@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { RiLogoutCircleRLine } from "react-icons/ri";
@@ -7,101 +8,152 @@ import { LuLayoutDashboard } from "react-icons/lu";
 import { IoPeople, IoSettings } from "react-icons/io5";
 import { FaWallet, FaHistory } from "react-icons/fa";
 import { FaBoxesPacking } from "react-icons/fa6";
-
+import { IoMdClose } from "react-icons/io";
 import Images from "@/constant/Image";
 
 const menuItems = [
   {
     href: "/dashboard",
-    icon: <LuLayoutDashboard size={25} />,
+    icon: <LuLayoutDashboard size={28} />,
     label: "Dashboard",
   },
   {
     href: "/administration",
-    icon: <IoPeople size={25} />,
+    icon: <IoPeople size={26} />,
     label: "Administration",
   },
-  { href: "/wallet", icon: <FaWallet size={25} />, label: "Wallet" },
-  { href: "/orders", icon: <FaBoxesPacking size={25} />, label: "Orders" },
-  { href: "/historys", icon: <FaHistory size={25} />, label: "History" },
-  { href: "/settings", icon: <IoSettings size={25} />, label: "Settings" },
+  { href: "/wallet", icon: <FaWallet size={26} />, label: "Wallet" },
+  { href: "/orders", icon: <FaBoxesPacking size={27} />, label: "Orders" },
+  { href: "/historys", icon: <FaHistory size={26} />, label: "History" },
+  { href: "/settings", icon: <IoSettings size={26} />, label: "Settings" },
 ];
 
-export default function SideNav() {
+export default function SideNav({
+  isOpen,
+  setIsOpen,
+}: {
+  isOpen: boolean;
+  setIsOpen: (val: boolean) => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
   const handleNavigation = (path: string) => {
     router.push(path);
+    setIsOpen(false); // Close sidebar on mobile after navigation
   };
 
   return (
-    <div className="relative flex h-screen overflow-visible">
-      {/* Floating Avatar */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10 transition-all duration-300 hover:scale-110">
-        <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden flex items-center justify-center">
-          <Image
-            src={Images.LogoImage}
-            alt="logo"
-            width={48}
-            height={48}
-            className="object-contain"
-            priority
-          />
+    <>
+      {/* Desktop SideNav */}
+      <div className="hidden lg:flex flex-col items-center w-20 bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-400 pt-20 pb-6 rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative">
+        <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">
+          <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden flex items-center justify-center">
+            <Image
+              src={Images.LogoImage}
+              alt="logo"
+              width={48}
+              height={48}
+              className="object-contain"
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Sidebar */}
-      <div className="flex flex-col items-center w-16 md:w-20 bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-400 pt-20 pb-6 rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg">
-        {/* Navigation Menu */}
         <div className="flex flex-col items-center gap-2 flex-grow w-full mt-10">
           {menuItems.map((item, index) => {
             const isActive = pathname === item.href;
             return (
-             <div key={index} className="relative group">
-  <button
-    onClick={() => handleNavigation(item.href)}
-    className={`group p-2 rounded-xl w-12 h-12 flex items-center justify-center 
-      transition-all duration-300 ease-in-out 
-      ${isActive
-        ? "bg-white text-black shadow-lg scale-110"
-        : "text-white hover:text-black hover:scale-105"}`}
-  >
-    {item.icon}
-  </button>
-
-  {/* Tooltip */}
-  <span
-    className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs
-      font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0
-      group-hover:opacity-100 group-hover:delay-[800ms] transition-opacity duration-200
-      whitespace-nowrap z-50 pointer-events-none group-hover:pointer-events-auto"
-  >
-    {item.label}
-  </span>
-</div>
-
+              <div key={index} className="relative group">
+                <button
+                  onClick={() => handleNavigation(item.href)}
+                  className={`group p-2 rounded-xl w-12 h-12 flex items-center justify-center 
+                    transition-all duration-300 ease-in-out 
+                    ${
+                      isActive
+                        ? "bg-white text-black shadow-lg scale-110"
+                        : "text-white hover:text-black hover:scale-105"
+                    }`}
+                >
+                  {item.icon}
+                </button>
+                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[800ms] transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none group-hover:pointer-events-auto">
+                  {item.label}
+                </span>
+              </div>
             );
           })}
         </div>
 
-        {/* Logout Button */}
         <div className="w-full flex justify-center">
           <div className="relative">
             <button
               onClick={() => handleNavigation("/auth/login")}
               className="group p-3 rounded-xl w-12 h-12 flex items-center justify-center text-white hover:bg-white/90 hover:text-black hover:shadow-md transition-all duration-300"
             >
-              <RiLogoutCircleRLine size={30} className="font-semibold" />
+              <RiLogoutCircleRLine size={30} />
             </button>
-
-            {/* Tooltip */}
             <span className="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-50">
               Logout
             </span>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Mobile SideNav Overlay */}
+      <div
+        className={`lg:hidden fixed top-0 left-0 z-50 h-full w-64 bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-400 p-6 transform transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Close Button */}
+        <button
+          onClick={() => setIsOpen(false)}
+          className="absolute top-4 right-4 text-white text-2xl"
+        >
+          <IoMdClose />
+        </button>
+
+        {/* Logo */}
+        <div className="w-16 h-16 mx-auto mb-10 rounded-full bg-white shadow-lg flex items-center justify-center">
+          <Image
+            src={Images.LogoImage}
+            alt="logo"
+            width={48}
+            height={48}
+            className="object-contain"
+          />
+        </div>
+
+        {/* Menu Items */}
+        <div className="flex flex-col space-y-4">
+          {menuItems.map((item, index) => {
+            const isActive = pathname === item.href;
+            return (
+              <button
+                key={index}
+                onClick={() => handleNavigation(item.href)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 ${
+                  isActive
+                    ? "bg-white text-black"
+                    : "text-white hover:bg-white/10"
+                }`}
+              >
+                {item.icon}
+                <span className="text-sm font-medium">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Logout */}
+        <button
+          onClick={() => handleNavigation("/auth/login")}
+          className="mt-10 flex items-center gap-3 px-4 py-3 rounded-md text-white hover:bg-white/10"
+        >
+          <RiLogoutCircleRLine size={22} />
+          <span className="text-sm font-medium">Logout</span>
+        </button>
+      </div>
+    </>
   );
 }
