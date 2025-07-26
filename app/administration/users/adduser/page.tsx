@@ -22,7 +22,7 @@ export default function AddNewUserForm() {
         </div>
 
         {/* Form Card */}
-        <div className="rounded-xl p-6 border border-gray-300 bg-gray-100 shadow-sm w-full max-w-2xl">
+        <div className="rounded-xl p-6 border border-gray-300 bg-gray-100 shadow-sm">
           <div className="space-y-4">
             {/* User ID */}
             <div className="flex items-center">
