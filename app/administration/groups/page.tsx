@@ -4,6 +4,7 @@ import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
 import { FaTrash } from "react-icons/fa";
 import { GoPencil } from "react-icons/go";
+import { useRouter } from "next/navigation";
 
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
@@ -33,6 +34,8 @@ const groupsData = [
 ];
 
 export default function GroupsPage() {
+  const router = useRouter();
+
   const columns = [
     { field: "id", headerName: "Group ID", flex: 1 },
     { field: "name", headerName: "Group Name", flex: 1 },
@@ -49,7 +52,7 @@ export default function GroupsPage() {
             <GoPencil size={18} />
           </button>
           <button className="text-red-600 cursor-pointer ml-5 mt-2 mr-5">
-            <FaTrash size={16}  />
+            <FaTrash size={16} />
           </button>
         </div>
       ),
@@ -81,6 +84,14 @@ export default function GroupsPage() {
     onPageChange: handlePageChange,
   });
 
+  const handleAddGroup = () => {
+    router.push("/administration/groups/addgroup");
+  };
+
+  const onBack=()=>{
+    router.push("/administration")
+  }
+
   return (
     <Layout>
       <div className="p-6 w-full max-w-6xl mx-auto -mt-5">
@@ -90,8 +101,9 @@ export default function GroupsPage() {
           setSearch={handleChange}
           showAddButton
           showBack
+          onBack={onBack}
           addLabel="+ ADD GROUP"
-          onAdd={() => console.log("Add group clicked")}
+          onAdd={handleAddGroup}
           onMore={() => console.log("More options clicked")}
         />
 

@@ -6,6 +6,7 @@ import { FaTrash, FaEdit } from "react-icons/fa";
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
+import { useRouter } from "next/navigation";
 
 const rolesData = [
   {
@@ -31,6 +32,8 @@ const rolesData = [
 ];
 
 export default function RolesPage() {
+  const router = useRouter();
+
   const columns = [
     { field: "id", headerName: "Role ID", flex: 1 },
     { field: "name", headerName: "Role Name", flex: 1 },
@@ -79,6 +82,14 @@ export default function RolesPage() {
     onPageChange: handlePageChange,
   });
 
+  const handleAddRole = () => {
+    router.push("/administration/roles/addrole");
+  };
+
+  const onBack = () => {
+    router.push("/administration");
+  };
+
   return (
     <Layout>
       <div className="p-6 w-full max-w-6xl mx-auto -mt-5">
@@ -89,7 +100,8 @@ export default function RolesPage() {
           addLabel="+ ADD ROLE"
           showAddButton
           showBack
-          onAdd={() => console.log("Add role clicked")}
+          onBack={onBack}
+          onAdd={handleAddRole}
           onMore={() => console.log("More options clicked")}
         />
 
