@@ -1,12 +1,57 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Layout from "@/layout/Layout";
 import { IoArrowBackOutline } from "react-icons/io5";
 import { useRouter } from "next/navigation";
+import InputField from "@/components/common/inputtype1";
+import CheckboxField from "@/components/common/checkboxinput";
+import TextareaField from "@/components/common/textareainput";
+import SubmitButton from "@/components/common/submitbutton";
 
 export default function AddRoleForm() {
   const router = useRouter();
+
+  interface RoleFormData {
+    roleId: string;
+    roleName: string;
+    components: string[];
+    description: string;
+  }
+
+  const [formData, setFormData] = useState<RoleFormData>({
+    roleId: "RL000003",
+    roleName: "",
+    components: [],
+    description: "",
+  });
+
+  const componentOptions = ["Administration", "Wallet", "Orders", "History"];
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (value: string) => {
+    setFormData((prev) => {
+      const exists = prev.components.includes(value);
+      return {
+        ...prev,
+        components: exists
+          ? prev.components.filter((c) => c !== value)
+          : [...prev.components, value],
+      };
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Submitted Role Data:", formData);
+    // Add submission logic here
+  };
 
   return (
     <Layout>
@@ -22,69 +67,48 @@ export default function AddRoleForm() {
         </div>
 
         {/* Form Card */}
-        <div className="rounded-xl p-6 border border-gray-300 bg-gray-100 shadow-sm">
-          <form className="space-y-5">
-            {/* Role ID */}
-            <div className="flex items-center">
-              <label className="w-48 text-sm font-medium">Role ID :</label>
-              <input
+        <div className="rounded-xl p-6 bg-white">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Input Fields Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <InputField
+                label="Role ID"
+                name="roleId"
                 type="text"
-                defaultValue="RL000003"
-                className="border border-gray-400 rounded px-3 py-1 w-[60%] bg-white"
-                readOnly
+                value={formData.roleId}
+                onChange={handleInputChange}
               />
-            </div>
 
-            {/* Role Name */}
-            <div className="flex items-center">
-              <label className="w-48 text-sm font-medium">Role Name :</label>
-              <input
+              <InputField
+                label="Role Name"
+                name="roleName"
                 type="text"
                 placeholder="Role Name"
-                className="border border-gray-400 rounded px-3 py-1 w-[60%] bg-white"
+                value={formData.roleName}
+                onChange={handleInputChange}
               />
             </div>
 
-            {/* Components */}
-            <div className="flex items-start">
-              <label className="w-48 text-sm font-medium mt-1">Components :</label>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm w-[60%]">
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="accent-yellow-400" />
-                  <span>Administration</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="accent-yellow-400" />
-                  <span>Wallet</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="accent-yellow-400" />
-                  <span>Orders</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="accent-yellow-400" />
-                  <span>History</span>
-                </label>
-              </div>
-            </div>
+            {/* Components Checkbox */}
+            <CheckboxField
+              label="Components"
+              options={componentOptions}
+              selected={formData.components}
+              onChange={handleCheckboxChange}
+            />
 
             {/* Description */}
-            <div className="flex items-start">
-              <label className="w-48 text-sm font-medium mt-1">Description :</label>
-              <textarea
-                placeholder="Description"
-                className="border border-gray-400 rounded px-3 py-2 w-[60%] h-24 bg-white resize-none"
-              ></textarea>
-            </div>
+            <TextareaField
+              label="Description"
+              name="description"
+              placeholder="Description"
+              value={formData.description}
+              onChange={handleInputChange}
+            />
 
-            {/* Submit */}
+            {/* Submit Button */}
             <div className="flex justify-end">
-              <button
-                type="submit"
-                className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 px-6 rounded"
-              >
-                Submit
-              </button>
+              <SubmitButton type="submit">Submit</SubmitButton>
             </div>
           </form>
         </div>

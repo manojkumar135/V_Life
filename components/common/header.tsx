@@ -21,7 +21,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
     <header className="flex items-center justify-between w-full max-md:w-screen px-4 py-2 bg-white dark:bg-gray-900 h-[60px] shadow-sm">
       <div className="flex items-center space-x-3">
         {/* Hamburger Icon - visible only on small screens */}
-        <button onClick={onMenuClick} className="lg:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
+        <button onClick={onMenuClick} className="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800">
           <GiHamburgerMenu  className="text-3xl text-gray-800 dark:text-gray-200" />
         </button>
         <h1 className="text-[1.5rem] max-md:text-[1rem] font-semibold text-gray-800 dark:text-gray-100">Hello, User</h1>
