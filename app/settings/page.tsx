@@ -1,5 +1,8 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import axios from "axios";
 import Layout from "@/layout/Layout";
 import Accordion from "@mui/material/Accordion";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -10,33 +13,140 @@ import Image from "next/image";
 import Images from "@/constant/Image";
 import { FiEdit2 } from "react-icons/fi";
 import InputField from "@/components/common/inputtype1";
+import SubmitButton from "@/components/common/submitbutton";
+import SelectField from "@/components/common/selectinput";
+
+// Validation Schema
+const profileSchema = Yup.object().shape({
+  userName: Yup.string()
+    .required("Username is required")
+    .min(3, "Username must be at least 3 characters"),
+  phone: Yup.string()
+    .required("Phone number is required")
+    .matches(/^[0-9]{10}$/, "Phone number must be 10 digits"),
+  email: Yup.string()
+    .email("Invalid email address")
+    .required("Email is required"),
+  address: Yup.string().required("Address is required"),
+  country: Yup.string().required("Country is required"),
+  state: Yup.string().required("State is required"),
+  city: Yup.string().required("City is required"),
+  pincode: Yup.string()
+    .required("Pincode is required")
+    .matches(/^[0-9]{6}$/, "Pincode must be 6 digits"),
+  locality: Yup.string().required("Locality is required"),
+});
+
+type FormValues = {
+  userName: string;
+  phone: string;
+  email: string;
+  address: string;
+  country: string;
+  state: string;
+  city: string;
+  pincode: string;
+  locality: string;
+};
 
 const Page = () => {
   const referralLink = "https://VLifeGlobal……………";
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
 
-  const [formData, setFormData] = useState({
-    userName: "",
-    phone: "",
-    email: "",
-    address: "",
-    country: "",
-    state: "",
-    city: "",
-    pincode: ""
+  // Formik initialization
+  const formik = useFormik<FormValues>({
+    initialValues: {
+      userName: "",
+      phone: "",
+      email: "",
+      address: "",
+      country: "India",
+      state: "",
+      city: "",
+      pincode: "",
+      locality: "",
+    },
+    validationSchema: profileSchema,
+    onSubmit: (values) => {
+      console.log("Form submitted:", values);
+      alert("Profile updated successfully!");
+    },
   });
+
+  const localityOptions = postOfficeData.map((item) => ({
+    label: item.Name,
+    value: item.Name,
+  }));
+
+  // Fetch location data based on pincode
+  useEffect(() => {
+    const fetchLocationByPincode = async () => {
+      const pincode = formik.values.pincode;
+      if (pincode.length === 6) {
+        setIsLoadingLocation(true);
+        try {
+          const res = await axios.get(
+            `https://api.postalpincode.in/pincode/${pincode}`
+          );
+
+          const data = res.data[0];
+          console.log("API Response:", data); // Debug log
+          
+          if (data.Status === "Success" && data.PostOffice?.length) {
+            const firstPostOffice = data.PostOffice[0];
+            
+            formik.setFieldValue("city", firstPostOffice.District || firstPostOffice.Block || "");
+            formik.setFieldValue("state", firstPostOffice.State || "");
+            formik.setFieldValue("country", firstPostOffice.Country || "India");
+            setPostOfficeData(data.PostOffice);
+            
+            // Auto-select first locality if available
+            if (data.PostOffice.length > 0) {
+              formik.setFieldValue("locality", data.PostOffice[0].Name);
+            }
+          } else {
+            // Clear fields on failure
+            formik.setFieldValue("city", "");
+            formik.setFieldValue("state", "");
+            formik.setFieldValue("country", "India");
+            formik.setFieldValue("locality", "");
+            setPostOfficeData([]);
+          }
+        } catch (error) {
+          console.error("Error fetching location data:", error);
+          formik.setFieldValue("city", "");
+          formik.setFieldValue("state", "");
+          formik.setFieldValue("country", "India");
+          formik.setFieldValue("locality", "");
+          setPostOfficeData([]);
+        } finally {
+          setIsLoadingLocation(false);
+        }
+      }
+    };
+
+    const debounceTimer = setTimeout(() => {
+      if (formik.values.pincode.length === 6) {
+        fetchLocationByPincode();
+      } else if (formik.values.pincode.length === 0) {
+        // Clear fields if pincode is empty
+        formik.setFieldValue("city", "");
+        formik.setFieldValue("state", "");
+        formik.setFieldValue("country", "India");
+        formik.setFieldValue("locality", "");
+        setPostOfficeData([]);
+      }
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [formik.values.pincode]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    alert("Referral link copied to clipboard!");
   };
 
   return (
@@ -51,6 +161,8 @@ const Page = () => {
             <Image
               src={Images.ProfilePhoto}
               alt="Profile"
+              width={100}
+              height={100}
               className="w-26 h-26 rounded-full border-4 border-white shadow-md object-cover cursor-pointer"
               onClick={() => setPreviewOpen(true)}
             />
@@ -68,11 +180,13 @@ const Page = () => {
           <Image
             src={Images.ProfilePhoto}
             alt="Profile"
+            width={120}
+            height={120}
             className="w-30 h-30 rounded-full border-4 border-white shadow-xl object-cover cursor-pointer"
             onClick={() => setPreviewOpen(true)}
           />
           <button
-            className="absolute bottom-1 right-2/7  bg-black p-2 rounded-full shadow border-[1.5px] border-white"
+            className="absolute bottom-1 right-2/7 bg-black p-2 rounded-full shadow border-[1.5px] border-white"
             onClick={() => fileInputRef.current?.click()}
           >
             <FiEdit2 className="text-white text-sm" />
@@ -93,63 +207,137 @@ const Page = () => {
           }}
         />
 
-        {/* Profile Section */}
-        <section className="mb-10 mx-5 max-md:mx-0">
-          <h3 className="text-xl max-md:text-lg font-bold text-gray-800 mb-5">
-            Profile
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <InputField
-              label="User Name"
-              name="userName"
-              type="text"
-              placeholder="User Name"
-              value={formData.userName}
-              onChange={handleInputChange}
-            />
-            <InputField
-              label="Contact"
-              name="phone"
-              type="text"
-              placeholder="1234567890"
-              value={formData.phone}
-              onChange={handleInputChange}
-            />
-            <InputField
-              label="Email"
-              name="email"
-              type="email"
-              placeholder="123@gmail.com"
-              value={formData.email}
-              onChange={handleInputChange}
-            />
-          </div>
-        </section>
-
-        {/* Shipping Section */}
-        <section className="mb-10 mx-5 max-md:mx-0">
-          <h3 className="text-xl max-md:text-lg font-bold text-gray-800 mb-5">
-            Shipping Details
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {[
-              { name: "address", label: "Address", placeholder: "D.NO : 123, left street" },
-              { name: "country", label: "Country", placeholder: "India" },
-              { name: "state", label: "State", placeholder: "Uttar Pradesh" },
-              { name: "city", label: "City", placeholder: "Noida" },
-              { name: "pincode", label: "Pincode", placeholder: "123456" },
-            ].map(({ name, label, placeholder }) => (
+        {/* Form starts here */}
+        <form onSubmit={formik.handleSubmit}>
+          {/* Profile Section */}
+          <section className="mb-10 mx-5 max-md:mx-0">
+            <h3 className="text-xl max-md:text-lg font-bold text-gray-800 mb-5">
+              Profile
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <InputField
-                key={name}
-                name={name}
-                label={label}
-                placeholder={placeholder}
-                value={formData[name as keyof typeof formData]}
-                onChange={handleInputChange}
+                label="User Name"
+                name="userName"
+                type="text"
+                placeholder="User Name"
+                value={formik.values.userName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.userName ? formik.errors.userName : undefined}
+                required
               />
-            ))}
+              <InputField
+                label="Contact"
+                name="phone"
+                type="tel"
+                minLength={10}
+                maxLength={10}
+                placeholder="1234567890"
+                value={formik.values.phone}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.phone ? formik.errors.phone : undefined}
+                required
+              />
+              <InputField
+                label="Email"
+                name="email"
+                type="email"
+                placeholder="123@gmail.com"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.email ? formik.errors.email : undefined}
+                required
+              />
+            </div>
+          </section>
+
+          {/* Shipping Section */}
+          <section className="mb-10 mx-5 max-md:mx-0">
+            <h3 className="text-xl max-md:text-lg font-bold text-gray-800 mb-5">
+              Shipping Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <InputField
+                label="Address"
+                name="address"
+                placeholder="D.NO : 123, left street"
+                value={formik.values.address}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.address ? formik.errors.address : undefined}
+                required
+              />
+              <InputField
+                label="Pincode"
+                name="pincode"
+                placeholder="123456"
+                value={formik.values.pincode}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.pincode ? formik.errors.pincode : undefined}
+                required
+                disabled={isLoadingLocation}
+              />
+             
+              <InputField
+                label="Country"
+                name="country"
+                placeholder="India"
+                value={formik.values.country}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.country ? formik.errors.country : undefined}
+                required
+                disabled={isLoadingLocation}
+              />
+              <InputField
+                label="State"
+                name="state"
+                placeholder="Uttar Pradesh"
+                value={formik.values.state}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.state ? formik.errors.state : undefined}
+                required
+                disabled={isLoadingLocation}
+              />
+              <InputField
+                label="District"
+                name="city"
+                placeholder="Noida"
+                value={formik.values.city}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.city ? formik.errors.city : undefined}
+                required
+                disabled={isLoadingLocation}
+              />
+               <SelectField
+                label="Locality"
+                name="locality"
+                value={formik.values.locality}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                options={localityOptions}
+                error={formik.touched.locality ? formik.errors.locality : undefined}
+                required
+                disabled={isLoadingLocation || postOfficeData.length === 0}
+              />
+            </div>
+          </section>
+
+          {/* Submit Button */}
+          <div className="flex justify-end px-5 mb-10">
+            <SubmitButton 
+              type="submit" 
+              disabled={formik.isSubmitting || isLoadingLocation}
+            >
+              {formik.isSubmitting ? "Saving..." : "Save Changes"}
+            </SubmitButton>
           </div>
-        </section>
+        </form>
 
         {/* Accordion Sections */}
         {[
@@ -175,12 +363,12 @@ const Page = () => {
                   {[1, 2].map((_, i) => (
                     <div className="flex gap-2 items-center" key={i}>
                       <input
-                        className="modern-input flex-1 text-blue-600"
+                        className="modern-input flex-1 text-blue-600 border border-gray-300 rounded px-3 py-2"
                         value={referralLink}
-                        // readOnly
+                        readOnly
                       />
                       <button
-                        className="bg-yellow-400 hover:bg-yellow-500 text-black font-medium px-4 py-2 rounded shadow"
+                        className="bg-yellow-400 hover:bg-yellow-500 text-black font-medium px-4 py-2 rounded shadow transition-colors duration-200"
                         onClick={() => handleCopy(referralLink)}
                       >
                         Copy Link
@@ -208,6 +396,8 @@ const Page = () => {
             <Image
               src={Images.ProfilePhoto}
               alt="Zoomed Profile"
+              width={300}
+              height={300}
               className="w-full h-full rounded-full shadow-2xl border-4 border-white object-cover"
             />
           </div>
