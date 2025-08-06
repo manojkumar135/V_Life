@@ -49,7 +49,7 @@ export default function AddWalletForm() {
         </div>
 
         {/* Form Container */}
-        <div className="rounded-xl px-6 max-md:p-4 bg-white shadow-md">
+        <div className="rounded-xl px-6 max-md:p-4 bg-white">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <InputField
               label="Account Holder Name"
