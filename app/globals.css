@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.MuiDataGrid-columnHeaderCheckbox .MuiSvgIcon-root {
+  color: white !important;
+}
+
+.MuiDataGrid-columnHeaderCheckbox svg {
+  color: white !important;
+}

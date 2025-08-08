@@ -121,8 +121,9 @@ export default function OrdersPage() {
     { field: "orderType", headerName: "Order Type", flex: 1 },
     { field: "status", headerName: "Status", flex: 1 },
     {
-      field: "actions",
+      field: "action",
       headerName: "Actions",
+      //  width: 250, 
       flex: 1,
       sortable: false,
       disableColumnMenu: true,
@@ -131,12 +132,16 @@ export default function OrdersPage() {
           <button className="text-green-600 cursor-pointer ml-5 mt-2 mr-5">
             <FaEdit size={18} />
           </button>
-          <button className="text-red-600 cursor-pointer ml-5 mt-2 mr-5">
+          <button className="text-red-600 cursor-pointer ml-2 mt-2 mr-5">
             <FaTrash size={16} />
           </button>
         </div>
       ),
     },
+        // { field: "", headerName: "", flex: 1 },
+
+        
+
   ];
 
   const { query, handleChange } = useSearch();
@@ -172,7 +177,7 @@ export default function OrdersPage() {
 
   return (
     <Layout>
-      <div className="p-6 w-full max-w-6xl mx-auto -mt-5">
+      <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
         <HeaderWithActions
           title="Orders"
           search={query}

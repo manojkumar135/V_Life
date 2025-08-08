@@ -98,7 +98,7 @@ export default function WalletsPage() {
 
   return (
     <Layout>
-      <div className="p-6 w-full max-w-6xl mx-auto -mt-5">
+      <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
         <HeaderWithActions
           title="Wallets"
           search={query}

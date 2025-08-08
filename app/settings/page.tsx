@@ -65,7 +65,7 @@ const Page = () => {
       phone: "",
       email: "",
       address: "",
-      country: "India",
+      country: "",
       state: "",
       city: "",
       pincode: "",

@@ -116,7 +116,7 @@ export default function WithdrawPage() {
 
   return (
     <Layout>
-      <div className="p-6 w-full max-w-7xl mx-auto -mt-5">
+      <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
         <HeaderWithActions
           title="Withdraw Transactions"
           search={query}

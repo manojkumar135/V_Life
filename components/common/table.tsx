@@ -70,14 +70,16 @@ export default function Table({
   };
 
   return (
-    <div className={`flex flex-col ${className}`}>
+    <div
+      className={`flex flex-col w-full max-sm:w-[110%] max-sm:-ml-4 ${className}`}
+    >
       {/* DataGrid */}
-      <div className="overflow-x-auto bg-white shadow rounded-lg flex-grow h-[500px]">
+      <div className="overflow-x-auto bg-white shadow rounded-lg flex-grow min-h-full w-full">
         <DataGrid
           rows={paginatedRows}
           columns={columns}
           checkboxSelection={checkboxSelection}
-          disableColumnFilter
+          disableRowSelectionOnClick // ✅ Add this line          disableColumnFilter
           disableColumnMenu
           hideFooterPagination
           rowHeight={40}
@@ -91,17 +93,57 @@ export default function Table({
             border: 0,
             zIndex: 1,
             position: "relative",
-            "@media (max-width: 700px)": {
-              width: "100%",
-              minWidth: "100%",
-              textOverflow: "ellipsis",
+
+            "@media (max-width: 800px)": {
+              width: "100% !important",
+              overflowX: "auto",
+
+              "& .MuiDataGrid-row": {
+                maxHeight: "30px !important",
+                minHeight: "30px !important",
+              },
+              "& .MuiDataGrid-cell": {
+                maxHeight: "30px !important",
+                minHeight: "30px !important",
+                padding: "2px 4px !important",
+                fontSize: "0.8rem !important", // ✅ Smaller font
+                overflow: "visible !important",
+              },
+
+              '& .MuiDataGrid-cell[data-field="action"]': {
+                minWidth: "250px !important",
+                maxWidth: "250px !important",
+                overflow: "visible !important",
+                padding: "2px 4px !important",
+                marginRight: "2rem !important",
+              },
+              '& .MuiDataGrid-cell[data-field="action"] > div': {
+                display: "flex",
+                flexDirection: "row",
+                gap: "8px",
+                justifyContent: "center",
+                alignItems: "center",
+                overflow: "visible !important",
+              },
+
+              "& .MuiDataGrid-columnHeaders": {
+                minHeight: "30px !important",
+                maxHeight: "30px !important",
+                fontSize: "0.9rem !important", // ✅ Smaller header font
+              },
+              "& .MuiDataGrid-columnHeaderTitle": {
+                fontSize: "0.9rem !important",
+              },
+
               "& .MuiDataGrid-virtualScroller": {
-                minWidth: "100% !important",
+                width: "max-content !important",
                 overflowX: "auto !important",
-                ...(processedRows.length > 0 && { marginRight: "-8.8rem" }),
               },
               "& .MuiDataGrid-virtualScrollerContent": {
-                width: "auto !important",
+                width: "max-content !important",
+              },
+              "& .MuiDataGrid-main": {
+                width: "max-content !important",
               },
               '& .MuiDataGrid-columnHeader:not([data-field="__check__"]), & .MuiDataGrid-cell:not([data-field="__check__"])':
                 {
@@ -120,6 +162,18 @@ export default function Table({
                 margin: "0 auto !important",
               },
             },
+            // "& .MuiDataGrid-main": {
+            //   width: "max-content !important",
+            // },
+
+            "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within":
+              {
+                outline: "none !important",
+              },
+            "& .MuiDataGrid-cell:focus-within": {
+              outline: "none !important",
+            },
+
             "& .MuiDataGrid-virtualScroller": {
               scrollbarWidth: "none",
               msOverflowStyle: "none",
@@ -129,6 +183,10 @@ export default function Table({
             },
             "& .MuiDataGrid-scrollbarContent": {
               display: "none",
+            },
+
+            "& .MuiDataGrid-columnHeadersInner": {
+              minWidth: "100%",
             },
             "& .MuiDataGrid-row": {
               fontSize: "0.8rem",
@@ -166,7 +224,7 @@ export default function Table({
               color: "white",
             },
             "& .MuiDataGrid-columnHeaders": {
-              backgroundColor: "#026902 !important",
+              backgroundColor: "gray !important",
               color: "white !important",
               fontWeight: "bold",
               fontSize: "0.8rem",
@@ -175,6 +233,18 @@ export default function Table({
               minHeight: "35px",
               maxHeight: "35px",
             },
+            "& .MuiDataGrid-columnHeaderCheckbox .MuiCheckbox-root .MuiSvgIcon-root":
+              {
+                color: "#ffffff !important", // ✅ White checkbox icon
+              },
+            "& .MuiDataGrid-columnHeaderCheckbox svg": {
+              color: "white !important",
+            },
+            "& .MuiDataGrid-columnHeaderCheckbox .MuiCheckbox-root:not(.Mui-checked) .MuiSvgIcon-root":
+              {
+                color: "white !important",
+              },
+
             "& .MuiDataGrid-columnHeader": {
               backgroundColor: "gray",
               color: "white",
@@ -182,7 +252,14 @@ export default function Table({
               fontSize: "0.9rem",
               minHeight: "35px !important",
               maxHeight: "35px !important",
+              // minWidth:"10% !important",
             },
+      //        // ✅ Make last column take more width
+      // "& .MuiDataGrid-columnHeader:last-of-type, & .MuiDataGrid-cell:last-of-type": {
+      //   minWidth: "300px !important", // adjust as needed
+      //   maxWidth: "auto !important",
+      //   flexGrow: 1,
+      // },
             "& .MuiDataGrid-cell": {
               maxHeight: "35px !important",
               minHeight: "35px !important",
@@ -196,7 +273,7 @@ export default function Table({
               fontWeight: "bold",
             },
             "& .MuiDataGrid-row--borderBottom": {
-              background: "#026902 !important",
+              background: "gray !important",
               fontWeight: "bold",
               height: "2rem",
             },
@@ -211,7 +288,7 @@ export default function Table({
               borderBottomRightRadius: "1rem",
             },
             "& .MuiDataGrid-cell .MuiSvgIcon-root": {
-              color: "#026902",
+              color: "gray",
             },
             "& .MuiCheckbox-root:not(.Mui-checked) .MuiSvgIcon-root": {
               color: "grey !important",
