@@ -28,7 +28,7 @@ export default function Table({
   rowIdField,
   pageSize = 10,
   className = "",
-  rowHeight = 60,
+  // rowHeight = 60,
   onRowClick,
   checkboxSelection = false,
   rowSelectionModel,
@@ -38,8 +38,11 @@ export default function Table({
 }: TableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
-  const totalEntries = rows.length;
-  const paginatedRows = rows.slice(
+  // console.log("Table rendered with rows:", rows);
+
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const totalEntries = safeRows.length;
+  const paginatedRows = safeRows.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
@@ -69,6 +72,8 @@ export default function Table({
     setSelectedRows(selectedData);
   };
 
+  
+
   return (
     <div
       className={`flex flex-col w-full max-sm:w-[110%] max-sm:-ml-4 ${className}`}
@@ -96,24 +101,27 @@ export default function Table({
 
             // Force full width for all grid containers on desktop
             "& .MuiDataGrid-main": {
-              width: "102% !important",
+              width: "100% !important",
+              maxWidth: "100% !important",
             },
             "& .MuiDataGrid-virtualScroller": {
               width: "100% !important",
-              // border:"1px solid black",
-              overflowX: "auto !important",
             },
             "& .MuiDataGrid-virtualScrollerContent": {
               width: "100% !important",
             },
             "& .MuiDataGrid-columnHeadersInner": {
-              minWidth: "100%",
-              width: "100%",
+              width: "100% !important",
             },
 
             "@media (max-width: 800px)": {
               width: "100% !important",
               overflowX: "auto",
+
+              "& .MuiDataGrid-main": {
+                width: "100% !important",
+                maxWidth: "100% !important",
+              },
 
               "& .MuiDataGrid-row": {
                 maxHeight: "30px !important",
@@ -143,9 +151,9 @@ export default function Table({
               "& .MuiDataGrid-virtualScrollerContent": {
                 width: "max-content !important",
               },
-              "& .MuiDataGrid-main": {
-                width: "max-content !important",
-              },
+              // "& .MuiDataGrid-main": {
+              //   width: "max-content !important",
+              // },
               '& .MuiDataGrid-columnHeader:not([data-field="__check__"]), & .MuiDataGrid-cell:not([data-field="__check__"])':
                 {
                   minWidth: "130px !important",
@@ -167,7 +175,7 @@ export default function Table({
                 {
                   minWidth: "160px !important", // adjust as needed
                   maxWidth: "auto !important",
-                  flexGrow: 1,
+                  // flexGrow: 1,
                 },
             },
 

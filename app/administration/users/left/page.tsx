@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
 import { FaTrash, FaEdit } from "react-icons/fa";
@@ -7,55 +7,61 @@ import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
 import { useRouter } from "next/navigation";
-
-
-const usersData = [
-  {
-    id: 1,
-    name: "Aarav Sharma",
-    contact: "1234567890",
-    email: "aarav.sharma@example.com",
-    role: "Manager",
-  },
-  {
-    id: 2,
-    name: "Neha Patel",
-    contact: "2345678901",
-    email: "neha.patel@example.com",
-    role: "Admin",
-  },
-  {
-    id: 3,
-    name: "Rahul Gupta",
-    contact: "3456789012",
-    email: "rahul.gupta@example.com",
-    role: "Developer",
-  },
-  {
-    id: 4,
-    name: "Priya Singh",
-    contact: "4567890123",
-    email: "priya.singh@example.com",
-    role: "Designer",
-  },
-  {
-    id: 5,
-    name: "Vikram Joshi",
-    contact: "5678901234",
-    email: "vikram.joshi@example.com",
-    role: "Manager",
-  },
-];
+import axios from "axios";
 
 export default function LeftTeam() {
-    const router = useRouter();
+  const router = useRouter();
+  const { query, handleChange } = useSearch();
+  const [usersData, setUsersData] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const API_URL = "/api/users-operations"; // Next.js API route
+
+  // Fetch users from API
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL);
+      console.log("Fetched users:", data);
+      setUsersData(data.data || []);
+      setTotalItems(data.data?.length || 0);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // console.log("Users data:", usersData);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // Delete user
+  const handleDelete = async (id: number) => {
+    try {
+      await axios.delete(`${API_URL}?user_id=${id}`);
+      setUsersData((prev) => prev.filter((user: any) => user.id !== id));
+      setTotalItems((prev) => prev - 1);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+    }
+  };
+
+  // Edit user (navigate)
+const handleEdit = (id: string) => {
+  router.push(`/administration/users/edituser/${id}`);
+};
+
 
   const columns = [
-    { field: "id", headerName: "User ID", flex: 1 },
-    { field: "name", headerName: "User Name", flex: 2 },
-    { field: "contact", headerName: "Contact", flex: 2 },
-    { field: "email", headerName: "Email", flex: 3 },
-    { field: "role", headerName: "Role", flex: 2 },
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_name", headerName: "User Name", flex: 1 },
+    { field: "contact", headerName: "Contact", flex: 1},
+    { field: "mail", headerName: "Email", flex: 1 },
+    { field: "role", headerName: "Role", flex: 1 },
     {
       field: "actions",
       headerName: "Actions",
@@ -64,10 +70,16 @@ export default function LeftTeam() {
       disableColumnMenu: true,
       renderCell: (params: any) => (
         <div className="flex gap-2 items-center">
-          <button className="text-green-600 cursor-pointer ml-5 mt-2 mr-5">
+          <button
+            className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
+            onClick={() => handleEdit(params.row._id)}
+          >
             <FaEdit size={18} />
           </button>
-          <button className="text-red-600 cursor-pointer ml-5 mt-2 mr-5">
+          <button
+            className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
+            onClick={() => handleDelete(params.row._id)}
+          >
             <FaTrash size={16} />
           </button>
         </div>
@@ -75,13 +87,9 @@ export default function LeftTeam() {
     },
   ];
 
-  const { query, handleChange } = useSearch();
-  const [totalItems, setTotalItems] = useState(usersData.length);
-
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
-      // Implement data fetching/pagination logic here if needed
-      // For now, we're using static data
+      // Here you could implement API pagination if backend supports it
     },
     [query]
   );
@@ -123,9 +131,10 @@ export default function LeftTeam() {
         <Table
           columns={columns}
           rows={usersData}
-          rowIdField="id"
+          rowIdField="_id"
           pageSize={10}
           checkboxSelection
+          // loading={loading}
           onRowClick={(row) => console.log("User clicked:", row)}
         />
       </div>

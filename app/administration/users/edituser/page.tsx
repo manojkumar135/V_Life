@@ -6,7 +6,7 @@ import * as Yup from "yup";
 import axios from "axios";
 import Layout from "@/layout/Layout";
 import { IoArrowBackOutline } from "react-icons/io5";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import Button from "@/components/common/submitbutton";
 import SelectField from "@/components/common/selectinput";
@@ -32,14 +32,16 @@ const validationSchema = Yup.object().shape({
   locality: Yup.string().required("Locality is required"),
 });
 
-export default function AddNewUserForm() {
+export default function AddOrEditUserForm() {
   const router = useRouter();
+  const params = useParams(); // ✅ Get route params
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
 
   const formik = useFormik({
     initialValues: {
-      userId: "US000003",
+      userId: "",
       fullName: "",
       email: "",
       contact: "",
@@ -51,74 +53,126 @@ export default function AddNewUserForm() {
       locality: "",
     },
     validationSchema,
-   onSubmit: async (values) => {
-  try {
-    const res = await axios.post("/api/users-operations", {
-      user_id: values.userId,
-      user_name: values.fullName,
-      mail: values.email,
-      contact: values.contact,
-      address: values.address,
-      pincode: values.pincode,
-      country: values.country,
-      state: values.state,
-      district: values.city,
-      locality: values.locality,
-      created_by: "admin", // or current logged-in user
-      role: "user", // or from dropdown
-    });
-    if (res.data.success) {
-      alert("User added successfully!");
-      router.push("/administration/users");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Failed to add user");
-  }
-},
-
+    onSubmit: async (values) => {
+      try {
+        if (isEdit) {
+          // ✅ Update existing user
+          const res = await axios.put(`/api/users-operations/${params.id}`, {
+            user_id: values.userId,
+            user_name: values.fullName,
+            mail: values.email,
+            contact: values.contact,
+            address: values.address,
+            pincode: values.pincode,
+            country: values.country,
+            state: values.state,
+            district: values.city,
+            locality: values.locality,
+            updated_by: "admin",
+          });
+          if (res.data.success) {
+            alert("User updated successfully!");
+            router.push("/administration/users");
+          }
+        } else {
+          // ✅ Create new user
+          const res = await axios.post("/api/users-operations", {
+            user_id: values.userId,
+            user_name: values.fullName,
+            mail: values.email,
+            contact: values.contact,
+            address: values.address,
+            pincode: values.pincode,
+            country: values.country,
+            state: values.state,
+            district: values.city,
+            locality: values.locality,
+            created_by: "admin",
+            role: "user",
+          });
+          if (res.data.success) {
+            alert("User added successfully!");
+            router.push("/administration/users");
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        alert(isEdit ? "Failed to update user" : "Failed to add user");
+      }
+    },
   });
+
+  // ✅ Fetch existing user for edit
+  useEffect(() => {
+    if (params.id) {
+      setIsEdit(true);
+      axios
+        .get(`/api/users-operations/${params.id}`)
+        .then((res) => {
+          if (res.data.success) {
+            const u = res.data.data;
+            formik.setValues({
+              userId: u.user_id || "",
+              fullName: u.user_name || "",
+              email: u.mail || "",
+              contact: u.contact || "",
+              address: u.address || "",
+              city: u.district || "",
+              state: u.state || "",
+              country: u.country || "",
+              pincode: u.pincode || "",
+              locality: u.locality || "",
+            });
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch user", err);
+        });
+    }
+  }, [params.id]);
 
   // Fetch location data based on pincode
   useEffect(() => {
-  const fetchLocationByPincode = async () => {
-    const pincode = formik.values.pincode;
+    const fetchLocationByPincode = async () => {
+      const pincode = formik.values.pincode;
 
-    if (/^\d{6}$/.test(pincode)) {
-      setIsLoadingLocation(true);
-      try {
-        const res = await axios.get(`/api/location-by-pincode?pincode=${pincode}`);
-        if (res.data.success) {
-          const { city, state, country, postOffices } = res.data.data;
-          formik.setFieldValue("city", city);
-          formik.setFieldValue("state", state);
-          formik.setFieldValue("country", country);
-          setPostOfficeData(postOffices);
-          if (postOffices.length) {
-            formik.setFieldValue("locality", postOffices[0].Name);
+      if (/^\d{6}$/.test(pincode)) {
+        setIsLoadingLocation(true);
+        try {
+          const res = await axios.get(
+            `/api/location-by-pincode?pincode=${pincode}`
+          );
+          if (res.data.success) {
+            const { city, state, country, postOffices } = res.data.data;
+            formik.setFieldValue("city", city);
+            formik.setFieldValue("state", state);
+            formik.setFieldValue("country", country);
+            setPostOfficeData(postOffices);
+            if (postOffices.length) {
+              formik.setFieldValue("locality", postOffices[0].Name);
+            }
+          } else {
+            clearLocationFields();
           }
-        } else {
+        } catch (error) {
+          console.error("Error fetching location:", error);
           clearLocationFields();
+        } finally {
+          setIsLoadingLocation(false);
         }
-      } catch (error) {
-        console.error("Error fetching location:", error);
-        clearLocationFields();
-      } finally {
-        setIsLoadingLocation(false);
       }
-    }
-  };
+    };
 
-  const clearLocationFields = () => {
-    formik.setFieldValue("city", "");
-    formik.setFieldValue("state", "");
-    formik.setFieldValue("locality", "");
-    setPostOfficeData([]);
-  };
+    const clearLocationFields = () => {
+      formik.setFieldValue("city", "");
+      formik.setFieldValue("state", "");
+      formik.setFieldValue("locality", "");
+      setPostOfficeData([]);
+    };
 
-  const debounceTimer = setTimeout(fetchLocationByPincode, 800);
-  return () => clearTimeout(debounceTimer);
-}, [formik.values.pincode]);
+    const debounceTimer = setTimeout(fetchLocationByPincode, 800);
+    return () => clearTimeout(debounceTimer);
+  }, [formik.values.pincode]);
 
   const localityOptions = postOfficeData.map((item) => ({
     label: item.Name,
@@ -136,7 +190,7 @@ export default function AddNewUserForm() {
             onClick={() => router.push("/administration/users")}
           />
           <h2 className="text-xl max-sm:text-[1rem] font-semibold">
-            Add New User
+            {isEdit ? "Edit User" : "Add New User"}
           </h2>
         </div>
 
@@ -145,7 +199,6 @@ export default function AddNewUserForm() {
           onSubmit={formik.handleSubmit}
           className="rounded-xl p-5 max-sm:p-3 bg-white space-y-4"
         >
-          {/* Form Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             <InputField
               label="User ID"
@@ -205,9 +258,6 @@ export default function AddNewUserForm() {
               required
               disabled={isLoadingLocation}
             />
-
-           
-
             <InputField
               label="Country"
               name="country"
@@ -236,31 +286,33 @@ export default function AddNewUserForm() {
               value={formik.values.city}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              // error={formik.touched.city ? formik.errors.city : undefined}
               required
               disabled={isLoadingLocation}
             />
-
-             <SelectField
+            <SelectField
               label="Locality"
               name="locality"
               value={formik.values.locality}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
               options={localityOptions}
-              error={formik.touched.locality ? formik.errors.locality : undefined}
+              error={
+                formik.touched.locality ? formik.errors.locality : undefined
+              }
               required
               disabled={isLoadingLocation || postOfficeData.length === 0}
             />
           </div>
-
-          {/* Submit Button */}
           <div className="flex justify-end mt-6">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={formik.isSubmitting || isLoadingLocation}
             >
-              {formik.isSubmitting ? "Submitting..." : "Submit"}
+              {formik.isSubmitting
+                ? "Submitting..."
+                : isEdit
+                ? "Update"
+                : "Submit"}
             </Button>
           </div>
         </form>

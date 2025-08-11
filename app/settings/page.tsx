@@ -94,59 +94,47 @@ const Page = () => {
   }));
 
   // Fetch location data based on pincode
-  useEffect(() => {
-    const fetchLocationByPincode = async () => {
-      const pincode = formik.values.pincode;
-      if (pincode.length === 6 && /^\d+$/.test(pincode)) {
-        setIsLoadingLocation(true);
-        try {
-          const res = await axios.get(
-            `https://api.postalpincode.in/pincode/${pincode}`
-          );
+useEffect(() => {
+  const fetchLocationByPincode = async () => {
+    const pincode = formik.values.pincode;
 
-          const data = res.data[0];
-          console.log("API Response:", data);
-
-          if (data?.Status === "Success" && data?.PostOffice?.length) {
-            const firstPostOffice = data.PostOffice[0];
-            
-            formik.setFieldValue(
-              "city",
-              firstPostOffice.District || firstPostOffice.Block || ""
-            );
-            formik.setFieldValue("state", firstPostOffice.State || "");
-            formik.setFieldValue("country", firstPostOffice.Country || "India");
-            setPostOfficeData(data.PostOffice);
-            
-            // Auto-select first locality if available
-            if (data.PostOffice.length > 0) {
-              formik.setFieldValue("locality", data.PostOffice[0].Name);
-            }
-          } else {
-            // Clear fields on failure
-            formik.setFieldValue("city", "");
-            formik.setFieldValue("state", "");
-            formik.setFieldValue("locality", "");
-            setPostOfficeData([]);
+    if (/^\d{6}$/.test(pincode)) {
+      setIsLoadingLocation(true);
+      try {
+        const res = await axios.get(`/api/location-by-pincode?pincode=${pincode}`);
+        if (res.data.success) {
+          const { city, state, country, postOffices } = res.data.data;
+          formik.setFieldValue("city", city);
+          formik.setFieldValue("state", state);
+          formik.setFieldValue("country", country);
+          setPostOfficeData(postOffices);
+          if (postOffices.length) {
+            formik.setFieldValue("locality", postOffices[0].Name);
           }
-        } catch (error) {
-          console.error("Error fetching location data:", error);
-          formik.setFieldValue("city", "");
-          formik.setFieldValue("state", "");
-          formik.setFieldValue("locality", "");
-          setPostOfficeData([]);
-        } finally {
-          setIsLoadingLocation(false);
+        } else {
+          clearLocationFields();
         }
+      } catch (error) {
+        console.error("Error fetching location:", error);
+        clearLocationFields();
+      } finally {
+        setIsLoadingLocation(false);
       }
-    };
+    }
+  };
 
-    const debounceTimer = setTimeout(() => {
-      fetchLocationByPincode();
-    }, 800);
+  const clearLocationFields = () => {
+    formik.setFieldValue("city", "");
+    formik.setFieldValue("state", "");
+    formik.setFieldValue("locality", "");
+    setPostOfficeData([]);
+  };
 
-    return () => clearTimeout(debounceTimer);
-  }, [formik.values.pincode]);
+  const debounceTimer = setTimeout(fetchLocationByPincode, 800);
+  return () => clearTimeout(debounceTimer);
+}, [formik.values.pincode]);
+
+
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
