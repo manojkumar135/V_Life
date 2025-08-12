@@ -23,7 +23,7 @@ export default function LeftTeam() {
     try {
       setLoading(true);
       const { data } = await axios.get(API_URL);
-      console.log("Fetched users:", data);
+      // console.log("Fetched users:", data);
       setUsersData(data.data || []);
       setTotalItems(data.data?.length || 0);
     } catch (error) {
@@ -51,15 +51,14 @@ export default function LeftTeam() {
   };
 
   // Edit user (navigate)
-const handleEdit = (id: string) => {
-  router.push(`/administration/users/edituser/${id}`);
-};
-
+  const handleEdit = (id: string) => {
+    router.push(`/administration/users/edituser/${id}`);
+  };
 
   const columns = [
     { field: "user_id", headerName: "User ID", flex: 1 },
     { field: "user_name", headerName: "User Name", flex: 1 },
-    { field: "contact", headerName: "Contact", flex: 1},
+    { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 1 },
     { field: "role", headerName: "Role", flex: 1 },
     {

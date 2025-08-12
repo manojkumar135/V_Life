@@ -1,0 +1,123 @@
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/mongodb";
+import { Login } from "@/models/login";
+import mongoose from "mongoose";
+
+// POST - Create new login
+export async function POST(request) {
+  try {
+    await connectDB();
+    const body = await request.json();
+    const newLogin = await Login.create(body);
+    return NextResponse.json({ success: true, data: newLogin }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
+// GET - Fetch all logins OR single login by id or login_id
+export async function GET(request) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id") || searchParams.get("login_id");
+    console.log("Fetching login with ID:", id);
+
+    if (id) {
+      let login;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        login = await Login.findById(id);
+      } else {
+        login = await Login.findOne({ login_id: id });
+      }
+      if (!login) {
+        return NextResponse.json({ success: false, message: "Login not found" }, { status: 404 });
+      }
+      return NextResponse.json({ success: true, data: login }, { status: 200 });
+    }
+
+    const logins = await Login.find();
+    return NextResponse.json({ success: true, data: logins }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
+// PUT - Replace a login record
+export async function PUT(request) {
+  try {
+    await connectDB();
+    const { id, login_id, ...rest } = await request.json();
+    const updateId = id || login_id;
+
+    if (!updateId) {
+      return NextResponse.json(
+        { success: false, message: "ID is required" },
+        { status: 400 }
+      );
+    }
+
+    let updatedLogin;
+    if (mongoose.Types.ObjectId.isValid(updateId)) {
+      updatedLogin = await Login.findByIdAndUpdate(updateId, rest, { new: true });
+    } else {
+      updatedLogin = await Login.findOneAndUpdate({ login_id: updateId }, rest, { new: true });
+    }
+
+    if (!updatedLogin) {
+      return NextResponse.json({ success: false, message: "Login not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updatedLogin }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
+// PATCH - Partial update for login
+export async function PATCH(request) {
+  try {
+    await connectDB();
+    const { id, login_id, ...updates } = await request.json();
+    const updateId = id || login_id;
+
+    let updatedLogin;
+    if (mongoose.Types.ObjectId.isValid(updateId)) {
+      updatedLogin = await Login.findByIdAndUpdate(updateId, updates, { new: true });
+    } else {
+      updatedLogin = await Login.findOneAndUpdate({ login_id: updateId }, updates, { new: true });
+    }
+
+    if (!updatedLogin) {
+      return NextResponse.json({ success: false, message: "Login not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updatedLogin }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}
+
+// DELETE - Remove a login
+export async function DELETE(request) {
+  try {
+    await connectDB();
+    const { id, login_id } = await request.json();
+    const deleteId = id || login_id;
+
+    let deletedLogin;
+    if (mongoose.Types.ObjectId.isValid(deleteId)) {
+      deletedLogin = await Login.findByIdAndDelete(deleteId);
+    } else {
+      deletedLogin = await Login.findOneAndDelete({ login_id: deleteId });
+    }
+
+    if (!deletedLogin) {
+      return NextResponse.json({ success: false, message: "Login not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, message: "Login deleted" }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+  }
+}

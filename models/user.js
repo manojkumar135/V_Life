@@ -13,10 +13,10 @@ const UserSchema = new mongoose.Schema(
     district: { type: String,},
     locality: { type: String,  },
     created_at: { type: Date, default: Date.now },
-    created_by: { type: String, required: true },
+    created_by: { type: String, },
     last_modified_by: { type: String },
     last_modified_at: { type: Date },
-    role: { type: String, required: true },
+    role: { type: String,  },
   },
   {
     timestamps: false, // not auto — you have custom fields

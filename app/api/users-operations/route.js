@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
+import mongoose from "mongoose"; // <-- Add this
+
 
 // POST - Create new user
 export async function POST(request) {
@@ -19,10 +21,17 @@ export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const id = searchParams.get("id") || searchParams.get("user_id");
+    console.log("Fetching user with ID:", id);
 
     if (id) {
-      const user = await User.findById(id);
+      // Convert id to ObjectId if it's a valid 24-char hex string
+      let user;
+      if (mongoose.Types.ObjectId.isValid(id)) {
+        user = await User.findById(id);
+      } else {
+        user = await User.findOne({ user_id: id });
+      }
       if (!user) {
         return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
       }
@@ -36,15 +45,44 @@ export async function GET(request) {
   }
 }
 
+
 // PUT - Replace a user
 export async function PUT(request) {
   try {
     await connectDB();
-    const { id, ...rest } = await request.json();
-    const updatedUser = await User.findByIdAndUpdate(id, rest, { new: true });
+    const { id, user_id, ...rest } = await request.json();
+    
+    // Use either id or user_id consistently
+    const updateId = id || user_id;
+    
+    if (!updateId) {
+      return NextResponse.json(
+        { success: false, message: "ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      updateId, 
+      rest, 
+      { new: true }
+    );
+    
+    if (!updatedUser) {
+      return NextResponse.json(
+        { success: false, message: "User not found" },
+        { status: 404 }
+      );
+    }
+    
+    console.log("Updated user:", updatedUser);
     return NextResponse.json({ success: true, data: updatedUser }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    console.error("Update error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message }, 
+      { status: 500 }
+    );
   }
 }
 
