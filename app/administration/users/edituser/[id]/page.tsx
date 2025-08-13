@@ -10,6 +10,7 @@ import { useRouter, useParams } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import SelectField from "@/components/common/selectinput";
 import Button from "@/components/common/submitbutton";
+import ShowToast from "@/components/common/Toast/toast";
 
 interface UserData {
   user_id: string;
@@ -73,15 +74,20 @@ export default function AddEditUserForm() {
 
         const res = await axios.put("/api/users-operations", payload);
         if (res?.data?.success) {
-          alert("User saved successfully");
+          // alert("User saved successfully");
+                        ShowToast.success("User updated successfully!");
+          
           router.push("/administration/users");
         } else {
           console.error("Save failed:", res?.data);
-          alert("Failed to save user");
+          // alert("Failed to save user");
+          ShowToast.error("Failed to save user.");
         }
       } catch (err) {
         console.error(err);
-        alert("Failed to save user");
+        // alert("Failed to save user");
+                  ShowToast.error("Failed to update User.");
+
       } finally {
         setSubmitting(false);
       }
@@ -293,7 +299,7 @@ export default function AddEditUserForm() {
 
           <div className="flex justify-end">
             <Button type="submit" disabled={formik.isSubmitting || isLoadingLocation}>
-              {formik.isSubmitting ? "Saving..." : id ? "Update User" : "Add User"}
+              {formik.isSubmitting ? "Saving..." : id ? "UPDATE" : "Add User"}
             </Button>
           </div>
         </form>

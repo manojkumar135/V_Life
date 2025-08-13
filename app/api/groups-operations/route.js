@@ -101,7 +101,9 @@ export async function PATCH(request) {
 export async function DELETE(request) {
   try {
     await connectDB();
-    const { id, group_id } = await request.json();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const group_id = searchParams.get("group_id");
 
     let deletedGroup;
     if (mongoose.Types.ObjectId.isValid(id || group_id)) {
@@ -119,3 +121,4 @@ export async function DELETE(request) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+

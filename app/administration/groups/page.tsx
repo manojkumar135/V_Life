@@ -1,44 +1,61 @@
 "use client";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
 import { FaTrash } from "react-icons/fa";
 import { GoPencil } from "react-icons/go";
 import { useRouter } from "next/navigation";
-
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
-
-const groupsData = [
-  {
-    id: "GP000001",
-    name: "Group 1",
-    roles: "Manager , Direct Partners",
-  },
-  {
-    id: "GP000002",
-    name: "Group 2",
-    roles: "Admin , Staff",
-  },
-  {
-    id: "GP000003",
-    name: "Group 3",
-    roles: "Manager , Admin",
-  },
-  {
-    id: "GP000004",
-    name: "Group 4",
-    roles: "Direct Partners , Viewer",
-  },
-];
+import axios from "axios";
 
 export default function GroupsPage() {
   const router = useRouter();
+  const { query, handleChange } = useSearch();
+  const [groupsData, setGroupsData] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const API_URL = "/api/groups-operations"; // Change this to your actual API route
+
+  // Fetch groups
+  const fetchGroups = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL);
+      setGroupsData(data.data || []);
+      setTotalItems(data.data?.length || 0);
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
+
+  // Delete group
+  const handleDelete = async (id: string) => {
+    try {
+      await axios.delete(`${API_URL}?group_id=${id}`);
+      setGroupsData((prev) => prev.filter((group: any) => group._id !== id));
+      setTotalItems((prev) => prev - 1);
+    } catch (error) {
+      console.error("Error deleting group:", error);
+    }
+  };
+
+  // Edit group
+  const handleEdit = (id: string) => {
+    router.push(`/administration/groups/editgroup/${id}`);
+  };
 
   const columns = [
-    { field: "id", headerName: "Group ID", flex: 1 },
-    { field: "name", headerName: "Group Name", flex: 1 },
+    { field: "group_id", headerName: "Group ID", flex: 1 },
+    { field: "group_name", headerName: "Group Name", flex: 1 },
     { field: "roles", headerName: "Roles", flex: 2 },
     {
       field: "actions",
@@ -48,10 +65,16 @@ export default function GroupsPage() {
       disableColumnMenu: true,
       renderCell: (params: any) => (
         <div className="flex gap-2 items-center">
-          <button className="text-green-600 cursor-pointer ml-5 mt-2 mr-5">
+          <button
+            className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
+            onClick={() => handleEdit(params.row._id)}
+          >
             <GoPencil size={18} />
           </button>
-          <button className="text-red-600 cursor-pointer ml-5 mt-2 mr-5">
+          <button
+            className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
+            onClick={() => handleDelete(params.row._id)}
+          >
             <FaTrash size={16} />
           </button>
         </div>
@@ -59,12 +82,9 @@ export default function GroupsPage() {
     },
   ];
 
-  const { query, handleChange } = useSearch();
-  const [totalItems, setTotalItems] = useState(0);
-
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
-      //   fetchData(offset, limit, query);
+      // Optional: Implement API pagination if backend supports it
     },
     [query]
   );
@@ -80,7 +100,7 @@ export default function GroupsPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 20,
+    itemsPerPage: 10,
     onPageChange: handlePageChange,
   });
 
@@ -88,13 +108,13 @@ export default function GroupsPage() {
     router.push("/administration/groups/addgroup");
   };
 
-  const onBack=()=>{
-    router.push("/administration")
-  }
+  const onBack = () => {
+    router.push("/administration");
+  };
 
   return (
     <Layout>
-      <div className="p-6  w-full max-w-[98%] mx-auto -mt-5">
+      <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
         <HeaderWithActions
           title="Groups"
           search={query}
@@ -111,10 +131,11 @@ export default function GroupsPage() {
         <Table
           columns={columns}
           rows={groupsData}
-          rowIdField="id"
+          rowIdField="_id"
           pageSize={10}
           checkboxSelection
-          onRowClick={(row) => console.log("Row clicked:", row)}
+          // loading={loading}
+          onRowClick={(row) => console.log("Group clicked:", row)}
         />
       </div>
     </Layout>

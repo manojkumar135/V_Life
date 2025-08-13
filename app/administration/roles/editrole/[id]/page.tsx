@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, useEffect, FormEvent } from "react";
 import Layout from "@/layout/Layout";
 import { IoArrowBackOutline } from "react-icons/io5";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import CheckboxField from "@/components/common/checkboxinput";
 import TextareaField from "@/components/common/textareainput";
@@ -11,30 +11,53 @@ import SubmitButton from "@/components/common/submitbutton";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 
-interface GroupFormData {
-  groupId: string;
-  groupName: string;
+interface RoleFormData {
+  roleId: string;
+  roleName: string;
   components: string[];
   description: string;
 }
 
-export default function AddGroupForm() {
+export default function EditRolePage() {
   const router = useRouter();
+  const params = useParams();
+  const roleId = params?.id as string;
 
-  const [formData, setFormData] = useState<GroupFormData>({
-    groupId: "",
-    groupName: "",
+  const [formData, setFormData] = useState<RoleFormData>({
+    roleId: "",
+    roleName: "",
     components: [],
     description: "",
   });
 
-  const componentOptions = [
-    "Manager",
-    "Right",
-    "Left",
-    "Direct Partners",
-    "None",
-  ];
+  const [loading, setLoading] = useState(false);
+
+  const componentOptions = ["Administration", "Wallet", "Orders", "History"];
+
+  // Fetch role data on mount
+  useEffect(() => {
+    if (!roleId) return;
+    const fetchRole = async () => {
+      try {
+        setLoading(true);
+        const { data } = await axios.get(`/api/roles-operations?role_id=${roleId}`);
+        if (data?.data) {
+          setFormData({
+            roleId: data.data.role_id,
+            roleName: data.data.role_name,
+            components: data.data.components || [],
+            description: data.data.description || "",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching role:", error);
+        ShowToast.error("Failed to fetch role details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRole();
+  }, [roleId]);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -55,31 +78,29 @@ export default function AddGroupForm() {
     });
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
+      setLoading(true);
       const payload = {
-        group_id: formData.groupId,
-        group_name: formData.groupName,
-        roles: formData.components,
-        created_by: "admin",
+        role_id: formData.roleId,
+        role_name: formData.roleName,
+        components: formData.components,
+        description: formData.description,
         last_modified_by: "admin",
-        description: "none",
-        group_status: "active",
       };
 
-      const res = await axios.post("/api/groups-operations", payload);
+      const res = await axios.patch(`/api/roles-operations?role_id=${roleId}`, payload);
 
       if (res.data.success) {
-        // alert("Group created successfully!");
-              ShowToast.success("Group created successfully!");
-
-        router.push("/administration/groups");
+        ShowToast.success("Role updated successfully!");
+        router.push("/administration/roles");
       }
     } catch (error) {
-      console.error(error);
-      // alert("Failed to create group.");
-      ShowToast.error("Failed to create group.");
+      console.error("Error updating role:", error);
+      ShowToast.error("Failed to update Role.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,10 +112,10 @@ export default function AddGroupForm() {
           <IoArrowBackOutline
             size={25}
             className="mr-3 cursor-pointer"
-            onClick={() => router.push("/administration/groups")}
+            onClick={() => router.push("/administration/roles")}
           />
           <h2 className="text-xl max-sm:text-[1rem] font-semibold">
-            Add New Group
+            Edit Role
           </h2>
         </div>
 
@@ -103,18 +124,19 @@ export default function AddGroupForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <InputField
-                label="Group ID"
-                name="groupId"
+                label="Role ID"
+                name="roleId"
                 type="text"
-                value={formData.groupId}
+                value={formData.roleId}
                 onChange={handleInputChange}
+                disabled
               />
               <InputField
-                label="Group Name"
-                name="groupName"
+                label="Role Name"
+                name="roleName"
                 type="text"
-                placeholder="Group Name"
-                value={formData.groupName}
+                placeholder="Role Name"
+                value={formData.roleName}
                 onChange={handleInputChange}
               />
             </div>
@@ -135,7 +157,9 @@ export default function AddGroupForm() {
             />
 
             <div className="flex justify-end">
-              <SubmitButton type="submit">Submit</SubmitButton>
+              <SubmitButton type="submit">
+                {loading ? "Updating..." : "UPDATE"}
+              </SubmitButton>
             </div>
           </form>
         </div>

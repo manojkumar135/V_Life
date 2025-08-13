@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { Role } from "@/models/role";
+import { Role } from "@/models/roles";
 import mongoose from "mongoose";
 
 // POST - Create new role
@@ -101,7 +101,9 @@ export async function PATCH(request) {
 export async function DELETE(request) {
   try {
     await connectDB();
-    const { id, role_id } = await request.json();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const role_id = searchParams.get("role_id");
 
     let deletedRole;
     if (mongoose.Types.ObjectId.isValid(id || role_id)) {
@@ -119,3 +121,4 @@ export async function DELETE(request) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+

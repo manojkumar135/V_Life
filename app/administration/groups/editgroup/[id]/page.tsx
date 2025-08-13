@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, useEffect } from "react";
 import Layout from "@/layout/Layout";
 import { IoArrowBackOutline } from "react-icons/io5";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import CheckboxField from "@/components/common/checkboxinput";
 import TextareaField from "@/components/common/textareainput";
@@ -18,8 +18,10 @@ interface GroupFormData {
   description: string;
 }
 
-export default function AddGroupForm() {
+export default function EditGroupPage() {
   const router = useRouter();
+  const params = useParams();
+  const groupId = params?.id as string;
 
   const [formData, setFormData] = useState<GroupFormData>({
     groupId: "",
@@ -28,6 +30,8 @@ export default function AddGroupForm() {
     description: "",
   });
 
+  const [loading, setLoading] = useState(false);
+
   const componentOptions = [
     "Manager",
     "Right",
@@ -35,6 +39,32 @@ export default function AddGroupForm() {
     "Direct Partners",
     "None",
   ];
+
+  // Fetch group data on mount
+  useEffect(() => {
+    if (!groupId) return;
+    const fetchGroup = async () => {
+      try {
+        setLoading(true);
+        const { data } = await axios.get(
+          `/api/groups-operations?group_id=${groupId}`
+        );
+        if (data?.data) {
+          setFormData({
+            groupId: data.data.group_id,
+            groupName: data.data.group_name,
+            components: data.data.roles || [],
+            description: data.data.description || "",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching group:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGroup();
+  }, [groupId]);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -55,31 +85,19 @@ export default function AddGroupForm() {
     });
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = {
-        group_id: formData.groupId,
-        group_name: formData.groupName,
-        roles: formData.components,
-        created_by: "admin",
-        last_modified_by: "admin",
-        description: "none",
-        group_status: "active",
-      };
+      setLoading(true);
+      await axios.patch(`/api/groups-operations?group_id=${groupId}`, formData);
+      ShowToast.success("Group updated successfully!");
 
-      const res = await axios.post("/api/groups-operations", payload);
-
-      if (res.data.success) {
-        // alert("Group created successfully!");
-              ShowToast.success("Group created successfully!");
-
-        router.push("/administration/groups");
-      }
+      router.push("/administration/groups");
     } catch (error) {
-      console.error(error);
-      // alert("Failed to create group.");
-      ShowToast.error("Failed to create group.");
+      console.error("Error updating group:", error);
+      ShowToast.error("Failed to update Group.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,7 +112,7 @@ export default function AddGroupForm() {
             onClick={() => router.push("/administration/groups")}
           />
           <h2 className="text-xl max-sm:text-[1rem] font-semibold">
-            Add New Group
+            Edit Group
           </h2>
         </div>
 
@@ -108,6 +126,7 @@ export default function AddGroupForm() {
                 type="text"
                 value={formData.groupId}
                 onChange={handleInputChange}
+                disabled
               />
               <InputField
                 label="Group Name"
@@ -135,7 +154,9 @@ export default function AddGroupForm() {
             />
 
             <div className="flex justify-end">
-              <SubmitButton type="submit">Submit</SubmitButton>
+              <SubmitButton type="submit">
+                {loading ? "Updating..." : "UPDATE"}
+              </SubmitButton>
             </div>
           </form>
         </div>

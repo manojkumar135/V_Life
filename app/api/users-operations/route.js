@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
-import mongoose from "mongoose"; // <-- Add this
-
+import mongoose from "mongoose";
 
 // POST - Create new user
 export async function POST(request) {
@@ -16,25 +15,25 @@ export async function POST(request) {
   }
 }
 
-// GET - Fetch all users OR single user by id
+// GET - Fetch all users OR single user by id / user_id
 export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id") || searchParams.get("user_id");
-    console.log("Fetching user with ID:", id);
 
     if (id) {
-      // Convert id to ObjectId if it's a valid 24-char hex string
       let user;
       if (mongoose.Types.ObjectId.isValid(id)) {
         user = await User.findById(id);
       } else {
         user = await User.findOne({ user_id: id });
       }
+
       if (!user) {
         return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
       }
+
       return NextResponse.json({ success: true, data: user }, { status: 200 });
     }
 
@@ -45,44 +44,31 @@ export async function GET(request) {
   }
 }
 
-
-// PUT - Replace a user
+// PUT - Replace a user (full update)
 export async function PUT(request) {
   try {
     await connectDB();
     const { id, user_id, ...rest } = await request.json();
-    
-    // Use either id or user_id consistently
     const updateId = id || user_id;
-    
+
     if (!updateId) {
-      return NextResponse.json(
-        { success: false, message: "ID is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      updateId, 
-      rest, 
-      { new: true }
-    );
-    
-    if (!updatedUser) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
-      );
+    let updatedUser;
+    if (mongoose.Types.ObjectId.isValid(updateId)) {
+      updatedUser = await User.findByIdAndUpdate(updateId, rest, { new: true });
+    } else {
+      updatedUser = await User.findOneAndUpdate({ user_id: updateId }, rest, { new: true });
     }
-    
-    console.log("Updated user:", updatedUser);
+
+    if (!updatedUser) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true, data: updatedUser }, { status: 200 });
   } catch (error) {
-    console.error("Update error:", error);
-    return NextResponse.json(
-      { success: false, message: error.message }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
@@ -90,8 +76,24 @@ export async function PUT(request) {
 export async function PATCH(request) {
   try {
     await connectDB();
-    const { id, ...updates } = await request.json();
-    const updatedUser = await User.findByIdAndUpdate(id, updates, { new: true });
+    const { id, user_id, ...updates } = await request.json();
+    const updateId = id || user_id;
+
+    if (!updateId) {
+      return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
+    }
+
+    let updatedUser;
+    if (mongoose.Types.ObjectId.isValid(updateId)) {
+      updatedUser = await User.findByIdAndUpdate(updateId, updates, { new: true });
+    } else {
+      updatedUser = await User.findOneAndUpdate({ user_id: updateId }, updates, { new: true });
+    }
+
+    if (!updatedUser) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true, data: updatedUser }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -102,8 +104,22 @@ export async function PATCH(request) {
 export async function DELETE(request) {
   try {
     await connectDB();
-    const { id } = await request.json();
-    await User.findByIdAndDelete(id);
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const user_id = searchParams.get("user_id");
+
+    let deletedUser;
+    if (mongoose.Types.ObjectId.isValid(id || user_id)) {
+      deletedUser = await User.findByIdAndDelete(id || user_id);
+    } else {
+      deletedUser = await User.findOneAndDelete({ user_id });
+    }
+
+    if (!deletedUser) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+    }
+
     return NextResponse.json({ success: true, message: "User deleted" }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

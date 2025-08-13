@@ -5,6 +5,8 @@ const GroupSchema = new mongoose.Schema(
     group_id: { type: String, required: true, unique: true },
     group_name: { type: String, required: true },
     roles: { type: [String], default: [] }, // array of role names or IDs
+    description: { type: String,},
+    group_status:{ type: String,},
     created_at: { type: Date, default: Date.now },
     created_by: { type: String, },
     last_modified_by: { type: String },

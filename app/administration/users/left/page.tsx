@@ -2,7 +2,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
-import { FaTrash, FaEdit } from "react-icons/fa";
+import { FaTrash,  } from "react-icons/fa";
+import { GoPencil } from "react-icons/go";
+
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
@@ -23,27 +25,25 @@ export default function LeftTeam() {
     try {
       setLoading(true);
       const { data } = await axios.get(API_URL);
-      // console.log("Fetched users:", data);
-      setUsersData(data.data || []);
-      setTotalItems(data.data?.length || 0);
+      const users = data.data || [];
+      setUsersData(users);
+      setTotalItems(users.length);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
   }, []);
-
-  // console.log("Users data:", usersData);
-
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
   // Delete user
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     try {
       await axios.delete(`${API_URL}?user_id=${id}`);
-      setUsersData((prev) => prev.filter((user: any) => user.id !== id));
+      // Remove from UI immediately
+      setUsersData((prev) => prev.filter((user: any) => user._id !== id));
       setTotalItems((prev) => prev - 1);
     } catch (error) {
       console.error("Error deleting user:", error);
@@ -59,7 +59,7 @@ export default function LeftTeam() {
     { field: "user_id", headerName: "User ID", flex: 1 },
     { field: "user_name", headerName: "User Name", flex: 1 },
     { field: "contact", headerName: "Contact", flex: 1 },
-    { field: "mail", headerName: "Email", flex: 1 },
+    { field: "mail", headerName: "Email", flex: 2 },
     { field: "role", headerName: "Role", flex: 1 },
     {
       field: "actions",
@@ -69,26 +69,26 @@ export default function LeftTeam() {
       disableColumnMenu: true,
       renderCell: (params: any) => (
         <div className="flex gap-2 items-center">
-          <button
-            className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
-            onClick={() => handleEdit(params.row._id)}
-          >
-            <FaEdit size={18} />
-          </button>
-          <button
-            className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
-            onClick={() => handleDelete(params.row._id)}
-          >
-            <FaTrash size={16} />
-          </button>
-        </div>
+                 <button
+                   className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
+                   onClick={() => handleEdit(params.row._id)}
+                 >
+                   <GoPencil size={18} />
+                 </button>
+                 <button
+                   className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
+                   onClick={() => handleDelete(params.row._id)}
+                 >
+                   <FaTrash size={16} />
+                 </button>
+               </div>
       ),
     },
   ];
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
-      // Here you could implement API pagination if backend supports it
+      // Optional: implement server-side pagination
     },
     [query]
   );
@@ -126,7 +126,6 @@ export default function LeftTeam() {
           onMore={() => console.log("More options clicked")}
         />
 
-        {/* Table with checkbox selection */}
         <Table
           columns={columns}
           rows={usersData}

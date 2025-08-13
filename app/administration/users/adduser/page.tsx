@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import Button from "@/components/common/submitbutton";
 import SelectField from "@/components/common/selectinput";
+import ShowToast from "@/components/common/Toast/toast";
 
 const validationSchema = Yup.object().shape({
   userId: Yup.string().required("User ID is required"),
@@ -68,12 +69,17 @@ export default function AddNewUserForm() {
       role: "user", // or from dropdown
     });
     if (res.data.success) {
-      alert("User added successfully!");
+      // alert("User added successfully!");
+              ShowToast.success("User created successfully!");
+
+
       router.push("/administration/users");
     }
   } catch (err) {
     console.error(err);
-    alert("Failed to add user");
+          ShowToast.error("Failed to create user.");
+
+    // alert("Failed to add user");
   }
 },
 

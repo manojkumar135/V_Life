@@ -1,42 +1,61 @@
 "use client";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
-import { FaTrash, FaEdit } from "react-icons/fa";
+import { FaTrash } from "react-icons/fa";
+import { GoPencil } from "react-icons/go";
+import { useRouter } from "next/navigation";
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
-import { useRouter } from "next/navigation";
-
-const rolesData = [
-  {
-    id: "RL000001",
-    name: "Manager",
-    description: "For Manager Section",
-  },
-  {
-    id: "RL000002",
-    name: "Direct Partner",
-    description: "For Direct Partners sections",
-  },
-  {
-    id: "RL000003",
-    name: "Left",
-    description: "For Left Section",
-  },
-  {
-    id: "RL000004",
-    name: "Right",
-    description: "For Right Section",
-  },
-];
+import axios from "axios";
 
 export default function RolesPage() {
   const router = useRouter();
+  const { query, handleChange } = useSearch();
+  const [rolesData, setRolesData] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const API_URL = "/api/roles-operations"; // Change this to your actual API route
+
+  // Fetch roles
+  const fetchRoles = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL);
+      setRolesData(data.data || []);
+      setTotalItems(data.data?.length || 0);
+    } catch (error) {
+      console.error("Error fetching roles:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
+
+  // Delete role
+  const handleDelete = async (id: string) => {
+    try {
+      await axios.delete(`${API_URL}?role_id=${id}`);
+      setRolesData((prev) => prev.filter((role: any) => role._id !== id));
+      setTotalItems((prev) => prev - 1);
+    } catch (error) {
+      console.error("Error deleting role:", error);
+    }
+  };
+
+  // Edit role
+  const handleEdit = (id: string) => {
+    router.push(`/administration/roles/editrole/${id}`);
+  };
 
   const columns = [
-    { field: "id", headerName: "Role ID", flex: 1 },
-    { field: "name", headerName: "Role Name", flex: 1 },
+    { field: "role_id", headerName: "Role ID", flex: 1 },
+    { field: "role_name", headerName: "Role Name", flex: 1 },
     { field: "description", headerName: "Description", flex: 2 },
     {
       field: "actions",
@@ -46,10 +65,16 @@ export default function RolesPage() {
       disableColumnMenu: true,
       renderCell: (params: any) => (
         <div className="flex gap-2 items-center">
-          <button className="text-green-600 cursor-pointer ml-5 mt-2 mr-5">
-            <FaEdit size={18} />
+          <button
+            className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
+            onClick={() => handleEdit(params.row._id)}
+          >
+            <GoPencil size={18} />
           </button>
-          <button className="text-red-600 cursor-pointer ml-5 mt-2 mr-5">
+          <button
+            className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
+            onClick={() => handleDelete(params.row._id)}
+          >
             <FaTrash size={16} />
           </button>
         </div>
@@ -57,12 +82,9 @@ export default function RolesPage() {
     },
   ];
 
-  const { query, handleChange } = useSearch();
-  const [totalItems, setTotalItems] = useState(0);
-
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
-      //   fetchData(offset, limit, query);
+      // Optional: Implement API pagination if backend supports it
     },
     [query]
   );
@@ -78,7 +100,7 @@ export default function RolesPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 20,
+    itemsPerPage: 10,
     onPageChange: handlePageChange,
   });
 
@@ -97,10 +119,10 @@ export default function RolesPage() {
           title="Roles"
           search={query}
           setSearch={handleChange}
-          addLabel="+ ADD ROLE"
           showAddButton
           showBack
           onBack={onBack}
+          addLabel="+ ADD ROLE"
           onAdd={handleAddRole}
           onMore={() => console.log("More options clicked")}
         />
@@ -109,10 +131,11 @@ export default function RolesPage() {
         <Table
           columns={columns}
           rows={rolesData}
-          rowIdField="id"
+          rowIdField="_id"
           pageSize={10}
           checkboxSelection
-          onRowClick={(row) => console.log("Row clicked:", row)}
+          // loading={loading}
+          onRowClick={(row) => console.log("Role clicked:", row)}
         />
       </div>
     </Layout>

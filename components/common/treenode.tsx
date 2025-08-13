@@ -4,11 +4,10 @@ import { FaUserCircle, FaPlusCircle } from "react-icons/fa";
 export interface TreeNode {
   id: string;
   name: string;
-    color?: string;
+  color?: string;
   left?: TreeNode;
   right?: TreeNode;
 }
-
 
 interface Props {
   node: TreeNode;

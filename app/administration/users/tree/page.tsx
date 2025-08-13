@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import Layout from "@/layout/Layout";
-import BinaryTreeNode from "@/components/treenode";
+import BinaryTreeNode from "@/components/common/treenode";
 import { useRouter } from "next/navigation";
 import { IoArrowBackOutline } from "react-icons/io5";
 

@@ -1,0 +1,6 @@
+[data-sonner-toast] button[data-close-button="true"] {
+  position: absolute;
+  right: 8px !important;
+  top: 8px !important;
+  z-index: 10;
+}
