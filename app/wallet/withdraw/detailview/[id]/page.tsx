@@ -1,30 +1,78 @@
 "use client";
 
-import React, { useState, ChangeEvent, FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import { IoArrowBackOutline } from "react-icons/io5";
+import React, { useState, ChangeEvent, useEffect, FormEvent } from "react";
 import Layout from "@/layout/Layout";
+import { IoArrowBackOutline } from "react-icons/io5";
+import { useRouter, useParams } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import SubmitButton from "@/components/common/submitbutton";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 
 interface WithdrawFormData {
+  withdrawId: string;
   walletId: string;
   availableBalance: string;
+  withdrawAddress: string;
+  date: string;
   withdrawAmount: string;
+  status: string;
   otp: string;
 }
 
-export default function MakeNewWithdrawalForm() {
+export default function EditWithdrawPage() {
   const router = useRouter();
+  const params = useParams();
+  const withdrawId = params?.id as string;
 
   const [formData, setFormData] = useState<WithdrawFormData>({
-    walletId: "WA000003", // Default or fetched value
-    availableBalance: "1000.00", // Default or fetched value
+    withdrawId: "",
+    walletId: "",
+    availableBalance: "",
+    withdrawAddress: "",
+    date: "",
     withdrawAmount: "",
+    status: "",
     otp: "",
   });
+
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!withdrawId) return;
+
+    const fetchWithdraw = async () => {
+      try {
+        setLoading(true);
+        const { data } = await axios.get(
+          `/api/withdraw-operations?withdraw_id=${withdrawId}`
+        );
+
+        if (data?.data) {
+          const w = data.data;
+          setFormData({
+            withdrawId: w.withdraw_id || "",
+            walletId: w.wallet_id || "",
+            availableBalance: w.available_balance || "", // Add this if backend sends it
+            withdrawAddress: w.user_id || "",
+            date: w.date || "",
+            withdrawAmount: w.withdraw_amount || "",
+            status: w.status || "",
+            otp: "",
+          });
+        } else {
+          ShowToast.error("Withdrawal not found.");
+        }
+      } catch (error) {
+        console.error("Error fetching withdrawal:", error);
+        ShowToast.error("Failed to fetch withdrawal details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchWithdraw();
+  }, [withdrawId]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -32,45 +80,42 @@ export default function MakeNewWithdrawalForm() {
   };
 
   const handleVerifyOtp = () => {
-    // TODO: Implement real OTP verification
+    // Your OTP verification logic
     ShowToast.success("OTP verified successfully!");
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    // Example validation
-    if (parseFloat(formData.withdrawAmount) < 500) {
-      ShowToast.error("Minimum ₹ 500.00 can be withdrawn");
-      return;
-    }
-
     try {
+      setLoading(true);
       const payload = {
+        withdraw_id: formData.withdrawId,
         wallet_id: formData.walletId,
-        available_balance: parseFloat(formData.availableBalance),
-        withdraw_amount: parseFloat(formData.withdrawAmount),
+        available_balance: formData.availableBalance,
+        user_id: formData.withdrawAddress,
+        date: formData.date,
+        withdraw_amount: formData.withdrawAmount,
+        status: formData.status,
         otp: formData.otp,
-        created_by: "admin", // Or current logged-in user
-        // Dummy required values (replace with actual)
-        user_id: "DUMMY_USER_ID_12345",
-        user_name: "Hello",
-        withdraw_id: "DUMMY_WITHDRAW_ID_54321",
-        date: new Date(),
-        status: "Pending",
+        last_modified_by: "admin",
       };
 
-      const res = await axios.post("/api/withdraw-operations", payload);
+      const res = await axios.patch(
+        `/api/withdraw-operations?withdraw_id=${withdrawId}`,
+        payload
+      );
 
       if (res.data.success) {
-        ShowToast.success("Withdrawal request submitted!");
+        ShowToast.success("Withdrawal updated successfully!");
         router.push("/wallet/withdraw");
       } else {
-        ShowToast.error(res.data.message || "Failed to submit withdrawal");
+        ShowToast.error(res.data.message || "Failed to update withdrawal.");
       }
     } catch (error) {
-      console.error(error);
-      ShowToast.error("Something went wrong while making withdrawal");
+      console.error("Error updating withdrawal:", error);
+      ShowToast.error("Failed to update withdrawal.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -85,7 +130,7 @@ export default function MakeNewWithdrawalForm() {
             onClick={() => router.push("/wallet/withdraw")}
           />
           <p className="text-xl max-md:text-[1rem] font-semibold">
-            Make New Withdrawal
+            Withdrawal DetailView
           </p>
         </div>
 
@@ -93,6 +138,13 @@ export default function MakeNewWithdrawalForm() {
         <div className="rounded-xl px-6 max-md:p-4 bg-white">
           <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <InputField
+                label="Transaction ID"
+                name="withdrawId"
+                value={formData.withdrawId}
+                onChange={handleInputChange}
+                disabled
+              />
               <InputField
                 label="Wallet ID"
                 name="walletId"
@@ -109,15 +161,34 @@ export default function MakeNewWithdrawalForm() {
                 prefix="₹"
               />
               <InputField
+                label="Withdraw Address"
+                name="withdrawAddress"
+                value={formData.withdrawAddress}
+                onChange={handleInputChange}
+              />
+              <InputField
+                label="Date"
+                name="date"
+                type="date"
+                value={formData.date}
+                onChange={handleInputChange}
+              />
+              <InputField
                 label="Withdraw Amount"
                 name="withdrawAmount"
+                prefix="₹"
                 value={formData.withdrawAmount}
                 onChange={handleInputChange}
-                prefix="₹"
+              />
+              <InputField
+                label="Status"
+                name="status"
+                value={formData.status}
+                onChange={handleInputChange}
               />
 
               {/* OTP Field */}
-              <div className="flex flex-col gap-1">
+              {/* <div className="flex flex-col gap-1">
                 <label
                   htmlFor="otp"
                   className="text-[0.9rem] max-md:text-[0.8rem] font-semibold text-gray-700"
@@ -142,33 +213,34 @@ export default function MakeNewWithdrawalForm() {
                     Verify
                   </button>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Summary */}
-            {formData.withdrawAmount && (
+            {/* {formData.withdrawAmount && (
               <div className="flex justify-end mt-2 text-sm font-medium">
-                Make New Withdrawal:{" "}
+                Make Withdrawal:{" "}
                 <span className="font-bold ml-1 text-black">
                   ₹ {formData.withdrawAmount}
                 </span>
               </div>
-            )}
+            )} */}
 
             {/* Submit */}
-            <div className="flex justify-end mt-4">
-              <SubmitButton type="submit">Withdraw</SubmitButton>
-            </div>
+            {/* <div className="flex justify-end mt-4">
+              <SubmitButton type="submit">
+                {loading ? "Updating..." : "UPDATE"}
+              </SubmitButton>
+            </div> */}
 
             {/* Note */}
-            <p className="text-xs text-gray-600 mt-2">
+            {/* <p className="text-xs text-gray-600 mt-2">
               <span className="font-semibold">Note:</span> Minimum ₹ 500.00 can
               be withdrawn
-            </p>
+            </p> */}
           </form>
         </div>
       </div>
     </Layout>
   );
 }
-5

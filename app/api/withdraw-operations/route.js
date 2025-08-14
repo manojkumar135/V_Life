@@ -101,7 +101,10 @@ export async function PATCH(request) {
 export async function DELETE(request) {
   try {
     await connectDB();
-    const { id, withdraw_id } = await request.json();
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const withdraw_id = searchParams.get("withdraw_id");
 
     let deletedWithdraw;
     if (mongoose.Types.ObjectId.isValid(id || withdraw_id)) {
@@ -119,3 +122,4 @@ export async function DELETE(request) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+

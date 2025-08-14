@@ -13,12 +13,14 @@ interface InputFieldProps {
   containerClassName?: string;
   name?: string;
   disabled?: boolean;
+  readOnly?: boolean;
   required?: boolean;
   min?: number;
   max?: number;
   minLength?: number;
   maxLength?: number;
-  error?: string | undefined;
+  error?: string;
+  prefix?: string; // ✅ Added
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -33,12 +35,14 @@ const InputField: React.FC<InputFieldProps> = ({
   containerClassName = "",
   name,
   disabled,
+  readOnly,
   required,
   min,
   max,
   minLength,
   maxLength,
   error,
+  prefix, // ✅ Added
 }) => {
   return (
     <div className={`flex flex-col gap-1 -mb-3 ${containerClassName}`}>
@@ -52,30 +56,40 @@ const InputField: React.FC<InputFieldProps> = ({
         </label>
       )}
       <div className="flex flex-col">
-        <input
-          id={name}
-          name={name}
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          onBlur={onBlur}
-          disabled={disabled}
-          required={required}
-          min={min}
-          max={max}
-          minLength={minLength}
-          maxLength={maxLength}
-          className={`w-full px-4 py-2 border ${
-            error ? "border-red-500" : "border-gray-400"
-          } rounded-lg bg-white text-sm placeholder-gray-400  transition-all ${className}`}
-        />
-        <div 
+        <div className="relative flex items-center">
+          {prefix && (
+            <span className="absolute left-3 text-gray-600 text-md font-semibold">
+              {prefix}
+            </span>
+          )}
+          <input
+            id={name}
+            name={name}
+            type={type}
+            placeholder={placeholder}
+            value={value}
+            onChange={onChange}
+            onBlur={onBlur}
+            disabled={disabled}
+            readOnly={readOnly}
+            required={required}
+            min={min}
+            max={max}
+            minLength={minLength}
+            maxLength={maxLength}
+            className={`w-full px-4 py-2 border ${
+              error ? "border-red-500" : "border-gray-400"
+            } rounded-lg bg-white text-sm placeholder-gray-400 transition-all ${
+              prefix ? "pl-8" : ""
+            } ${className}`}
+          />
+        </div>
+        <div
           className={`text-red-500 text-xs mt-1 ${
             error ? "opacity-100 h-4" : "opacity-0 h-4"
           } transition-opacity`}
         >
-          {error || "\u00A0"} {/* &nbsp; as fallback */}
+          {error || "\u00A0"}
         </div>
       </div>
     </div>

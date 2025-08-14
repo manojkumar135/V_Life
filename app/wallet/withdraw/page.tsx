@@ -1,67 +1,70 @@
 "use client";
-import React, { useState, useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
 import { FaTrash } from "react-icons/fa";
 import { GoPencil } from "react-icons/go";
+import { useRouter } from "next/navigation";
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
-import { useRouter } from "next/navigation";
-
-const withdrawData = [
-  {
-    id: "TR000003",
-    walletId: "WA000003",
-    address: "User Name",
-    date: "18-06-2025",
-    amount: "₹ 1000.00",
-    status: "Successful",
-  },
-  {
-    id: "TR000003",
-    walletId: "WA000003",
-    address: "User Name",
-    date: "18-06-2025",
-    amount: "₹ 1000.00",
-    status: "Successful",
-  },
-  {
-    id: "TR000003",
-    walletId: "WA000003",
-    address: "User Name",
-    date: "18-06-2025",
-    amount: "₹ 1000.00",
-    status: "Successful",
-  },
-  {
-    id: "TR000003",
-    walletId: "WA000003",
-    address: "User Name",
-    date: "18-06-2025",
-    amount: "₹ 1000.00",
-    status: "Successful",
-  },
-  {
-    id: "TR000003",
-    walletId: "WA000003",
-    address: "User Name",
-    date: "18-06-2025",
-    amount: "₹ 1000.00",
-    status: "Successful",
-  },
-];
+import axios from "axios";
+import ShowToast from "@/components/common/Toast/toast";
 
 export default function WithdrawPage() {
   const router = useRouter();
+  const { query, handleChange } = useSearch();
+  const [withdrawData, setWithdrawData] = useState<any[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const API_URL = "/api/withdraw-operations";
+
+  // Fetch withdrawals
+  const fetchWithdrawals = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL);
+      const withdrawals = data.data || [];
+      setWithdrawData(withdrawals);
+      setTotalItems(withdrawals.length);
+    } catch (error) {
+      console.error("Error fetching withdrawals:", error);
+      ShowToast.error("Failed to load withdrawals");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchWithdrawals();
+  }, [fetchWithdrawals]);
+
+  // Delete withdrawal
+  const handleDelete = async (id: string) => {
+    try {
+      await axios.delete(`${API_URL}?withdraw_id=${id}`);
+      setWithdrawData((prev) => prev.filter((item) => item._id !== id));
+      setTotalItems((prev) => prev - 1);
+      ShowToast.success("Withdrawal deleted successfully");
+    } catch (error) {
+      console.error("Error deleting withdrawal:", error);
+      ShowToast.error("Failed to delete withdrawal");
+    }
+  };
+
+  // Edit withdrawal
+  const handleEdit = (id: string) => {
+    router.push(`/wallet/withdraw/detailview/${id}`);
+  };
 
   const columns = [
-    { field: "id", headerName: "# ID", flex: 1 },
-    { field: "walletId", headerName: "Wallet ID", flex: 1.5 },
-    { field: "address", headerName: "Withdraw Address", flex: 2 },
+    { field: "withdraw_id", headerName: "Transaction ID", flex: 1 },
+    { field: "wallet_id", headerName: "Wallet ID", flex: 1.5 },
+    { field: "user_id", headerName: "Withdraw Address", flex: 2 },
     { field: "date", headerName: "Date", flex: 1.5 },
-    { field: "amount", headerName: "Amount", flex: 1.5 },
-    { field: "status", headerName: "Status", flex: 1.5 },
+    { field: "withdraw_amount", headerName: "Amount", flex: 1 },
+    { field: "status", headerName: "Status", flex: 1 },
     {
       field: "actions",
       headerName: "Actions",
@@ -70,10 +73,16 @@ export default function WithdrawPage() {
       disableColumnMenu: true,
       renderCell: (params: any) => (
         <div className="flex gap-2 items-center">
-          <button className="text-green-600 cursor-pointer">
+          <button
+            className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
+            onClick={() => handleEdit(params.row._id)}
+          >
             <GoPencil size={18} />
           </button>
-          <button className="text-red-600 cursor-pointer">
+          <button
+            className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
+            onClick={() => handleDelete(params.row._id)}
+          >
             <FaTrash size={16} />
           </button>
         </div>
@@ -81,12 +90,9 @@ export default function WithdrawPage() {
     },
   ];
 
-  const { query, handleChange } = useSearch();
-  const [totalItems, setTotalItems] = useState(0);
-
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
-      // Fetch data here if using backend
+      // Optional: implement API pagination
     },
     [query]
   );
@@ -102,7 +108,7 @@ export default function WithdrawPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 20,
+    itemsPerPage: 10,
     onPageChange: handlePageChange,
   });
 
@@ -121,19 +127,20 @@ export default function WithdrawPage() {
           title="Withdraw Transactions"
           search={query}
           setSearch={handleChange}
-          addLabel="Make Withdrawal"
           showAddButton
           showBack
-          onAdd={handleMakeWithdraw}
           onBack={onBack}
+          addLabel="Make Withdrawal"
+          onAdd={handleMakeWithdraw}
         />
 
         <Table
           columns={columns}
           rows={withdrawData}
-          rowIdField="id"
+          rowIdField="_id"
           pageSize={10}
           checkboxSelection
+          // loading={loading}
           onRowClick={(row) => console.log("Withdraw clicked:", row)}
         />
       </div>
