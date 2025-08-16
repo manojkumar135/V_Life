@@ -20,7 +20,7 @@ export default function MakeNewWithdrawalForm() {
   const router = useRouter();
 
   const [formData, setFormData] = useState<WithdrawFormData>({
-    walletId: "WA000003", // Default or fetched value
+    walletId: "", // Default or fetched value
     availableBalance: "1000.00", // Default or fetched value
     withdrawAmount: "",
     otp: "",
@@ -98,7 +98,6 @@ export default function MakeNewWithdrawalForm() {
                 name="walletId"
                 value={formData.walletId}
                 onChange={handleInputChange}
-                readOnly
               />
               <InputField
                 label="Available Balance"

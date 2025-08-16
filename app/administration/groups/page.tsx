@@ -50,6 +50,7 @@ export default function GroupsPage() {
 
   // Edit group
   const handleEdit = (id: string) => {
+    // console.log("Editing group with id:", id);
     router.push(`/administration/groups/editgroup/${id}`);
   };
 

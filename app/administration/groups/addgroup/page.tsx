@@ -12,7 +12,7 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 
 interface GroupFormData {
-  groupId: string;
+  // groupId: string;
   groupName: string;
   components: string[];
   description: string;
@@ -22,7 +22,7 @@ export default function AddGroupForm() {
   const router = useRouter();
 
   const [formData, setFormData] = useState<GroupFormData>({
-    groupId: "",
+    // groupId: "",
     groupName: "",
     components: [],
     description: "",
@@ -59,7 +59,7 @@ export default function AddGroupForm() {
     e.preventDefault();
     try {
       const payload = {
-        group_id: formData.groupId,
+        // group_id: formData.groupId,
         group_name: formData.groupName,
         roles: formData.components,
         created_by: "admin",
@@ -102,13 +102,13 @@ export default function AddGroupForm() {
         <div className="rounded-xl p-6 bg-white">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <InputField
+              {/* <InputField
                 label="Group ID"
                 name="groupId"
                 type="text"
                 value={formData.groupId}
                 onChange={handleInputChange}
-              />
+              /> */}
               <InputField
                 label="Group Name"
                 name="groupName"

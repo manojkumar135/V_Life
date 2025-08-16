@@ -2,19 +2,30 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Withdraw } from "@/models/withdraw";
 import mongoose from "mongoose";
+import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+
 
 // POST - Create new withdrawal
 export async function POST(request) {
   try {
     await connectDB();
+
     const body = await request.json();
-    const newWithdraw = await Withdraw.create(body);
+
+    // Generate unique withdraw_id with prefix "WD"
+    const withdraw_id = await generateUniqueCustomId("WT", Withdraw, 8, 8);
+
+    // Attach withdraw_id before saving
+    const newWithdraw = await Withdraw.create({ ...body, withdraw_id });
+
     return NextResponse.json({ success: true, data: newWithdraw }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
-
 // GET - Fetch all withdrawals OR single withdrawal by id / withdraw_id
 export async function GET(request) {
   try {

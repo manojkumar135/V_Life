@@ -164,13 +164,13 @@ export default function EditWalletPage() {
                 value={formData.ifscCode}
                 onChange={handleInputChange}
               />
-              <InputField
+              {/* <InputField
                 label="OTP (if required)"
                 name="otp"
                 placeholder="X X X X X X"
                 value={formData.otp}
                 onChange={handleInputChange}
-              />
+              /> */}
             </div>
 
             <div className="flex justify-end">

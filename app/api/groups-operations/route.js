@@ -2,16 +2,27 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Group } from "@/models/group";
 import mongoose from "mongoose";
+import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
 // POST - Create new group
 export async function POST(request) {
   try {
     await connectDB();
+
     const body = await request.json();
-    const newGroup = await Group.create(body);
-    return NextResponse.json({ success: true, data: newGroup }, { status: 201 });
+
+    // Generate unique role_id with prefix "RL"
+    const role_id = await generateUniqueCustomId("RL", Role, 8, 8);
+
+    // Attach role_id to body before saving
+    const newRole = await Role.create({ ...body, role_id });
+
+    return NextResponse.json({ success: true, data: newRole }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -21,6 +32,7 @@ export async function GET(request) {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id") || searchParams.get("group_id");
+    // console.log("Fetching group with id:", id);
 
     if (id) {
       let group;
@@ -78,24 +90,40 @@ export async function PUT(request) {
 export async function PATCH(request) {
   try {
     await connectDB();
-    const { id, group_id, ...updates } = await request.json();
 
-    let updatedGroup;
-    if (mongoose.Types.ObjectId.isValid(id || group_id)) {
-      updatedGroup = await Group.findByIdAndUpdate(id || group_id, updates, { new: true });
-    } else {
-      updatedGroup = await Group.findOneAndUpdate({ group_id }, updates, { new: true });
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("group_id"); // could be group_id or _id
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: "group_id or _id is required" },
+        { status: 400 }
+      );
     }
+
+    const body = await request.json();
+
+    // If it starts with GR → use group_id, else use _id
+    const filter = id.startsWith("GR") ? { group_id: id } : { _id: id };
+
+    const updatedGroup = await Group.findOneAndUpdate(filter, body, { new: true });
 
     if (!updatedGroup) {
-      return NextResponse.json({ success: false, message: "Group not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Group not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ success: true, data: updatedGroup }, { status: 200 });
+    return NextResponse.json({ success: true, data: updatedGroup });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
+
 
 // DELETE - Remove a group
 export async function DELETE(request) {

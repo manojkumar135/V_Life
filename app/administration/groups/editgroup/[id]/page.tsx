@@ -89,7 +89,16 @@ export default function EditGroupPage() {
     e.preventDefault();
     try {
       setLoading(true);
-      await axios.patch(`/api/groups-operations?group_id=${groupId}`, formData);
+      // console.log(groupId)
+      const payload = {
+        // group_id: formData.groupId,
+        group_name: formData.groupName,
+        roles: formData.components,
+        description: formData.description,
+        last_modified_by: "admin", // you can set dynamically
+      };
+
+      await axios.patch(`/api/groups-operations?group_id=${groupId}`, payload);
       ShowToast.success("Group updated successfully!");
 
       router.push("/administration/groups");
@@ -125,7 +134,8 @@ export default function EditGroupPage() {
                 name="groupId"
                 type="text"
                 value={formData.groupId}
-                onChange={handleInputChange}
+                // onChange={handleInputChange}
+                readOnly
                 disabled
               />
               <InputField

@@ -2,16 +2,28 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Wallet } from "@/models/wallet";
 import mongoose from "mongoose";
+import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+
 
 // POST - Create new wallet
 export async function POST(request) {
   try {
     await connectDB();
+
     const body = await request.json();
-    const newWallet = await Wallet.create(body);
+
+    // Generate unique wallet_id with prefix "WA"
+    const wallet_id = await generateUniqueCustomId("WA", Wallet, 8, 8);
+
+    // Attach wallet_id before saving
+    const newWallet = await Wallet.create({ ...body, wallet_id });
+
     return NextResponse.json({ success: true, data: newWallet }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 

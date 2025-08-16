@@ -142,14 +142,15 @@ export default function EditWithdrawPage() {
                 label="Transaction ID"
                 name="withdrawId"
                 value={formData.withdrawId}
-                onChange={handleInputChange}
+                // onChange={handleInputChange}
+                readOnly
                 disabled
               />
               <InputField
                 label="Wallet ID"
                 name="walletId"
                 value={formData.walletId}
-                onChange={handleInputChange}
+                // onChange={handleInputChange}
                 readOnly
               />
               <InputField

@@ -128,7 +128,8 @@ export default function EditRolePage() {
                 name="roleId"
                 type="text"
                 value={formData.roleId}
-                onChange={handleInputChange}
+                // onChange={handleInputChange}
+                readOnly
                 disabled
               />
               <InputField

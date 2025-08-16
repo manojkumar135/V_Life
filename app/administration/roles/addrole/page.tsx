@@ -53,7 +53,7 @@ export default function AddRoleForm() {
     e.preventDefault();
     try {
       const payload = {
-        role_id: formData.roleId,
+        // role_id: formData.roleId,
         role_name: formData.roleName,
         components: formData.components,
         description: formData.description,
@@ -94,13 +94,13 @@ export default function AddRoleForm() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Input Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <InputField
+              {/* <InputField
                 label="Role ID"
                 name="roleId"
                 type="text"
                 value={formData.roleId}
                 onChange={handleInputChange}
-              />
+              /> */}
               <InputField
                 label="Role Name"
                 name="roleName"

@@ -2,16 +2,28 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Role } from "@/models/roles";
 import mongoose from "mongoose";
+import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+
 
 // POST - Create new role
 export async function POST(request) {
   try {
     await connectDB();
+
     const body = await request.json();
-    const newRole = await Role.create(body);
+
+    // Generate unique role_id with prefix "RL"
+    const role_id = await generateUniqueCustomId("RL", Role, 8, 8);
+
+    // Attach role_id to body before saving
+    const newRole = await Role.create({ ...body, role_id });
+
     return NextResponse.json({ success: true, data: newRole }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 

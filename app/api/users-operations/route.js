@@ -2,16 +2,28 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import mongoose from "mongoose";
+import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+
 
 // POST - Create new user
 export async function POST(request) {
   try {
     await connectDB();
+
     const body = await request.json();
-    const newUser = await User.create(body);
+
+    // Generate unique user_id with prefix "US"
+    const user_id = await generateUniqueCustomId("US", User, 8, 8);
+
+    // Attach user_id before saving
+    const newUser = await User.create({ ...body, user_id });
+
     return NextResponse.json({ success: true, data: newUser }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
