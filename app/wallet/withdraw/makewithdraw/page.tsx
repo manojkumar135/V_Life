@@ -57,7 +57,7 @@ export default function MakeNewWithdrawalForm() {
         user_name: "Hello",
         withdraw_id: "DUMMY_WITHDRAW_ID_54321",
         date: new Date(),
-        status: "Pending",
+        withdraw_status: "Pending",
       };
 
       const res = await axios.post("/api/withdraw-operations", payload);

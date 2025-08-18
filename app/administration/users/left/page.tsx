@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
-import { FaTrash,  } from "react-icons/fa";
+import { FaTrash } from "react-icons/fa";
 import { GoPencil } from "react-icons/go";
 
 import HeaderWithActions from "@/components/common/componentheader";
@@ -61,29 +61,31 @@ export default function LeftTeam() {
     { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 2 },
     { field: "role", headerName: "Role", flex: 1 },
-    {
-      field: "actions",
-      headerName: "Actions",
-      flex: 1,
-      sortable: false,
-      disableColumnMenu: true,
-      renderCell: (params: any) => (
-        <div className="flex gap-2 items-center">
-                 <button
-                   className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
-                   onClick={() => handleEdit(params.row._id)}
-                 >
-                   <GoPencil size={18} />
-                 </button>
-                 <button
-                   className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
-                   onClick={() => handleDelete(params.row._id)}
-                 >
-                   <FaTrash size={16} />
-                 </button>
-               </div>
-      ),
-    },
+    { field: "user_status", headerName: "Status", flex: 1 },
+
+    // {
+    //   field: "actions",
+    //   headerName: "Actions",
+    //   flex: 1,
+    //   sortable: false,
+    //   disableColumnMenu: true,
+    //   renderCell: (params: any) => (
+    //     <div className="flex gap-2 items-center">
+    //              <button
+    //                className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
+    //                onClick={() => handleEdit(params.row._id)}
+    //              >
+    //                <GoPencil size={18} />
+    //              </button>
+    //              <button
+    //                className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
+    //                onClick={() => handleDelete(params.row._id)}
+    //              >
+    //                <FaTrash size={16} />
+    //              </button>
+    //            </div>
+    //   ),
+    // },
   ];
 
   const handlePageChange = useCallback(
@@ -131,6 +133,9 @@ export default function LeftTeam() {
           rows={usersData}
           rowIdField="_id"
           pageSize={10}
+          statusField="user_status" // ← show icon & click
+          onIdClick={(id) => handleEdit(id)}
+          // onStatusClick={(id, status, row) => toggleStatus(id, status, row)}
           checkboxSelection
           // loading={loading}
           onRowClick={(row) => console.log("User clicked:", row)}

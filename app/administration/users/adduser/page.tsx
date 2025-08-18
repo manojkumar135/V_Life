@@ -64,6 +64,7 @@ export default function AddNewUserForm() {
           locality: values.locality,
           created_by: "admin",
           role: "user",
+          user_status: "active",
         });
 
         if (res.data.success) {

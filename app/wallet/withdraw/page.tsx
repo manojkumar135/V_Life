@@ -64,30 +64,32 @@ export default function WithdrawPage() {
     { field: "user_id", headerName: "Withdraw Address", flex: 2 },
     { field: "date", headerName: "Date", flex: 1.5 },
     { field: "withdraw_amount", headerName: "Amount", flex: 1 },
-    { field: "status", headerName: "Status", flex: 1 },
-    {
-      field: "actions",
-      headerName: "Actions",
-      flex: 1,
-      sortable: false,
-      disableColumnMenu: true,
-      renderCell: (params: any) => (
-        <div className="flex gap-2 items-center">
-          <button
-            className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
-            onClick={() => handleEdit(params.row._id)}
-          >
-            <GoPencil size={18} />
-          </button>
-          <button
-            className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
-            onClick={() => handleDelete(params.row._id)}
-          >
-            <FaTrash size={16} />
-          </button>
-        </div>
-      ),
-    },
+    // { field: "status", headerName: "Payment", flex: 1 },
+    { field: "withdraw_status", headerName: "Status", flex: 1 },
+
+    // {
+    //   field: "actions",
+    //   headerName: "Actions",
+    //   flex: 1,
+    //   sortable: false,
+    //   disableColumnMenu: true,
+    //   renderCell: (params: any) => (
+    //     <div className="flex gap-2 items-center">
+    //       <button
+    //         className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
+    //         onClick={() => handleEdit(params.row._id)}
+    //       >
+    //         <GoPencil size={18} />
+    //       </button>
+    //       <button
+    //         className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
+    //         onClick={() => handleDelete(params.row._id)}
+    //       >
+    //         <FaTrash size={16} />
+    //       </button>
+    //     </div>
+    //   ),
+    // },
   ];
 
   const handlePageChange = useCallback(
@@ -139,6 +141,9 @@ export default function WithdrawPage() {
           rows={withdrawData}
           rowIdField="_id"
           pageSize={10}
+          statusField="withdraw_status" 
+          onIdClick={(id) => handleEdit(id)}
+          // onStatusClick={(id, status, row) => toggleStatus(id, status, row)}
           checkboxSelection
           // loading={loading}
           onRowClick={(row) => console.log("Withdraw clicked:", row)}

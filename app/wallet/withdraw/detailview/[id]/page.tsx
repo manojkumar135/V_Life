@@ -57,7 +57,7 @@ export default function EditWithdrawPage() {
             withdrawAddress: w.user_id || "",
             date: w.date || "",
             withdrawAmount: w.withdraw_amount || "",
-            status: w.status || "",
+            status: w.withdraw_status || "",
             otp: "",
           });
         } else {
@@ -95,7 +95,6 @@ export default function EditWithdrawPage() {
         user_id: formData.withdrawAddress,
         date: formData.date,
         withdraw_amount: formData.withdrawAmount,
-        status: formData.status,
         otp: formData.otp,
         last_modified_by: "admin",
       };

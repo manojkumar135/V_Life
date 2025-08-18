@@ -2,24 +2,31 @@
 import {
   DataGrid,
   GridRowSelectionModel,
+  GridColDef,
   GridCallbackDetails,
 } from "@mui/x-data-grid";
-import Pagination from "@/components/common/pagination";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { GrStatusGood } from "react-icons/gr";
+import { MdCancel } from "react-icons/md";
+
+type Row = Record<string, any>;
 
 interface TableProps {
-  columns: any[];
-  rows: any[];
+  columns: GridColDef[];
+  rows: Row[];
   rowIdField: string;
   pageSize?: number;
   className?: string;
   rowHeight?: number;
-  onRowClick?: (row: any) => void;
   checkboxSelection?: boolean;
+  statusField?: string;
+  onRowClick?: (row: Row) => void;
+  onIdClick?: (id: string, row: Row) => void;
+  onStatusClick?: (id: string, status: string, row: Row) => void;
   rowSelectionModel?: GridRowSelectionModel;
   setRowSelectionModel?: (selected: GridRowSelectionModel) => void;
-  setSelectedRows?: (rows: any[]) => void;
-  processedRows?: any[];
+  setSelectedRows?: (rows: Row[]) => void;
+  processedRows?: Row[];
 }
 
 export default function Table({
@@ -28,9 +35,12 @@ export default function Table({
   rowIdField,
   pageSize = 10,
   className = "",
-  // rowHeight = 60,
-  onRowClick,
+  rowHeight = 36,
   checkboxSelection = false,
+  statusField,
+  onRowClick,
+  onIdClick,
+  onStatusClick,
   rowSelectionModel,
   setRowSelectionModel,
   setSelectedRows,
@@ -38,18 +48,89 @@ export default function Table({
 }: TableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
-  // console.log("Table rendered with rows:", rows);
-
   const safeRows = Array.isArray(rows) ? rows : [];
   const totalEntries = safeRows.length;
-  const paginatedRows = safeRows.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
+  const paginatedRows = useMemo(
+    () => safeRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [safeRows, currentPage, pageSize]
   );
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
+  const enhancedColumns: GridColDef[] = useMemo(() => {
+    return columns.map((col, idx) => {
+      const isIdCol = col.field === rowIdField || idx === 0;
+      const isStatusCol = statusField && col.field === statusField;
+
+      if (!isIdCol && !isStatusCol) return col;
+
+      return {
+        ...col,
+        sortable: col.sortable ?? false,
+        renderCell: (params) => {
+          const id = String(params.row?.[rowIdField] ?? "");
+          const value = params.value;
+
+          if (isIdCol) {
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onIdClick?.(id, params.row);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#0000EE",
+                  textDecoration: "underline",
+                }}
+              >
+                {value ?? "-"}
+              </button>
+            );
+          }
+
+          if (isStatusCol) {
+            const raw = String(value ?? "").toLowerCase();
+            const isActive =
+              raw === "active" ||
+              raw === "available" ||
+              raw === "paid" ||
+              raw === "true" ||
+              raw === "yes";
+
+            const Icon = isActive ? GrStatusGood : MdCancel;
+
+            return (
+              <button
+                type="button"
+                title={isActive ? "Active" : "Inactive"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusClick?.(id, raw, params.row);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  // justifyContent: "center",
+                  margin: "0 0 0 10px",
+                  height: "100%",
+                  width: "100%",
+                }}
+              >
+                <Icon size={20} color={isActive ? "green" : "red"} />
+              </button>
+            );
+          }
+
+          return value ?? "-";
+        },
+      };
+    });
+  }, [columns, rowIdField, statusField, onIdClick, onStatusClick]);
 
   const handleSelectionChange = (
     newSelectionModel: GridRowSelectionModel,
@@ -59,7 +140,6 @@ export default function Table({
 
     setRowSelectionModel(newSelectionModel);
 
-    // Safe conversion to string array
     const selectedIds: string[] = [];
     if (Array.isArray(newSelectionModel)) {
       newSelectionModel.forEach((id) => selectedIds.push(String(id)));
@@ -67,27 +147,24 @@ export default function Table({
 
     const selectedData = selectedIds
       .map((id) => processedRows.find((row) => String(row[rowIdField]) === id))
-      .filter((row): row is any => row !== undefined);
+      .filter((row): row is Row => row !== undefined);
 
     setSelectedRows(selectedData);
   };
 
-  
-
   return (
     <div
-      className={`flex flex-col w-full max-sm:w-[110%] max-sm:-ml-4 ${className}`}
+      className={`flex flex-col w-full max-sm:w-[110%] max-sm:-ml-4 min-h-full ${className}`}
     >
-      {/* DataGrid */}
-      <div className="overflow-x-auto bg-white shadow rounded-lg flex-grow min-h-full w-full">
+      <div className="overflow-x-auto bg-white shadow-md rounded-lg min-h-full w-[100%]">
         <DataGrid
           rows={paginatedRows}
-          columns={columns}
+          columns={enhancedColumns}
           checkboxSelection={checkboxSelection}
           disableRowSelectionOnClick
           disableColumnMenu
           hideFooterPagination
-          rowHeight={40}
+          rowHeight={rowHeight}
           getRowId={(row) => String(row[rowIdField] ?? "")}
           localeText={{ noRowsLabel: "No records found" }}
           onRowSelectionModelChange={handleSelectionChange}
@@ -118,19 +195,20 @@ export default function Table({
               width: "100% !important",
               overflowX: "auto",
 
+
               "& .MuiDataGrid-main": {
                 width: "100% !important",
                 maxWidth: "100% !important",
               },
 
               "& .MuiDataGrid-row": {
-                maxHeight: "30px !important",
-                minHeight: "30px !important",
+                maxHeight: "36px !important",
+                minHeight: "36px !important",
               },
               "& .MuiDataGrid-cell": {
-                maxHeight: "30px !important",
-                minHeight: "30px !important",
-                padding: "2px 4px !important",
+                maxHeight: "35px !important",
+                minHeight: "35px !important",
+                padding: "4px 4px !important",
                 fontSize: "0.8rem !important",
                 overflow: "visible !important",
               },
@@ -156,8 +234,8 @@ export default function Table({
               // },
               '& .MuiDataGrid-columnHeader:not([data-field="__check__"]), & .MuiDataGrid-cell:not([data-field="__check__"])':
                 {
-                  minWidth: "130px !important",
-                  maxWidth: "250px !important",
+                  minWidth: "150px !important",
+                  maxWidth: "280px !important",
                 },
               '& [data-field="__check__"]': {
                 minWidth: "50px !important",
@@ -179,6 +257,12 @@ export default function Table({
                 },
             },
 
+            "& .MuiDataGrid-scrollbarFiller": {
+              backgroundColor: "gray !important", // ✅ make filler gray
+            },
+            "& .MuiDataGrid-scrollbarFiller--header": {
+              backgroundColor: "gray !important", // ✅ header filler gray
+            },
             // ✅ Make last column take more width
 
             "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within":
@@ -202,11 +286,11 @@ export default function Table({
 
             "& .MuiDataGrid-row": {
               fontSize: "0.8rem",
-              maxHeight: "40px !important",
-              minHeight: "40px !important",
-              "&:hover": {
-                backgroundColor: "#e0f7fa",
-              },
+              maxHeight: "35px !important",
+              minHeight: "35px !important",
+              // "&:hover": {
+              //   backgroundColor: "#e0f7fa",
+              // },
             },
             "& .MuiDataGrid-sortIcon": {
               color: "white",
@@ -272,7 +356,17 @@ export default function Table({
             "& .MuiDataGrid-cell": {
               maxHeight: "35px !important",
               minHeight: "35px !important",
-              padding: "5px 8px !important",
+              padding: "1px 8px !important",
+              outline: "none",
+              whiteSpace: "nowrap !important", // ✅ single line
+              overflow: "hidden !important", // ✅ cut off extra
+              textOverflow: "ellipsis !important", // ✅ ellipsis
+            },
+            "& .MuiDataGrid-cellContent": {
+              fontSize: "0.8rem !important",
+              whiteSpace: "nowrap !important", // ✅ same inside content span
+              overflow: "hidden !important",
+              textOverflow: "ellipsis !important",
               outline: "none",
             },
             "& .MuiDataGrid-columnHeader:focus-within": {
@@ -312,10 +406,10 @@ export default function Table({
             "& .MuiDataGrid-checkboxInput": {
               padding: "5px !important",
             },
-            "& .MuiDataGrid-cellContent": {
-              fontSize: "0.75rem !important",
-              outline: "none",
-            },
+            // "& .MuiDataGrid-cellContent": {
+            //   fontSize: "0.8rem !important",
+            //   outline: "none",
+            // },
           }}
           className="
     w-full
@@ -327,14 +421,6 @@ export default function Table({
   "
         />
       </div>
-
-      {/* Pagination */}
-      {/* <Pagination
-        totalEntries={totalEntries}
-        entriesPerPage={pageSize}
-        currentPage={currentPage}
-        onPageChange={handlePageChange}
-      /> */}
     </div>
   );
 }

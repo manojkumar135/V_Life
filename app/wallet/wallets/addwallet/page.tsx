@@ -61,6 +61,7 @@ export default function AddWalletForm() {
       // Adding the required dummy values
       user_id: "DUMMY_USER_ID_12345",
       user_name:"Hello",
+      wallet_status: "active",
       // wallet_id: "DUMMY_WALLET_ID_67890",
       // withdraw_id: "DUMMY_WITHDRAW_ID_54321"
     };
