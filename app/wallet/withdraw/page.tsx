@@ -10,6 +10,7 @@ import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader";
 
 export default function WithdrawPage() {
   const router = useRouter();
@@ -125,6 +126,11 @@ export default function WithdrawPage() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <Loader />
+          </div>
+        )}
         <HeaderWithActions
           title="Withdraw Transactions"
           search={query}

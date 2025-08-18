@@ -10,6 +10,7 @@ import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import Loader from "@/components/common/loader";
 
 export default function LeftTeam() {
   const router = useRouter();
@@ -117,6 +118,12 @@ export default function LeftTeam() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <Loader />
+          </div>
+        )}
         <HeaderWithActions
           title="Left Team"
           search={query}

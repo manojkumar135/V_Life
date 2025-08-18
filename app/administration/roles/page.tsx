@@ -9,6 +9,7 @@ import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
 import axios from "axios";
+import Loader from "@/components/common/loader";
 
 export default function RolesPage() {
   const router = useRouter();
@@ -117,6 +118,12 @@ export default function RolesPage() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <Loader />
+          </div>
+        )}
         <HeaderWithActions
           title="Roles"
           search={query}

@@ -178,6 +178,12 @@ export default function OrdersPage() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+
+        {/* {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <Loader />
+          </div>
+        )} */}
         <HeaderWithActions
           title="Orders"
           search={query}

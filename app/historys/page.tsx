@@ -157,6 +157,12 @@ export default function TransactionHistory() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+{/* {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <Loader />
+          </div>
+        )} */}
+
          {/* Balance Display */}
         <div className="bg-yellow-100 text-black px-6 py-3 rounded-xl shadow-md w-fit mb-6 mx-auto flex items-center gap-2">
           <span className="text-xl font-semibold">Available Balance</span>
