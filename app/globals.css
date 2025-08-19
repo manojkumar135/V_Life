@@ -32,3 +32,13 @@ body {
 .MuiDataGrid-columnHeaderCheckbox svg {
   color: white !important;
 }
+
+[data-sonner-toast] {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+[data-sonner-toast] [data-close-button] {
+  margin-left: auto;
+}

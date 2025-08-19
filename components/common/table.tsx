@@ -153,10 +153,8 @@ export default function Table({
   };
 
   return (
-    <div
-      className={`flex flex-col w-full max-sm:w-[110%] max-sm:-ml-4 min-h-full ${className}`}
-    >
-      <div className="overflow-x-auto bg-white shadow-md rounded-lg min-h-full w-[100%]">
+    <div className={`flex flex-col w-full min-h-full ${className}`}>
+      <div className=" bg-white shadow-md rounded-lg min-h-full w-full flex-grow">
         <DataGrid
           rows={paginatedRows}
           columns={enhancedColumns}
@@ -176,6 +174,8 @@ export default function Table({
             zIndex: 1,
             position: "relative",
 
+            // Force full width for all grid containers on desktop
+           
             // Force full width for all grid containers on desktop
             "& .MuiDataGrid-main": {
               width: "100% !important",
@@ -257,9 +257,10 @@ export default function Table({
                 },
             },
 
-            "& .MuiDataGrid-scrollbarFiller": {
-              backgroundColor: "gray !important", // ✅ make filler gray
-            },
+
+            // "& .MuiDataGrid-scrollbarFiller": {
+            //   backgroundColor: "gray !important", // ✅ make filler gray
+            // },
             "& .MuiDataGrid-scrollbarFiller--header": {
               backgroundColor: "gray !important", // ✅ header filler gray
             },

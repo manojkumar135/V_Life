@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
+import {Login} from "@/models/login";
+
 import mongoose from "mongoose";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
@@ -9,16 +12,56 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 export async function POST(request) {
   try {
     await connectDB();
-
     const body = await request.json();
 
-    // Generate unique user_id with prefix "US"
+    const { mail, contact, user_name, first_name, last_name, role, role_id, title, address, pincode } = body;
+
+    // Step 1: Check if mail or contact already exists in logins
+    const existingLogin = await Login.findOne({
+      $or: [{ mail }, { contact }],
+    });
+
+    if (existingLogin) {
+      return NextResponse.json(
+        { success: false, message: "Email or contact already exists" },
+        { status: 400 }
+      );
+    }
+
+    // Step 2: Generate user_id
     const user_id = await generateUniqueCustomId("US", User, 8, 8);
 
-    // Attach user_id before saving
+    // Step 3: Create User
     const newUser = await User.create({ ...body, user_id });
 
-    return NextResponse.json({ success: true, data: newUser }, { status: 201 });
+    // Step 4: Generate login_id
+    const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
+
+    // Step 5: Hash default password (using contact as default password)
+    const hashedPassword = await bcrypt.hash(contact, 10);
+
+    // Step 6: Create Login
+    const newLogin = await Login.create({
+      login_id,
+      user_id,
+      user_name,
+      first_name,
+      last_name,
+      role,
+      role_id,
+      title,
+      mail,
+      contact,
+      address,
+      pincode,
+      password: hashedPassword,
+      status: "Active",
+    });
+
+    return NextResponse.json(
+      { success: true, user: newUser, login: newLogin },
+      { status: 201 }
+    );
   } catch (error) {
     return NextResponse.json(
       { success: false, message: error.message },
@@ -26,6 +69,7 @@ export async function POST(request) {
     );
   }
 }
+
 
 // GET - Fetch all users OR single user by id / user_id
 export async function GET(request) {

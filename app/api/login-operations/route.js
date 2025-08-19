@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Login } from "@/models/login";
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+
 
 // POST - Create new login
 export async function POST(request) {
@@ -19,27 +21,44 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     await connectDB();
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id") || searchParams.get("login_id");
-    console.log("Fetching login with ID:", id);
+    const body = await request.json();
+    const { loginId, password } = body;
 
-    if (id) {
-      let login;
-      if (mongoose.Types.ObjectId.isValid(id)) {
-        login = await Login.findById(id);
-      } else {
-        login = await Login.findOne({ login_id: id });
-      }
-      if (!login) {
-        return NextResponse.json({ success: false, message: "Login not found" }, { status: 404 });
-      }
-      return NextResponse.json({ success: true, data: login }, { status: 200 });
+    if (!loginId || !password) {
+      return NextResponse.json(
+        { success: false, message: "User ID/Contact and password are required" },
+        { status: 400 }
+      );
     }
 
-    const logins = await Login.find();
-    return NextResponse.json({ success: true, data: logins }, { status: 200 });
+    // find user by user_id OR contact
+    const user = await Login.findOne({
+      $or: [{ login_id: loginId }, { contact: loginId }],
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "Invalid User ID or Contact" },
+        { status: 404 }
+      );
+    }
+
+    // check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return NextResponse.json(
+        { success: false, message: "Incorrect password" },
+        { status: 401 }
+      );
+    }
+
+    // ✅ login success
+    return NextResponse.json({ success: true, data: user }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 

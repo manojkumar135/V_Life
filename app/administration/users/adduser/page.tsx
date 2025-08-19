@@ -62,7 +62,7 @@ export default function AddNewUserForm() {
           state: values.state,
           district: values.city,
           locality: values.locality,
-          created_by: "admin",
+          created_by: "",
           role: "user",
           user_status: "active",
         });
@@ -236,18 +236,19 @@ export default function AddNewUserForm() {
             />
 
             <SelectField
-              label="Locality"
-              name="locality"
-              value={formik.values.locality}
-              onChange={(option: any) =>
-                formik.setFieldValue("locality", option?.value || "")
-              }
-              onBlur={formik.handleBlur}
-              options={localityOptions}
-              error={formik.touched.locality ? formik.errors.locality : undefined}
-              required
-              disabled={isLoadingLocation || postOfficeData.length === 0}
-            />
+  label="Locality"
+  name="locality"
+  value={formik.values.locality} // <-- pass string value
+  onChange={(e: any) =>
+    formik.setFieldValue("locality", e.target?.value || e?.value || "")
+  }
+  onBlur={formik.handleBlur}
+  options={localityOptions}
+  error={formik.touched.locality ? formik.errors.locality : undefined}
+  required
+  disabled={isLoadingLocation || postOfficeData.length === 0}
+/>
+
           </div>
 
           {/* Submit Button */}

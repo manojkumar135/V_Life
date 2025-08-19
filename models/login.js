@@ -13,7 +13,6 @@ const LoginSchema = new mongoose.Schema(
         title: { type: String },
 
 
-
         mail: { type: String, required: true },
         password: { type: String, required: true }, // store hashed password
         login_key: { type: String },
@@ -35,15 +34,15 @@ const LoginSchema = new mongoose.Schema(
         logo: { type: String }, // URL or file path to logo
         profile: { type: String }, // URL or file path to profile photo
 
-        intro: { type: Boolean, default: true },
-        isDeleted: { type: Boolean, default: true },
+        intro: { type: Boolean, default: false },
+        isDeleted: { type: Boolean, default: false },
 
 
         ip_address: { type: String },
         device_info: { type: String },
         login_time: { type: Date, default: Date.now, },
         logout_time: { type: Date },
-        status: { type: String, enum: ["Active", "Logged Out", "Failed"], default: "Active" },
+        status: { type: String, enum: ["Active", "Logged Out", "Failed"], default: "active" },
         created_at: { type: Date, default: Date.now },
         created_by: { type: String, },
         last_modified_by: { type: String },

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import SideNav from "@/components/common/sidenav";
 import Header from "@/components/common/header";
 import Loader from "@/components/common/loader";
-import { Toaster } from 'sonner';
+import { Toaster } from "sonner";
 import "@/components/common/Toast/toastStyles.css";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -26,7 +26,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <Loader />
         </div>
       )}
-      <Toaster position="top-right" richColors closeButton />
+      {/* <Toaster position="top-right" richColors expand headless /> */}
 
       <div className="flex h-screen bg-white overflow-hidden w-screen">
         <SideNav isOpen={showSidebar} setIsOpen={setShowSidebar} />

@@ -1,25 +1,66 @@
 "use client";
 
-import { useState } from "react";
-import { FiMail } from "react-icons/fi";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import { TfiLock } from "react-icons/tfi";
+import { FiEye, FiEyeOff } from "react-icons/fi";
+
+import { Toaster } from "sonner";
+
+import { FaRegUser } from "react-icons/fa6";
+import { useRouter } from "next/navigation";
+import axios from "axios";
+import { useState } from "react";
 import Image from "next/image";
+import ShowToast from "@/components/common/Toast/toast";
 import Images from "@/constant/Image";
-import { useRouter } from "next/navigation"; // ✅ import router
+import Loader from "@/components/common/loader";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const router = useRouter(); // ✅ initialize router
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log({ email, password });
+  // Formik + Yup schema
+  const formik = useFormik({
+    initialValues: {
+      loginId: "", // user_id or contact
+      password: "",
+    },
+    validationSchema: Yup.object({
+      loginId: Yup.string().required("* User ID / Contact is required"),
+      password: Yup.string().required("* Password is required"),
+    }),
+    // ...existing code...
+    onSubmit: async (values) => {
+      setLoading(true);
+      try {
+        const res = await axios.post(
+          "/api/login-operations/signIn-operations",
+          values
+        ); // <-- use POST
+        console.log("Login response:", res);
+        if (res.data.success) {
+          ShowToast.success("Login successful!");
+          router.push("/dashboard");
+        } else {
+          ShowToast.error(res.data.message || "Login failed");
+        }
+      } catch (err: any) {
+        console.log("error:", err.response?.data?.message);
 
-    // TODO: Add your real login logic here
-    // After successful login:
-    router.push("/dashboard"); // ✅ navigate to dashboard
-  };
+        const errorMessage =
+          err.response?.data?.message || err.message || "Something went wrong";
+
+        console.log("toast message:", errorMessage);
+
+        await ShowToast?.error?.(errorMessage); // safe call if function exists
+      } finally {
+        setLoading(false);
+      }
+    },
+    // ...existing code...
+  });
 
   const handleForgotPassword = () => {
     router.push("/forgot-password");
@@ -30,83 +71,122 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
-      {/* Left Illustration Section */}
-      <div className="w-1/2 max-md:w-full flex items-center justify-center p-10 max-lg:p-5 max-md:hidden ">
-        <Image
-          src={Images.LoginImage}
-          alt="Login Illustration"
-          width={500}
-          height={500}
-          className="w-4/5 max-md:w-full max-lg:w-full max-md:ml-1 max-lg:ml-16"
-        />
-      </div>
+    <>
+      {/* <Toaster position="top-right" richColors closeButton /> */}
 
-      {/* Right Login Form */}
-      <div className="w-1/2 max-lg:w-full flex flex-col justify-center items-center overflow-y-auto max-lg:py-6 max-md:h-full">
-        <div className="w-[70%] max-md:w-[90%] flex flex-col justify-center items-center py-10 px-8 bg-[#fffff0] rounded-3xl shadow max-lg:py-8">
-          <p className="text-[2rem] max-md:text-[1.5rem] max-lg:text-[1.5rem] font-bold text-black mb-8 max-lg:mb-5">
-            Login
-          </p>
+      <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <Loader />
+          </div>
+        )}
+        {/* Left Illustration Section */}
+        <div className="w-1/2 max-md:w-full flex items-center justify-center p-10 max-lg:p-5 max-md:hidden">
+          <Image
+            src={Images.LoginImage}
+            alt="Login Illustration"
+            width={500}
+            height={500}
+            className="w-4/5 max-md:w-full max-lg:w-full max-md:ml-1 max-lg:ml-16"
+          />
+        </div>
 
-          <form onSubmit={handleLogin} className="w-full space-y-6">
-            {/* Email */}
-            <div className="relative">
-              <FiMail className="absolute left-3 top-3.5 text-gray-500" />
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                // required
-              />
-            </div>
-
-            {/* Password */}
-            <div className="relative">
-              <TfiLock className="absolute left-3 top-3.5 text-gray-500" />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                // required
-              />
-            </div>
-
-            {/* Forgot password */}
-            <div className="text-right text-sm">
-              <span
-                onClick={handleForgotPassword}
-                className="text-blue-600 cursor-pointer"
-              >
-                Forgot password?
-              </span>
-            </div>
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              className="w-full py-2 bg-[#FFD700] text-black font-semibold rounded-md hover:bg-yellow-400 transition-colors text-[1.2rem] max-lg:text-[1rem]"
-            >
+        {/* Right Login Form */}
+        <div className="w-1/2 max-lg:w-full flex flex-col justify-center items-center overflow-y-auto max-lg:py-6 max-md:h-full">
+          <div className="w-[70%] max-md:w-[90%] flex flex-col justify-center items-center py-10 px-8 bg-[#fffff0] rounded-3xl shadow max-lg:py-8">
+            <p className="text-[2rem] max-md:text-[1.5rem] max-lg:text-[1.5rem] font-bold text-black mb-8 max-lg:mb-5">
               Login
-            </button>
+            </p>
 
-            {/* Signup prompt */}
-            <div className="text-center text-sm text-black -mt-3">
-              Don&apos;t have an account?{" "}
-              <span
-                onClick={handleNavigateToSignup}
-                className="text-blue-600 font-medium cursor-pointer"
+            <form onSubmit={formik.handleSubmit} className="w-full space-y-6">
+              {/* User ID / Contact */}
+              <div className="flex flex-col">
+                <div className="relative">
+                  <FaRegUser className="absolute left-3 top-3 text-gray-500" />
+                  <input
+                    type="text"
+                    name="loginId"
+                    placeholder="User ID / Contact"
+                    value={formik.values.loginId}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  />
+                </div>
+                <span
+                  className={`text-red-500 text-sm mt-1 transition-opacity h-2 ${
+                    formik.touched.loginId && formik.errors.loginId
+                      ? "opacity-100"
+                      : "opacity-0"
+                  }`}
+                >
+                  {formik.errors.loginId || "\u00A0"}
+                </span>
+              </div>
+
+              {/* Password with Show/Hide */}
+              <div className="flex flex-col">
+                <div className="relative">
+                  <TfiLock className="absolute left-3 top-3 text-gray-500" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Password"
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full pl-10 pr-10 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-500"
+                  >
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
+                <span
+                  className={`text-red-500 text-sm mt-1 transition-opacity h-2 ${
+                    formik.touched.password && formik.errors.password
+                      ? "opacity-100"
+                      : "opacity-0"
+                  }`}
+                >
+                  {formik.errors.password || "\u00A0"}
+                </span>
+              </div>
+
+              {/* Forgot password */}
+              <div className="text-right text-sm">
+                <span
+                  onClick={handleForgotPassword}
+                  className="text-blue-600 cursor-pointer "
+                >
+                  Forgot password?
+                </span>
+              </div>
+
+              {/* Login Button */}
+              <button
+                type="submit"
+                disabled={
+                  loading ||
+                  !formik.values.loginId.trim() ||
+                  !formik.values.password.trim()
+                }
+                className={`w-full py-2 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] cursor-pointer
+    ${
+      loading || !formik.values.loginId.trim() || !formik.values.password.trim()
+        ? "bg-gray-500 text-white cursor-not-allowed"
+        : "bg-[#FFD700] text-black hover:bg-yellow-400"
+    }`}
               >
-                Sign Up!
-              </span>
-            </div>
-          </form>
+                Login
+              </button>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

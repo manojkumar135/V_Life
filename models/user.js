@@ -17,6 +17,7 @@ const UserSchema = new mongoose.Schema(
     last_modified_by: { type: String },
     last_modified_at: { type: Date },
     role: { type: String,  },
+    user_status: { type: String, default: "active" },
   },
   {
     timestamps: false, // not auto — you have custom fields
