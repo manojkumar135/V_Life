@@ -3,7 +3,10 @@
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { TfiLock } from "react-icons/tfi";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FaEye } from "react-icons/fa";
+import { FaEyeSlash } from "react-icons/fa6";
+
+// import { useContext } from "react";
 
 import { Toaster } from "sonner";
 
@@ -15,11 +18,14 @@ import Image from "next/image";
 import ShowToast from "@/components/common/Toast/toast";
 import Images from "@/constant/Image";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const { user, setUser, clearUser } = useVLife();
 
   // Formik + Yup schema
   const formik = useFormik({
@@ -32,6 +38,7 @@ export default function LoginPage() {
       password: Yup.string().required("* Password is required"),
     }),
     // ...existing code...
+
     onSubmit: async (values) => {
       setLoading(true);
       try {
@@ -39,8 +46,18 @@ export default function LoginPage() {
           "/api/login-operations/signIn-operations",
           values
         ); // <-- use POST
-        console.log("Login response:", res);
+
         if (res.data.success) {
+          setUser({
+            login_id: res.data.data.login_id,
+            user_id: res.data.data.user_id,
+            user_name: res.data.data.user_name,
+            role: res.data.data.role,
+            mail: res.data.data.mail,
+            contact: res.data.data.contact,
+            status: res.data.data.status,
+          });
+
           ShowToast.success("Login successful!");
           router.push("/dashboard");
         } else {
@@ -54,7 +71,7 @@ export default function LoginPage() {
 
         console.log("toast message:", errorMessage);
 
-        await ShowToast?.error?.(errorMessage); // safe call if function exists
+        ShowToast?.error?.(errorMessage); // safe call if function exists
       } finally {
         setLoading(false);
       }
@@ -66,9 +83,9 @@ export default function LoginPage() {
     router.push("/forgot-password");
   };
 
-  const handleNavigateToSignup = () => {
-    router.push("/auth/register");
-  };
+  // const handleNavigateToSignup = () => {
+  //   router.push("/auth/register");
+  // };
 
   return (
     <>
@@ -76,7 +93,7 @@ export default function LoginPage() {
 
       <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
         {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  backdrop-blur-sm">
             <Loader />
           </div>
         )}
@@ -140,9 +157,9 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-500"
+                    className="absolute right-3 top-3 text-gray-800"
                   >
-                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                    {showPassword ? <FaEye /> : <FaEyeSlash />}
                   </button>
                 </div>
                 <span

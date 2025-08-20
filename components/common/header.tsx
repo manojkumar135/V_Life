@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FaMoon, FaSun } from "react-icons/fa";
 import { HiUserCircle } from "react-icons/hi";
 import { MdNotificationsNone } from "react-icons/md";
 import { HiOutlineMenuAlt2 } from "react-icons/hi";
+import {useVLife} from "@/store/context"; 
+
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const [darkMode, setDarkMode] = useState(false);
+  const { user } = useVLife(); // Access user context
+  // console.log(user,'from header')
 
   useEffect(() => {
     if (darkMode) {
@@ -28,11 +32,11 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="flex items-center space-x-4 max-md:space-x-2">
-        <button className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+        <button className="p-1 rounded-full bg-gray-100 dark:hover:bg-gray-800">
           <MdNotificationsNone className="w-6 h-6 text-gray-700 dark:text-gray-300" />
         </button>
         <button
-          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="p-2 rounded-full bg-gray-100 dark:hover:bg-gray-800"
           onClick={() => setDarkMode((prev) => !prev)}
         >
           {darkMode ? (

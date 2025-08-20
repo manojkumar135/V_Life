@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { IoClose } from "react-icons/io5";
+import { VLifeContextProvider } from "@/store/context";
+// import RefreshHandler from "@/components/RefreshHandler";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,9 +32,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Toaster position="top-right" richColors closeButton />
-
-        {children}
+        <VLifeContextProvider>
+          <Toaster position="top-right" richColors closeButton />
+          {children}
+        </VLifeContextProvider>
       </body>
     </html>
   );

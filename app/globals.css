@@ -33,7 +33,7 @@ body {
   color: white !important;
 }
 
-[data-sonner-toast] {
+/* [data-sonner-toast] {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -41,4 +41,4 @@ body {
 
 [data-sonner-toast] [data-close-button] {
   margin-left: auto;
-}
+} */

@@ -1,6 +1,8 @@
+"use client";
+
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
-export interface UserContextType {
+export interface UserType {
   login_id: string;
   user_id: string;
   user_name: string;
@@ -8,11 +10,16 @@ export interface UserContextType {
   mail: string;
   contact: string;
   status: string;
-  setUser: (user: Partial<UserContextType>) => void;
+  token?: string; // store access token
+}
+
+export interface VLifeContextType {
+  user: UserType;
+  setUser: (user: Partial<UserType>) => void;
   clearUser: () => void;
 }
 
-const defaultUser: UserContextType = {
+const defaultUser: UserType = {
   login_id: "",
   user_id: "",
   user_name: "",
@@ -20,46 +27,31 @@ const defaultUser: UserContextType = {
   mail: "",
   contact: "",
   status: "",
-  setUser: () => {},
-  clearUser: () => {},
+  token: "",
 };
 
-const UserContext = createContext<UserContextType>(defaultUser);
+const VLifeContext = createContext<VLifeContextType | undefined>(undefined);
 
-export const useUser = () => useContext(UserContext);
+export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUserState] = useState<UserType>(defaultUser);
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUserState] = useState<
-    Omit<UserContextType, "setUser" | "clearUser">
-  >({
-    login_id: "",
-    user_id: "",
-    user_name: "",
-    role: "",
-    mail: "",
-    contact: "",
-    status: "",
-  });
-
-  const setUser = (newUser: Partial<UserContextType>) => {
-    setUserState((prev) => ({ ...prev, ...newUser }));
+  const setUser = (u: Partial<UserType>) => {
+    setUserState((prev) => ({ ...prev, ...u }));
   };
 
   const clearUser = () => {
-    setUserState({
-      login_id: "",
-      user_id: "",
-      user_name: "",
-      role: "",
-      mail: "",
-      contact: "",
-      status: "",
-    });
+    setUserState(defaultUser);
   };
 
   return (
-    <UserContext.Provider value={{ ...user, setUser, clearUser }}>
+    <VLifeContext.Provider value={{ user, setUser, clearUser }}>
       {children}
-    </UserContext.Provider>
+    </VLifeContext.Provider>
   );
+};
+
+export const useVLife = () => {
+  const ctx = useContext(VLifeContext);
+  if (!ctx) throw new Error("useVLifeContext must be used inside VLifeContextProvider");
+  return ctx;
 };
