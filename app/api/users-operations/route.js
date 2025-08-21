@@ -14,7 +14,7 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
 
-    const { mail, contact, user_name, first_name, last_name, role, role_id, title, address, pincode } = body;
+    const { mail, contact, user_name, first_name, last_name, role, role_id, title, address, pincode,locality } = body;
 
     // Step 1: Check if mail or contact already exists in logins
     const existingLogin = await Login.findOne({
@@ -54,6 +54,7 @@ export async function POST(request) {
       contact,
       address,
       pincode,
+      locality,
       password: hashedPassword,
       status: "Active",
     });

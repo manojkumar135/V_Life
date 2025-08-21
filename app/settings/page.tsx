@@ -16,6 +16,7 @@ import InputField from "@/components/common/inputtype1";
 import SubmitButton from "@/components/common/submitbutton";
 import SelectField from "@/components/common/selectinput";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 // Validation Schema
 const profileSchema = Yup.object().shape({
@@ -58,26 +59,27 @@ const Page = () => {
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const { user } = useVLife();
+  console.log(user, "from profile page");
+
   // Formik initialization
   const formik = useFormik<FormValues>({
     initialValues: {
-      userName: "",
-      phone: "",
-      email: "",
-      address: "",
+      userName: user.user_name || "",
+      phone: user.contact || "",
+      email: user.mail || "",
+      address: user.address || "",
       country: "",
       state: "",
       city: "",
-      pincode: "",
-      locality: "",
+      pincode: user.pincode || "",
+      locality: user.locality || "",
     },
     validationSchema: profileSchema,
     onSubmit: async (values) => {
       setLoading(true);
       try {
         console.log("Form submitted:", values);
-        // Here you would make your actual API call to save the profile
-        // await axios.post('/api/profile', values);
         alert("Profile updated successfully!");
       } catch (error) {
         console.error("Error updating profile:", error);
@@ -94,47 +96,71 @@ const Page = () => {
   }));
 
   // Fetch location data based on pincode
-useEffect(() => {
-  const fetchLocationByPincode = async () => {
-    const pincode = formik.values.pincode;
+  useEffect(() => {
+    const fetchLocationByPincode = async () => {
+      const pincode = formik.values.pincode;
 
-    if (/^\d{6}$/.test(pincode)) {
-      setIsLoadingLocation(true);
-      try {
-        const res = await axios.get(`/api/location-by-pincode?pincode=${pincode}`);
-        if (res.data.success) {
-          const { city, state, country, postOffices } = res.data.data;
-          formik.setFieldValue("city", city);
-          formik.setFieldValue("state", state);
-          formik.setFieldValue("country", country);
-          setPostOfficeData(postOffices);
-          if (postOffices.length) {
-            formik.setFieldValue("locality", postOffices[0].Name);
+      if (/^\d{6}$/.test(pincode)) {
+        setIsLoadingLocation(true);
+        try {
+          const res = await axios.get(
+            `/api/location-by-pincode?pincode=${pincode}`
+          );
+          if (res.data.success) {
+            const { city, state, country, postOffices } = res.data.data;
+            formik.setFieldValue("city", city);
+            formik.setFieldValue("state", state);
+            formik.setFieldValue("country", country);
+            setPostOfficeData(postOffices);
+
+            if (postOffices.length) {
+              // ✅ Keep user's locality if it's valid, otherwise fallback
+              const defaultLocality =
+                user.locality &&
+                postOffices.some((po: any) => po.Name === user.locality)
+                  ? user.locality
+                  : postOffices[0].Name;
+
+              formik.setFieldValue("locality", defaultLocality);
+            }
+          } else {
+            clearLocationFields();
           }
-        } else {
+        } catch (error) {
+          console.error("Error fetching location:", error);
           clearLocationFields();
+        } finally {
+          setIsLoadingLocation(false);
         }
-      } catch (error) {
-        console.error("Error fetching location:", error);
-        clearLocationFields();
-      } finally {
-        setIsLoadingLocation(false);
       }
+    };
+
+    const clearLocationFields = () => {
+      formik.setFieldValue("city", "");
+      formik.setFieldValue("state", "");
+      formik.setFieldValue("locality", "");
+      setPostOfficeData([]);
+    };
+
+    const debounceTimer = setTimeout(fetchLocationByPincode, 800);
+    return () => clearTimeout(debounceTimer);
+  }, [formik.values.pincode, user.locality]);
+
+  useEffect(() => {
+    if (user.user_name) {
+      formik.setValues({
+        userName: user.user_name || "",
+        phone: user.contact || "",
+        email: user.mail || "",
+        address: user.address || "",
+        country: "",
+        state: "",
+        city: "",
+        pincode: user.pincode || "",
+        locality: user.locality || "",
+      });
     }
-  };
-
-  const clearLocationFields = () => {
-    formik.setFieldValue("city", "");
-    formik.setFieldValue("state", "");
-    formik.setFieldValue("locality", "");
-    setPostOfficeData([]);
-  };
-
-  const debounceTimer = setTimeout(fetchLocationByPincode, 800);
-  return () => clearTimeout(debounceTimer);
-}, [formik.values.pincode]);
-
-
+  }, [user]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -148,7 +174,7 @@ useEffect(() => {
           <Loader />
         </div>
       )}
-      <Layout>
+       <Layout>
         <div className="px-6 py-3 md:p-10 bg-[#fefefe] min-h-screen -mt-5 max-md:-mt-3">
           {/* Profile Banner - Desktop */}
           <div className="flex flex-row max-md:flex-col justify-between items-center rounded-2xl bg-gradient-to-r from-gray-700 to-yellow-300 max-md:hidden px-6 py-4 mb-8 relative overflow-hidden shadow-lg">

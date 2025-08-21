@@ -10,7 +10,18 @@ export interface UserType {
   mail: string;
   contact: string;
   status: string;
-  token?: string; // store access token
+  token?: string;   // store access token
+
+  // 👇 Add missing fields from your API
+  address?: string;
+  pincode?: string;
+  intro?: boolean;
+  isDeleted?: boolean;
+  login_time?: string;
+  created_at?: string;
+  locality?: string; // added for locality
+  _id?: string;
+  __v?: number;
 }
 
 export interface VLifeContextType {
@@ -28,6 +39,17 @@ const defaultUser: UserType = {
   contact: "",
   status: "",
   token: "",
+
+  // initialize optional ones as needed
+  address: "",
+  pincode: "",
+  intro: false,
+  isDeleted: false,
+  login_time: "",
+  created_at: "",
+  locality: "", // added for locality
+  _id: "",
+  __v: 0,
 };
 
 const VLifeContext = createContext<VLifeContextType | undefined>(undefined);
@@ -52,6 +74,6 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
 
 export const useVLife = () => {
   const ctx = useContext(VLifeContext);
-  if (!ctx) throw new Error("useVLifeContext must be used inside VLifeContextProvider");
+  if (!ctx) throw new Error("useVLife must be used inside VLifeContextProvider");
   return ctx;
 };
