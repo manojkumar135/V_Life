@@ -30,8 +30,7 @@ export default function AddEditUserForm() {
   const params = useParams();
   const id = (params as any)?.id as string | undefined;
 
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
 
   const initialValues: UserData = {
@@ -49,11 +48,17 @@ export default function AddEditUserForm() {
 
   const validationSchema = Yup.object({
     user_id: Yup.string().required("User ID is required"),
-    user_name: Yup.string().required("Full Name is required").min(3, "At least 3 chars"),
+    user_name: Yup.string()
+      .required("Full Name is required")
+      .min(3, "At least 3 chars"),
     mail: Yup.string().email("Invalid email").required("Email is required"),
-    contact: Yup.string().matches(/^[0-9]{10}$/, "Contact must be 10 digits").required("Contact is required"),
+    contact: Yup.string()
+      .matches(/^[0-9]{10}$/, "Contact must be 10 digits")
+      .required("Contact is required"),
     address: Yup.string().required("Address is required"),
-    pincode: Yup.string().matches(/^[0-9]{6}$/, "Pincode must be 6 digits").required("Pincode is required"),
+    pincode: Yup.string()
+      .matches(/^[0-9]{6}$/, "Pincode must be 6 digits")
+      .required("Pincode is required"),
     country: Yup.string().required("Country is required"),
     state: Yup.string().required("State is required"),
     district: Yup.string().required("District is required"),
@@ -75,19 +80,22 @@ export default function AddEditUserForm() {
         const res = await axios.put("/api/users-operations", payload);
         if (res?.data?.success) {
           // alert("User saved successfully");
-                        ShowToast.success("User updated successfully!");
-          
+          ShowToast.success("User updated successfully!");
+
           router.push("/administration/users");
         } else {
           console.error("Save failed:", res?.data);
           // alert("Failed to save user");
           ShowToast.error("Failed to save user.");
         }
-      } catch (err) {
-        console.error(err);
-        // alert("Failed to save user");
-                  ShowToast.error("Failed to update User.");
+      } catch (err: any) {
+        console.error("Submission error:", err);
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to Update user.";
 
+        ShowToast.error(errorMessage);
       } finally {
         setSubmitting(false);
       }
@@ -99,7 +107,7 @@ export default function AddEditUserForm() {
     let mounted = true;
     const fetchUser = async () => {
       if (!id) {
-        setIsLoading(false);
+        setLoading(false);
         return;
       }
       try {
@@ -121,7 +129,9 @@ export default function AddEditUserForm() {
           // If pincode exists, fetch postOfficeData so locality select is populated
           if (user.pincode) {
             try {
-              const locRes = await axios.get(`/api/location-by-pincode?pincode=${user.pincode}`);
+              const locRes = await axios.get(
+                `/api/location-by-pincode?pincode=${user.pincode}`
+              );
               if (locRes?.data?.success && locRes?.data?.data?.postOffices) {
                 setPostOfficeData(locRes.data.data.postOffices);
               }
@@ -133,7 +143,7 @@ export default function AddEditUserForm() {
       } catch (e) {
         console.error("Failed to fetch user", e);
       } finally {
-        if (mounted) setIsLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
@@ -153,9 +163,11 @@ export default function AddEditUserForm() {
     }
 
     const t = setTimeout(async () => {
-      setIsLoadingLocation(true);
+      setLoading(true);
       try {
-        const res = await axios.get(`/api/location-by-pincode?pincode=${pincode}`);
+        const res = await axios.get(
+          `/api/location-by-pincode?pincode=${pincode}`
+        );
         if (res?.data?.success) {
           const { city, state, country, postOffices } = res.data.data;
           formik.setFieldValue("district", city ?? formik.values.district);
@@ -165,7 +177,10 @@ export default function AddEditUserForm() {
           // Only set locality if current value is empty or not in the options
           if (postOffices && postOffices.length > 0) {
             const localityNames = postOffices.map((p: any) => p.Name);
-            if (!formik.values.locality || !localityNames.includes(formik.values.locality)) {
+            if (
+              !formik.values.locality ||
+              !localityNames.includes(formik.values.locality)
+            ) {
               formik.setFieldValue("locality", postOffices[0].Name);
             }
           }
@@ -176,7 +191,7 @@ export default function AddEditUserForm() {
         console.error("Pincode lookup failed:", err);
         setPostOfficeData([]);
       } finally {
-        setIsLoadingLocation(false);
+        setLoading(false);
       }
     }, 800);
 
@@ -191,8 +206,12 @@ export default function AddEditUserForm() {
 
   // Ensure the saved locality is always present in the options
   const mergedLocalityOptions =
-    formik.values.locality && !localityOptions.some((opt) => opt.value === formik.values.locality)
-      ? [{ label: formik.values.locality, value: formik.values.locality }, ...localityOptions]
+    formik.values.locality &&
+    !localityOptions.some((opt) => opt.value === formik.values.locality)
+      ? [
+          { label: formik.values.locality, value: formik.values.locality },
+          ...localityOptions,
+        ]
       : localityOptions;
 
   const formFields: Array<
@@ -211,35 +230,70 @@ export default function AddEditUserForm() {
         disabled?: boolean;
       }
   > = [
-    { name: "user_id", label: "User ID", kind: "input", inputType: "text", disabled: Boolean(id) },
+    {
+      name: "user_id",
+      label: "User ID",
+      kind: "input",
+      inputType: "text",
+      disabled: Boolean(id),
+    },
     { name: "user_name", label: "Full Name", kind: "input", inputType: "text" },
     { name: "mail", label: "Email", kind: "input", inputType: "email" },
     { name: "contact", label: "Contact", kind: "input", inputType: "text" },
     { name: "address", label: "Address", kind: "input", inputType: "text" },
     { name: "pincode", label: "Pincode", kind: "input", inputType: "text" },
-    { name: "country", label: "Country", kind: "input", inputType: "text", disabled: isLoadingLocation },
-    { name: "state", label: "State", kind: "input", inputType: "text", disabled: isLoadingLocation },
-    { name: "district", label: "District", kind: "input", inputType: "text", disabled: isLoadingLocation },
+    {
+      name: "country",
+      label: "Country",
+      kind: "input",
+      inputType: "text",
+      disabled: loading,
+    },
+    {
+      name: "state",
+      label: "State",
+      kind: "input",
+      inputType: "text",
+      disabled: loading,
+    },
+    {
+      name: "district",
+      label: "District",
+      kind: "input",
+      inputType: "text",
+      disabled: loading,
+    },
     {
       name: "locality",
       label: "Locality",
       kind: "select",
       options: mergedLocalityOptions.length
         ? mergedLocalityOptions
-        : [{ value: formik.values.locality || "", label: formik.values.locality || "—" }],
-      disabled: isLoadingLocation || mergedLocalityOptions.length === 0,
+        : [
+            {
+              value: formik.values.locality || "",
+              label: formik.values.locality || "—",
+            },
+          ],
+      disabled: loading || mergedLocalityOptions.length === 0,
     },
   ];
 
-  if (isLoading) {
+  if (loading) {
     return (
       <Layout>
         <div className="p-6">
           <div className="flex items-center gap-3 mb-6">
-            <IoArrowBackOutline className="cursor-pointer" size={20} onClick={() => router.push("/administration/users")} />
+            <IoArrowBackOutline
+              className="cursor-pointer"
+              size={20}
+              onClick={() => router.push("/administration/users")}
+            />
             <h2 className="text-lg font-semibold">Loading user...</h2>
           </div>
-          <div className="h-40 flex items-center justify-center">Loading...</div>
+          <div className="h-40 flex items-center justify-center">
+            Loading...
+          </div>
         </div>
       </Layout>
     );
@@ -249,11 +303,20 @@ export default function AddEditUserForm() {
     <Layout>
       <div className="p-4">
         <div className="flex items-center mb-4">
-          <IoArrowBackOutline className="cursor-pointer mr-3" size={20} onClick={() => router.push("/administration/users")} />
-          <h2 className="text-xl font-semibold">{id ? "Edit User" : "Add User"}</h2>
+          <IoArrowBackOutline
+            className="cursor-pointer mr-3"
+            size={20}
+            onClick={() => router.push("/administration/users")}
+          />
+          <h2 className="text-xl font-semibold">
+            {id ? "Edit User" : "Add User"}
+          </h2>
         </div>
 
-        <form onSubmit={formik.handleSubmit} className="rounded-xl p-5 bg-white space-y-6">
+        <form
+          onSubmit={formik.handleSubmit}
+          className="rounded-xl p-5 bg-white space-y-6"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {formFields.map((f) => {
               if (f.kind === "input") {
@@ -266,7 +329,11 @@ export default function AddEditUserForm() {
                     value={String(formik.values[f.name] ?? "")}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    error={formik.touched[f.name] ? (formik.errors[f.name] as string | undefined) : undefined}
+                    error={
+                      formik.touched[f.name]
+                        ? (formik.errors[f.name] as string | undefined)
+                        : undefined
+                    }
                     required
                     disabled={!!f.disabled}
                   />
@@ -288,7 +355,11 @@ export default function AddEditUserForm() {
                     }}
                     onBlur={formik.handleBlur}
                     options={f.options}
-                    error={formik.touched[f.name] ? (formik.errors[f.name] as string | undefined) : undefined}
+                    error={
+                      formik.touched[f.name]
+                        ? (formik.errors[f.name] as string | undefined)
+                        : undefined
+                    }
                     required
                     disabled={!!f.disabled}
                   />
@@ -298,7 +369,7 @@ export default function AddEditUserForm() {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={formik.isSubmitting || isLoadingLocation}>
+            <Button type="submit" disabled={formik.isSubmitting || loading}>
               {formik.isSubmitting ? "Saving..." : id ? "UPDATE" : "Add User"}
             </Button>
           </div>

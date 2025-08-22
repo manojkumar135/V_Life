@@ -191,10 +191,10 @@ export default function LoginPage() {
                   !formik.values.loginId.trim() ||
                   !formik.values.password.trim()
                 }
-                className={`w-full py-2 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] cursor-pointer
+                className={`w-full py-2 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
     ${
       loading || !formik.values.loginId.trim() || !formik.values.password.trim()
-        ? "bg-gray-500 text-white cursor-not-allowed"
+        ? "bg-gray-500 text-white cursor-none"
         : "bg-[#FFD700] text-black hover:bg-yellow-400"
     }`}
               >

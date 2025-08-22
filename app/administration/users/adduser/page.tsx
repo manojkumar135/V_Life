@@ -35,7 +35,7 @@ const validationSchema = Yup.object().shape({
 export default function AddNewUserForm() {
   const router = useRouter();
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -73,9 +73,14 @@ export default function AddNewUserForm() {
         } else {
           ShowToast.error(res.data.message || "Failed to create user.");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Submission error:", err);
-        ShowToast.error("Failed to create user.");
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to create user.";
+
+        ShowToast.error(errorMessage);
       } finally {
         setSubmitting(false);
       }
@@ -97,7 +102,7 @@ export default function AddNewUserForm() {
       const pincode = formik.values.pincode;
 
       if (/^\d{6}$/.test(pincode)) {
-        setIsLoadingLocation(true);
+        setLoading(true);
         try {
           const res = await axios.get(
             `/api/location-by-pincode?pincode=${pincode}`
@@ -118,7 +123,7 @@ export default function AddNewUserForm() {
           console.error("Error fetching location:", error);
           clearLocationFields();
         } finally {
-          setIsLoadingLocation(false);
+          setLoading(false);
         }
       } else {
         clearLocationFields();
@@ -162,7 +167,9 @@ export default function AddNewUserForm() {
               value={formik.values.fullName}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={formik.touched.fullName ? formik.errors.fullName : undefined}
+              error={
+                formik.touched.fullName ? formik.errors.fullName : undefined
+              }
               required
             />
             <InputField
@@ -201,7 +208,7 @@ export default function AddNewUserForm() {
               onBlur={formik.handleBlur}
               error={formik.touched.pincode ? formik.errors.pincode : undefined}
               required
-              disabled={isLoadingLocation}
+              disabled={loading}
             />
 
             <InputField
@@ -212,7 +219,7 @@ export default function AddNewUserForm() {
               onBlur={formik.handleBlur}
               error={formik.touched.country ? formik.errors.country : undefined}
               required
-              disabled={isLoadingLocation}
+              disabled={loading}
             />
             <InputField
               label="State"
@@ -222,7 +229,7 @@ export default function AddNewUserForm() {
               onBlur={formik.handleBlur}
               error={formik.touched.state ? formik.errors.state : undefined}
               required
-              disabled={isLoadingLocation}
+              disabled={loading}
             />
             <InputField
               label="District"
@@ -232,31 +239,32 @@ export default function AddNewUserForm() {
               onBlur={formik.handleBlur}
               error={formik.touched.city ? formik.errors.city : undefined}
               required
-              disabled={isLoadingLocation}
+              disabled={loading}
             />
 
             <SelectField
-  label="Locality"
-  name="locality"
-  value={formik.values.locality} // <-- pass string value
-  onChange={(e: any) =>
-    formik.setFieldValue("locality", e.target?.value || e?.value || "")
-  }
-  onBlur={formik.handleBlur}
-  options={localityOptions}
-  error={formik.touched.locality ? formik.errors.locality : undefined}
-  required
-  disabled={isLoadingLocation || postOfficeData.length === 0}
-/>
-
+              label="Locality"
+              name="locality"
+              value={formik.values.locality} // <-- pass string value
+              onChange={(e: any) =>
+                formik.setFieldValue(
+                  "locality",
+                  e.target?.value || e?.value || ""
+                )
+              }
+              onBlur={formik.handleBlur}
+              options={localityOptions}
+              error={
+                formik.touched.locality ? formik.errors.locality : undefined
+              }
+              required
+              disabled={loading || postOfficeData.length === 0}
+            />
           </div>
 
           {/* Submit Button */}
           <div className="flex justify-end mt-6">
-            <Button
-              type="submit"
-              disabled={formik.isSubmitting || isLoadingLocation}
-            >
+            <Button type="submit" disabled={formik.isSubmitting || loading}>
               {formik.isSubmitting ? "Submitting..." : "Submit"}
             </Button>
           </div>

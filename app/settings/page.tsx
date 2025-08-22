@@ -70,7 +70,7 @@ const Page = () => {
   const [loading, setLoading] = useState(false);
 
   const { user } = useVLife();
-  console.log(user, "from profile page")
+  console.log(user, "from profile page");
 
   // Formik initialization
   const formik = useFormik<FormValues>({
@@ -220,7 +220,7 @@ const Page = () => {
         city: "",
         pincode: user.pincode || "",
         locality: user.locality || "",
-      profile: user.profile || "",
+        profile: user.profile || "",
       });
     }
   }, [user]);
