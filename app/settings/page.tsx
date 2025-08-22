@@ -17,6 +17,9 @@ import SubmitButton from "@/components/common/submitbutton";
 import SelectField from "@/components/common/selectinput";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
+import ChangePasswordForm from "@/components/changePasswordForm";
+import ShowToast from "@/components/common/Toast/toast";
+import { toTitleCase } from "@/utils/convertString";
 
 // Validation Schema
 const profileSchema = Yup.object().shape({
@@ -49,18 +52,25 @@ type FormValues = {
   city: string;
   pincode: string;
   locality: string;
+  profile: string;
 };
 
 const Page = () => {
+  const [expanded, setExpanded] = useState<string | false>(false);
+
+  const handleAccordionChange =
+    (panel: string) => (_: React.SyntheticEvent, isExpanded: boolean) => {
+      setExpanded(isExpanded ? panel : false);
+    };
+
   const referralLink = "https://VLifeGlobal……………";
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   const { user } = useVLife();
-  console.log(user, "from profile page");
+  console.log(user, "from profile page")
 
   // Formik initialization
   const formik = useFormik<FormValues>({
@@ -74,16 +84,27 @@ const Page = () => {
       city: "",
       pincode: user.pincode || "",
       locality: user.locality || "",
+      profile: user.profile || "",
     },
     validationSchema: profileSchema,
     onSubmit: async (values) => {
       setLoading(true);
       try {
-        console.log("Form submitted:", values);
-        alert("Profile updated successfully!");
-      } catch (error) {
+        const res = await axios.patch("/api/users-operations", {
+          user_id: user.user_id, // ✅ important
+          ...values,
+        });
+
+        if (res.data.success) {
+          ShowToast.success("Profile updated successfully!");
+        } else {
+          ShowToast.error(res.data.message || "Failed to update profile");
+        }
+      } catch (error: any) {
         console.error("Error updating profile:", error);
-        alert("Failed to update profile");
+        ShowToast.error(
+          error.response?.data?.message || "Failed to update profile"
+        );
       } finally {
         setLoading(false);
       }
@@ -95,13 +116,54 @@ const Page = () => {
     value: item.Name,
   }));
 
+  // Unified File Upload Handler
+  // Unified File Upload Handler
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      ShowToast.error("Only image files are allowed");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await axios.post("/api/getFileUrl", formData);
+
+      if (res.data.success) {
+        const imageUrl = res.data.fileUrl;
+        formik.setFieldValue("profile", imageUrl);
+
+        // ✅ Trigger the PATCH API call to update user profile with the new image
+        await axios.patch("/api/users-operations", {
+          user_id: user.user_id,
+          profile: imageUrl,
+        });
+
+        ShowToast.success("Profile image uploaded successfully!");
+      } else {
+        ShowToast.error(res.data.message || "Upload failed");
+      }
+    } catch (err: any) {
+      console.error("Error uploading file:", err);
+      ShowToast.error(err.response?.data?.message || "Failed to upload file");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch location data based on pincode
   useEffect(() => {
     const fetchLocationByPincode = async () => {
       const pincode = formik.values.pincode;
 
       if (/^\d{6}$/.test(pincode)) {
-        setIsLoadingLocation(true);
+        setLoading(true);
         try {
           const res = await axios.get(
             `/api/location-by-pincode?pincode=${pincode}`
@@ -130,7 +192,7 @@ const Page = () => {
           console.error("Error fetching location:", error);
           clearLocationFields();
         } finally {
-          setIsLoadingLocation(false);
+          setLoading(false);
         }
       }
     };
@@ -158,6 +220,7 @@ const Page = () => {
         city: "",
         pincode: user.pincode || "",
         locality: user.locality || "",
+      profile: user.profile || "",
       });
     }
   }, [user]);
@@ -174,16 +237,18 @@ const Page = () => {
           <Loader />
         </div>
       )}
-       <Layout>
+      <Layout>
         <div className="px-6 py-3 md:p-10 bg-[#fefefe] min-h-screen -mt-5 max-md:-mt-3">
           {/* Profile Banner - Desktop */}
           <div className="flex flex-row max-md:flex-col justify-between items-center rounded-2xl bg-gradient-to-r from-gray-700 to-yellow-300 max-md:hidden px-6 py-4 mb-8 relative overflow-hidden shadow-lg">
             <h2 className="text-white text-[2rem] max-md:text-[1.8rem] font-semibold tracking-wide font-[cursive] bottom-0 self-end max-md:hidden">
-              Adam Jackson <span className="ml-2 text-white text-[1.2rem]"></span>
+              {formik.values.userName}
+
+              <span className="ml-2 text-white text-[1.2rem]"></span>
             </h2>
             <div className="relative">
               <Image
-                src={Images.ProfilePhoto}
+                src={formik.values.profile || Images.ProfilePhoto}
                 alt="Profile"
                 width={100}
                 height={100}
@@ -191,7 +256,7 @@ const Page = () => {
                 onClick={() => setPreviewOpen(true)}
               />
               <button
-                className="absolute bottom-1 right-1 bg-black p-1 rounded-full shadow border-[1.5px] border-white"
+                className="absolute bottom-1 right-1 bg-black p-1 rounded-full shadow border-[1.5px] border-white cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <FiEdit2 className="text-white text-sm" />
@@ -202,7 +267,7 @@ const Page = () => {
           {/* Profile Image - Mobile */}
           <div className="flex flex-col items-center justify-center md:hidden mb-4 relative">
             <Image
-              src={Images.ProfilePhoto}
+              src={formik.values.profile || Images.ProfilePhoto}
               alt="Profile"
               width={120}
               height={120}
@@ -210,25 +275,20 @@ const Page = () => {
               onClick={() => setPreviewOpen(true)}
             />
             <button
-              className="absolute bottom-1 right-2/7 bg-black p-2 rounded-full shadow border-[1.5px] border-white"
+              className="absolute bottom-1 right-2/7 bg-black p-2 rounded-full shadow border-[1.5px] border-white cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
             >
               <FiEdit2 className="text-white text-sm" />
             </button>
           </div>
 
-          {/* File Upload Input */}
+          {/* File Upload Input - Only one instance */}
           <input
             type="file"
             ref={fileInputRef}
             className="hidden"
             accept="image/*"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                console.log("Selected file:", file);
-              }
-            }}
+            onChange={handleFileUpload}
           />
 
           {/* Form starts here */}
@@ -244,7 +304,7 @@ const Page = () => {
                   name="userName"
                   type="text"
                   placeholder="User Name"
-                  value={formik.values.userName}
+                  value={toTitleCase(formik.values.userName)}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={
@@ -289,7 +349,7 @@ const Page = () => {
                   label="Address"
                   name="address"
                   placeholder="D.NO : 123, left street"
-                  value={formik.values.address}
+                  value={toTitleCase(formik.values.address)}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={
@@ -304,7 +364,7 @@ const Page = () => {
                   value={formik.values.pincode}
                   onChange={(e) => {
                     // Only allow numbers
-                    const value = e.target.value.replace(/\D/g, '');
+                    const value = e.target.value.replace(/\D/g, "");
                     if (value.length <= 6) {
                       formik.handleChange(e);
                     }
@@ -314,7 +374,7 @@ const Page = () => {
                     formik.touched.pincode ? formik.errors.pincode : undefined
                   }
                   required
-                  disabled={isLoadingLocation}
+                  disabled={loading}
                 />
                 <InputField
                   label="Country"
@@ -327,7 +387,7 @@ const Page = () => {
                     formik.touched.country ? formik.errors.country : undefined
                   }
                   required
-                  disabled={isLoadingLocation}
+                  disabled={loading}
                 />
                 <InputField
                   label="State"
@@ -338,7 +398,7 @@ const Page = () => {
                   onBlur={formik.handleBlur}
                   error={formik.touched.state ? formik.errors.state : undefined}
                   required
-                  disabled={isLoadingLocation}
+                  disabled={loading}
                 />
                 <InputField
                   label="District"
@@ -349,7 +409,7 @@ const Page = () => {
                   onBlur={formik.handleBlur}
                   error={formik.touched.city ? formik.errors.city : undefined}
                   required
-                  disabled={isLoadingLocation}
+                  disabled={loading}
                 />
                 <SelectField
                   label="Locality"
@@ -362,7 +422,7 @@ const Page = () => {
                     formik.touched.locality ? formik.errors.locality : undefined
                   }
                   required
-                  disabled={isLoadingLocation || postOfficeData.length === 0}
+                  disabled={loading || postOfficeData.length === 0}
                 />
               </div>
             </section>
@@ -371,7 +431,7 @@ const Page = () => {
             <div className="flex justify-end px-5 mb-10">
               <SubmitButton
                 type="submit"
-                disabled={formik.isSubmitting || isLoadingLocation}
+                disabled={formik.isSubmitting || loading}
               >
                 {formik.isSubmitting ? "Saving..." : "Save Changes"}
               </SubmitButton>
@@ -379,50 +439,36 @@ const Page = () => {
           </form>
 
           {/* Accordion Sections */}
-          {[
-            "Change Password",
-            "Activate / Re-Activate ID",
-            "Support",
-            "Invite",
-            "Refer",
-          ].map((section) => (
-            <Accordion
-              key={section}
-              className="mb-4 bg-[#f7f7f7] shadow-sm rounded-md"
-            >
-              <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                className="font-semibold text-black px-4"
+          {["Change Password", "Activate / Re-Activate ID", "Support"].map(
+            (section) => (
+              <Accordion
+                key={section}
+                expanded={expanded === section}
+                onChange={handleAccordionChange(section)}
+                className="mb-4 bg-[#f7f7f7] shadow-sm rounded-md"
               >
-                <Typography className="text-base">{section}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                {section === "Refer" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[1, 2].map((_, i) => (
-                      <div className="flex gap-2 items-center" key={i}>
-                        <input
-                          className="modern-input flex-1 text-blue-600 border border-gray-300 rounded px-3 py-2"
-                          value={referralLink}
-                          readOnly
-                        />
-                        <button
-                          className="bg-yellow-400 hover:bg-yellow-500 text-black font-medium px-4 py-2 rounded shadow transition-colors duration-200"
-                          onClick={() => handleCopy(referralLink)}
-                        >
-                          Copy Link
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-gray-600 text-sm">
-                    Content for "{section}" goes here.
-                  </p>
-                )}
-              </AccordionDetails>
-            </Accordion>
-          ))}
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography
+                    variant="subtitle1"
+                    fontSize={expanded === section ? "1.2rem" : "1rem"}
+                    fontWeight={expanded === section ? "bold" : "normal"}
+                    className="text-base"
+                  >
+                    {section}
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  {section === "Change Password" ? (
+                    <ChangePasswordForm onSuccess={() => setExpanded(false)} />
+                  ) : (
+                    <p className="text-gray-600 text-sm">
+                      Content for "{section}" goes here.
+                    </p>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            )
+          )}
         </div>
 
         {/* Fullscreen Preview */}
@@ -433,7 +479,7 @@ const Page = () => {
           >
             <div className="w-[70vw] max-md:w-[80vw] max-w-xs aspect-square">
               <Image
-                src={Images.ProfilePhoto}
+                src={formik.values.profile || Images.ProfilePhoto}
                 alt="Zoomed Profile"
                 width={300}
                 height={300}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
-import {Login} from "@/models/login";
+import { Login } from "@/models/login";
 
 import mongoose from "mongoose";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
@@ -14,7 +14,7 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
 
-    const { mail, contact, user_name, first_name, last_name, role, role_id, title, address, pincode,locality } = body;
+    const { mail, contact, user_name, first_name, last_name, role, role_id, title, address, pincode, locality } = body;
 
     // Step 1: Check if mail or contact already exists in logins
     const existingLogin = await Login.findOne({
@@ -137,23 +137,71 @@ export async function PATCH(request) {
     const updateId = id || user_id;
 
     if (!updateId) {
-      return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "ID is required" },
+        { status: 400 }
+      );
     }
 
+    // Update User
     let updatedUser;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
       updatedUser = await User.findByIdAndUpdate(updateId, updates, { new: true });
     } else {
-      updatedUser = await User.findOneAndUpdate({ user_id: updateId }, updates, { new: true });
+      updatedUser = await User.findOneAndUpdate(
+        { user_id: updateId },
+        updates,
+        { new: true }
+      );
     }
 
     if (!updatedUser) {
-      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "User not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ success: true, data: updatedUser }, { status: 200 });
+    // 🔑 Update Login record too
+    const loginUpdates = {};
+    if (updates.userName) loginUpdates.user_name = updates.userName;
+    if (updates.phone) loginUpdates.contact = updates.phone;
+    if (updates.email) loginUpdates.mail = updates.email;
+    if (updates.address) loginUpdates.address = updates.address;
+    if (updates.pincode) loginUpdates.pincode = updates.pincode;
+    if (updates.locality) loginUpdates.locality = updates.locality;   // ✅ FIX
+    if (updates.country) loginUpdates.country = updates.country;      // if stored in Login
+    if (updates.state) loginUpdates.state = updates.state;            // if stored in Login
+    if (updates.profile) loginUpdates.profile = updates.profile;            // if stored in Login
+
+    if (updates.city || updates.district) {
+      loginUpdates.district = updates.city || updates.district;       // ✅ Map to district
+    }
+
+    // console.log("Login Update Payload:", loginUpdates);
+
+    let updatedLogin = null;
+    if (Object.keys(loginUpdates).length > 0) {
+      updatedLogin = await Login.findOneAndUpdate(
+        { user_id: updateId },
+        loginUpdates,
+        { new: true }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Profile updated successfully",
+        data: { user: updatedUser, login: updatedLogin },
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 

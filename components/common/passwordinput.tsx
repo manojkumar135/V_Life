@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, ChangeEvent } from "react";
-import { Eye, EyeOff } from "lucide-react"; // you can use react-icons too
+import { Eye, EyeOff } from "lucide-react";
 
 interface PasswordInputProps {
   label?: string;
@@ -8,9 +8,10 @@ interface PasswordInputProps {
   value?: string;
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
-  className?: string;
-  labelClassName?: string;
-  containerClassName?: string;
+  className?: string; // input styles
+  labelClassName?: string; // label styles
+  containerClassName?: string; // wrapper styles
+  errorClassName?: string; // error text styles
   name?: string;
   disabled?: boolean;
   readOnly?: boolean;
@@ -30,6 +31,7 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
   className = "",
   labelClassName = "",
   containerClassName = "",
+  errorClassName = "",
   name,
   disabled,
   readOnly,
@@ -93,9 +95,9 @@ const PasswordInput: React.FC<PasswordInputProps> = ({
 
         {/* Error Message */}
         <div
-          className={`text-red-500 text-xs mt-1 ${
-            error ? "opacity-100 h-4" : "opacity-0 h-4"
-          } transition-opacity`}
+          className={`text-xs mt-1 transition-opacity ${
+            error ? "opacity-100 h-4 text-red-500" : "opacity-0 h-4"
+          } ${errorClassName}`}
         >
           {error || "\u00A0"}
         </div>

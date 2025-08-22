@@ -1,10 +1,12 @@
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
 
-interface UserPayload {
+export interface UserPayload {
   _id: string;
-  fullName: string;
-  role?: string;
+  role: string;
+  user_id?: string;   
+  fullName?: string;  
 }
+
 
 
 interface EmployeePayload {
@@ -15,7 +17,7 @@ interface EmployeePayload {
 
 export const generateAccessToken = (user: UserPayload): string => {
   return jwt.sign(
-    { user_id: user._id, user_name: user.fullName, role: user.role ?? "admin" },
+    {_id: user._id, user_name: user.fullName, role: user.role ?? "admin" },
     process.env.JWT_SECRET as Secret,
     { expiresIn: "1h" }
   );

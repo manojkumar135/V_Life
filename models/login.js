@@ -28,6 +28,7 @@ const LoginSchema = new mongoose.Schema(
         contact: { type: String, required: true },
         address: { type: String, required: true },
         pincode: { type: String, required: true },
+        locality: { type: String, },
 
 
         sponsor: { type: String }, // sponsor ID or name

@@ -62,6 +62,7 @@ export async function POST(req: Request) {
     // 🎟 Generate new short-lived access token
     const accessToken = generateAccessToken({
       _id: loginUser._id.toString(),
+      user_id: loginUser.user_id || "",
       fullName: loginUser.user_name || "",
       role: loginUser.role,
     });

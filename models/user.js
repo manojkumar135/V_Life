@@ -1,3 +1,4 @@
+import { profile } from "console";
 import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema(
@@ -17,6 +18,7 @@ const UserSchema = new mongoose.Schema(
     last_modified_by: { type: String },
     last_modified_at: { type: Date },
     role: { type: String,  },
+    profile: { type: String, }, // URL or file path to profile photo
     user_status: { type: String, default: "active" },
   },
   {

@@ -20,6 +20,7 @@ export interface UserType {
   login_time?: string;
   created_at?: string;
   locality?: string; // added for locality
+  profile?:string;
   _id?: string;
   __v?: number;
 }
@@ -48,6 +49,7 @@ const defaultUser: UserType = {
   login_time: "",
   created_at: "",
   locality: "", // added for locality
+  profile:"",
   _id: "",
   __v: 0,
 };

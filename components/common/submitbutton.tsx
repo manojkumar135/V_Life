@@ -22,7 +22,7 @@ const Button: React.FC<ButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       className={clsx(
-        "bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 px-6 rounded transition-colors duration-200 disabled:opacity-50",
+        "bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 px-6 rounded transition-colors duration-200 disabled:opacity-50 cursor-pointer",
         className
       )}
     >
