@@ -11,6 +11,7 @@ import InputField from "@/components/common/inputtype1";
 import Button from "@/components/common/submitbutton";
 import SelectField from "@/components/common/selectinput";
 import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader"
 
 const validationSchema = Yup.object().shape({
   fullName: Yup.string()
@@ -140,7 +141,14 @@ export default function AddNewUserForm() {
   }));
 
   return (
+    <>
     <Layout>
+      {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <Loader />
+          </div>
+        )}
+      
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center mb-0">
@@ -271,5 +279,7 @@ export default function AddNewUserForm() {
         </form>
       </div>
     </Layout>
+    </>
+    
   );
 }

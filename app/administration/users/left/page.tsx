@@ -119,11 +119,7 @@ export default function LeftTeam() {
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
 
-        {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <Loader />
-          </div>
-        )}
+     
         <HeaderWithActions
           title="Left Team"
           search={query}

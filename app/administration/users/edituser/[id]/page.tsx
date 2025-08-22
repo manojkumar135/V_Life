@@ -11,6 +11,7 @@ import InputField from "@/components/common/inputtype1";
 import SelectField from "@/components/common/selectinput";
 import Button from "@/components/common/submitbutton";
 import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader"
 
 interface UserData {
   user_id: string;
@@ -282,6 +283,11 @@ export default function AddEditUserForm() {
   if (loading) {
     return (
       <Layout>
+           {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <Loader />
+          </div>
+        )}
         <div className="p-6">
           <div className="flex items-center gap-3 mb-6">
             <IoArrowBackOutline
@@ -301,6 +307,12 @@ export default function AddEditUserForm() {
 
   return (
     <Layout>
+       {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <Loader />
+          </div>
+        )}
+      
       <div className="p-4">
         <div className="flex items-center mb-4">
           <IoArrowBackOutline
