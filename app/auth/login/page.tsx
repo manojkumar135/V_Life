@@ -80,7 +80,7 @@ export default function LoginPage() {
   });
 
   const handleForgotPassword = () => {
-    router.push("/forgot-password");
+    router.push("/auth/forgot");
   };
 
   // const handleNavigateToSignup = () => {
@@ -195,7 +195,7 @@ export default function LoginPage() {
     ${
       loading || !formik.values.loginId.trim() || !formik.values.password.trim()
         ? "bg-gray-500 text-white cursor-none"
-        : "bg-[#FFD700] text-black hover:bg-yellow-400"
+        : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
     }`}
               >
                 Login

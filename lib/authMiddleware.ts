@@ -11,7 +11,9 @@ const PUBLIC_PATHS = [
   "/auth/register",
   "/auth/forgot",
   "/api/refresh",
-  "/api/login-operations", // ✅ allow login APIs
+  "/api/login-operations", 
+  "/api/sendOTP",
+  "/api/verifyOTP",
 ];
 
 export function authMiddleware(req: NextRequest) {
