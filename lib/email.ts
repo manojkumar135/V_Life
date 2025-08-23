@@ -42,3 +42,4 @@ export const verifyOtp = (email: string, otp: string) => {
     return { status: 200, success: false, message: "Invalid OTP." };
   }
 };
+

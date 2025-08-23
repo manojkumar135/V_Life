@@ -52,6 +52,7 @@ export default function AddNewUserForm() {
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
+      setLoading(true)
       try {
         const res = await axios.post("/api/users-operations", {
           user_name: values.fullName,
@@ -84,6 +85,8 @@ export default function AddNewUserForm() {
         ShowToast.error(errorMessage);
       } finally {
         setSubmitting(false);
+              setLoading(false)
+
       }
     },
   });

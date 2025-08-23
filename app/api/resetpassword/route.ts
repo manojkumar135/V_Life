@@ -8,9 +8,10 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     
-    const { mail, newPassword } = await request.json();
+    const { email, newPassword } = await request.json();
+    console.log(email, newPassword)
 
-    if (!mail || !newPassword) {
+    if (!email || !newPassword) {
       return NextResponse.json(
         { success: false, message: "Email and new password are required" },
         { status: 400 }
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by mail
-    const user = await Login.findOne({ mail });
+    const user = await Login.findOne({ mail:email });
 
     if (!user) {
       return NextResponse.json(
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash the new password
-    const saltRounds = 12;
+    const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
     // Update the password in the database

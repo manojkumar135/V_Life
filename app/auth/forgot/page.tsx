@@ -9,8 +9,8 @@ import ShowToast from "@/components/common/Toast/toast";
 import Images from "@/constant/Image";
 import InputField from "@/components/common/inputtype1";
 import axios from "axios";
-import SubmitButton from "@/components/common/submitbutton"
-import Loader from "@/components/common/loader"
+import SubmitButton from "@/components/common/submitbutton";
+import Loader from "@/components/common/loader";
 import PasswordInput from "@/components/common/passwordinput";
 
 // Define TypeScript interfaces
@@ -29,8 +29,6 @@ interface NewPasswordFormValues {
   newPassword: string;
   confirmPassword: string;
 }
-
-
 
 // OTP Input Component
 const OTPInput: React.FC<OTPInputProps> = ({
@@ -98,7 +96,7 @@ const OTPInput: React.FC<OTPInputProps> = ({
           ref={(el) => {
             if (el) inputRefs.current[index] = el;
           }}
-          className="w-12 h-12 text-center text-xl font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+          className="w-8 h-8 text-center text-lg font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
         />
       ))}
     </div>
@@ -129,12 +127,12 @@ const ForgotPassword: React.FC = () => {
   };
 
   const formatTime = (timeInSeconds: number) => {
-  const minutes = Math.floor(timeInSeconds / 60);
-  const seconds = timeInSeconds % 60;
-  return `${minutes.toString().padStart(2, "0")}:${seconds
-    .toString()
-    .padStart(2, "0")}`;
-};
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   const emailValidation = Yup.object({
     email: Yup.string()
@@ -158,13 +156,13 @@ const ForgotPassword: React.FC = () => {
       setLoading(true);
       try {
         // API call to send OTP using Axios
-        console.log(values.email,"getting mail")
+        console.log(values.email, "getting mail");
         const response = await axios.post("/api/sendOTP", {
           email: values.email,
         });
 
         const data = response.data;
-        console.log(response)
+        // console.log(response);
 
         if (data.success) {
           setEmail(values.email);
@@ -270,45 +268,45 @@ const ForgotPassword: React.FC = () => {
     validationSchema: passwordValidation,
     onSubmit: async (values: NewPasswordFormValues, { setSubmitting }) => {
       setLoading(true);
-     try {
-      // API call to reset password using Axios
-      const response = await axios.post('/api/resetpassword', {
-        email: email, // The email from state
-        newPassword: values.newPassword
-      });
-      
-      const data = response.data;
-      
-      if (data.success) {
-        ShowToast.success("Password reset successfully!");
-        
-        // Redirect to login page after 2 seconds
-        setTimeout(() => {
-          window.location.href = '/login'; // Or use your router
-        }, 2000);
-      } else {
-        ShowToast.error(data.message || "Failed to reset password. Try again.");
+      try {
+        // API call to reset password using Axios
+        const response = await axios.post("/api/resetpassword", {
+          email,
+          newPassword: values.newPassword,
+        });
+
+        const data = response.data;
+
+        if (data.success) {
+          ShowToast.success("Password reset successfully!");
+          router.push("/auth/login");
+        } else {
+          ShowToast.error(
+            data.message || "Failed to reset password. Try again."
+          );
+        }
+      } catch (error: any) {
+        // Handle axios error
+        if (error.response) {
+          ShowToast.error(
+            error.response.data.message ||
+              "Failed to reset password. Try again."
+          );
+        } else if (error.request) {
+          ShowToast.error("Network error. Please check your connection.");
+        } else {
+          ShowToast.error("Failed to reset password. Try again.");
+        }
+      } finally {
+        setLoading(false);
+        setSubmitting(false);
       }
-    } catch (error: any) {
-      // Handle axios error
-      if (error.response) {
-        ShowToast.error(error.response.data.message || "Failed to reset password. Try again.");
-      } else if (error.request) {
-        ShowToast.error("Network error. Please check your connection.");
-      } else {
-        ShowToast.error("Failed to reset password. Try again.");
-      }
-    } finally {
-      setLoading(false);
-      setSubmitting(false);
-    }
     },
   });
 
   return (
     <>
-
-     {loading && (
+      {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
         </div>
@@ -325,7 +323,7 @@ const ForgotPassword: React.FC = () => {
 
         {/* ✅ Form at bottom for mobile/tab, right for desktop */}
         <div className="w-full xl:w-3/5 flex flex-col items-center justify-center order-2 xl:order-1">
-          <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-lg shadow-md border border-gray-200">
+          <div className="w-full max-w-md bg-white p-6 md:p-8 rounded-lg shadow-none xl:shadow-md max-lg:border-0 xl:border-1 border-gray-200">
             <p className="text-xl md:text-2xl font-bold mb-6 text-gray-800 text-center">
               {step === 1
                 ? "Forgot Password"
@@ -393,7 +391,10 @@ const ForgotPassword: React.FC = () => {
                     {countdown > 0 ? (
                       <p className="text-gray-600">
                         Resend OTP in{" "}
-                        <span className="font-medium">{countdown}</span> seconds
+                        <span className="font-medium">
+                          {formatTime(countdown)}
+                        </span>{" "}
+                        seconds
                       </p>
                     ) : (
                       <button
@@ -412,43 +413,43 @@ const ForgotPassword: React.FC = () => {
             {/* Step 3: New Password */}
             {step === 3 && (
               <form onSubmit={passwordFormik.handleSubmit}>
-               <PasswordInput
-  label="New Password"
-  name="newPassword"
-  value={passwordFormik.values.newPassword}
-  onChange={passwordFormik.handleChange}
-  onBlur={passwordFormik.handleBlur}
-  required
-  placeholder="Enter new password"
-  error={
-    passwordFormik.touched.newPassword
-      ? passwordFormik.errors.newPassword
-      : ""
-  }
-  className="focus:ring-2 focus:ring-blue-500"
-  labelClassName="text-gray-700 mb-2"
-  errorClassName="text-red-600 text-sm mt-2"
-  containerClassName="mb-4"
-/>
+                <PasswordInput
+                  label="New Password"
+                  name="newPassword"
+                  value={passwordFormik.values.newPassword}
+                  onChange={passwordFormik.handleChange}
+                  onBlur={passwordFormik.handleBlur}
+                  required
+                  placeholder="Enter new password"
+                  error={
+                    passwordFormik.touched.newPassword
+                      ? passwordFormik.errors.newPassword
+                      : ""
+                  }
+                  className="focus:ring-2 focus:ring-blue-500"
+                  labelClassName="text-gray-700 mb-2"
+                  errorClassName="text-red-600 text-sm mt-2"
+                  containerClassName="mb-4"
+                />
 
-<PasswordInput
-  label="Confirm New Password"
-  name="confirmPassword"
-  value={passwordFormik.values.confirmPassword}
-  onChange={passwordFormik.handleChange}
-  onBlur={passwordFormik.handleBlur}
-  required
-  placeholder="Confirm new password"
-  error={
-    passwordFormik.touched.confirmPassword
-      ? passwordFormik.errors.confirmPassword
-      : ""
-  }
-  className="focus:ring-2 focus:ring-blue-500"
-  labelClassName="text-gray-700 mb-2"
-  errorClassName="text-red-600 text-sm mt-2"
-  containerClassName="mb-6"
-/>
+                <PasswordInput
+                  label="Confirm New Password"
+                  name="confirmPassword"
+                  value={passwordFormik.values.confirmPassword}
+                  onChange={passwordFormik.handleChange}
+                  onBlur={passwordFormik.handleBlur}
+                  required
+                  placeholder="Confirm new password"
+                  error={
+                    passwordFormik.touched.confirmPassword
+                      ? passwordFormik.errors.confirmPassword
+                      : ""
+                  }
+                  className="focus:ring-2 focus:ring-blue-500"
+                  labelClassName="text-gray-700 mb-2"
+                  errorClassName="text-red-600 text-sm mt-2"
+                  containerClassName="mb-6"
+                />
 
                 <div className="flex justify-center">
                   <SubmitButton
@@ -463,8 +464,8 @@ const ForgotPassword: React.FC = () => {
           </div>
         </div>
 
-        <div className="w-full xl:w-2/5 flex justify-start xl:justify-start order-1 xl:order-2 -mt-40 xl:mt-0">
-          <div className="relative w-full max-w-md h-64 md:h-96  xl:!-ml-10">
+        <div className="w-full xl:w-2/5 flex justify-start xl:justify-start order-1 xl:order-2 -mt-30 xl:mt-0">
+          <div className="relative w-full max-w-md h-45 md:h-96  ml-0 xl:!-ml-10">
             <Image
               src={Images.ForgotPhoto}
               alt="Forgot Password Illustration"
