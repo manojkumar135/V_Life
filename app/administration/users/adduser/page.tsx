@@ -11,7 +11,7 @@ import InputField from "@/components/common/inputtype1";
 import Button from "@/components/common/submitbutton";
 import SelectField from "@/components/common/selectinput";
 import ShowToast from "@/components/common/Toast/toast";
-import Loader from "@/components/common/loader"
+import Loader from "@/components/common/loader";
 
 const validationSchema = Yup.object().shape({
   fullName: Yup.string()
@@ -52,7 +52,7 @@ export default function AddNewUserForm() {
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
-      setLoading(true)
+      setLoading(true);
       try {
         const res = await axios.post("/api/users-operations", {
           user_name: values.fullName,
@@ -85,8 +85,7 @@ export default function AddNewUserForm() {
         ShowToast.error(errorMessage);
       } finally {
         setSubmitting(false);
-              setLoading(false)
-
+        setLoading(false);
       }
     },
   });
@@ -145,144 +144,151 @@ export default function AddNewUserForm() {
 
   return (
     <>
-    <Layout>
-      {loading && (
+      <Layout>
+        {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
         )}
-      
-      <div className="p-4">
-        {/* Header */}
-        <div className="flex items-center mb-0">
-          <IoArrowBackOutline
-            size={25}
-            className="mr-3 cursor-pointer"
-            onClick={() => router.push("/administration/users")}
-          />
-          <h2 className="text-xl max-sm:text-[1rem] font-semibold">
-            Add New User
-          </h2>
+
+        <div className="p-4">
+          {/* Header */}
+          <div className="flex items-center mb-0">
+            <IoArrowBackOutline
+              size={25}
+              className="mr-3 cursor-pointer"
+              onClick={() => router.push("/administration/users")}
+            />
+            <h2 className="text-xl max-sm:text-[1rem] font-semibold">
+              Add New User
+            </h2>
+          </div>
+
+          {/* Form */}
+          <form
+            onSubmit={formik.handleSubmit}
+            className="rounded-xl p-5 max-sm:p-3 bg-white space-y-4"
+          >
+            {/* Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <InputField
+                label="Full Name"
+                name="fullName"
+                value={formik.values.fullName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.fullName ? formik.errors.fullName : undefined
+                }
+                required
+              />
+              <InputField
+                label="Email"
+                name="email"
+                type="email"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.email ? formik.errors.email : undefined}
+                required
+              />
+              <InputField
+                label="Contact"
+                name="contact"
+                value={formik.values.contact}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.contact ? formik.errors.contact : undefined
+                }
+                required
+              />
+              <InputField
+                label="Address"
+                name="address"
+                value={formik.values.address}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.address ? formik.errors.address : undefined
+                }
+                required
+              />
+              <InputField
+                label="Pincode"
+                name="pincode"
+                value={formik.values.pincode}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.pincode ? formik.errors.pincode : undefined
+                }
+                required
+                disabled={loading}
+              />
+
+              <InputField
+                label="Country"
+                name="country"
+                value={formik.values.country}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.country ? formik.errors.country : undefined
+                }
+                required
+                disabled={loading}
+              />
+              <InputField
+                label="State"
+                name="state"
+                value={formik.values.state}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.state ? formik.errors.state : undefined}
+                required
+                disabled={loading}
+              />
+              <InputField
+                label="District"
+                name="city"
+                value={formik.values.city}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.city ? formik.errors.city : undefined}
+                required
+                disabled={loading}
+              />
+
+              <SelectField
+                label="Locality"
+                name="locality"
+                value={formik.values.locality} // <-- pass string value
+                onChange={(e: any) =>
+                  formik.setFieldValue(
+                    "locality",
+                    e.target?.value || e?.value || ""
+                  )
+                }
+                onBlur={formik.handleBlur}
+                options={localityOptions}
+                error={
+                  formik.touched.locality ? formik.errors.locality : undefined
+                }
+                required
+                disabled={loading || postOfficeData.length === 0}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-end mt-6">
+              <Button type="submit" disabled={formik.isSubmitting || loading}>
+                {formik.isSubmitting ? "Submitting..." : "Submit"}
+              </Button>
+            </div>
+          </form>
         </div>
-
-        {/* Form */}
-        <form
-          onSubmit={formik.handleSubmit}
-          className="rounded-xl p-5 max-sm:p-3 bg-white space-y-4"
-        >
-          {/* Form Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <InputField
-              label="Full Name"
-              name="fullName"
-              value={formik.values.fullName}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={
-                formik.touched.fullName ? formik.errors.fullName : undefined
-              }
-              required
-            />
-            <InputField
-              label="Email"
-              name="email"
-              type="email"
-              value={formik.values.email}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.email ? formik.errors.email : undefined}
-              required
-            />
-            <InputField
-              label="Contact"
-              name="contact"
-              value={formik.values.contact}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.contact ? formik.errors.contact : undefined}
-              required
-            />
-            <InputField
-              label="Address"
-              name="address"
-              value={formik.values.address}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.address ? formik.errors.address : undefined}
-              required
-            />
-            <InputField
-              label="Pincode"
-              name="pincode"
-              value={formik.values.pincode}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.pincode ? formik.errors.pincode : undefined}
-              required
-              disabled={loading}
-            />
-
-            <InputField
-              label="Country"
-              name="country"
-              value={formik.values.country}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.country ? formik.errors.country : undefined}
-              required
-              disabled={loading}
-            />
-            <InputField
-              label="State"
-              name="state"
-              value={formik.values.state}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.state ? formik.errors.state : undefined}
-              required
-              disabled={loading}
-            />
-            <InputField
-              label="District"
-              name="city"
-              value={formik.values.city}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.city ? formik.errors.city : undefined}
-              required
-              disabled={loading}
-            />
-
-            <SelectField
-              label="Locality"
-              name="locality"
-              value={formik.values.locality} // <-- pass string value
-              onChange={(e: any) =>
-                formik.setFieldValue(
-                  "locality",
-                  e.target?.value || e?.value || ""
-                )
-              }
-              onBlur={formik.handleBlur}
-              options={localityOptions}
-              error={
-                formik.touched.locality ? formik.errors.locality : undefined
-              }
-              required
-              disabled={loading || postOfficeData.length === 0}
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end mt-6">
-            <Button type="submit" disabled={formik.isSubmitting || loading}>
-              {formik.isSubmitting ? "Submitting..." : "Submit"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </Layout>
+      </Layout>
     </>
-    
   );
 }

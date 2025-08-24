@@ -194,7 +194,7 @@ export default function LoginPage() {
                 className={`w-full py-2 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
     ${
       loading || !formik.values.loginId.trim() || !formik.values.password.trim()
-        ? "bg-gray-500 text-white cursor-none"
+        ? "bg-gray-400 text-white cursor-none"
         : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
     }`}
               >

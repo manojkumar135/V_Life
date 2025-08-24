@@ -96,7 +96,7 @@ const OTPInput: React.FC<OTPInputProps> = ({
           ref={(el) => {
             if (el) inputRefs.current[index] = el;
           }}
-          className="w-8 h-8 text-center text-lg font-medium border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+          className="w-8 h-8 text-center text-lg font-medium border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
         />
       ))}
     </div>
@@ -313,6 +313,7 @@ const ForgotPassword: React.FC = () => {
       )}
       <div className="flex items-center mb-0 mt-5  ml-5 ">
         <IoArrowBackOutline
+          title="Back To Login"
           size={35}
           className="mr-3 cursor-pointer top-0 "
           onClick={() => router.push("/auth/login")}
@@ -464,7 +465,7 @@ const ForgotPassword: React.FC = () => {
           </div>
         </div>
 
-        <div className="w-full xl:w-2/5 flex justify-start xl:justify-start order-1 xl:order-2 -mt-30 xl:mt-0">
+        <div className="w-full xl:w-2/5 flex justify-center items-center xl:justify-start order-1 xl:order-2 -mt-30 xl:mt-0">
           <div className="relative w-full max-w-md h-45 md:h-96  ml-0 xl:!-ml-10">
             <Image
               src={Images.ForgotPhoto}
