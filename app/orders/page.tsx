@@ -6,6 +6,8 @@ import { FaTrash, FaEdit } from "react-icons/fa";
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
+import { useRouter } from "next/navigation";
+
 
 const ordersData = [
   {
@@ -111,6 +113,8 @@ const ordersData = [
 ];
 
 export default function OrdersPage() {
+    const router = useRouter();
+  
   const columns = [
     { field: "id", headerName: "Order ID", flex: 1 },
     { field: "userId", headerName: "User ID", flex: 1 },
@@ -175,6 +179,9 @@ export default function OrdersPage() {
     // handle navigation or modal etc.
   };
 
+  const handleAddGroup = () => {
+    router.push("/orders/addorder");
+  };
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
@@ -190,7 +197,7 @@ export default function OrdersPage() {
           setSearch={handleChange}
           addLabel="+ ADD ORDER"
           showAddButton
-          onAdd={() => console.log("Add order clicked")}
+          onAdd={handleAddGroup}
           onMore={() => console.log("More options clicked")}
         />
 
