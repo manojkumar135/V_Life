@@ -146,9 +146,9 @@ export default function AddOrderPage() {
 
   return (
     <Layout>
-      <div className="p-4">
+      <div className="px-4 py-2">
         {/* Header */}
-        <div className="flex items-center mb-4">
+        <div className="flex items-center mb-2">
           <IoArrowBackOutline
             size={25}
             className="mr-3 cursor-pointer"
@@ -161,12 +161,12 @@ export default function AddOrderPage() {
 
         {/* Products Grid */}
         <div
-          className={`rounded-xl p-6 bg-white mb-6 transition-all duration-300
+          className={`rounded-xl px-6 max-lg:px-3 py-3 bg-white mb-5 transition-all duration-300  
             ${showCart ? "lg:pr-[470px]" : ""}`}
         >
-          <h3 className="text-lg font-semibold mb-4">Products</h3>
+          <h3 className="text-lg font-semibold mb-4 ">Products</h3>
           <div
-            className={`grid gap-4 
+            className={`grid gap-4 max-lg:gap-3 
               grid-cols-1 sm:grid-cols-2 
               ${
                 showCart
@@ -213,7 +213,7 @@ export default function AddOrderPage() {
         <div
           className={`
             absolute bg-white shadow-2xl pointer-events-auto
-            w-full h-[80%] rounded-t-2xl bottom-0 transform transition-transform duration-500 ease-out
+            w-full h-[90%] rounded-t-2xl bottom-0 transform transition-transform duration-500 ease-out
             lg:w-[600px] lg:h-full lg:rounded-none lg:top-0 lg:right-0
             ${
               showCart
@@ -223,7 +223,7 @@ export default function AddOrderPage() {
           `}
         >
           {/* Header */}
-          <div className="flex justify-between items-center p-4 border-b">
+          <div className="flex justify-between items-center px-4 py-2 border-b">
             <h3 className="text-lg font-semibold">Your Cart</h3>
             <IoClose
               size={28}

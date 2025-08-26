@@ -19,9 +19,9 @@ export default function OrderFormCartSection({
   console.log(cart);
 
   return (
-    <div className="rounded-xl p-4 bg-white">
+    <div className="rounded-xl p-4 max-lg:p-3 bg-white">
       {/* Tabs */}
-      <div className="flex border-b mb-4">
+      <div className="flex border-b mb-3">
         <button
           className={`px-2 py-2 font-medium ${
             activeTab === "cart"
@@ -59,7 +59,7 @@ export default function OrderFormCartSection({
               </div>
 
               {/* Cart Items */}
-              <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
+              <div className="space-y-4 max-h-80 max-lg:max-h-95 max-lg:min-h-[600px] overflow-y-auto pr-2">
                 {cart.map((item: any) => (
                   <div
                     key={item.id}
@@ -210,12 +210,18 @@ export default function OrderFormCartSection({
               </div>
 
               {/* Total Section */}
-              <div className="mt-6 pt-4 xl:border-t max-lg:mt-0">
-                <div className="flex justify-between items-center text-lg font-semibold max-lg:px-5">
+              <div
+                className="
+   xl:pt-4  xl:border-t self-end 
+   fixed bottom-0 left-0 right-0 
+    max-lg:bg-white max-lg:shadow-[0_-4px_6px_rgba(0,0,0,0.1)] max-lg:z-50 max-lg:rounded-t-xl 
+  "
+              >
+                <div className="flex justify-between items-center text-lg font-semibold px-5 mt-3">
                   <span>Total:</span>
                   <span>₹ {getTotalPrice().toFixed(2)}</span>
                 </div>
-                <div className="flex justify-end ">
+                <div className="flex justify-end px-5 pb-3">
                   <SubmitButton
                     type="submit"
                     onClick={(e) => handleSubmit(e as any)}

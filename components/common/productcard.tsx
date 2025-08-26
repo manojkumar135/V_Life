@@ -46,7 +46,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         onClick={() =>
           onAddToCart({ id, name, price, image, description })
         }
-        className="mt-4  text-black font-medium py-2 px-4 max-lg:px-3 max-md:text-[0.85rem] max-lg:text-[0.9rem] rounded-md self-end"
+        className=" text-black font-medium py-2 px-4 max-lg:px-3 max-md:text-[0.85rem] max-lg:text-[0.9rem] rounded-md self-end"
       >
         Add to Cart
       </SubmitButton>
