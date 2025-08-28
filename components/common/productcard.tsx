@@ -9,13 +9,8 @@ interface ProductCardProps {
   price: number;
   image: string;
   description: string;
-  onAddToCart: (product: {
-    id: number;
-    name: string;
-    price: number;
-    image: string;
-    description: string;
-  }) => void;
+ onAddToCart: (product: any) => void;
+  isInCart?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -25,6 +20,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   image,
   description,
   onAddToCart,
+    isInCart = false,
+
 }) => {
   return (
     <div className="border rounded-lg p-4 flex flex-col">
@@ -48,7 +45,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         }
         className=" text-black font-medium py-2 px-4 max-lg:px-3 max-md:text-[0.85rem] max-lg:text-[0.9rem] rounded-md self-end"
       >
-        Add to Cart
+        {isInCart ? "Added" : "Add to Cart"}
       </SubmitButton>
     </div>
   );

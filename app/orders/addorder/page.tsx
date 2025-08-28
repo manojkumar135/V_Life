@@ -8,31 +8,160 @@ import ShowToast from "@/components/common/Toast/toast";
 import ProductCard from "@/components/common/productcard";
 import OrderSummary from "@/components/common/OrderSummary/ordersummary";
 
-// Dummy product data
-const dummyProducts = [
+// Categories with their products
+const categories = [
   {
     id: 1,
-    name: "Wireless Headphones",
-    price: 89.99,
-    image:
-      "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-    description: "Premium noise-cancelling wireless headphones",
+    name: "Electronics",
+    products: [
+      {
+        id: 101,
+        name: "Wireless Headphones",
+        price: 89.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Premium noise-cancelling wireless headphones",
+        category: "Electronics",
+      },
+      {
+        id: 102,
+        name: "Smart Watch",
+        price: 199.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Feature-rich smartwatch with health monitoring",
+        category: "Electronics",
+      },
+      {
+        id: 103,
+        name: "Bluetooth Speaker",
+        price: 59.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Portable speaker with 12-hour battery life",
+        category: "Electronics",
+      },
+    ],
   },
   {
     id: 2,
-    name: "Smart Watch",
-    price: 199.99,
-    image:
-      "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-    description: "Feature-rich smartwatch with health monitoring",
+    name: "Clothing",
+    products: [
+      {
+        id: 201,
+        name: "Cotton T-Shirt",
+        price: 24.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "100% cotton comfortable t-shirt",
+        category: "Clothing",
+      },
+      {
+        id: 202,
+        name: "Denim Jeans",
+        price: 59.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Classic denim jeans for everyday wear",
+        category: "Clothing",
+      },
+    ],
   },
   {
     id: 3,
-    name: "Bluetooth Speaker",
-    price: 59.99,
-    image:
-      "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-    description: "Portable speaker with 12-hour battery life",
+    name: "Kitchen",
+    products: [
+      {
+        id: 301,
+        name: "Coffee Maker",
+        price: 79.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Programmable coffee maker with timer",
+        category: "Kitchen",
+      },
+      {
+        id: 302,
+        name: "Non-Stick Cookware Set",
+        price: 129.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "10-piece non-stick cookware set",
+        category: "Kitchen",
+      },
+    ],
+  },
+  {
+    id: 4,
+    name: "Beauty",
+    products: [
+      {
+        id: 401,
+        name: "Moisturizing Cream",
+        price: 29.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Hydrating facial moisturizer for all skin types",
+        category: "Beauty",
+      },
+      {
+        id: 402,
+        name: "Electric Toothbrush",
+        price: 49.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Rechargeable electric toothbrush with multiple modes",
+        category: "Beauty",
+      },
+    ],
+  },
+  {
+    id: 5,
+    name: "Sports",
+    products: [
+      {
+        id: 501,
+        name: "Yoga Mat",
+        price: 39.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Non-slip yoga mat for exercise and meditation",
+        category: "Sports",
+      },
+      {
+        id: 502,
+        name: "Water Bottle",
+        price: 19.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Insulated water bottle that keeps drinks cold for 24 hours",
+        category: "Sports",
+      },
+    ],
+  },
+  {
+    id: 6,
+    name: "Books",
+    products: [
+      {
+        id: 601,
+        name: "Notebook Set",
+        price: 24.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Set of 3 premium quality notebooks",
+        category: "Books",
+      },
+      {
+        id: 602,
+        name: "Ballpoint Pen Set",
+        price: 14.99,
+        image:
+          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+        description: "Smooth-writing ballpoint pens in assorted colors",
+        category: "Books",
+      },
+    ],
   },
 ];
 
@@ -42,6 +171,8 @@ interface CartItem {
   price: number;
   quantity: number;
   image: string;
+  description: string;
+  category: string;
 }
 
 interface OrderFormData {
@@ -61,6 +192,7 @@ export default function AddOrderPage() {
     notes: "",
   });
   const [showCart, setShowCart] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(categories[0].name);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -89,7 +221,7 @@ export default function AddOrderPage() {
             quantity: 1,
             image: product.image,
             description: product.description || "",
-            model: product.model || "",
+            category: product.category || "",
           },
         ];
       }
@@ -144,6 +276,11 @@ export default function AddOrderPage() {
     router.push("/orders");
   };
 
+  // Get products for the active category
+  const activeCategoryProducts = categories.find(
+    (category) => category.name === activeCategory
+  )?.products || [];
+
   return (
     <Layout>
       <div className="px-4 py-2">
@@ -154,9 +291,26 @@ export default function AddOrderPage() {
             className="mr-3 cursor-pointer"
             onClick={() => router.back()}
           />
-          <h2 className="text-xl max-sm:text-[1rem] font-semibold">
-            Create New Order
-          </h2>
+          <h2 className="text-xl max-sm:text-[1rem] font-semibold">Products</h2>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="rounded-xl px-6 max-lg:px-3 py-1 bg-white mb-2">
+          <div className="flex flex-wrap gap-4 border-b">
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                className={`px-4 py-2 font-medium ${
+                  activeCategory === category.name
+                    ? "border-b-2 border-blue-600 text-blue-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+                onClick={() => setActiveCategory(category.name)}
+              >
+                {category.name}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Products Grid */}
@@ -164,7 +318,6 @@ export default function AddOrderPage() {
           className={`rounded-xl px-6 max-lg:px-3 py-3 bg-white mb-5 transition-all duration-300  
             ${showCart ? "lg:pr-[470px]" : ""}`}
         >
-          <h3 className="text-lg font-semibold mb-4 ">Products</h3>
           <div
             className={`grid gap-4 max-lg:gap-3 
               grid-cols-1 sm:grid-cols-2 
@@ -174,11 +327,12 @@ export default function AddOrderPage() {
                   : "lg:grid-cols-3 xl:grid-cols-3"
               }`}
           >
-            {dummyProducts.map((product) => (
+            {activeCategoryProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 {...product}
                 onAddToCart={addToCart}
+                isInCart={!!cart.find((item) => item.id === product.id)}
               />
             ))}
           </div>
@@ -186,14 +340,30 @@ export default function AddOrderPage() {
       </div>
 
       {/* Floating Cart Icon */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-8 right-8 z-10">
         <button
-          className="relative w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg"
+          className="
+            relative w-14 h-14 rounded-full 
+            bg-black text-yellow-300 flex items-center justify-center 
+            shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)]
+            border border-yellow-400
+            hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)]
+            active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)]
+            transition-all duration-200
+          "
           onClick={() => setShowCart(true)}
         >
           <IoCartOutline size={28} />
+
           {cart.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+            <span
+              className="
+                absolute -top-1 -right-1 
+                bg-red-600 text-white text-xs font-bold 
+                rounded-full w-6 h-6 flex items-center justify-center
+                shadow-[0_2px_6px_rgba(0,0,0,0.4)]
+              "
+            >
               {cart.reduce((sum, item) => sum + item.quantity, 0)}
             </span>
           )}
