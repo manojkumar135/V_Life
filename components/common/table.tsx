@@ -164,7 +164,7 @@ export default function Table({
           hideFooterPagination
           rowHeight={rowHeight}
           getRowId={(row) => String(row[rowIdField] ?? "")}
-          localeText={{ noRowsLabel: "No records found" }}
+          localeText={{ noRowsLabel: "No Records Found" }}
           onRowSelectionModelChange={handleSelectionChange}
           rowSelectionModel={rowSelectionModel}
           onRowClick={(params) => onRowClick && onRowClick(params.row)}
@@ -174,8 +174,18 @@ export default function Table({
             zIndex: 1,
             position: "relative",
 
-            // Force full width for all grid containers on desktop
-           
+            "& .MuiDataGrid-overlay": {
+              padding: "20px !important",
+              fontSize: "1rem",
+              color: "gray",
+              marginBottom:"1.5rem",
+            },
+
+            "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within":
+              {
+                outline: "none !important",
+              },
+
             // Force full width for all grid containers on desktop
             "& .MuiDataGrid-main": {
               width: "100% !important",
@@ -195,6 +205,12 @@ export default function Table({
               width: "100% !important",
               overflowX: "auto",
 
+               "& .MuiDataGrid-overlay": {
+              padding: "20px !important",
+              fontSize: "1rem",
+              color: "gray",
+              marginBottom:"1.5rem",
+            },
 
               "& .MuiDataGrid-main": {
                 width: "100% !important",
@@ -257,19 +273,14 @@ export default function Table({
                 },
             },
 
-
             // "& .MuiDataGrid-scrollbarFiller": {
             //   backgroundColor: "gray !important", // ✅ make filler gray
             // },
             "& .MuiDataGrid-scrollbarFiller--header": {
               backgroundColor: "gray !important", // ✅ header filler gray
             },
-            // ✅ Make last column take more width
 
-            "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within":
-              {
-                outline: "none !important",
-              },
+            
             "& .MuiDataGrid-cell:focus-within": {
               outline: "none !important",
             },

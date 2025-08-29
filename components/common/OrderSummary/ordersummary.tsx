@@ -16,7 +16,7 @@ export default function OrderFormCartSection({
   handleInputChange,
 }: any) {
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
-  console.log(cart);
+  // console.log(cart);
 
   return (
     <div className="rounded-xl p-4 max-lg:p-3 bg-white">

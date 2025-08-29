@@ -2,7 +2,7 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import Layout from "@/layout/Layout";
-import { IoArrowBackOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import CheckboxField from "@/components/common/checkboxinput";
@@ -79,7 +79,7 @@ export default function AddRoleForm() {
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center mb-4">
-          <IoArrowBackOutline
+          <IoIosArrowBack
             size={25}
             className="mr-3 cursor-pointer"
             onClick={() => router.push("/administration/roles")}

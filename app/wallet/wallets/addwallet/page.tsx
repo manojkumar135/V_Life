@@ -2,7 +2,7 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { IoArrowBackOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
 import Layout from "@/layout/Layout";
 import InputField from "@/components/common/inputtype1";
 import SubmitButton from "@/components/common/submitbutton";
@@ -85,7 +85,7 @@ export default function AddWalletForm() {
       <div className="p-4 max-md:p-2">
         {/* Header */}
         <div className="flex items-center mb-6 max-md:mb-2">
-          <IoArrowBackOutline
+          <IoIosArrowBack
             size={25}
             color="black"
             className="mr-2 cursor-pointer"

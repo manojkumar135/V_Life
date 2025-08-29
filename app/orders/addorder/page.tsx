@@ -2,11 +2,16 @@
 
 import React, { useState, ChangeEvent, FormEvent } from "react";
 import Layout from "@/layout/Layout";
-import { IoArrowBackOutline, IoCartOutline, IoClose } from "react-icons/io5";
+import {  IoCartOutline, IoClose } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
+
 import { useRouter } from "next/navigation";
 import ShowToast from "@/components/common/Toast/toast";
 import ProductCard from "@/components/common/productcard";
 import OrderSummary from "@/components/common/OrderSummary/ordersummary";
+import axios from "axios";
+import { useVLife } from "@/store/context";
+import { formatDate } from "@/components/common/formatDate";
 
 // Categories with their products
 const categories = [
@@ -134,7 +139,8 @@ const categories = [
         price: 19.99,
         image:
           "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Insulated water bottle that keeps drinks cold for 24 hours",
+        description:
+          "Insulated water bottle that keeps drinks cold for 24 hours",
         category: "Sports",
       },
     ],
@@ -178,17 +184,22 @@ interface CartItem {
 interface OrderFormData {
   customerName: string;
   customerEmail: string;
+  contact: string;
   shippingAddress: string;
   notes: string;
 }
 
 export default function AddOrderPage() {
+  const { user } = useVLife();
+  // console.log(user);
+
   const router = useRouter();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [formData, setFormData] = useState<OrderFormData>({
-    customerName: "",
-    customerEmail: "",
-    shippingAddress: "",
+    customerName: user.user_name || "",
+    customerEmail: user.mail || "",
+    contact: user.contact || "",
+    shippingAddress: user.address || "",
     notes: "",
   });
   const [showCart, setShowCart] = useState(false);
@@ -201,6 +212,7 @@ export default function AddOrderPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  // ✅ Ensure category is stored
   const addToCart = (product: any) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
@@ -221,7 +233,7 @@ export default function AddOrderPage() {
             quantity: 1,
             image: product.image,
             description: product.description || "",
-            category: product.category || "",
+            category: product.category, // ✅ always keep category
           },
         ];
       }
@@ -252,7 +264,9 @@ export default function AddOrderPage() {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  // console.log(cart)
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (cart.length === 0) {
@@ -260,47 +274,85 @@ export default function AddOrderPage() {
       return;
     }
 
-    const payload = {
-      customer_name: formData.customerName,
-      customer_email: formData.customerEmail,
-      shipping_address: formData.shippingAddress,
-      notes: formData.notes,
-      items: cart,
-      total_amount: getTotalPrice(),
-      status: "pending",
-      order_date: new Date().toISOString(),
-    };
+    try {
+      // Transform cart items to match backend schema
+      const orderItems = cart.map((item) => ({
+        product_id: item.id.toString(),
+        product: item.id.toString(), // using id as product code
+        category: item.category,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.price,
+        price: item.price * item.quantity,
+        description: item.description, // ✅ include description
+        image: item.image, // ✅ include image
+      }));
 
-    console.log("Order payload:", payload);
-    ShowToast.success("Order created successfully!");
-    router.push("/orders");
+      const payload = {
+        user_id: user.user_id, // You need to get this from your auth system
+        user_name: user.user_name || "",
+        contact: formData.contact || user.contact,
+        mail: formData.customerEmail || user.mail,
+        address: formData.shippingAddress || user.address,
+        description: formData.notes,
+        payment_date: formatDate(new Date()),
+        payment_id: "payment-id-" + Date.now(),
+        payment_type: "cash",
+        items: orderItems,
+        order_status: "pending",
+      };
+
+      const response = await axios.post("/api/order-operations", payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.data.success) {
+        ShowToast.success("Order created successfully!");
+        router.push("/orders");
+      } else {
+        ShowToast.error(response.data.message || "Failed to create order");
+      }
+    } catch (error: any) {
+      console.error("Error creating order:", error);
+
+      if (error.response) {
+        ShowToast.error(
+          error.response.data.message || "Failed to create order"
+        );
+      } else if (error.request) {
+        ShowToast.error("No response from server. Please try again.");
+      } else {
+        ShowToast.error("Failed to create order: " + error.message);
+      }
+    }
   };
 
-  // Get products for the active category
-  const activeCategoryProducts = categories.find(
-    (category) => category.name === activeCategory
-  )?.products || [];
+  const activeCategoryProducts =
+    categories.find((category) => category.name === activeCategory)?.products ||
+    [];
 
   return (
     <Layout>
       <div className="px-4 py-2">
         {/* Header */}
         <div className="flex items-center mb-2">
-          <IoArrowBackOutline
+          <IoIosArrowBack
             size={25}
             className="mr-3 cursor-pointer"
-            onClick={() => router.back()}
+            onClick={() => router.push("/orders")}
           />
           <h2 className="text-xl max-sm:text-[1rem] font-semibold">Products</h2>
         </div>
 
         {/* Category Tabs */}
         <div className="rounded-xl px-6 max-lg:px-3 py-1 bg-white mb-2">
-          <div className="flex flex-wrap gap-4 border-b">
+          <div className="flex space-x-4 overflow-x-auto scrollbar-hide border-b">
             {categories.map((category) => (
               <button
                 key={category.id}
-                className={`px-4 py-2 font-medium ${
+                className={`px-4 py-2 font-medium whitespace-nowrap ${
                   activeCategory === category.name
                     ? "border-b-2 border-blue-600 text-blue-600"
                     : "text-gray-500 hover:text-gray-700"

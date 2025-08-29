@@ -2,7 +2,7 @@
 
 import React, { useState, ChangeEvent, useEffect, FormEvent } from "react";
 import Layout from "@/layout/Layout";
-import { IoArrowBackOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
 import { useRouter, useParams } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import SubmitButton from "@/components/common/submitbutton";
@@ -114,7 +114,7 @@ export default function EditWalletPage() {
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center mb-4">
-          <IoArrowBackOutline
+          <IoIosArrowBack
             size={25}
             className="mr-3 cursor-pointer"
             onClick={() => router.push("/wallet/wallets")}

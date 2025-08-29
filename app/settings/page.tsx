@@ -70,7 +70,7 @@ const Page = () => {
   const [loading, setLoading] = useState(false);
 
   const { user } = useVLife();
-  console.log(user, "from profile page");
+  // console.log(user, "from profile page");
 
   // Formik initialization
   const formik = useFormik<FormValues>({

@@ -3,7 +3,7 @@ import { useState, useRef, ReactNode } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import Image from "next/image";
-import { IoArrowBackOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import ShowToast from "@/components/common/Toast/toast";
 import Images from "@/constant/Image";
@@ -312,7 +312,7 @@ const ForgotPassword: React.FC = () => {
         </div>
       )}
       <div className="flex items-center mb-0 mt-5  ml-5 ">
-        <IoArrowBackOutline
+        <IoIosArrowBack
           title="Back To Login"
           size={35}
           className="mr-3 cursor-pointer top-0 "

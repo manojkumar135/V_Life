@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import Layout from "@/layout/Layout";
 import BinaryTreeNode from "@/components/common/treenode";
 import { useRouter } from "next/navigation";
-import { IoArrowBackOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
 
 interface TreeNode {
   id: string;
@@ -77,7 +77,7 @@ export default function TreeView() {
   return (
     <Layout>
       <div className="overflow-auto p-6">
-        <IoArrowBackOutline
+        <IoIosArrowBack
           size={25}
           color="black"
           className="ml-0 mr-3 mt-1 max-sm:!mt-0 max-sm:mr-1 cursor-pointer z-20 mb-3"

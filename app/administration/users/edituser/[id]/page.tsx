@@ -5,7 +5,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import Layout from "@/layout/Layout";
-import { IoArrowBackOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
 import { useRouter, useParams } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import SelectField from "@/components/common/selectinput";
@@ -290,7 +290,7 @@ export default function AddEditUserForm() {
         )}
         <div className="p-6">
           <div className="flex items-center gap-3 mb-6">
-            <IoArrowBackOutline
+            <IoIosArrowBack
               className="cursor-pointer"
               size={20}
               onClick={() => router.push("/administration/users")}
@@ -315,7 +315,7 @@ export default function AddEditUserForm() {
       
       <div className="p-4">
         <div className="flex items-center mb-4">
-          <IoArrowBackOutline
+          <IoIosArrowBack
             className="cursor-pointer mr-3"
             size={20}
             onClick={() => router.push("/administration/users")}

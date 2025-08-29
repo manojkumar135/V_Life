@@ -27,7 +27,7 @@ const page = () => {
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <Banknote size={32} />
-            <span className="mt-2 text-lg font-semibold">Withdraw</span>
+            <span className="mt-2 text-lg font-semibold">Payout</span>
           </div>
 
           {/* Convert Card */}

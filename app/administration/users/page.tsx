@@ -4,7 +4,7 @@ import React from "react";
 import Layout from "@/layout/Layout";
 import { Users, UserCheck, TreePine } from "lucide-react"; // Lucide icons
 import { useRouter } from "next/navigation";
-import { IoArrowBackOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
 
 const Page = () => {
   const router = useRouter();
@@ -12,7 +12,7 @@ const Page = () => {
   return (
     <Layout>
       <div className="px-6 py-3">
-        <IoArrowBackOutline
+        <IoIosArrowBack
           size={25}
           color="black"
           className="ml-0 mr-3 mt-1 max-sm:!mt-0 max-sm:mr-1 cursor-pointer z-20 mb-3"

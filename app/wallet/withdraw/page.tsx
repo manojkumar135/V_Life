@@ -132,7 +132,7 @@ export default function WithdrawPage() {
           </div>
         )}
         <HeaderWithActions
-          title="Withdraw Transactions"
+          title="Payouts"
           search={query}
           setSearch={handleChange}
           showAddButton

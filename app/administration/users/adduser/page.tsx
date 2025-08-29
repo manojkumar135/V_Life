@@ -5,7 +5,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import Layout from "@/layout/Layout";
-import { IoArrowBackOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import Button from "@/components/common/submitbutton";
@@ -154,7 +154,7 @@ export default function AddNewUserForm() {
         <div className="p-4">
           {/* Header */}
           <div className="flex items-center mb-0">
-            <IoArrowBackOutline
+            <IoIosArrowBack
               size={25}
               className="mr-3 cursor-pointer"
               onClick={() => router.push("/administration/users")}
