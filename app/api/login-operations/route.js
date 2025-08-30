@@ -93,19 +93,45 @@ export async function PUT(request) {
   }
 }
 
-// PATCH - Partial update for login
 export async function PATCH(request) {
   try {
     await connectDB();
-    const { id, login_id, ...updates } = await request.json();
-    const updateId = id || login_id;
+    const { _id, user_id, login_id, items, ...updates } = await request.json();
 
-    let updatedLogin;
-    if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedLogin = await Login.findByIdAndUpdate(updateId, updates, { new: true });
+    // Check which identifier is provided
+    let query = {};
+    if (_id) {
+      query = { _id };
+    } else if (user_id) {
+      query = { user_id };
+    } else if (login_id) {
+      query = { login_id };
     } else {
-      updatedLogin = await Login.findOneAndUpdate({ login_id: updateId }, updates, { new: true });
+      return NextResponse.json({ success: false, message: "User identifier is required" }, { status: 400 });
     }
+
+    // If items are provided, update the cart
+    if (items !== undefined && Array.isArray(items)) {
+      // Transform items to match the OrderItemSchema requirements
+      updates.items = items.map(item => ({
+        id: item.product_id || String(item.id || ''),
+        product: item.product_id || String(item.id || ''), // Use product_id for product field
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.price, // Map price to unit_price
+        price: item.price * item.quantity, // Calculate total price
+        description: item.description || '',
+        category: item.category,
+        image: item.image,
+        created_at: item.created_at || new Date().toISOString()
+      }));
+    }
+
+    const updatedLogin = await Login.findOneAndUpdate(
+      query,
+      updates,
+      { new: true, runValidators: true }
+    );
 
     if (!updatedLogin) {
       return NextResponse.json({ success: false, message: "Login not found" }, { status: 404 });
@@ -113,6 +139,7 @@ export async function PATCH(request) {
 
     return NextResponse.json({ success: true, data: updatedLogin }, { status: 200 });
   } catch (error) {
+    console.error("Error updating login:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }

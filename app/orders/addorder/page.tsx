@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import Layout from "@/layout/Layout";
-import {  IoCartOutline, IoClose } from "react-icons/io5";
+import { IoCartOutline, IoClose } from "react-icons/io5";
 import { IoIosArrowBack } from "react-icons/io";
 
 import { useRouter } from "next/navigation";
@@ -190,11 +190,11 @@ interface OrderFormData {
 }
 
 export default function AddOrderPage() {
-  const { user } = useVLife();
-  // console.log(user);
-
+  const { user, updateUserCart } = useVLife();
   const router = useRouter();
-  const [cart, setCart] = useState<CartItem[]>([]);
+
+  // Initialize cart
+  const [cart, setCart] = useState<CartItem[]>(user.items || []);
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
     customerEmail: user.mail || "",
@@ -205,6 +205,13 @@ export default function AddOrderPage() {
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState(categories[0].name);
 
+ useEffect(() => {
+  if (user.items) {
+    // Normalize ids to numbers
+    setCart(user.items.map((i: any) => ({ ...i, id: Number(i.id) })));
+  }
+}, [user.items]);
+
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -212,59 +219,72 @@ export default function AddOrderPage() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ Ensure category is stored
-  const addToCart = (product: any) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.id === product.id);
+  // In your AddOrderPage component, update the addToCart function:
+const addToCart = async (product: any) => {
+  const updatedCart = [...cart];
+  const productId = Number(product.id);
 
-      if (existingItem) {
-        return prevCart.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        return [
-          ...prevCart,
-          {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            quantity: 1,
-            image: product.image,
-            description: product.description || "",
-            category: product.category, // ✅ always keep category
-          },
-        ];
-      }
+  const existingItem = updatedCart.find((item) => item.id === productId);
+
+  if (existingItem) {
+    existingItem.quantity += 1;
+  } else {
+    updatedCart.push({
+      id: productId,
+      name: product.name,
+      price: product.price,
+      quantity: 1,
+      image: product.image,
+      description: product.description || "",
+      category: product.category,
     });
+  }
 
-    ShowToast.success(`${product.name} added to cart`);
-  };
+  setCart(updatedCart);
+  try {
+    await updateUserCart(updatedCart);
+  } catch (error) {
+    ShowToast.error("Failed to update cart");
+  }
+};
 
-  const updateQuantity = (id: number, newQuantity: number) => {
-    if (newQuantity < 1) {
-      removeFromCart(id);
-      return;
-    }
 
-    setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-  };
+  const updateQuantity = async (id: number, newQuantity: number) => {
+  if (newQuantity < 1) {
+    removeFromCart(id);
+    return;
+  }
 
-  const removeFromCart = (id: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
-    ShowToast.info("Item removed from cart");
-  };
+  const updatedCart = cart.map((item) =>
+    Number(item.id) === Number(id) ? { ...item, quantity: newQuantity } : item
+  );
 
+  setCart(updatedCart);
+
+  try {
+    await updateUserCart(updatedCart);
+  } catch (error) {
+    ShowToast.error("Failed to update cart");
+  }
+};
+
+const removeFromCart = async (id: number) => {
+  const updatedCart = cart.filter((item) => Number(item.id) !== Number(id));
+  setCart(updatedCart);
+
+  try {
+    await updateUserCart(updatedCart);
+  } catch (error) {
+    ShowToast.error("Failed to update cart");
+  }
+};
+
+
+
+  // console.log(cart)
   const getTotalPrice = () => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
-
-  // console.log(cart)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -275,21 +295,20 @@ export default function AddOrderPage() {
     }
 
     try {
-      // Transform cart items to match backend schema
       const orderItems = cart.map((item) => ({
-        product_id: item.id.toString(),
-        product: item.id.toString(), // using id as product code
+        product_id: String(item.id), // ✅ convert only here
+        product: String(item.id),
         category: item.category,
         name: item.name,
         quantity: item.quantity,
         unit_price: item.price,
         price: item.price * item.quantity,
-        description: item.description, // ✅ include description
-        image: item.image, // ✅ include image
+        description: item.description,
+        image: item.image,
       }));
 
       const payload = {
-        user_id: user.user_id, // You need to get this from your auth system
+        user_id: user.user_id,
         user_name: user.user_name || "",
         contact: formData.contact || user.contact,
         mail: formData.customerEmail || user.mail,
@@ -303,12 +322,19 @@ export default function AddOrderPage() {
       };
 
       const response = await axios.post("/api/order-operations", payload, {
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       });
 
       if (response.data.success) {
+        const emptyCart: CartItem[] = [];
+        setCart(emptyCart);
+
+        try {
+          await updateUserCart(emptyCart);
+        } catch (error) {
+          console.error("Failed to clear cart:", error);
+        }
+
         ShowToast.success("Order created successfully!");
         router.push("/orders");
       } else {
@@ -316,11 +342,8 @@ export default function AddOrderPage() {
       }
     } catch (error: any) {
       console.error("Error creating order:", error);
-
       if (error.response) {
-        ShowToast.error(
-          error.response.data.message || "Failed to create order"
-        );
+        ShowToast.error(error.response.data.message || "Failed to create order");
       } else if (error.request) {
         ShowToast.error("No response from server. Please try again.");
       } else {
@@ -384,7 +407,7 @@ export default function AddOrderPage() {
                 key={product.id}
                 {...product}
                 onAddToCart={addToCart}
-                isInCart={!!cart.find((item) => item.id === product.id)}
+                isInCart={!!cart.find((item) => item.id === Number(product.id))}
               />
             ))}
           </div>
@@ -446,7 +469,7 @@ export default function AddOrderPage() {
         >
           {/* Header */}
           <div className="flex justify-between items-center px-4 py-2 border-b">
-            <h3 className="text-lg font-semibold">Your Cart</h3>
+            <h3 className="text-lg font-semibold">My cart</h3>
             <IoClose
               size={28}
               className="cursor-pointer"
@@ -463,6 +486,7 @@ export default function AddOrderPage() {
               getTotalPrice={getTotalPrice}
               handleSubmit={handleSubmit}
               formData={formData}
+              setFormData={setFormData}
               handleInputChange={handleInputChange}
             />
           </div>
