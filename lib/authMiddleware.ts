@@ -7,6 +7,7 @@ const secretKey = process.env.JWT_SECRET || "your-secret-key";
 
 // Public routes (accessible without login)
 const PUBLIC_PATHS = [
+  "/",
   "/auth/login",
   "/auth/register",
   "/auth/forgot",
