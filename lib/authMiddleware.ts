@@ -14,7 +14,8 @@ const PUBLIC_PATHS = [
   "/api/login-operations", 
   "/api/sendOTP",
   "/api/verifyOTP",
-  "/api/resetpassword"
+  "/api/resetpassword",
+  "/api/users-operations"
 ];
 
 export function authMiddleware(req: NextRequest) {

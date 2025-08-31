@@ -3,95 +3,210 @@
 import { useState } from "react";
 import { FiMail } from "react-icons/fi";
 import { TfiLock } from "react-icons/tfi";
-import { FaUser } from "react-icons/fa";
+import { FaUser, FaPhone } from "react-icons/fa";
+import { IoIosLink } from "react-icons/io";
+
+import { useFormik } from "formik";
+import * as Yup from "yup";
 import Image from "next/image";
 import Images from "@/constant/Image";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log({ name, email, password });
+  // Form validation schema
+  const validationSchema = Yup.object({
+    user_name: Yup.string()
+      .required("* Full Name is required")
+      .min(2, "* Name must be at least 2 characters"),
+    mail: Yup.string()
+      .email("* Invalid email format")
+      .required("* Email is required"),
+    contact: Yup.string()
+      .required("* Contact is required")
+      .matches(/^[0-9]{10}$/, "* Contact must be a 10-digit number"),
+    // password: Yup.string()
+    //   .required("* Password is required")
+    //   .min(6, "* Password must be at least 6 characters"),
+    referBy: Yup.string().required("* Referral ID is required"),
+  });
 
-    router.push("/auth/login");
-  };
+  const formik = useFormik({
+    initialValues: {
+      user_name: "",
+      mail: "",
+      contact: "",
+      password: "",
+      referBy: "",
+      role: "user",
+    },
+    validationSchema,
+    onSubmit: async (values) => {
+      setLoading(true);
+      try {
+        const res = await axios.post("/api/users-operations", values);
+
+        if (res.data.success) {
+          ShowToast.success("Registration successful!");
+          router.push("/auth/login");
+        } else {
+          ShowToast.error(res.data.message || "Registration failed");
+        }
+      } catch (err: any) {
+        const errorMessage =
+          err.response?.data?.message || err.message || "Something went wrong";
+        ShowToast.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+  });
 
   const handleNavigateToLogin = () => {
-    router.push("/auth/login"); 
+    router.push("/auth/login");
   };
 
   return (
     <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
-      {/* Left Illustration Section */}
-      <div className="w-1/2 max-md:w-full flex items-center justify-center p-10 max-lg:p-5 max-md:hidden">
-        <Image
-          src={Images.LoginImage}
-          alt="Register Illustration"
-          width={500}
-          height={500}
-          className="w-4/5 max-md:w-full max-lg:w-full max-md:ml-1 max-lg:ml-16"
-        />
-      </div>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
 
-      {/* Right Registration Form */}
-      <div className="w-1/2 max-lg:w-full flex flex-col justify-center items-center overflow-y-auto max-lg:py-6 max-md:h-full">
-        <div className="w-[70%] max-md:w-[90%] flex flex-col justify-center items-center py-10 px-8 bg-[#fffff0] rounded-3xl shadow max-lg:py-8">
+      {/* Left Illustration Section */}
+       <div className="w-1/2 max-md:w-full max-lg:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:h-full">
+    <div className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-10 px-8 bg-[#fffff0] 
+    rounded-3xl shadow-lg border-gray-200 border max-lg:py-8">
           <p className="text-[2rem] max-md:text-[1.5rem] max-lg:text-[1.5rem] font-bold text-black mb-8 max-lg:mb-5">
-            Register
+            Sign Up
           </p>
 
-          <form onSubmit={handleRegister} className="w-full space-y-6">
+          <form onSubmit={formik.handleSubmit} className="w-full space-y-4">
             {/* Name */}
-            <div className="relative">
-              <FaUser className="absolute left-3 top-3.5 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-              />
+            <div className="flex flex-col">
+              <div className="relative">
+                <FaUser className="absolute left-3 top-3.5 text-gray-500" />
+                <input
+                  type="text"
+                  name="user_name"
+                  placeholder="Full Name"
+                  value={formik.values.user_name}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+              </div>
+              <span className="text-red-500 text-sm mt-1 h-4 block">
+                {formik.touched.user_name && formik.errors.user_name
+                  ? formik.errors.user_name
+                  : "\u00A0"}
+              </span>
             </div>
 
             {/* Email */}
-            <div className="relative">
-              <FiMail className="absolute left-3 top-3.5 text-gray-500" />
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-              />
+            <div className="flex flex-col">
+              <div className="relative">
+                <FiMail className="absolute left-3 top-3.5 text-gray-500" />
+                <input
+                  type="email"
+                  name="mail"
+                  placeholder="Email"
+                  value={formik.values.mail}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+              </div>
+              <span className="text-red-500 text-sm mt-1 h-4 block">
+                {formik.touched.mail && formik.errors.mail
+                  ? formik.errors.mail
+                  : "\u00A0"}
+              </span>
+            </div>
+
+            {/* Contact */}
+            <div className="flex flex-col">
+              <div className="relative">
+                <FaPhone className="absolute left-3 top-3.5 text-gray-500" />
+                <input
+                  type="text"
+                  name="contact"
+                  placeholder="Contact Number"
+                  value={formik.values.contact}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+              </div>
+              <span className="text-red-500 text-sm mt-1 h-4 block">
+                {formik.touched.contact && formik.errors.contact
+                  ? formik.errors.contact
+                  : "\u00A0"}
+              </span>
             </div>
 
             {/* Password */}
-            <div className="relative">
-              <TfiLock className="absolute left-3 top-3.5 text-gray-500" />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-              />
+            {/* <div className="flex flex-col">
+              <div className="relative">
+                <TfiLock className="absolute left-3 top-3.5 text-gray-500" />
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Password"
+                  value={formik.values.password}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+              </div>
+              <span className="text-red-500 text-sm mt-1 h-4 block">
+                {formik.touched.password && formik.errors.password ? formik.errors.password : "\u00A0"}
+              </span>
+            </div> */}
+
+            {/* Referral ID */}
+            <div className="flex flex-col">
+              <div className="relative">
+                <IoIosLink className="absolute left-3 top-3.5 text-gray-500" />
+                <input
+                  type="text"
+                  name="referBy"
+                  placeholder="Referral ID"
+                  value={formik.values.referBy}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+              </div>
+              <span className="text-red-500 text-sm mt-1 h-4 block">
+                {formik.touched.referBy && formik.errors.referBy
+                  ? formik.errors.referBy
+                  : "\u00A0"}
+              </span>
             </div>
 
             {/* Register Button */}
             <button
               type="submit"
-              className="w-full py-2 bg-[#FFD700] text-black font-semibold rounded-md hover:bg-yellow-400 transition-colors text-[1.2rem] max-lg:text-[1rem]"
+              disabled={loading || !formik.isValid || !formik.dirty}
+              className={`w-full py-2 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
+    ${
+      loading || !formik.isValid || !formik.dirty
+        ? "bg-gray-400 text-white cursor-not-allowed"
+        : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+    }`}
             >
               Register
             </button>
 
             {/* Login prompt */}
-            <div className="text-center text-sm text-black -mt-3">
+            <div className="text-center text-sm text-black -mt-1">
               Already have an account?{" "}
               <span
                 onClick={handleNavigateToLogin}
@@ -103,6 +218,19 @@ export default function RegisterPage() {
           </form>
         </div>
       </div>
+      
+
+      {/* Right Registration Form */}
+      <div className="w-1/2  max-lg:w-2/5 flex items-center justify-center p-1 max-lg:p-0 max-md:hidden">
+        <Image
+          src={Images.SignupPhoto}
+          alt="Register Illustration"
+          width={800}
+          height={700}
+          className="w-full max-lg:w-full max-md:ml-1 border-2"
+        />
+      </div>
+     
     </div>
   );
 }

@@ -83,9 +83,9 @@ export default function LoginPage() {
     router.push("/auth/forgot");
   };
 
-  // const handleNavigateToSignup = () => {
-  //   router.push("/auth/register");
-  // };
+  const handleNavigateToSignup = () => {
+    router.push("/auth/register");
+  };
 
   return (
     <>
@@ -200,6 +200,17 @@ export default function LoginPage() {
               >
                 Login
               </button>
+
+              {/* Signup prompt */}
+            <div className="text-center text-sm text-gray-800 -mt-3">
+              Don&apos;t have an account ? {" "}
+              <span
+                onClick={handleNavigateToSignup}
+                className="text-blue-600 font-medium cursor-pointer"
+              >
+                Sign Up!
+              </span>
+            </div>
             </form>
           </div>
         </div>

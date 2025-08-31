@@ -30,6 +30,7 @@ const LoginSchema = new mongoose.Schema(
     title: { type: String },
     first_name: { type: String },
     last_name: { type: String },
+    referBy: { type: String },
 
     mail: { type: String, required: true },
     password: { type: String, required: true }, // hashed password
@@ -43,8 +44,8 @@ const LoginSchema = new mongoose.Schema(
     authenticator_secret: { type: String },
 
     contact: { type: String, required: true },
-    address: { type: String, required: true },
-    pincode: { type: String, required: true },
+    address: { type: String,},
+    pincode: { type: String,  },
     locality: { type: String },
 
     sponsor: { type: String },

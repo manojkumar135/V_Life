@@ -12,6 +12,7 @@ import Button from "@/components/common/submitbutton";
 import SelectField from "@/components/common/selectinput";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 const validationSchema = Yup.object().shape({
   fullName: Yup.string()
@@ -34,6 +35,9 @@ const validationSchema = Yup.object().shape({
 });
 
 export default function AddNewUserForm() {
+
+  const {user}=useVLife()
+  console.log(user)
   const router = useRouter();
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,6 +71,7 @@ export default function AddNewUserForm() {
           created_by: "",
           role: "user",
           user_status: "active",
+          referBy:user.user_id
         });
 
         if (res.data.success) {

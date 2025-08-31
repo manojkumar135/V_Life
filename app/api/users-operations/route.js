@@ -149,7 +149,8 @@ export async function POST(request) {
       title, 
       address, 
       pincode, 
-      locality 
+      locality,
+      referBy,
     } = body;
 
     // Step 1: Check if mail or contact already exists in User or Login
@@ -177,19 +178,30 @@ export async function POST(request) {
       );
     }
 
-    // Step 2: Generate user_id
+    // ✅ Step 2: Validate referral (if referBy is provided)
+    if (referBy) {
+      const referrer = await User.findOne({ user_id: referBy });
+      if (!referrer) {
+        return NextResponse.json(
+          { success: false, message: "Referral ID does not exist" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Step 3: Generate user_id
     const user_id = await generateUniqueCustomId("US", User, 8, 8);
 
-    // Step 3: Create User
+    // Step 4: Create User
     const newUser = await User.create({ ...body, user_id });
 
-    // Step 4: Generate login_id
+    // Step 5: Generate login_id
     const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
 
-    // Step 5: Hash default password (using contact as default password)
+    // Step 6: Hash default password (using contact as default password)
     const hashedPassword = await bcrypt.hash(contact, 10);
 
-    // Step 6: Create Login
+    // Step 7: Create Login
     const newLogin = await Login.create({
       login_id,
       user_id,
@@ -204,11 +216,12 @@ export async function POST(request) {
       address,
       pincode,
       locality,
+      referBy,
       password: hashedPassword,
       status: "Active",
     });
 
-    // Step 7: Send welcome email with login credentials
+    // Step 8: Send welcome email with login credentials
     try {
       await sendWelcomeEmail(mail, user_name, user_id, contact);
       console.log("Welcome email sent successfully to:", mail);
@@ -234,6 +247,7 @@ export async function POST(request) {
     );
   }
 }
+
 
 // GET - Fetch all users OR single user by id / user_id
 export async function GET(request) {

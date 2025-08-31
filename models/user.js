@@ -6,8 +6,8 @@ const UserSchema = new mongoose.Schema(
     user_name: { type: String, required: true },
     mail: { type: String, required: true },
     contact: { type: String, required: true },
-    address: { type: String, required: true },
-    pincode: { type: String, required: true },
+    address: { type: String, },
+    pincode: { type: String, },
     country: { type: String, },
     state: { type: String,  },
     district: { type: String,},
@@ -17,6 +17,7 @@ const UserSchema = new mongoose.Schema(
     last_modified_by: { type: String },
     last_modified_at: { type: Date },
     role: { type: String,  },
+    referBy: { type: String,  },
     profile: { type: String, }, // URL or file path to profile photo
     user_status: { type: String, default: "active" },
   },
