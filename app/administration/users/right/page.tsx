@@ -2,8 +2,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
-import { FaTrash } from "react-icons/fa";
-import { GoPencil } from "react-icons/go";
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
@@ -14,14 +12,13 @@ import Loader from "@/components/common/loader";
 export default function RightTeam() {
   const router = useRouter();
   const { query, handleChange } = useSearch();
-
-  const [usersData, setUsersData] = useState([]);
+  const [usersData, setUsersData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = "/api/users-operations"; // Next.js API route
+  const API_URL = "/api/users-operations"; // Update if endpoint differs
 
-  // Fetch users from API
+  // Fetch users
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -40,18 +37,7 @@ export default function RightTeam() {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Delete user
-  const handleDelete = async (id: string) => {
-    try {
-      await axios.delete(`${API_URL}?user_id=${id}`);
-      setUsersData((prev) => prev.filter((user: any) => user._id !== id));
-      setTotalItems((prev) => prev - 1);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-    }
-  };
-
-  // Edit user (navigate)
+  // Navigate to edit
   const handleEdit = (id: string) => {
     router.push(`/administration/users/edituser/${id}`);
   };
@@ -62,34 +48,12 @@ export default function RightTeam() {
     { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 2 },
     { field: "role", headerName: "Role", flex: 1 },
-    {
-      field: "actions",
-      headerName: "Actions",
-      flex: 1,
-      sortable: false,
-      disableColumnMenu: true,
-      renderCell: (params: any) => (
-        <div className="flex gap-2 items-center">
-          <button
-            className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
-            onClick={() => handleEdit(params.row._id)}
-          >
-            <GoPencil size={18} />
-          </button>
-          <button
-            className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
-            onClick={() => handleDelete(params.row._id)}
-          >
-            <FaTrash size={16} />
-          </button>
-        </div>
-      ),
-    },
+    { field: "user_status", headerName: "Status", flex: 1 }, // ✅ new status column
   ];
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
-      // Optional: implement server-side pagination here
+      // optional: implement server-side pagination
     },
     [query]
   );
@@ -121,6 +85,7 @@ export default function RightTeam() {
             <Loader />
           </div>
         )}
+
         <HeaderWithActions
           title="Right Team"
           search={query}
@@ -137,8 +102,9 @@ export default function RightTeam() {
           rows={usersData}
           rowIdField="_id"
           pageSize={10}
+          statusField="user_status" // ✅ tells table to use status column
+          onIdClick={(id) => handleEdit(id)} // ✅ clicking ID goes to edit
           checkboxSelection
-          // loading={loading}
           onRowClick={(row) => console.log("User clicked:", row)}
         />
       </div>

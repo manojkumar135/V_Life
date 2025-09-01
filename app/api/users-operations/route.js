@@ -138,49 +138,45 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
 
-    const { 
-      mail, 
-      contact, 
-      user_name, 
-      first_name, 
-      last_name, 
-      role, 
-      role_id, 
-      title, 
-      address, 
-      pincode, 
+    const {
+      mail,
+      contact,
+      user_name,
+      first_name,
+      last_name,
+      role,
+      role_id,
+      title,
+      address,
+      pincode,
       locality,
       referBy,
     } = body;
 
-    // Step 1: Check if mail or contact already exists in User or Login
-    const existingUser = await User.findOne({
-      $or: [{ mail }, { contact }],
-    });
+    // ✅ Step 1: Check if mail or contact already exists
+    const existingUser = await User.findOne({ $or: [{ mail }, { contact }] });
+    const existingLogin = await Login.findOne({ $or: [{ mail }, { contact }] });
 
-    const existingLogin = await Login.findOne({
-      $or: [{ mail }, { contact }],
-    });
-
-    if (existingLogin) {
+    if (existingLogin || existingUser) {
       let message = "";
-      if (existingLogin.mail === mail) {
+      if (existingLogin?.mail === mail || existingUser?.mail === mail) {
         message = "Email already exists";
-      } else if (existingLogin.contact === contact) {
+      } else if (
+        existingLogin?.contact === contact ||
+        existingUser?.contact === contact
+      ) {
         message = "Contact already exists";
       } else {
         message = "Email or contact already exists";
       }
 
-      return NextResponse.json(
-        { success: false, message },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, message }, { status: 400 });
     }
 
     // ✅ Step 2: Validate referral (if referBy is provided)
+    let referrer = null;
     if (referBy) {
-      const referrer = await User.findOne({ user_id: referBy });
+      referrer = await User.findOne({ user_id: referBy });
       if (!referrer) {
         return NextResponse.json(
           { success: false, message: "Referral ID does not exist" },
@@ -189,19 +185,36 @@ export async function POST(request) {
       }
     }
 
-    // Step 3: Generate user_id
+    // ✅ Step 3: Generate user_id
     const user_id = await generateUniqueCustomId("US", User, 8, 8);
 
-    // Step 4: Create User
+    // ✅ Step 4: Create User
     const newUser = await User.create({ ...body, user_id });
 
-    // Step 5: Generate login_id
+    // ✅ Step 5: If referral exists → update referred_users of referrer
+    if (referrer) {
+      const updateResult = await User.updateOne(
+        { user_id: referBy },
+        { $push: { referred_users: user_id } },
+        { upsert: false }
+      );
+
+      if (updateResult.modifiedCount === 0) {
+        console.error("⚠️ Referrer not updated:", referBy);
+      } else {
+        console.log(
+          `✅ Referrer ${referBy} updated with new referred user ${user_id}`
+        );
+      }
+    }
+
+    // ✅ Step 6: Generate login_id
     const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
 
-    // Step 6: Hash default password (using contact as default password)
+    // ✅ Step 7: Hash default password (using contact as default password)
     const hashedPassword = await bcrypt.hash(contact, 10);
 
-    // Step 7: Create Login
+    // ✅ Step 8: Create Login
     const newLogin = await Login.create({
       login_id,
       user_id,
@@ -221,33 +234,32 @@ export async function POST(request) {
       status: "Active",
     });
 
-    // Step 8: Send welcome email with login credentials
+    // ✅ Step 9: Send welcome email
     try {
       await sendWelcomeEmail(mail, user_name, user_id, contact);
-      console.log("Welcome email sent successfully to:", mail);
+      console.log("📧 Welcome email sent successfully to:", mail);
     } catch (emailError) {
-      console.error("Failed to send welcome email:", emailError);
-      // Don't fail the entire request if email fails, just log it
+      console.error("❌ Failed to send welcome email:", emailError);
     }
 
     return NextResponse.json(
-      { 
-        success: true, 
-        message: "User created successfully. Login credentials sent via email.",
-        user: newUser, 
-        login: newLogin 
+      {
+        success: true,
+        message:
+          "User created successfully. Login credentials sent via email.",
+        user: newUser,
+        login: newLogin,
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error creating user:", error);
+    console.error("❌ Error creating user:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }
     );
   }
 }
-
 
 // GET - Fetch all users OR single user by id / user_id
 export async function GET(request) {

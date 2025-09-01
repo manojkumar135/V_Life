@@ -15,6 +15,8 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -80,9 +82,11 @@ export default function RegisterPage() {
       )}
 
       {/* Left Illustration Section */}
-       <div className="w-1/2 max-md:w-full max-lg:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:h-full">
-    <div className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-10 px-8 bg-[#fffff0] 
-    rounded-3xl shadow-lg border-gray-200 border max-lg:py-8">
+      <div className="w-1/2 max-md:w-full max-lg:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:h-full">
+        <div
+          className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-10 px-8 bg-[#fffff0] 
+    rounded-3xl shadow-lg border-gray-200 border max-lg:py-8"
+        >
           <p className="text-[2rem] max-md:text-[1.5rem] max-lg:text-[1.5rem] font-bold text-black mb-8 max-lg:mb-5">
             Sign Up
           </p>
@@ -206,11 +210,11 @@ export default function RegisterPage() {
             </button>
 
             {/* Login prompt */}
-            <div className="text-center text-sm text-black -mt-1">
+            <div className="text-center text-sm text-black -mt-1 leading-tight">
               Already have an account?{" "}
               <span
                 onClick={handleNavigateToLogin}
-                className="text-blue-600 font-medium cursor-pointer"
+                className="inline-flex items-center text-blue-600 font-medium cursor-pointer"
               >
                 Login here!
               </span>
@@ -218,19 +222,16 @@ export default function RegisterPage() {
           </form>
         </div>
       </div>
-      
 
       {/* Right Registration Form */}
       <div className="w-1/2  max-lg:w-2/5 flex items-center justify-center p-1 max-lg:p-0 max-md:hidden">
-        <Image
-          src={Images.SignupPhoto}
-          alt="Register Illustration"
-          width={800}
-          height={700}
-          className="w-full max-lg:w-full max-md:ml-1 border-2"
+        <DotLottieReact
+          src="https://lottie.host/b80db1a0-c452-4ff8-847a-eed370430e0e/DePiYXvQ6y.lottie"
+          loop
+          autoplay
+          style={{ width: "70%", height: "70%" }}
         />
       </div>
-     
     </div>
   );
 }

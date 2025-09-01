@@ -174,7 +174,7 @@ export default function LoginPage() {
               </div>
 
               {/* Forgot password */}
-              <div className="text-right text-sm">
+              <div className="text-right text-sm mb-3">
                 <span
                   onClick={handleForgotPassword}
                   className="text-blue-600 cursor-pointer "
@@ -202,15 +202,16 @@ export default function LoginPage() {
               </button>
 
               {/* Signup prompt */}
-            <div className="text-center text-sm text-gray-800 -mt-3">
-              Don&apos;t have an account ? {" "}
-              <span
-                onClick={handleNavigateToSignup}
-                className="text-blue-600 font-medium cursor-pointer"
-              >
-                Sign Up!
-              </span>
-            </div>
+              <div className="text-center text-sm text-gray-800 -mt-3">
+  Don&apos;t have an account? {" "}
+  <span
+    onClick={handleNavigateToSignup}
+    className="inline-flex items-center text-blue-600 font-medium cursor-pointer"
+  >
+    Sign Up!
+  </span>
+</div>
+
             </form>
           </div>
         </div>
