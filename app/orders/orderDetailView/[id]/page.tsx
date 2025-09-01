@@ -103,7 +103,7 @@ export default function OrderDetailView() {
         <div className="border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row justify-between gap-2 xl:items-center xl:pr-15">
           <button
             onClick={() => router.push("/orders")}
-            className="flex max-lg:flex-col flex-row max-lg:items-start items-center gap-2 text-black hover:text-black transition-colors"
+            className="flex max-lg:flex-col flex-row max-lg:items-start items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
           >
             <IoIosArrowBack size={25} />
             <span className="text-sm font-medium text-gray-600">

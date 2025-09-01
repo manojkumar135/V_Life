@@ -17,23 +17,6 @@ import axios from "axios";
 import Loader from "@/components/common/loader";
 
 
-const menuItems = [
-  {
-    href: "/dashboard",
-    icon: <LuLayoutDashboard />,
-    label: "Dashboard",
-  },
-  {
-    href: "/administration",
-    icon: <IoPeople />,
-    label: "Administration",
-  },
-  { href: "/wallet", icon: <FaWallet />, label: "Wallet" },
-  { href: "/orders", icon: <FaBoxesPacking />, label: "Orders" },
-  { href: "/historys", icon: <FaHistory />, label: "History" },
-  { href: "/settings", icon: <IoSettings />, label: "Settings" },
-];
-
 export default function SideNav({
   isOpen,
   setIsOpen,
@@ -43,12 +26,28 @@ export default function SideNav({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { clearUser } = useVLife();
+  const {user, clearUser } = useVLife();
 
 
   const [isLogoutOpen, setIsLogoutOpen] = useState(false); // ✅ modal state
   const [loading, setLoading] = useState(false);
 
+  const menuItems = [
+    {
+      href: "/dashboard",
+      icon: <LuLayoutDashboard />,
+      label: "Dashboard",
+    },
+    {
+      href: user?.role === "admin" ? "/administration" : "/administration/users",
+      icon: <IoPeople />,
+      label: "Administration",
+    },
+    { href: "/wallet", icon: <FaWallet />, label: "Wallet" },
+    { href: "/orders", icon: <FaBoxesPacking />, label: "Orders" },
+    { href: "/historys", icon: <FaHistory />, label: "History" },
+    { href: "/settings", icon: <IoSettings />, label: "Settings" },
+  ];
 
   const handleNavigation = (path: string) => {
     router.push(path);
