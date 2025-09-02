@@ -211,7 +211,7 @@ export default function RegisterPage() {
 
             {/* Login prompt */}
             <div className="text-center text-sm text-black -mt-1 leading-tight">
-              Already have an account?{" "}
+              Already have an account ? {"  "}
               <span
                 onClick={handleNavigateToLogin}
                 className="inline-flex items-center text-blue-600 font-medium cursor-pointer"

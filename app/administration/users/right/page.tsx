@@ -74,7 +74,7 @@ export default function RightTeam() {
   });
 
   const handleAddUser = () => {
-    router.push("/administration/users/adduser");
+    router.push("/administration/users/adduser?team=right");
   };
 
   return (

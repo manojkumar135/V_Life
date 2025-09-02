@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
+import nodemailer from 'nodemailer';
+
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import { Login } from "@/models/login";
+import TreeNode from "@/models/tree";
 
-import mongoose from "mongoose";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
-import nodemailer from 'nodemailer';
+
 
 // Create transporter directly in the file
 const transporter = nodemailer.createTransport({
@@ -132,121 +135,203 @@ const sendWelcomeEmail = async (email, userName, userId, contact) => {
 };
 
 
-// POST - Create new user
+
+// ------------------ TREE LOGIC ------------------
+// Find available placement in tree
+async function findAvailablePlacement(parentId, team) {
+  // ✅ If no nodes exist yet → root user
+  const count = await TreeNode.countDocuments();
+  if (count === 0) {
+    return { parent: null, side: null }; // root placement
+  }
+
+  // ✅ Normal case → check parent
+  let current = await TreeNode.findOne({ user_id: parentId });
+  if (!current) throw new Error("Parent not found in tree");
+
+  let side = team || "right"; // default right
+
+  // Traverse until we find an empty slot
+  while (current[side]) {
+    current = await TreeNode.findOne({ user_id: current[side] });
+    if (!current) throw new Error(`Tree structure broken for ${side} side`);
+  }
+
+  return { parent: current, side };
+}
+
+// ------------------ TREE NODE CREATION ------------------
+async function createTreeNode(user, referrerId, team) {
+  const { parent, side } = await findAvailablePlacement(referrerId, team);
+
+  // ✅ Case 1: Root node (no parent)
+  if (!parent) {
+    const newNode = await TreeNode.create({
+      user_id: user.user_id,
+      name: user.user_name,
+      status: user.user_status || "active",
+      contact: user.contact || "",
+      mail: user.mail || "",
+      address: user.address || "",
+      pincode: user.pincode || "",
+      country: user.country || "",
+      state: user.state || "",
+      district: user.district || "",
+      locality: user.locality || "",
+      parent: null,
+      left: null,
+      right: null,
+      referrals: [],
+      referral_count: 0,
+    });
+    return newNode;
+  }
+
+  // ✅ Case 2: Normal child node
+  const newNode = await TreeNode.create({
+    user_id: user.user_id,
+    name: user.user_name,
+    status: user.user_status || "active",
+    contact: user.contact || "",
+    mail: user.mail || "",
+    address: user.address || "",
+    pincode: user.pincode || "",
+    country: user.country || "",
+    state: user.state || "",
+    district: user.district || "",
+    locality: user.locality || "",
+    parent: parent.user_id,
+    left: null,
+    right: null,
+    referrals: [],
+    referral_count: 0,
+  });
+
+  // ✅ Always attach the new node under parent (binary placement)
+  await TreeNode.updateOne(
+    { user_id: parent.user_id },
+    { $set: { [side]: user.user_id } }
+  );
+
+  // ✅ Only update referrals list if this parent is the actual referrer
+  if (referrerId) {
+    await TreeNode.updateOne(
+      { user_id: referrerId },
+      {
+        $push: { referrals: user.user_id },
+        $inc: { referral_count: 1 },
+      }
+    );
+  }
+
+  return newNode;
+}
+
+// ------------------ USER + LOGIN CREATION ------------------
+
+async function createUserAndLogin(body) {
+  const {
+    mail,
+    contact,
+    user_name,
+    first_name,
+    last_name,
+    role,
+    role_id,
+    title,
+    address,
+    pincode,
+    locality,
+    referBy,
+    team,
+  } = body;
+
+  // ✅ Check duplicates
+  const existingUser = await User.findOne({ $or: [{ mail }, { contact }] });
+  const existingLogin = await Login.findOne({ $or: [{ mail }, { contact }] });
+  if (existingUser || existingLogin) {
+    throw new Error("Email or Contact already exists");
+  }
+
+  // ✅ Validate referral
+  let referrer = null;
+  if (referBy) {
+    referrer = await User.findOne({ user_id: referBy });
+    if (!referrer) throw new Error("Referral ID does not exist");
+  }
+
+  // ✅ Generate IDs
+  const user_id = await generateUniqueCustomId("US", User, 8, 8);
+  const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
+
+  // ✅ Create User
+  const newUser = await User.create({ ...body, user_id });
+
+  // ✅ Update referrer’s referred_users + tree.referrals
+  if (referrer) {
+    await User.updateOne(
+      { user_id: referBy },
+      { $push: { referred_users: user_id } }
+    );
+
+  }
+
+  // ✅ Create Login (default password = contact)
+  const hashedPassword = await bcrypt.hash(contact, 10);
+  const newLogin = await Login.create({
+    login_id,
+    user_id,
+    user_name,
+    first_name,
+    last_name,
+    role,
+    role_id,
+    title,
+    mail,
+    contact,
+    address,
+    pincode,
+    locality,
+    referBy,
+    password: hashedPassword,
+    status: "Active",
+  });
+
+  // ✅ Create TreeNode
+  if (referBy) {
+    await createTreeNode(newUser, referBy, team);
+  } else {
+    // root user in tree
+    await TreeNode.create({
+      user_id,
+      name: user_name,
+      parent: null,
+      left: null,
+      right: null,
+      referrals: [],
+      referral_count: 0,
+    });
+  }
+
+  // ✅ Send welcome email
+  await sendWelcomeEmail(mail, user_name, user_id, contact);
+
+  return { newUser, newLogin };
+}
+
+
+// ------------------ ROUTES ------------------
 export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
 
-    const {
-      mail,
-      contact,
-      user_name,
-      first_name,
-      last_name,
-      role,
-      role_id,
-      title,
-      address,
-      pincode,
-      locality,
-      referBy,
-    } = body;
-
-    // ✅ Step 1: Check if mail or contact already exists
-    const existingUser = await User.findOne({ $or: [{ mail }, { contact }] });
-    const existingLogin = await Login.findOne({ $or: [{ mail }, { contact }] });
-
-    if (existingLogin || existingUser) {
-      let message = "";
-      if (existingLogin?.mail === mail || existingUser?.mail === mail) {
-        message = "Email already exists";
-      } else if (
-        existingLogin?.contact === contact ||
-        existingUser?.contact === contact
-      ) {
-        message = "Contact already exists";
-      } else {
-        message = "Email or contact already exists";
-      }
-
-      return NextResponse.json({ success: false, message }, { status: 400 });
-    }
-
-    // ✅ Step 2: Validate referral (if referBy is provided)
-    let referrer = null;
-    if (referBy) {
-      referrer = await User.findOne({ user_id: referBy });
-      if (!referrer) {
-        return NextResponse.json(
-          { success: false, message: "Referral ID does not exist" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // ✅ Step 3: Generate user_id
-    const user_id = await generateUniqueCustomId("US", User, 8, 8);
-
-    // ✅ Step 4: Create User
-    const newUser = await User.create({ ...body, user_id });
-
-    // ✅ Step 5: If referral exists → update referred_users of referrer
-    if (referrer) {
-      const updateResult = await User.updateOne(
-        { user_id: referBy },
-        { $push: { referred_users: user_id } },
-        { upsert: false }
-      );
-
-      if (updateResult.modifiedCount === 0) {
-        console.error("⚠️ Referrer not updated:", referBy);
-      } else {
-        console.log(
-          `✅ Referrer ${referBy} updated with new referred user ${user_id}`
-        );
-      }
-    }
-
-    // ✅ Step 6: Generate login_id
-    const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
-
-    // ✅ Step 7: Hash default password (using contact as default password)
-    const hashedPassword = await bcrypt.hash(contact, 10);
-
-    // ✅ Step 8: Create Login
-    const newLogin = await Login.create({
-      login_id,
-      user_id,
-      user_name,
-      first_name,
-      last_name,
-      role,
-      role_id,
-      title,
-      mail,
-      contact,
-      address,
-      pincode,
-      locality,
-      referBy,
-      password: hashedPassword,
-      status: "Active",
-    });
-
-    // ✅ Step 9: Send welcome email
-    try {
-      await sendWelcomeEmail(mail, user_name, user_id, contact);
-      console.log("📧 Welcome email sent successfully to:", mail);
-    } catch (emailError) {
-      console.error("❌ Failed to send welcome email:", emailError);
-    }
+    const { newUser, newLogin } = await createUserAndLogin(body);
 
     return NextResponse.json(
       {
         success: true,
-        message:
-          "User created successfully. Login credentials sent via email.",
+        message: "User created successfully",
         user: newUser,
         login: newLogin,
       },
@@ -254,12 +339,10 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("❌ Error creating user:", error);
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+
 
 // GET - Fetch all users OR single user by id / user_id
 export async function GET(request) {

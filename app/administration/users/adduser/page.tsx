@@ -13,6 +13,7 @@ import SelectField from "@/components/common/selectinput";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
+import { useSearchParams } from "next/navigation";
 
 const validationSchema = Yup.object().shape({
   fullName: Yup.string()
@@ -24,23 +25,25 @@ const validationSchema = Yup.object().shape({
   contact: Yup.string()
     .required("Contact is required")
     .matches(/^[0-9]{10}$/, "Contact must be 10 digits"),
-  address: Yup.string().required("Address is required"),
-  city: Yup.string().required("City is required"),
-  state: Yup.string().required("State is required"),
-  country: Yup.string().required("Country is required"),
-  pincode: Yup.string()
-    .required("Pincode is required")
-    .matches(/^[0-9]{6}$/, "Pincode must be 6 digits"),
-  locality: Yup.string().required("Locality is required"),
+  // address: Yup.string().required("Address is required"),
+  // city: Yup.string().required("City is required"),
+  // state: Yup.string().required("State is required"),
+  // country: Yup.string().required("Country is required"),
+  // pincode: Yup.string()
+  //   .required("Pincode is required")
+  //   .matches(/^[0-9]{6}$/, "Pincode must be 6 digits"),
+  // locality: Yup.string().required("Locality is required"),
 });
 
 export default function AddNewUserForm() {
-
-  const {user}=useVLife()
-  console.log(user)
+  const { user } = useVLife();
+  // console.log(user)
   const router = useRouter();
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const team = searchParams.get("team") || "right"; // "left" or "right"
+  // console.log("Team from URL:", team);
 
   const formik = useFormik({
     initialValues: {
@@ -71,7 +74,8 @@ export default function AddNewUserForm() {
           created_by: "",
           role: "user",
           user_status: "active",
-          referBy:user.user_id
+          referBy: user.user_id,
+          team: team || "right", // default left if not given
         });
 
         if (res.data.success) {
@@ -162,7 +166,7 @@ export default function AddNewUserForm() {
             <IoIosArrowBack
               size={25}
               className="mr-3 cursor-pointer"
-              onClick={() => router.push("/administration/users")}
+              onClick={() => router.push(`/administration/users/${team ?? ""}`)}
             />
             <h2 className="text-xl max-sm:text-[1rem] font-semibold">
               Add New User
@@ -217,7 +221,7 @@ export default function AddNewUserForm() {
                 error={
                   formik.touched.address ? formik.errors.address : undefined
                 }
-                required
+                // required
               />
               <InputField
                 label="Pincode"
@@ -228,7 +232,7 @@ export default function AddNewUserForm() {
                 error={
                   formik.touched.pincode ? formik.errors.pincode : undefined
                 }
-                required
+                // required
                 disabled={loading}
               />
 
@@ -241,7 +245,7 @@ export default function AddNewUserForm() {
                 error={
                   formik.touched.country ? formik.errors.country : undefined
                 }
-                required
+                // required
                 disabled={loading}
               />
               <InputField
@@ -251,7 +255,7 @@ export default function AddNewUserForm() {
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.state ? formik.errors.state : undefined}
-                required
+                // required
                 disabled={loading}
               />
               <InputField
@@ -261,7 +265,7 @@ export default function AddNewUserForm() {
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.city ? formik.errors.city : undefined}
-                required
+                // required
                 disabled={loading}
               />
 
@@ -280,7 +284,7 @@ export default function AddNewUserForm() {
                 error={
                   formik.touched.locality ? formik.errors.locality : undefined
                 }
-                required
+                // required
                 disabled={loading || postOfficeData.length === 0}
               />
             </div>

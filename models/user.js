@@ -30,12 +30,12 @@ const UserSchema = new mongoose.Schema(
     user_status: { type: String, default: "active" },
 
     // 🔗 Referral / Upline
-    referBy: { type: String }, 
-referred_users: { type: [String], default: [] },
+    referBy: { type: String },
+    referred_users: { type: [String], default: [] },
 
     // 🌳 Binary Team Structure
-    left_child: { type: String }, // user_id of left downline
-    right_child: { type: String }, // user_id of right downline
+    left: { type: String },
+    right: { type: String }, // user_id of right downline
     left_team_volume: { type: Number, default: 0 }, // total business on left
     right_team_volume: { type: Number, default: 0 },
     carry_forward_left: { type: Number, default: 0 },

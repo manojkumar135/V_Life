@@ -4,10 +4,8 @@ import React from "react";
 import Layout from "@/layout/Layout";
 import { useRouter } from "next/navigation";
 import { Users, UserPlus, Network } from "lucide-react";
-import { useVLife } from "@/store/context";
 
 const page = () => {
-  const { user } = useVLife();
   // console.log("User from context:", user);
   const router = useRouter();
 

@@ -11,9 +11,13 @@ import { useSearch } from "@/hooks/useSearch";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 export default function LeftTeam() {
   const router = useRouter();
+  const { user } = useVLife();
+  const team = "left";
+
   const { query, handleChange } = useSearch();
   const [usersData, setUsersData] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -23,9 +27,13 @@ export default function LeftTeam() {
 
   // Fetch users from API
   const fetchUsers = useCallback(async () => {
+    if (!user?.user_id) return;
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL);
+      const { data } = await axios.get(
+       API_URL
+      );
+
       const users = data.data || [];
       setUsersData(users);
       setTotalItems(users.length);
@@ -112,14 +120,12 @@ export default function LeftTeam() {
   });
 
   const handleAddUser = () => {
-    router.push("/administration/users/adduser");
+    router.push("/administration/users/adduser?team=left");
   };
 
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
-
-     
         <HeaderWithActions
           title="Left Team"
           search={query}
