@@ -23,17 +23,20 @@ export default function LeftTeam() {
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = "/api/users-operations"; // Next.js API route
+  const API_URL = "/api/team-operations";
 
   // Fetch users from API
   const fetchUsers = useCallback(async () => {
     if (!user?.user_id) return;
     try {
       setLoading(true);
-      const { data } = await axios.get(
-       API_URL
-      );
-
+      const { data } = await axios.get(API_URL, {
+        params: {
+          user_id: user.user_id,
+          team,
+          search: query,
+        },
+      });
       const users = data.data || [];
       setUsersData(users);
       setTotalItems(users.length);

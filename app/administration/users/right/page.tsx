@@ -8,21 +8,31 @@ import { useSearch } from "@/hooks/useSearch";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 export default function RightTeam() {
+  const { user } = useVLife();
+  const team = "right";
   const router = useRouter();
   const { query, handleChange } = useSearch();
   const [usersData, setUsersData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = "/api/users-operations"; // Update if endpoint differs
+  const API_URL = "/api/team-operations"; // Update if endpoint differs
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
+    if (!user?.user_id) return;
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL);
+      const { data } = await axios.get(API_URL, {
+        params: {
+          user_id: user.user_id,
+          team,
+          search: query,
+        },
+      });
       const users = data.data || [];
       setUsersData(users);
       setTotalItems(users.length);
