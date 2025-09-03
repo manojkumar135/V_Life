@@ -1,19 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import Layout from "@/layout/Layout";
 import { IoIosArrowBack } from "react-icons/io";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import InputField from "@/components/common/inputtype1";
 import Button from "@/components/common/submitbutton";
 import SelectField from "@/components/common/selectinput";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
-import { useSearchParams } from "next/navigation";
 
 const validationSchema = Yup.object().shape({
   fullName: Yup.string()
@@ -35,15 +34,13 @@ const validationSchema = Yup.object().shape({
   // locality: Yup.string().required("Locality is required"),
 });
 
-export default function AddNewUserForm() {
+function AddUserFormContent() {
   const { user } = useVLife();
-  // console.log(user)
   const router = useRouter();
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
-  const team = searchParams.get("team") || "right"; // "left" or "right"
-  // console.log("Team from URL:", team);
+  const team = searchParams.get("team") || "right";
 
   const formik = useFormik({
     initialValues: {
@@ -75,7 +72,7 @@ export default function AddNewUserForm() {
           role: "user",
           user_status: "active",
           referBy: user.user_id,
-          team: team || "right", // default left if not given
+          team: team || "right",
         });
 
         if (res.data.success) {
@@ -90,7 +87,6 @@ export default function AddNewUserForm() {
           err.response?.data?.message ||
           err.message ||
           "Failed to create user.";
-
         ShowToast.error(errorMessage);
       } finally {
         setSubmitting(false);
@@ -152,152 +148,158 @@ export default function AddNewUserForm() {
   }));
 
   return (
-    <>
-      <Layout>
-        {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <Loader />
-          </div>
-        )}
-
-        <div className="p-4">
-          {/* Header */}
-          <div className="flex items-center mb-0">
-            <IoIosArrowBack
-              size={25}
-              className="mr-3 cursor-pointer"
-              onClick={() => router.push(`/administration/users/${team ?? ""}`)}
-            />
-            <h2 className="text-xl max-sm:text-[1rem] font-semibold">
-              Add New User
-            </h2>
-          </div>
-
-          {/* Form */}
-          <form
-            onSubmit={formik.handleSubmit}
-            className="rounded-xl p-5 max-sm:p-3 bg-white space-y-4"
-          >
-            {/* Form Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <InputField
-                label="Full Name"
-                name="fullName"
-                value={formik.values.fullName}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={
-                  formik.touched.fullName ? formik.errors.fullName : undefined
-                }
-                required
-              />
-              <InputField
-                label="Email"
-                name="email"
-                type="email"
-                value={formik.values.email}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={formik.touched.email ? formik.errors.email : undefined}
-                required
-              />
-              <InputField
-                label="Contact"
-                name="contact"
-                value={formik.values.contact}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={
-                  formik.touched.contact ? formik.errors.contact : undefined
-                }
-                required
-              />
-              <InputField
-                label="Address"
-                name="address"
-                value={formik.values.address}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={
-                  formik.touched.address ? formik.errors.address : undefined
-                }
-                // required
-              />
-              <InputField
-                label="Pincode"
-                name="pincode"
-                value={formik.values.pincode}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={
-                  formik.touched.pincode ? formik.errors.pincode : undefined
-                }
-                // required
-                disabled={loading}
-              />
-
-              <InputField
-                label="Country"
-                name="country"
-                value={formik.values.country}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={
-                  formik.touched.country ? formik.errors.country : undefined
-                }
-                // required
-                disabled={loading}
-              />
-              <InputField
-                label="State"
-                name="state"
-                value={formik.values.state}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={formik.touched.state ? formik.errors.state : undefined}
-                // required
-                disabled={loading}
-              />
-              <InputField
-                label="District"
-                name="city"
-                value={formik.values.city}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={formik.touched.city ? formik.errors.city : undefined}
-                // required
-                disabled={loading}
-              />
-
-              <SelectField
-                label="Locality"
-                name="locality"
-                value={formik.values.locality} // <-- pass string value
-                onChange={(e: any) =>
-                  formik.setFieldValue(
-                    "locality",
-                    e.target?.value || e?.value || ""
-                  )
-                }
-                onBlur={formik.handleBlur}
-                options={localityOptions}
-                error={
-                  formik.touched.locality ? formik.errors.locality : undefined
-                }
-                // required
-                disabled={loading || postOfficeData.length === 0}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end mt-6">
-              <Button type="submit" disabled={formik.isSubmitting || loading}>
-                {formik.isSubmitting ? "Submitting..." : "Submit"}
-              </Button>
-            </div>
-          </form>
+    <Layout>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
         </div>
-      </Layout>
-    </>
+      )}
+
+      <div className="p-4">
+        {/* Header */}
+        <div className="flex items-center mb-0">
+          <IoIosArrowBack
+            size={25}
+            className="mr-3 cursor-pointer"
+            onClick={() => router.push(`/administration/users/${team ?? ""}`)}
+          />
+          <h2 className="text-xl max-sm:text-[1rem] font-semibold">
+            Add New User
+          </h2>
+        </div>
+
+        {/* Form */}
+        <form
+          onSubmit={formik.handleSubmit}
+          className="rounded-xl p-5 max-sm:p-3 bg-white space-y-4"
+        >
+          {/* Form Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <InputField
+              label="Full Name"
+              name="fullName"
+              value={formik.values.fullName}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={
+                formik.touched.fullName ? formik.errors.fullName : undefined
+              }
+              required
+            />
+            <InputField
+              label="Email"
+              name="email"
+              type="email"
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.email ? formik.errors.email : undefined}
+              required
+            />
+            <InputField
+              label="Contact"
+              name="contact"
+              value={formik.values.contact}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={
+                formik.touched.contact ? formik.errors.contact : undefined
+              }
+              required
+            />
+            <InputField
+              label="Address"
+              name="address"
+              value={formik.values.address}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={
+                formik.touched.address ? formik.errors.address : undefined
+              }
+              // required
+            />
+            <InputField
+              label="Pincode"
+              name="pincode"
+              value={formik.values.pincode}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={
+                formik.touched.pincode ? formik.errors.pincode : undefined
+              }
+              // required
+              disabled={loading}
+            />
+
+            <InputField
+              label="Country"
+              name="country"
+              value={formik.values.country}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={
+                formik.touched.country ? formik.errors.country : undefined
+              }
+              // required
+              disabled={loading}
+            />
+            <InputField
+              label="State"
+              name="state"
+              value={formik.values.state}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.state ? formik.errors.state : undefined}
+              // required
+              disabled={loading}
+            />
+            <InputField
+              label="District"
+              name="city"
+              value={formik.values.city}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.city ? formik.errors.city : undefined}
+              // required
+              disabled={loading}
+            />
+
+            <SelectField
+              label="Locality"
+              name="locality"
+              value={formik.values.locality}
+              onChange={(e: any) =>
+                formik.setFieldValue(
+                  "locality",
+                  e.target?.value || e?.value || ""
+                )
+              }
+              onBlur={formik.handleBlur}
+              options={localityOptions}
+              error={
+                formik.touched.locality ? formik.errors.locality : undefined
+              }
+              // required
+              disabled={loading || postOfficeData.length === 0}
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end mt-6">
+            <Button type="submit" disabled={formik.isSubmitting || loading}>
+              {formik.isSubmitting ? "Submitting..." : "Submit"}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </Layout>
+  );
+}
+
+export default function AddNewUserForm() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-screen"><Loader /></div>}>
+      <AddUserFormContent />
+    </Suspense>
   );
 }

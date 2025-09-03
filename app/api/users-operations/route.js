@@ -387,7 +387,7 @@ export async function PUT(request) {
       );
     }
 
-    // 🔎 Check if contact or mail already exists for another user
+    // 🔎 Duplicate check for contact/mail
     if (rest.contact || rest.mail) {
       const existingUser = await User.findOne({
         $or: [
@@ -400,18 +400,10 @@ export async function PUT(request) {
       });
 
       if (existingUser) {
-        if (existingUser.contact === rest.contact) {
-          return NextResponse.json(
-            { success: false, message: "Contact already exists" },
-            { status: 400 }
-          );
-        }
-        if (existingUser.mail === rest.mail) {
-          return NextResponse.json(
-            { success: false, message: "Email already exists" },
-            { status: 400 }
-          );
-        }
+        return NextResponse.json(
+          { success: false, message: "Email or Contact already exists" },
+          { status: 400 }
+        );
       }
     }
 
@@ -432,23 +424,42 @@ export async function PUT(request) {
       );
     }
 
-    // 🔄 Sync Login record with **all relevant fields**
+    // 🔄 Sync Login
     await Login.findOneAndUpdate(
       { user_id: updatedUser.user_id },
       {
         ...(rest.user_name && { user_name: rest.user_name }),
+        ...(rest.first_name && { first_name: rest.first_name }),
+        ...(rest.last_name && { last_name: rest.last_name }),
         ...(rest.role && { role: rest.role }),
+        ...(rest.role_id && { role_id: rest.role_id }),
+        ...(rest.title && { title: rest.title }),
         ...(rest.mail && { mail: rest.mail }),
-        ...(rest.password && { password: rest.password }), // ⚠️ assume already hashed
         ...(rest.contact && { contact: rest.contact }),
-        ...(rest.status && { status: rest.status }),
-        ...(rest.isDeleted !== undefined && { isDeleted: rest.isDeleted }),
-        ...(rest.login_time && { login_time: rest.login_time }),
         ...(rest.address && { address: rest.address }),
         ...(rest.locality && { locality: rest.locality }),
         ...(rest.pincode && { pincode: rest.pincode }),
-        ...(rest.intro !== undefined && { intro: rest.intro }),
-        ...(rest.created_at && { created_at: rest.created_at }),
+        ...(rest.status && { status: rest.status }),
+
+      },
+      { new: true }
+    );
+
+    // 🔄 Sync TreeNode
+    await TreeNode.findOneAndUpdate(
+      { user_id: updatedUser.user_id },
+      {
+        ...(rest.user_name && { name: rest.user_name }),
+        ...(rest.contact && { contact: rest.contact }),
+        ...(rest.mail && { mail: rest.mail }),
+        ...(rest.address && { address: rest.address }),
+        ...(rest.locality && { locality: rest.locality }),
+        ...(rest.pincode && { pincode: rest.pincode }),
+        ...(rest.country && { country: rest.country }),
+        ...(rest.state && { state: rest.state }),
+        ...(rest.district && { district: rest.district }),
+        ...(rest.status && { status: rest.status }),
+
       },
       { new: true }
     );
@@ -465,6 +476,7 @@ export async function PUT(request) {
   }
 }
 
+
 // PATCH - Partial update
 export async function PATCH(request) {
   try {
@@ -479,16 +491,15 @@ export async function PATCH(request) {
       );
     }
 
-    // 🔎 Check duplicates before updating (only if user updates email/phone)
+    // 🔎 Duplicate check for email/phone
     if (updates.phone || updates.email) {
-      const duplicate = await Login.findOne({
+      const duplicate = await User.findOne({
         $or: [
-          updates.phone ? { contact: updates.phone } : {},
-          updates.email ? { mail: updates.email } : {},
-        ],
-        user_id: { $ne: updateId }, // exclude current user
+          updates.phone ? { contact: updates.phone } : null,
+          updates.email ? { mail: updates.email } : null,
+        ].filter(Boolean),
+        user_id: { $ne: updateId },
       });
-
       if (duplicate) {
         return NextResponse.json(
           {
@@ -503,16 +514,12 @@ export async function PATCH(request) {
       }
     }
 
-    // ✅ Update User
+    // 🔄 Update User
     let updatedUser;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
       updatedUser = await User.findByIdAndUpdate(updateId, updates, { new: true });
     } else {
-      updatedUser = await User.findOneAndUpdate(
-        { user_id: updateId },
-        updates,
-        { new: true }
-      );
+      updatedUser = await User.findOneAndUpdate({ user_id: updateId }, updates, { new: true });
     }
 
     if (!updatedUser) {
@@ -522,9 +529,11 @@ export async function PATCH(request) {
       );
     }
 
-    // 🔑 Update Login record
+    // 🔄 Sync Login
     const loginUpdates = {};
     if (updates.userName) loginUpdates.user_name = updates.userName;
+    if (updates.first_name) loginUpdates.first_name = updates.first_name;
+    if (updates.last_name) loginUpdates.last_name = updates.last_name;
     if (updates.phone) loginUpdates.contact = updates.phone;
     if (updates.email) loginUpdates.mail = updates.email;
     if (updates.address) loginUpdates.address = updates.address;
@@ -532,26 +541,37 @@ export async function PATCH(request) {
     if (updates.locality) loginUpdates.locality = updates.locality;
     if (updates.country) loginUpdates.country = updates.country;
     if (updates.state) loginUpdates.state = updates.state;
-    if (updates.profile) loginUpdates.profile = updates.profile;
-
     if (updates.city || updates.district) {
       loginUpdates.district = updates.city || updates.district;
     }
 
-    let updatedLogin = null;
     if (Object.keys(loginUpdates).length > 0) {
-      updatedLogin = await Login.findOneAndUpdate(
-        { user_id: updateId },
-        loginUpdates,
-        { new: true }
-      );
+      await Login.findOneAndUpdate({ user_id: updatedUser.user_id }, loginUpdates, { new: true });
+    }
+
+    // 🔄 Sync TreeNode
+    const treeUpdates = {};
+    if (updates.userName) treeUpdates.name = updates.userName;
+    if (updates.phone) treeUpdates.contact = updates.phone;
+    if (updates.email) treeUpdates.mail = updates.email;
+    if (updates.address) treeUpdates.address = updates.address;
+    if (updates.locality) treeUpdates.locality = updates.locality;
+    if (updates.pincode) treeUpdates.pincode = updates.pincode;
+    if (updates.country) treeUpdates.country = updates.country;
+    if (updates.state) treeUpdates.state = updates.state;
+    if (updates.city || updates.district) {
+      treeUpdates.district = updates.city || updates.district;
+    }
+
+    if (Object.keys(treeUpdates).length > 0) {
+      await TreeNode.findOneAndUpdate({ user_id: updatedUser.user_id }, treeUpdates, { new: true });
     }
 
     return NextResponse.json(
       {
         success: true,
         message: "Profile updated successfully",
-        data: { user: updatedUser, login: updatedLogin },
+        data: updatedUser,
       },
       { status: 200 }
     );
@@ -562,6 +582,7 @@ export async function PATCH(request) {
     );
   }
 }
+
 
 
 // DELETE - Remove a user

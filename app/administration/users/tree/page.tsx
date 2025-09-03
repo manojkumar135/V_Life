@@ -1,90 +1,146 @@
 "use client";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
-import BinaryTreeNode from "@/components/common/treenode";
+import BinaryTree from "@/components/common/treenode"; // ✅ updated import
 import { useRouter } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
+import axios from "axios";
+import { useVLife } from "@/store/context";
+import { useSearch } from "@/hooks/useSearch";
+import SubmitButton from "@/components/common/submitbutton";
 
+// Node type
 interface TreeNode {
-  id: string;
+  user_id: string;
   name: string;
-  color?: string;
-  left?: TreeNode;
-  right?: TreeNode;
+  user_status: string;
+  contact?: string;
+  mail?: string;
+  left?: TreeNode | null;
+  right?: TreeNode | null;
 }
 
 export default function TreeView() {
+  const { user } = useVLife();
+  const { query } = useSearch();
   const router = useRouter();
+  const [tree, setTree] = useState<TreeNode | null>(null);
+  const [search, setSearch] = useState("");
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
-  const tree: TreeNode = {
-    id: "1",
-    name: "Admin",
-    color: "text-yellow-500",
-    left: {
-      id: "2",
-      name: "Left A",
-      color: "text-gray-700",
-      left: {
-        id: "4",
-        name: "Left A1",
-        color: "text-black",
-      },
-      right: {
-        id: "5",
-        name: "Right A1",
-        color: "text-black",
-      },
-    },
-    right: {
-      id: "3",
-      name: "Right A",
-      color: "text-gray-700",
-      left: {
-        id: "6",
-        name: "Left B1",
-        color: "text-black",
-      },
-      right: {
-        id: "7",
-        name: "Right B1",
-        color: "text-black",
-      },
-    },
+  const API_URL = "/api/tree-operations";
+
+  // Map status → color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "active":
+        return "#16a34a"; // green-600
+      case "inactive":
+        return "#dc2626"; // red-600
+      case "pending":
+        return "#eab308"; // yellow-500
+      default:
+        return "#4b5563"; // gray-600
+    }
   };
 
-  const handleAdd = (side: "left" | "right", parentId: string) => {
-    const newNode: TreeNode = {
-      id: Math.random().toString(36).substring(2, 9),
-      name: `User`,
-    };
+  // Fetch full binary tree for root
+  const fetchTree = useCallback(async () => {
+    try {
+      const { data } = await axios.get(API_URL, {
+        params: {
+          user_id: user.user_id,
+          search: query,
+        },
+      });
+      if (data?.data) {
+        setTree(data.data);
+        if (data.highlight) {
+          setHighlightedId(data.highlight);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching tree:", error);
+    }
+  }, [user.user_id, query]);
 
-    const updateTree = (node: TreeNode): TreeNode => {
-      if (node.id === parentId) {
-        return {
-          ...node,
-          [side]: newNode,
-        };
+  useEffect(() => {
+    fetchTree();
+  }, [fetchTree]);
+
+  // Handle search (highlight if found)
+  const handleSearch = () => {
+    if (!search || !tree) return;
+
+    const searchLower = search.toLowerCase();
+
+    const findNode = (node: any): any | null => {
+      if (!node) return null;
+
+      if (
+        node.user_id.toLowerCase() === searchLower ||
+        (node.name && node.name.toLowerCase().includes(searchLower))
+      ) {
+        return node;
       }
 
-      return {
-        ...node,
-        left: node.left ? updateTree(node.left) : undefined,
-        right: node.right ? updateTree(node.right) : undefined,
-      };
+      const leftResult = findNode(node.left ?? null);
+      if (leftResult) return leftResult;
+
+      const rightResult = findNode(node.right ?? null);
+      if (rightResult) return rightResult;
+
+      return null;
     };
+
+    const found = findNode(tree);
+    setHighlightedId(found ? found.user_id : null);
   };
 
   return (
     <Layout>
-      <div className="overflow-auto p-6">
-        <IoIosArrowBack
-          size={25}
-          color="black"
-          className="ml-0 mr-3 mt-1 max-sm:!mt-0 max-sm:mr-1 cursor-pointer z-20 mb-3"
-          onClick={() => router.push("/administration/users")}
-        />
-        <div className="flex justify-center">
-          <BinaryTreeNode node={tree} onAdd={handleAdd} />
+      <div className="p-4 max-md:-mt-5 flex flex-col h-full">
+        {/* Header + Search (fixed) */}
+        <div className="flex flex-row items-center max-md:justify-between mb-1">
+          <IoIosArrowBack
+            size={28}
+            color="black"
+            className="ml-0 mr-3 max-sm:mr-1 cursor-pointer z-20 mb-3 max-md:mb-2 lg:-mt-5"
+            onClick={() => router.push("/administration/users")}
+          />
+
+          {/* Search Bar */}
+          <div className="flex justify-center items-center max-md:justify-end gap-2 mb-2 w-full lg:-ml-5 p-2 max-md:p-1">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by ID or name..."
+              className="border px-2 py-1 rounded-md w-64 max-md:w-52"
+            />
+            <SubmitButton
+              type="button"
+              onClick={handleSearch}
+              className="text-black px-4 !py-1.5 max-lg:!py-1 rounded-md bg-yellow-400 font-semibold"
+            >
+              Search
+            </SubmitButton>
+          </div>
+        </div>
+
+        {/* Tree View (scrollable only) */}
+        <div className="flex-1 overflow-x-auto max-md:!pl-5">
+          <div className="min-w-[800px] flex justify-center">
+            {tree ? (
+              <BinaryTree
+                root={tree}
+                getColor={getStatusColor}
+                highlightedId={highlightedId}
+              />
+            ) : (
+              <p>Loading tree...</p>
+            )}
+          </div>
         </div>
       </div>
     </Layout>
