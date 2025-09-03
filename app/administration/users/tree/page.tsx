@@ -69,7 +69,7 @@ export default function TreeView() {
   const handleSearch = () => {
     if (!search || !tree) return;
 
-    const searchLower = search.toLowerCase(); // ✅ now in scope
+    const searchLower = search.toLowerCase();
 
     const findNode = (node: any): any | null => {
       if (!node) return null;
@@ -81,13 +81,7 @@ export default function TreeView() {
         return node;
       }
 
-      const leftResult = findNode(node.left ?? null);
-      if (leftResult) return leftResult;
-
-      const rightResult = findNode(node.right ?? null);
-      if (rightResult) return rightResult;
-
-      return null;
+      return findNode(node.left) || findNode(node.right) || null;
     };
 
     const found = findNode(tree);
@@ -96,13 +90,13 @@ export default function TreeView() {
 
   return (
     <Layout>
-      <div className="p-4 max-md:-mt-5  flex flex-col h-full">
-        {/* Header + Search (fixed) */}
+      <div className="p-4 max-md:-mt-5 flex flex-col h-full">
+        {/* Header + Search */}
         <div className="flex flex-row items-center max-md:justify-between mb-1">
           <IoIosArrowBack
             size={28}
             color="black"
-            className="ml-0 mr-3  max-sm:mr-1 cursor-pointer z-20 mb-3 max-md:mb-2 lg:-mt-5"
+            className="ml-0 mr-3 max-sm:mr-1 cursor-pointer z-20 mb-3 max-md:mb-2 lg:-mt-5"
             onClick={() => router.push("/administration/users")}
           />
 
@@ -125,9 +119,9 @@ export default function TreeView() {
           </div>
         </div>
 
-        {/* Tree View (scrollable only) */}
-        <div className="flex-1 max-md:flex overflow-x-auto max-md:pl-[70%] max-md:pr-[70%] ">
-          <div className="flex justify-center ">
+        {/* Tree View (scrollable horizontally) */}
+        <div className="flex-1 overflow-x-auto">
+          <div className="flex justify-center min-w-[900px] lg:min-w-[1000px]">
             {tree ? (
               <BinaryTreeNode
                 node={tree}
