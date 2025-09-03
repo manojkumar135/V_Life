@@ -1,7 +1,7 @@
 "use client";
 import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
-import BinaryTree from "@/components/common/treenode"; // ✅ updated import
+import BinaryTreeNode from "@/components/common/treenode";
 import { useRouter } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
 import axios from "axios";
@@ -34,13 +34,13 @@ export default function TreeView() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "#16a34a"; // green-600
+        return "text-green-600";
       case "inactive":
-        return "#dc2626"; // red-600
+        return "text-red-600";
       case "pending":
-        return "#eab308"; // yellow-500
+        return "text-yellow-500";
       default:
-        return "#4b5563"; // gray-600
+        return "text-gray-600";
     }
   };
 
@@ -55,14 +55,11 @@ export default function TreeView() {
       });
       if (data?.data) {
         setTree(data.data);
-        if (data.highlight) {
-          setHighlightedId(data.highlight);
-        }
       }
     } catch (error) {
       console.error("Error fetching tree:", error);
     }
-  }, [user.user_id, query]);
+  }, []);
 
   useEffect(() => {
     fetchTree();
@@ -72,7 +69,7 @@ export default function TreeView() {
   const handleSearch = () => {
     if (!search || !tree) return;
 
-    const searchLower = search.toLowerCase();
+    const searchLower = search.toLowerCase(); // ✅ now in scope
 
     const findNode = (node: any): any | null => {
       if (!node) return null;
@@ -99,13 +96,13 @@ export default function TreeView() {
 
   return (
     <Layout>
-      <div className="p-4 max-md:-mt-5 flex flex-col h-full">
+      <div className="p-4 max-md:-mt-5  flex flex-col h-full">
         {/* Header + Search (fixed) */}
         <div className="flex flex-row items-center max-md:justify-between mb-1">
           <IoIosArrowBack
             size={28}
             color="black"
-            className="ml-0 mr-3 max-sm:mr-1 cursor-pointer z-20 mb-3 max-md:mb-2 lg:-mt-5"
+            className="ml-0 mr-3  max-sm:mr-1 cursor-pointer z-20 mb-3 max-md:mb-2 lg:-mt-5"
             onClick={() => router.push("/administration/users")}
           />
 
@@ -129,11 +126,11 @@ export default function TreeView() {
         </div>
 
         {/* Tree View (scrollable only) */}
-        <div className="flex-1 overflow-x-auto max-md:!pl-5">
-          <div className="min-w-[800px] flex justify-center">
+        <div className="flex-1 max-md:flex overflow-x-auto ">
+          <div className="flex justify-center ">
             {tree ? (
-              <BinaryTree
-                root={tree}
+              <BinaryTreeNode
+                node={tree}
                 getColor={getStatusColor}
                 highlightedId={highlightedId}
               />

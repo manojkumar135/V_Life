@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import TreeNode from "@/models/tree";
 
-// 🛠 Recursive tree builder
+// 🛠 Recursive builder
 async function buildTree(userId) {
   if (!userId) return null;
 
@@ -15,12 +15,13 @@ async function buildTree(userId) {
     user_status: node.status || "inactive",
     contact: node.contact || "",
     mail: node.mail || "",
+
     left: node.left ? await buildTree(node.left) : null,
     right: node.right ? await buildTree(node.right) : null,
   };
 }
 
-// 📌 GET handler
+// 📌 API handler
 export async function GET(req) {
   try {
     await connectDB();
@@ -36,7 +37,7 @@ export async function GET(req) {
       );
     }
 
-    // 🌳 Build full binary tree
+    // 🌳 Build full binary tree for the root
     const tree = await buildTree(user_id);
     if (!tree) {
       return NextResponse.json(
@@ -46,7 +47,6 @@ export async function GET(req) {
     }
 
     // 🔍 Search logic
-    let highlight = null;
     if (search) {
       const searchLower = search.toLowerCase();
 
@@ -62,10 +62,14 @@ export async function GET(req) {
       };
 
       const foundNode = findNode(tree);
-      highlight = foundNode ? foundNode.user_id : null;
+      return NextResponse.json({
+        success: true,
+        data: tree,
+        highlight: foundNode ? foundNode.user_id : null,
+      });
     }
 
-    return NextResponse.json({ success: true, data: tree, highlight });
+    return NextResponse.json({ success: true, data: tree });
   } catch (error) {
     console.error("❌ Error in tree-operations API:", error);
     return NextResponse.json(
