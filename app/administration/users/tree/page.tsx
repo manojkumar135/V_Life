@@ -126,7 +126,7 @@ export default function TreeView() {
         </div>
 
         {/* Tree View (scrollable only) */}
-        <div className="flex-1 max-md:flex overflow-x-auto ">
+        <div className="flex-1 max-md:flex overflow-x-auto max-md:pl-[70%] max-md:pr-[70%] ">
           <div className="flex justify-center ">
             {tree ? (
               <BinaryTreeNode
