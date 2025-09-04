@@ -50,28 +50,34 @@ const BinaryTreeNode: React.FC<Props> = ({
 
         {/* Tooltip */}
         {hovered && (
-          <div className="absolute top-14 z-10 bg-white border shadow-md rounded-md p-2 text-xs w-56">
-            <p>
-              <strong>ID:</strong> {node.user_id}
-            </p>
-            <p>
-              <strong>Name:</strong> {node.name}
-            </p>
-            <p>
-              <strong>Status:</strong>{" "}
-              <span className={getColor(node.user_status)}>
+          <div className="absolute top-14 z-10 bg-white border shadow-md rounded-md p-2 text-xs w-60 max-w-65 space-y-1">
+            <div className="flex">
+              <strong className="w-20">ID:</strong>
+              <span className="truncate">{node.user_id}</span>
+            </div>
+            <div className="flex">
+              <strong className="w-20">Name:</strong>
+              <span className="capitalize truncate">{node.name}</span>
+            </div>
+            <div className="flex">
+              <strong className="w-20">Status:</strong>
+              <span
+                className={`${getColor(node.user_status)} capitalize truncate`}
+              >
                 {node.user_status}
               </span>
-            </p>
+            </div>
             {node.contact && (
-              <p>
-                <strong>Contact:</strong> {node.contact}
-              </p>
+              <div className="flex">
+                <strong className="w-20">Contact:</strong>
+                <span className="truncate">{node.contact}</span>
+              </div>
             )}
             {node.mail && (
-              <p>
-                <strong>Email:</strong> {node.mail}
-              </p>
+              <div className="flex">
+                <strong className="w-20">Email:</strong>
+                <span className="truncate">{node.mail}</span>
+              </div>
             )}
           </div>
         )}

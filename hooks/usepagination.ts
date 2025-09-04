@@ -9,7 +9,7 @@ interface UsePaginationProps {
 
 const usePagination = ({
   totalItems,
-  itemsPerPage = 20,
+  itemsPerPage = 14,
   initialPage = 1,
   onPageChange,
 }: UsePaginationProps) => {
@@ -31,8 +31,9 @@ const usePagination = ({
     if (currentPage > 1) updatePage(currentPage - 1);
   };
 
-  const startItem = (currentPage - 1) * itemsPerPage + 1;
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1;
+const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
 
   return {
     currentPage,

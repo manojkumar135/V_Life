@@ -100,7 +100,7 @@ const page = () => {
         </div>
 
         {/* Referral Table */}
-        <div className="bg-white p-4 rounded-xl shadow-md border">
+        {/* <div className="bg-white p-4 rounded-xl shadow-md border">
           <table className="w-full text-sm text-left">
             <thead className="text-gray-600 font-semibold border-b">
               <tr>
@@ -123,7 +123,7 @@ const page = () => {
               ))}
             </tbody>
           </table>
-        </div>
+        </div> */}
       </div>
     </Layout>
   );

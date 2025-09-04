@@ -8,6 +8,7 @@ import {
 import { useMemo, useState } from "react";
 import { GrStatusGood } from "react-icons/gr";
 import { MdCancel } from "react-icons/md";
+import { useVLife } from "@/store/context";
 
 type Row = Record<string, any>;
 
@@ -33,7 +34,7 @@ export default function Table({
   columns,
   rows,
   rowIdField,
-  pageSize = 10,
+  pageSize = 14,
   className = "",
   rowHeight = 36,
   checkboxSelection = false,
@@ -47,6 +48,8 @@ export default function Table({
   processedRows = [],
 }: TableProps) {
   const [currentPage, setCurrentPage] = useState(1);
+
+  const { user } = useVLife();
 
   const safeRows = Array.isArray(rows) ? rows : [];
   const totalEntries = safeRows.length;
@@ -106,20 +109,21 @@ export default function Table({
                 type="button"
                 title={isActive ? "Active" : "Inactive"}
                 onClick={(e) => {
+                  if (user?.role !== "admin") return; // prevent non-admin clicks
                   e.stopPropagation();
                   onStatusClick?.(id, raw, params.row);
                 }}
                 style={{
                   background: "transparent",
                   border: "none",
-                  cursor: "pointer",
+                  cursor: user?.role === "admin" ? "pointer" : "default",
                   display: "flex",
                   alignItems: "center",
-                  // justifyContent: "center",
                   margin: "0 0 0 10px",
                   height: "100%",
                   width: "100%",
                 }}
+                disabled={user?.role !== "admin"} // disable for non-admins
               >
                 <Icon size={20} color={isActive ? "green" : "red"} />
               </button>
@@ -152,9 +156,13 @@ export default function Table({
     setSelectedRows(selectedData);
   };
 
+  
+
   return (
-    <div className={`flex flex-col w-full min-h-full ${className}`}>
-      <div className=" bg-white shadow-md rounded-lg min-h-full w-full flex-grow">
+    <div
+      className={`flex flex-col w-full min-h-124 max-md:min-h-150 max-lg:min-h-250 ${className}`}
+    >
+      <div className=" bg-white shadow-md rounded-lg min-h-124 max-md:min-h-150 max-lg:min-h-250 w-full flex-grow">
         <DataGrid
           rows={paginatedRows}
           columns={enhancedColumns}
@@ -178,7 +186,7 @@ export default function Table({
               padding: "20px !important",
               fontSize: "1rem",
               color: "gray",
-              marginBottom:"1.5rem",
+              marginBottom: "1.5rem",
             },
 
             "& .MuiDataGrid-cell:focus, & .MuiDataGrid-columnHeader:focus, & .MuiDataGrid-cell:focus-within":
@@ -205,12 +213,12 @@ export default function Table({
               width: "100% !important",
               overflowX: "auto",
 
-               "& .MuiDataGrid-overlay": {
-              padding: "20px !important",
-              fontSize: "1rem",
-              color: "gray",
-              marginBottom:"1.5rem",
-            },
+              "& .MuiDataGrid-overlay": {
+                padding: "20px !important",
+                fontSize: "1rem",
+                color: "gray",
+                marginBottom: "1.5rem",
+              },
 
               "& .MuiDataGrid-main": {
                 width: "100% !important",
@@ -271,16 +279,27 @@ export default function Table({
                   maxWidth: "auto !important",
                   // flexGrow: 1,
                 },
+
+                "& .MuiDataGrid-scrollbarFiller--header": {
+              backgroundColor: "gray !important", // ✅ header filler gray
             },
 
-            // "& .MuiDataGrid-scrollbarFiller": {
-            //   backgroundColor: "gray !important", // ✅ make filler gray
-            // },
+              // ✅ Hide the empty "ghost" cells
+              "& .MuiDataGrid-cellEmpty": {
+                display: "none !important",
+                width: 0,
+                padding: 0,
+                margin: 0,
+              },
+              "& .MuiDataGrid-columnHeader--empty": {
+                display: "none !important",
+              },
+            },
+           
             "& .MuiDataGrid-scrollbarFiller--header": {
               backgroundColor: "gray !important", // ✅ header filler gray
             },
 
-            
             "& .MuiDataGrid-cell:focus-within": {
               outline: "none !important",
             },

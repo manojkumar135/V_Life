@@ -100,7 +100,11 @@ export default function TransactionHistory() {
       headerName: "Amount",
       flex: 1,
       renderCell: (params: any) => (
-        <span className={params.row.status === "credit" ? "text-green-600" : "text-red-600"}>
+        <span
+          className={
+            params.row.status === "credit" ? "text-green-600" : "text-red-600"
+          }
+        >
           ₹ {params.value.toFixed(2)}
         </span>
       ),
@@ -126,7 +130,7 @@ export default function TransactionHistory() {
 
   const { query, handleChange } = useSearch();
   const [totalItems, setTotalItems] = useState(transactionData.length);
-  const [currentBalance, setCurrentBalance] = useState(5300.00); // Initial balance from last transaction
+  const [currentBalance, setCurrentBalance] = useState(5300.0); // Initial balance from last transaction
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
@@ -146,7 +150,7 @@ export default function TransactionHistory() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 10,
+    itemsPerPage: 12,
     onPageChange: handlePageChange,
   });
 
@@ -157,13 +161,13 @@ export default function TransactionHistory() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
-{/* {loading && (
+        {/* {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
         )} */}
 
-         {/* Balance Display */}
+        {/* Balance Display */}
         <div className="bg-yellow-100 text-black px-6 py-3 rounded-xl shadow-md w-fit mb-6 mx-auto flex items-center gap-2">
           <span className="text-xl font-semibold">Available Balance</span>
           <span className="text-xl font-bold text-right text-green-800">
@@ -177,16 +181,22 @@ export default function TransactionHistory() {
           // addLabel="+ ADD TRANSACTION"
           onAdd={() => console.log("Add transaction clicked")}
           onMore={() => console.log("More options clicked")}
+          showPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          startItem={startItem}
+          endItem={endItem}
+          onNext={nextPage}
+          onPrev={prevPage}
         />
-
-       
 
         {/* Table with transaction data */}
         <Table
           columns={columns}
-          rows={transactionData}
+          rows={transactionData.slice((currentPage - 1) * 12, currentPage * 12)}
           rowIdField="id"
-          pageSize={10}
+          pageSize={12}
           onRowClick={handleRowClick}
           checkboxSelection
         />

@@ -104,7 +104,7 @@ export default function GroupsPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 10,
+    itemsPerPage: 14,
     onPageChange: handlePageChange,
   });
 
@@ -119,8 +119,7 @@ export default function GroupsPage() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
-
-{loading && (
+        {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
@@ -136,14 +135,22 @@ export default function GroupsPage() {
           addLabel="+ ADD GROUP"
           onAdd={handleAddGroup}
           onMore={() => console.log("More options clicked")}
+          showPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            startItem={startItem}
+            endItem={endItem}
+            onNext={nextPage}
+            onPrev={prevPage}
         />
 
         {/* Table with checkbox selection */}
         <Table
           columns={columns}
-          rows={groupsData}
+          rows={groupsData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
-          pageSize={10}
+          pageSize={14}
           statusField="group_status" // ← show icon & click
           onIdClick={(id) => handleEdit(id)}
           // onStatusClick={(id, status, row) => toggleStatus(id, status, row)}

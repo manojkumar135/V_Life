@@ -11,7 +11,6 @@ import axios from "axios";
 import Loader from "@/components/common/loader";
 import { GridColDef } from "@mui/x-data-grid";
 
-
 export default function OrdersPage() {
   const router = useRouter();
   const { query, handleChange } = useSearch();
@@ -58,23 +57,23 @@ export default function OrdersPage() {
   };
 
   const columns: GridColDef[] = [
-  { field: "order_id", headerName: "Order ID", flex: 1 },
-  { field: "user_id", headerName: "User ID", flex: 1 },
-  { field: "user_name", headerName: "Name", flex: 1 },
-  { field: "contact", headerName: "Contact", flex: 1 },
-  { field: "payment_id", headerName: "Transaction ID", flex: 1 },
-  { field: "payment_date", headerName: "Order Date", flex: 1 },
-  {
-    field: "amount",
-    headerName: "Amount ( ₹ )",
-    align: "right",
-    flex: 1,
-    renderCell: (params) => (
-      <span>₹ {Number(params.value)?.toFixed(2) || "0.00"}</span>
-    ),
-  },
-  { field: "order_status", headerName: "Status", flex: 1 },
-];
+    { field: "order_id", headerName: "Order ID", flex: 1 },
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_name", headerName: "Name", flex: 1 },
+    { field: "contact", headerName: "Contact", flex: 1 },
+    { field: "payment_id", headerName: "Transaction ID", flex: 1 },
+    { field: "payment_date", headerName: "Order Date", flex: 1 },
+    {
+      field: "amount",
+      headerName: "Amount ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span>₹ {Number(params.value)?.toFixed(2) || "0.00"}</span>
+      ),
+    },
+    { field: "order_status", headerName: "Status", flex: 1 },
+  ];
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
@@ -94,7 +93,7 @@ export default function OrdersPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 10,
+    itemsPerPage: 14,
     onPageChange: handlePageChange,
   });
 
@@ -124,13 +123,21 @@ export default function OrdersPage() {
           showAddButton
           onAdd={handleAddOrder}
           onMore={() => console.log("More options clicked")}
+          showPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          startItem={startItem}
+          endItem={endItem}
+          onNext={nextPage}
+          onPrev={prevPage}
         />
 
         <Table
           columns={columns}
-          rows={ordersData}
+          rows={ordersData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
-          pageSize={10}
+          pageSize={14}
           statusField="order_status" // ← show icon & click
           onIdClick={(id) => handleEdit(id)}
           checkboxSelection

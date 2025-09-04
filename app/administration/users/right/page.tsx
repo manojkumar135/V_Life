@@ -9,17 +9,38 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
+import StatusModal from "@/components/common/statusModal"; // ✅ confirm modal
+
+// User type
+interface User {
+  _id: string;
+  user_id: string;
+  user_name: string;
+  contact?: string;
+  mail?: string;
+  role?: string;
+  user_status: "active" | "inactive" | string;
+}
 
 export default function RightTeam() {
   const { user } = useVLife();
   const team = "right";
   const router = useRouter();
   const { query, handleChange } = useSearch();
-  const [usersData, setUsersData] = useState<any[]>([]);
+  const [usersData, setUsersData] = useState<User[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = "/api/team-operations"; // Update if endpoint differs
+  const API_URL = "/api/team-operations";
+  const STATUS_URL = "/api/status-operations";
+
+  // ✅ modal states
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{
+    id: string;
+    status: string;
+    row: User;
+  } | null>(null);
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
@@ -33,7 +54,7 @@ export default function RightTeam() {
           search: query,
         },
       });
-      const users = data.data || [];
+      const users: User[] = data.data || [];
       setUsersData(users);
       setTotalItems(users.length);
     } catch (error) {
@@ -41,7 +62,7 @@ export default function RightTeam() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.user_id, query]);
 
   useEffect(() => {
     fetchUsers();
@@ -52,13 +73,42 @@ export default function RightTeam() {
     router.push(`/administration/users/edituser/${id}`);
   };
 
+  // Ask before toggling status
+  const handleStatusClick = (id: string, status: string, row: any) => {
+    setSelectedUser({ id, status, row });
+    setIsStatusModalOpen(true);
+  };
+
+  // Confirm status change
+  const confirmStatusChange = async () => {
+    if (!selectedUser) return;
+    try {
+      setLoading(true);
+
+      const { id, status } = selectedUser;
+      const res = await axios.put(STATUS_URL, { id, status });
+      if (res.data.success) {
+        setUsersData((prev) =>
+          prev.map((u) =>
+            u._id === id ? { ...u, user_status: res.data.data.user_status } : u
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+    } finally {
+      setSelectedUser(null);
+      setLoading(false);
+    }
+  };
+
   const columns = [
     { field: "user_id", headerName: "User ID", flex: 1 },
     { field: "user_name", headerName: "User Name", flex: 1 },
     { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 2 },
     { field: "role", headerName: "Role", flex: 1 },
-    { field: "user_status", headerName: "Status", flex: 1 }, // ✅ new status column
+    { field: "user_status", headerName: "Status", flex: 1 },
   ];
 
   const handlePageChange = useCallback(
@@ -75,11 +125,9 @@ export default function RightTeam() {
     prevPage,
     startItem,
     endItem,
-    isFirstPage,
-    isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 10,
+    itemsPerPage: 14,
     onPageChange: handlePageChange,
   });
 
@@ -105,17 +153,37 @@ export default function RightTeam() {
           showBack
           onAdd={handleAddUser}
           onMore={() => console.log("More options clicked")}
+          showPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          startItem={startItem}
+          endItem={endItem}
+          onNext={nextPage}
+          onPrev={prevPage}
         />
 
         <Table
           columns={columns}
-          rows={usersData}
+          rows={usersData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
-          pageSize={10}
-          statusField="user_status" // ✅ tells table to use status column
-          onIdClick={(id) => handleEdit(id)} // ✅ clicking ID goes to edit
+          pageSize={14}
+          statusField="user_status"
+          onIdClick={(id) => handleEdit(id)}
+          onStatusClick={handleStatusClick} // ✅ added
           checkboxSelection
           onRowClick={(row) => console.log("User clicked:", row)}
+        />
+
+        {/* ✅ Status confirmation modal */}
+        <StatusModal
+          isOpen={isStatusModalOpen}
+          setIsOpen={setIsStatusModalOpen}
+          currentStatus={
+            selectedUser?.status === "active" ? "active" : "inactive"
+          }
+          selectedUser={selectedUser}
+          onConfirm={confirmStatusChange}
         />
       </div>
     </Layout>

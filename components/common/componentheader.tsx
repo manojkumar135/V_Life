@@ -86,7 +86,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
     {showPagination && (
       <div className="flex items-center gap-2">
         <h3 className="text-sm font-semibold whitespace-nowrap">
-          {`${startItem}-${endItem} of ${totalItems}`}
+          {`${startItem} - ${endItem} of ${totalItems}`}
         </h3>
         <button
           type="button"

@@ -65,7 +65,7 @@ export default function WalletsPage() {
     { field: "bank_name", headerName: "Bank Name", flex: 2 },
     { field: "account_number", headerName: "Account Number", flex: 1.5 },
     { field: "ifsc_code", headerName: "IFSC Code", flex: 1.5 },
-        { field: "wallet_status", headerName: "Status", flex: 1 },
+    { field: "wallet_status", headerName: "Status", flex: 1 },
 
     // {
     //   field: "actions",
@@ -110,7 +110,7 @@ export default function WalletsPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 10,
+    itemsPerPage: 14,
     onPageChange: handlePageChange,
   });
 
@@ -125,7 +125,6 @@ export default function WalletsPage() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
-
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
@@ -140,14 +139,22 @@ export default function WalletsPage() {
           onBack={onBack}
           addLabel="+ ADD WALLET"
           onAdd={handleAddWallet}
+          showPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          startItem={startItem}
+          endItem={endItem}
+          onNext={nextPage}
+          onPrev={prevPage}
         />
 
         <Table
           columns={columns}
-          rows={walletsData}
+          rows={walletsData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
-          pageSize={10}
-        statusField="wallet_status" // ← show icon & click
+          pageSize={14}
+          statusField="wallet_status" // ← show icon & click
           onIdClick={(id) => handleEdit(id)}
           // onStatusClick={(id, status, row) => toggleStatus(id, status, row)}
           checkboxSelection

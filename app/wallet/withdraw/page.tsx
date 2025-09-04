@@ -111,7 +111,7 @@ export default function WithdrawPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 10,
+    itemsPerPage: 14,
     onPageChange: handlePageChange,
   });
 
@@ -140,14 +140,22 @@ export default function WithdrawPage() {
           onBack={onBack}
           addLabel="Make Withdrawal"
           onAdd={handleMakeWithdraw}
+          showPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          startItem={startItem}
+          endItem={endItem}
+          onNext={nextPage}
+          onPrev={prevPage}
         />
 
         <Table
           columns={columns}
-          rows={withdrawData}
+          rows={withdrawData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
-          pageSize={10}
-          statusField="withdraw_status" 
+          pageSize={14}
+          statusField="withdraw_status"
           onIdClick={(id) => handleEdit(id)}
           // onStatusClick={(id, status, row) => toggleStatus(id, status, row)}
           checkboxSelection
