@@ -15,9 +15,17 @@ interface Props {
   node: TreeNode;
   getColor: (status: string) => string;
   highlightedId?: string | null;
+  level?: number; // depth tracker
+  maxLevel?: number; // limit depth
 }
 
-const BinaryTreeNode: React.FC<Props> = ({ node, getColor, highlightedId }) => {
+const BinaryTreeNode: React.FC<Props> = ({
+  node,
+  getColor,
+  highlightedId,
+  level = 1,
+  maxLevel = 4,
+}) => {
   const [hovered, setHovered] = useState(false);
   const isHighlighted = highlightedId === node.user_id;
 
@@ -69,47 +77,54 @@ const BinaryTreeNode: React.FC<Props> = ({ node, getColor, highlightedId }) => {
         )}
       </div>
 
-      {/* Connector lines */}
-      <div className="relative flex justify-center mt-2 w-full">
-        {/* horizontal line connecting children */}
-        <div className="absolute top-0 left-1/4 right-1/4 border-t border-gray-400" />
-        {/* vertical lines */}
-        <div className="absolute top-0 left-1/4 border-l border-gray-400 h-2" />
-        <div className="absolute top-0 right-1/4 border-l border-gray-400 h-2" />
-      </div>
+      {/* Show children only if within level limit */}
+      {level < maxLevel && (
+        <>
+          {/* Connector lines */}
+          <div className="relative flex justify-center mt-2 w-full">
+            <div className="absolute top-0 left-1/4 right-1/4 border-t border-gray-400" />
+            <div className="absolute top-0 left-1/4 border-l border-gray-400 h-2" />
+            <div className="absolute top-0 right-1/4 border-l border-gray-400 h-2" />
+          </div>
 
-      {/* Children */}
-      <div className="flex justify-between mt-2 w-auto xl:w-full min-w-[300px] lg:min-w-[260px] px-4">
-        {/* Left */}
-        <div className="flex flex-col items-center flex-1">
-          {node.left ? (
-            <BinaryTreeNode
-              node={node.left}
-              getColor={getColor}
-              highlightedId={highlightedId}
-            />
-          ) : (
-            <div className="w-12 h-12 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400">
-              Empty
+          {/* Children */}
+          <div className="flex justify-between mt-2 w-auto xl:w-full min-w-[300px] lg:min-w-[260px] px-4">
+            {/* Left */}
+            <div className="flex flex-col items-center flex-1">
+              {node.left ? (
+                <BinaryTreeNode
+                  node={node.left}
+                  getColor={getColor}
+                  highlightedId={highlightedId}
+                  level={level + 1}
+                  maxLevel={maxLevel}
+                />
+              ) : (
+                <div className="w-12 h-12 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400">
+                  Empty
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Right */}
-        <div className="flex flex-col items-center flex-1">
-          {node.right ? (
-            <BinaryTreeNode
-              node={node.right}
-              getColor={getColor}
-              highlightedId={highlightedId}
-            />
-          ) : (
-            <div className="w-12 h-12 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400">
-              Empty
+            {/* Right */}
+            <div className="flex flex-col items-center flex-1">
+              {node.right ? (
+                <BinaryTreeNode
+                  node={node.right}
+                  getColor={getColor}
+                  highlightedId={highlightedId}
+                  level={level + 1}
+                  maxLevel={maxLevel}
+                />
+              ) : (
+                <div className="w-12 h-12 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400">
+                  Empty
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

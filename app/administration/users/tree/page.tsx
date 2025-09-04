@@ -24,7 +24,9 @@ export default function TreeView() {
   const { user } = useVLife();
   const { query } = useSearch();
   const router = useRouter();
+
   const [tree, setTree] = useState<TreeNode | null>(null);
+  const [currentRoot, setCurrentRoot] = useState<TreeNode | null>(null); // dynamic root
   const [search, setSearch] = useState("");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ export default function TreeView() {
     }
   };
 
-  // Fetch full binary tree for root
+  // Fetch full binary tree for root user
   const fetchTree = useCallback(async () => {
     try {
       const { data } = await axios.get(API_URL, {
@@ -55,38 +57,55 @@ export default function TreeView() {
       });
       if (data?.data) {
         setTree(data.data);
+        setCurrentRoot(data.data); // default full tree
       }
     } catch (error) {
       console.error("Error fetching tree:", error);
     }
-  }, []);
+  }, [user.user_id, query]);
 
   useEffect(() => {
     fetchTree();
   }, [fetchTree]);
 
-  // Handle search (highlight if found)
-  const handleSearch = () => {
-    if (!search || !tree) return;
+  // Recursive search
+  const findNode = (node: TreeNode | null, searchText: string): TreeNode | null => {
+    if (!node) return null;
 
-    const searchLower = search.toLowerCase();
+    const lower = searchText.toLowerCase();
+    if (
+      node.user_id.toLowerCase() === lower ||
+      (node.name && node.name.toLowerCase().includes(lower))
+    ) {
+      return node;
+    }
 
-    const findNode = (node: any): any | null => {
-      if (!node) return null;
-
-      if (
-        node.user_id.toLowerCase() === searchLower ||
-        (node.name && node.name.toLowerCase().includes(searchLower))
-      ) {
-        return node;
-      }
-
-      return findNode(node.left) || findNode(node.right) || null;
-    };
-
-    const found = findNode(tree);
-    setHighlightedId(found ? found.user_id : null);
+    return (
+      findNode(node.left ?? null, searchText) ||
+      findNode(node.right ?? null, searchText)
+    );
   };
+
+  // Handle search
+  const handleSearch = () => {
+    if (!tree) return;
+
+    const found = findNode(tree, search);
+    if (found) {
+      setCurrentRoot(found);
+      setHighlightedId(found.user_id);
+    } else {
+      alert("User not found!");
+    }
+  };
+
+  // 🔹 Auto-reset tree when search is cleared
+  useEffect(() => {
+    if (!search.trim() && tree) {
+      setCurrentRoot(tree);
+      setHighlightedId(null);
+    }
+  }, [search, tree]);
 
   return (
     <Layout>
@@ -119,14 +138,16 @@ export default function TreeView() {
           </div>
         </div>
 
-        {/* Tree View (scrollable horizontally) */}
-        <div className="flex-1 max-lg:flex overflow-x-auto ">
+        {/* Tree View */}
+        <div className="flex-1 max-lg:flex overflow-x-auto pt-5">
           <div className="flex justify-center min-w-[900px] xl:min-w-[1000px] max-md:pl-[100%] max-lg:pl-[50%]">
-            {tree ? (
+            {currentRoot ? (
               <BinaryTreeNode
-                node={tree}
+                node={currentRoot}
                 getColor={getStatusColor}
                 highlightedId={highlightedId}
+                level={1}
+                maxLevel={4} // show only 4 levels
               />
             ) : (
               <p>Loading tree...</p>
