@@ -90,9 +90,9 @@ export default function TreeView() {
 
   return (
     <Layout>
-      <div className="p-4 max-md:-mt-5 flex flex-col h-full">
+      <div className="p-4 max-md:-mt-5 flex flex-col h-full max-lg:max-w-[720px]">
         {/* Header + Search */}
-        <div className="flex flex-row items-center max-md:justify-between mb-1">
+        <div className="flex flex-row items-center max-md:justify-between mb-1 ">
           <IoIosArrowBack
             size={28}
             color="black"
@@ -120,8 +120,8 @@ export default function TreeView() {
         </div>
 
         {/* Tree View (scrollable horizontally) */}
-        <div className="flex-1 overflow-x-auto">
-          <div className="flex justify-center min-w-[900px] lg:min-w-[1000px]">
+        <div className="flex-1 max-lg:flex overflow-x-auto ">
+          <div className="flex justify-center min-w-[900px] xl:min-w-[1000px] max-md:pl-[100%] max-lg:pl-[50%]">
             {tree ? (
               <BinaryTreeNode
                 node={tree}
