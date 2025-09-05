@@ -32,8 +32,11 @@ export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id") || searchParams.get("wallet_id");
 
+    const id = searchParams.get("id") || searchParams.get("wallet_id");
+    const search = searchParams.get("search") || "";
+
+    // ✅ If id is provided → find one
     if (id) {
       let wallet;
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -43,15 +46,49 @@ export async function GET(request) {
       }
 
       if (!wallet) {
-        return NextResponse.json({ success: false, message: "Wallet not found" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, message: "Wallet not found" },
+          { status: 404 }
+        );
       }
       return NextResponse.json({ success: true, data: wallet }, { status: 200 });
     }
 
-    const wallets = await Wallet.find();
+    // ✅ Build query for search
+    const query = {};
+
+    if (search) {
+      // Split by comma and trim spaces
+      const searchTerms = search
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      // Build OR conditions across all wallet fields
+      query.$or = searchTerms.flatMap((term) => {
+        const regex = new RegExp(term, "i"); // case-insensitive
+        return [
+          { wallet_id: regex },
+          { user_id: regex },
+          { user_name: regex },
+          { account_holder_name: regex },
+          { bank_name: regex },
+          { account_number: regex },
+          { ifsc_code: regex },
+          { wallet_status: regex },
+        ];
+      });
+    }
+
+    // ✅ Find all (with or without search)
+    const wallets = await Wallet.find(query);
+
     return NextResponse.json({ success: true, data: wallets }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 

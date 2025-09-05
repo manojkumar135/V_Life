@@ -205,81 +205,82 @@ export default function AddOrderPage() {
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState(categories[0].name);
 
- useEffect(() => {
-  if (user.items) {
-    // Normalize ids to numbers
-    setCart(user.items.map((i: any) => ({ ...i, id: Number(i.id) })));
-  }
-}, [user.items]);
+  useEffect(() => {
+    if (user.items) {
+      // Normalize ids to numbers
+      setCart(user.items.map((i: any) => ({ ...i, id: Number(i.id) })));
+    }
+  }, [user.items]);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "customerEmail" ? value.toLowerCase() : value,
+    }));
   };
 
   // In your AddOrderPage component, update the addToCart function:
-const addToCart = async (product: any) => {
-  const updatedCart = [...cart];
-  const productId = Number(product.id);
+  const addToCart = async (product: any) => {
+    const updatedCart = [...cart];
+    const productId = Number(product.id);
 
-  const existingItem = updatedCart.find((item) => item.id === productId);
+    const existingItem = updatedCart.find((item) => item.id === productId);
 
-  if (existingItem) {
-    existingItem.quantity += 1;
-  } else {
-    updatedCart.push({
-      id: productId,
-      name: product.name,
-      price: product.price,
-      quantity: 1,
-      image: product.image,
-      description: product.description || "",
-      category: product.category,
-    });
-  }
+    if (existingItem) {
+      existingItem.quantity += 1;
+    } else {
+      updatedCart.push({
+        id: productId,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        image: product.image,
+        description: product.description || "",
+        category: product.category,
+      });
+    }
 
-  setCart(updatedCart);
-  try {
-    await updateUserCart(updatedCart);
-  } catch (error) {
-    ShowToast.error("Failed to update cart");
-  }
-};
-
+    setCart(updatedCart);
+    try {
+      await updateUserCart(updatedCart);
+    } catch (error) {
+      ShowToast.error("Failed to update cart");
+    }
+  };
 
   const updateQuantity = async (id: number, newQuantity: number) => {
-  if (newQuantity < 1) {
-    removeFromCart(id);
-    return;
-  }
+    if (newQuantity < 1) {
+      removeFromCart(id);
+      return;
+    }
 
-  const updatedCart = cart.map((item) =>
-    Number(item.id) === Number(id) ? { ...item, quantity: newQuantity } : item
-  );
+    const updatedCart = cart.map((item) =>
+      Number(item.id) === Number(id) ? { ...item, quantity: newQuantity } : item
+    );
 
-  setCart(updatedCart);
+    setCart(updatedCart);
 
-  try {
-    await updateUserCart(updatedCart);
-  } catch (error) {
-    ShowToast.error("Failed to update cart");
-  }
-};
+    try {
+      await updateUserCart(updatedCart);
+    } catch (error) {
+      ShowToast.error("Failed to update cart");
+    }
+  };
 
-const removeFromCart = async (id: number) => {
-  const updatedCart = cart.filter((item) => Number(item.id) !== Number(id));
-  setCart(updatedCart);
+  const removeFromCart = async (id: number) => {
+    const updatedCart = cart.filter((item) => Number(item.id) !== Number(id));
+    setCart(updatedCart);
 
-  try {
-    await updateUserCart(updatedCart);
-  } catch (error) {
-    ShowToast.error("Failed to update cart");
-  }
-};
-
-
+    try {
+      await updateUserCart(updatedCart);
+    } catch (error) {
+      ShowToast.error("Failed to update cart");
+    }
+  };
 
   // console.log(cart)
   const getTotalPrice = () => {
@@ -343,7 +344,9 @@ const removeFromCart = async (id: number) => {
     } catch (error: any) {
       console.error("Error creating order:", error);
       if (error.response) {
-        ShowToast.error(error.response.data.message || "Failed to create order");
+        ShowToast.error(
+          error.response.data.message || "Failed to create order"
+        );
       } else if (error.request) {
         ShowToast.error("No response from server. Please try again.");
       } else {

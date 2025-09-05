@@ -31,8 +31,11 @@ export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id") || searchParams.get("withdraw_id");
 
+    const id = searchParams.get("id") || searchParams.get("withdraw_id");
+    const search = searchParams.get("search") || "";
+
+    // ✅ If ID or withdraw_id provided → find single record
     if (id) {
       let withdraw;
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -42,15 +45,57 @@ export async function GET(request) {
       }
 
       if (!withdraw) {
-        return NextResponse.json({ success: false, message: "Withdrawal not found" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, message: "Withdrawal not found" },
+          { status: 404 }
+        );
       }
       return NextResponse.json({ success: true, data: withdraw }, { status: 200 });
     }
 
-    const withdrawals = await Withdraw.find();
+    // ✅ Build search query
+    const query = {};
+
+    if (search) {
+      const searchTerms = search
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      query.$or = searchTerms.flatMap((term) => {
+        const regex = new RegExp(term, "i"); // case-insensitive
+        const conditions= [
+          { withdraw_id: regex },
+          { user_id: regex },
+          { user_name: regex },
+          { bank_name: regex },
+          { account_number: regex },
+          { ifsc_code: regex },
+          { withdraw_status: regex },
+          { created_by: regex },
+          { last_modified_by: regex },
+        ];
+
+        // ✅ If numeric, try matching amount exactly (ignoring decimals)
+        if (!isNaN(Number(term))) {
+          conditions.push({
+            amount: { $gte: Number(term), $lt: Number(term) + 1 },
+          });
+        }
+
+        return conditions;
+      });
+    }
+
+    // ✅ Find withdrawals with optional search
+    const withdrawals = await Withdraw.find(query).sort({ createdAt: -1 });
+
     return NextResponse.json({ success: true, data: withdrawals }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 

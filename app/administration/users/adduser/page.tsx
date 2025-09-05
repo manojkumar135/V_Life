@@ -20,6 +20,7 @@ const validationSchema = Yup.object().shape({
     .min(3, "Full Name must be at least 3 characters"),
   email: Yup.string()
     .email("Invalid email address")
+      .transform((val) => (val ? val.toLowerCase() : val))
     .required("Email is required"),
   contact: Yup.string()
     .required("Contact is required")

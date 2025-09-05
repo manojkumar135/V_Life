@@ -19,9 +19,12 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     await connectDB();
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id") || searchParams.get("transaction_id");
+    const search = searchParams.get("search");
 
+    // 🔹 If ID or transaction_id is provided → fetch single history record
     if (id) {
       let history;
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -31,15 +34,46 @@ export async function GET(request) {
       }
 
       if (!history) {
-        return NextResponse.json({ success: false, message: "History record not found" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, message: "History record not found" },
+          { status: 404 }
+        );
       }
+
       return NextResponse.json({ success: true, data: history }, { status: 200 });
     }
 
-    const histories = await History.find();
+    // ✅ Build search query
+    let query = {};
+
+    if (search) {
+      const searchTerms = search
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      query.$or = searchTerms.flatMap((term) => {
+        const regex = new RegExp(term, "i"); // case-insensitive
+        return [
+          { transaction_id: regex },
+          { user_id: regex },
+          { amount: regex },       // depends on your schema, adjust if numeric
+          { type: regex },         // e.g. "credit"/"debit"
+          { status: regex },
+          { description: regex },
+        ];
+      });
+    }
+
+    const histories = await History.find(query).sort({ createdAt: -1 });
+
     return NextResponse.json({ success: true, data: histories }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    console.error("GET history error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
 

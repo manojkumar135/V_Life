@@ -137,6 +137,8 @@ const ForgotPassword: React.FC = () => {
   const emailValidation = Yup.object({
     email: Yup.string()
       .email("Invalid email address")
+            .transform((val) => (val ? val.toLowerCase() : val))
+
       .required("Email is required!"),
   });
 

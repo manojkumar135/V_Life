@@ -11,10 +11,12 @@ import { useSearch } from "@/hooks/useSearch";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 export default function WithdrawPage() {
+  const { user } = useVLife();
   const router = useRouter();
-  const { query, handleChange } = useSearch();
+  const { query, setQuery, debouncedQuery } = useSearch();
   const [withdrawData, setWithdrawData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -22,24 +24,30 @@ export default function WithdrawPage() {
   const API_URL = "/api/withdraw-operations";
 
   // Fetch withdrawals
-  const fetchWithdrawals = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL);
-      const withdrawals = data.data || [];
-      setWithdrawData(withdrawals);
-      setTotalItems(withdrawals.length);
-    } catch (error) {
-      console.error("Error fetching withdrawals:", error);
-      ShowToast.error("Failed to load withdrawals");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchWithdrawals = useCallback(
+    async (search: string) => {
+      try {
+        setLoading(true);
+        const { data } = await axios.get(API_URL, {
+          params: { search: query },
+        });
+        const withdrawals = data.data || [];
+        setWithdrawData(withdrawals);
+        setTotalItems(withdrawals.length);
+      } catch (error) {
+        console.error("Error fetching withdrawals:", error);
+        ShowToast.error("Failed to load withdrawals");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [query]
+  );
 
   useEffect(() => {
-    fetchWithdrawals();
-  }, [fetchWithdrawals]);
+    if (!user?.user_id) return;
+    fetchWithdrawals(debouncedQuery);
+  }, [debouncedQuery, user?.user_id]);
 
   // Delete withdrawal
   const handleDelete = async (id: string) => {
@@ -134,7 +142,7 @@ export default function WithdrawPage() {
         <HeaderWithActions
           title="Payouts"
           search={query}
-          setSearch={handleChange}
+          setSearch={setQuery}
           showAddButton
           showBack
           onBack={onBack}

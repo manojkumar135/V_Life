@@ -31,8 +31,9 @@ export async function GET(request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
+
     const id = searchParams.get("id") || searchParams.get("group_id");
-    // console.log("Fetching group with id:", id);
+    const search = searchParams.get("search"); // 👈 capture search query
 
     if (id) {
       let group;
@@ -43,15 +44,44 @@ export async function GET(request) {
       }
 
       if (!group) {
-        return NextResponse.json({ success: false, message: "Group not found" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, message: "Group not found" },
+          { status: 404 }
+        );
       }
       return NextResponse.json({ success: true, data: group }, { status: 200 });
     }
 
-    const groups = await Group.find();
+    // ✅ build query
+    const query = {};
+
+    if (search) {
+      // Split by comma and trim spaces
+      const searchTerms = search
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      // Build OR conditions for each search term across all fields
+      query.$or = searchTerms.flatMap((term) => {
+        const regex = new RegExp(term, "i"); // case-insensitive
+        return [
+          { group_id: regex },  
+          { group_name: regex }, 
+          { description: regex },
+          { roles: regex },
+          { group_status: regex },
+        ];
+      });
+    }
+
+    const groups = await Group.find(query); // 👈 pass query
     return NextResponse.json({ success: true, data: groups }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 

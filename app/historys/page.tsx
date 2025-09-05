@@ -128,7 +128,7 @@ export default function TransactionHistory() {
     },
   ];
 
-  const { query, handleChange } = useSearch();
+  const { query, setQuery,debouncedQuery } = useSearch(); 
   const [totalItems, setTotalItems] = useState(transactionData.length);
   const [currentBalance, setCurrentBalance] = useState(5300.0); // Initial balance from last transaction
 
@@ -177,7 +177,7 @@ export default function TransactionHistory() {
         <HeaderWithActions
           title="Transaction History"
           search={query}
-          setSearch={handleChange}
+          setSearch={setQuery}
           // addLabel="+ ADD TRANSACTION"
           onAdd={() => console.log("Add transaction clicked")}
           onMore={() => console.log("More options clicked")}

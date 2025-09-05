@@ -10,33 +10,38 @@ import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
 import axios from "axios";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 export default function GroupsPage() {
+  const { user } = useVLife();
   const router = useRouter();
-  const { query, handleChange } = useSearch();
+  const { query, setQuery,debouncedQuery } = useSearch(); 
   const [groupsData, setGroupsData] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const API_URL = "/api/groups-operations"; // Change this to your actual API route
 
-  // Fetch groups
-  const fetchGroups = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL);
-      setGroupsData(data.data || []);
-      setTotalItems(data.data?.length || 0);
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchGroups = useCallback(async (search: string) => {
+  try {
+    setLoading(true);
+    const { data } = await axios.get(API_URL, {
+      params: { search: query }, 
+    });
+    setGroupsData(data.data || []);
+    setTotalItems(data.data?.length || 0);
+  } catch (error) {
+    console.error("Error fetching groups:", error);
+  } finally {
+    setLoading(false);
+  }
+}, [query]);
+
 
   useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
+    if (!user?.user_id) return;
+    fetchGroups(debouncedQuery); 
+  }, [debouncedQuery, user?.user_id]);
 
   // Delete group
   const handleDelete = async (id: string) => {
@@ -127,8 +132,8 @@ export default function GroupsPage() {
 
         <HeaderWithActions
           title="Groups"
-          search={query}
-          setSearch={handleChange}
+           search={query}
+            setSearch={setQuery} // ✅ string setter
           showAddButton
           showBack
           onBack={onBack}

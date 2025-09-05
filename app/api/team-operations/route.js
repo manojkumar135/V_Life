@@ -18,7 +18,7 @@ async function collectTeam(userId, side, allNodes, collected = new Set()) {
   return collected;
 }
 
-// GET /api/team-operations?user_id=USER123&team=left&search=abc
+// GET /api/team-operations?user_id=USER123&team=left&search=user,123456
 export async function GET(req) {
   try {
     await connectDB();
@@ -51,19 +51,34 @@ export async function GET(req) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    // 4️⃣ Fetch user details from User table
-    let users = await User.find({ user_id: { $in: [...collectedIds] } }).lean();
+    // 4️⃣ Build query
+    let query = { user_id: { $in: [...collectedIds] } };
 
-    // 5️⃣ Apply search filter if given
     if (search) {
-      const regex = new RegExp(search, "i");
-      users = users.filter(
-        (u) =>
-          regex.test(u.user_name) ||
-          regex.test(u.mail) ||
-          regex.test(u.contact || "")
-      );
+      // Split by comma and trim spaces
+      const searchTerms = search.split(",").map((s) => s.trim()).filter(Boolean);
+
+      // Build OR conditions for each search term across all fields
+      query.$or = searchTerms.flatMap((term) => {
+        const regex = new RegExp(term, "i");
+        return [
+          { user_id: regex },
+          { user_name: regex },
+          { mail: regex },
+          { contact: regex },
+          { address: regex },
+          { pincode: regex },
+          { country: regex },
+          { state: regex },
+          { district: regex },
+          { locality: regex },
+          { user_status: regex },
+        ];
+      });
     }
+
+    // 5️⃣ Fetch user details from User table with filtering in DB
+    const users = await User.find(query).lean();
 
     return NextResponse.json({
       data: users,

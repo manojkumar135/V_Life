@@ -28,6 +28,8 @@ export default function RegisterPage() {
       .min(2, "* Name must be at least 2 characters"),
     mail: Yup.string()
       .email("* Invalid email format")
+      .transform((val) => (val ? val.toLowerCase() : val))
+
       .required("* Email is required"),
     contact: Yup.string()
       .required("* Contact is required")

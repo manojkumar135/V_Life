@@ -11,21 +11,25 @@ import { useSearch } from "@/hooks/useSearch";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 export default function WalletsPage() {
   const router = useRouter();
-  const { query, handleChange } = useSearch();
+  const { query, setQuery,debouncedQuery } = useSearch(); 
   const [walletsData, setWalletsData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
+  const { user } = useVLife();
 
   const API_URL = "/api/wallets-operations";
 
   // Fetch wallets
-  const fetchWallets = useCallback(async () => {
+  const fetchWallets = useCallback(async (search: string) => {
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL);
+      const { data } = await axios.get(API_URL,{
+      params: { search: query }, 
+    });
       const wallets = data.data || [];
       setWalletsData(wallets);
       setTotalItems(wallets.length);
@@ -35,11 +39,12 @@ export default function WalletsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [query]);
 
-  useEffect(() => {
-    fetchWallets();
-  }, [fetchWallets]);
+    useEffect(() => {
+      if (!user?.user_id) return;
+      fetchWallets(debouncedQuery);
+    }, [debouncedQuery, user?.user_id]);
 
   // Delete wallet
   const handleDelete = async (id: string) => {
@@ -133,7 +138,7 @@ export default function WalletsPage() {
         <HeaderWithActions
           title="Wallets"
           search={query}
-          setSearch={handleChange}
+          setSearch={setQuery}
           showAddButton
           showBack
           onBack={onBack}

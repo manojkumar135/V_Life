@@ -10,10 +10,12 @@ import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
 import axios from "axios";
 import Loader from "@/components/common/loader";
+import { useVLife } from "@/store/context";
 
 export default function RolesPage() {
+  const { user } = useVLife();
   const router = useRouter();
-  const { query, handleChange } = useSearch();
+  const { query, setQuery,debouncedQuery } = useSearch(); 
   const [rolesData, setRolesData] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -21,10 +23,12 @@ export default function RolesPage() {
   const API_URL = "/api/roles-operations"; // Change this to your actual API route
 
   // Fetch roles
-  const fetchRoles = useCallback(async () => {
+  const fetchRoles = useCallback(async (search: string) => {
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL);
+      const { data } = await axios.get(API_URL, {
+      params: { search: query }, 
+    })
       setRolesData(data.data || []);
       setTotalItems(data.data?.length || 0);
     } catch (error) {
@@ -32,11 +36,12 @@ export default function RolesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [query]);
 
-  useEffect(() => {
-    fetchRoles();
-  }, [fetchRoles]);
+   useEffect(() => {
+     if (!user?.user_id) return;
+     fetchRoles(debouncedQuery); 
+   }, [debouncedQuery, user?.user_id]);
 
   // Delete role
   const handleDelete = async (id: string) => {
@@ -127,7 +132,7 @@ export default function RolesPage() {
         <HeaderWithActions
           title="Roles"
           search={query}
-          setSearch={handleChange}
+          setSearch={setQuery}
           showAddButton
           showBack
           onBack={onBack}

@@ -6,7 +6,6 @@ import { IoClose } from "react-icons/io5";
 import { VLifeContextProvider } from "@/store/context";
 // import RefreshHandler from "@/components/RefreshHandler";
 
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -30,6 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
+        suppressHydrationWarning={true}
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <VLifeContextProvider>

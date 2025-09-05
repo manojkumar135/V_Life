@@ -31,9 +31,12 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     await connectDB();
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id") || searchParams.get("role_id");
+    const search = searchParams.get("search");
 
+    // 🔹 If ID or role_id is provided → fetch single role
     if (id) {
       let role;
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -43,17 +46,50 @@ export async function GET(request) {
       }
 
       if (!role) {
-        return NextResponse.json({ success: false, message: "Role not found" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, message: "Role not found" },
+          { status: 404 }
+        );
       }
+
       return NextResponse.json({ success: true, data: role }, { status: 200 });
     }
 
-    const roles = await Role.find();
+    // ✅ build query
+    let query = {};
+
+    if (search) {
+      // Split by comma and trim spaces
+      const searchTerms = search
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      // Build OR conditions for each search term across all fields
+      query.$or = searchTerms.flatMap((term) => {
+        const regex = new RegExp(term, "i"); // case-insensitive
+        return [
+          { role_id: regex },
+          { role_name: regex },
+          { description: regex },
+          { components: regex },
+          { role_status: regex },
+        ];
+      });
+    }
+
+    const roles = await Role.find(query).sort({ createdAt: -1 });
+
     return NextResponse.json({ success: true, data: roles }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    console.error("GET roles error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
+
 
 // PUT - Replace a role
 export async function PUT(request) {

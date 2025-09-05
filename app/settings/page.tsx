@@ -31,6 +31,7 @@ const profileSchema = Yup.object().shape({
     .matches(/^[0-9]{10}$/, "Phone number must be 10 digits"),
   email: Yup.string()
     .email("Invalid email address")
+    .transform((val) => (val ? val.toLowerCase() : val))
     .required("Email is required"),
   address: Yup.string().required("Address is required"),
   country: Yup.string().required("Country is required"),

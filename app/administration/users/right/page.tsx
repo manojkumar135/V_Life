@@ -26,7 +26,7 @@ export default function RightTeam() {
   const { user } = useVLife();
   const team = "right";
   const router = useRouter();
-  const { query, handleChange } = useSearch();
+  const { query, setQuery,debouncedQuery } = useSearch(); 
   const [usersData, setUsersData] = useState<User[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -43,7 +43,7 @@ export default function RightTeam() {
   } | null>(null);
 
   // Fetch users
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (search: string) => {
     if (!user?.user_id) return;
     try {
       setLoading(true);
@@ -65,8 +65,10 @@ export default function RightTeam() {
   }, [user?.user_id, query]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (!user?.user_id) return;
+    fetchUsers(debouncedQuery); 
+  }, [debouncedQuery, user?.user_id]);
+  
 
   // Navigate to edit
   const handleEdit = (id: string) => {
@@ -147,7 +149,7 @@ export default function RightTeam() {
         <HeaderWithActions
           title="Right Team"
           search={query}
-          setSearch={handleChange}
+            setSearch={setQuery} // ✅ string setter
           addLabel="+ ADD USER"
           showAddButton
           showBack

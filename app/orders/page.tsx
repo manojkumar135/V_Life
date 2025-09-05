@@ -10,10 +10,12 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loader from "@/components/common/loader";
 import { GridColDef } from "@mui/x-data-grid";
+import { useVLife } from "@/store/context";
 
 export default function OrdersPage() {
+  const { user } = useVLife();
   const router = useRouter();
-  const { query, handleChange } = useSearch();
+  const { query, setQuery, debouncedQuery } = useSearch();
   const [ordersData, setOrdersData] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -21,10 +23,12 @@ export default function OrdersPage() {
   const API_URL = "/api/order-operations"; // Replace with your actual API endpoint
 
   // Fetch orders from API
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (search: string) => {
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL);
+      const { data } = await axios.get(API_URL,{
+      params: { search: query }, 
+    });
       const orders = data.data || [];
       setOrdersData(orders);
       setTotalItems(orders.length);
@@ -33,11 +37,12 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [query]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    if (!user?.user_id) return;
+    fetchOrders(debouncedQuery);
+  }, [debouncedQuery, user?.user_id]);
 
   // Delete order
   const handleDelete = async (id: string) => {
@@ -118,7 +123,7 @@ export default function OrdersPage() {
         <HeaderWithActions
           title="Orders"
           search={query}
-          setSearch={handleChange}
+          setSearch={setQuery}
           addLabel="+ ADD ORDER"
           showAddButton
           onAdd={handleAddOrder}

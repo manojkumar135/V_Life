@@ -76,11 +76,11 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id") || searchParams.get("order_id");
+    const search = searchParams.get("search");
 
+    // 🔹 If ID or order_id is provided → fetch single order
     if (id) {
       let order;
-
-      // ✅ Check if it's ObjectId or custom order_id
       if (mongoose.Types.ObjectId.isValid(id)) {
         order = await Order.findById(id);
       } else {
@@ -97,12 +97,49 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: order }, { status: 200 });
     }
 
-    // ✅ If no ID → return all orders
-    const orders = await Order.find();
+    // ✅ Build search query
+    let query: Record<string, any> = {};
+
+    if (search) {
+      const searchTerms = search
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      query.$or = searchTerms.flatMap((term) => {
+        const regex = new RegExp(term, "i"); // case-insensitive
+        const conditions: any[] = [
+          { order_id: regex },
+          { user_id: regex },
+          { user_name: regex },
+          { contact: regex },
+          { mail: regex },
+          { product_id: regex },
+          { payment_date: regex },
+          { order_status: regex },
+          { payment_id: regex },
+          { shipping_address: regex },
+        ];
+
+         // ✅ Numeric search → compare floored integer part of amount
+    if (!isNaN(Number(term))) {
+      const num = Number(term);
+      conditions.push({
+        $expr: { $eq: [{ $floor: "$amount" }, num] },
+      });
+    }
+
+        return conditions;
+      });
+    }
+
+    const orders = await Order.find(query).sort({ createdAt: -1 });
+
     return NextResponse.json({ success: true, data: orders }, { status: 200 });
   } catch (error: any) {
+    console.error("GET orders error:", error);
     return NextResponse.json(
-      { success: false, message: error.message },
+      { success: false, message: error.message || "Server error" },
       { status: 500 }
     );
   }

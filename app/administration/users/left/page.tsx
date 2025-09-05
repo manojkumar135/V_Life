@@ -10,6 +10,7 @@ import axios from "axios";
 import { useVLife } from "@/store/context";
 import StatusModal from "@/components/common/statusModal"; // ✅ confirm modal
 import Loader from "@/components/common/loader";
+import { handleDownload } from "@/utils/handleDownload";
 
 // User type (adjust fields if your User model differs)
 interface User {
@@ -27,7 +28,8 @@ export default function LeftTeam() {
   const { user } = useVLife();
   const team = "left";
 
-  const { query, handleChange } = useSearch();
+  const { query, setQuery, debouncedQuery } = useSearch();
+  const [selectedRows, setSelectedRows] = useState<User[]>([]);
 
   // ✅ typed states
   const [usersData, setUsersData] = useState<User[]>([]);
@@ -45,27 +47,39 @@ export default function LeftTeam() {
     row: User;
   } | null>(null);
 
+  const handleDownloadClick = () => {
+  handleDownload<User>({
+    rows: selectedRows,
+    fileName: "left-team",
+    format: "csv", // or "json"
+  });
+};
+
   // Fetch users
-  const fetchUsers = useCallback(async () => {
-    if (!user?.user_id) return;
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL, {
-        params: { user_id: user.user_id, team, search: query },
-      });
-      const users: User[] = data.data || [];
-      setUsersData(users);
-      setTotalItems(users.length);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.user_id, query]);
+  const fetchUsers = useCallback(
+    async (search: string) => {
+      if (!user?.user_id) return;
+      try {
+        setLoading(true);
+        const { data } = await axios.get(API_URL, {
+          params: { user_id: user.user_id, team, search },
+        });
+        const users: User[] = data.data || [];
+        setUsersData(users);
+        setTotalItems(users.length);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.user_id]
+  );
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (!user?.user_id) return;
+    fetchUsers(debouncedQuery);
+  }, [debouncedQuery, user?.user_id]);
 
   // Edit user
   const handleEdit = (id: string) => {
@@ -130,22 +144,22 @@ export default function LeftTeam() {
   return (
     <>
       <Layout>
-         {loading && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                  <Loader />
-                </div>
-              )}
-        
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <Loader />
+          </div>
+        )}
+
         <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
           <HeaderWithActions
             title="Left Team"
             search={query}
-            setSearch={handleChange}
+            setSearch={setQuery} // ✅ string setter
             addLabel="+ ADD USER"
             showAddButton
             showBack
             onAdd={handleAddUser}
-            onMore={() => console.log("More options clicked")}
+            onMore={handleDownloadClick} // ✅ Now Download
             showPagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -165,6 +179,7 @@ export default function LeftTeam() {
             onIdClick={(id) => handleEdit(id)}
             onStatusClick={handleStatusClick}
             checkboxSelection
+            // setSelectedRows={setSelectedRows}
             onRowClick={(row) => console.log("User clicked:", row)}
           />
 
