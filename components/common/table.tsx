@@ -12,25 +12,25 @@ import { useVLife } from "@/store/context";
 
 type Row = Record<string, any>;
 
-interface TableProps {
+interface TableProps<T extends Row> {
   columns: GridColDef[];
-  rows: Row[];
+  rows: T[];
   rowIdField: string;
   pageSize?: number;
   className?: string;
   rowHeight?: number;
   checkboxSelection?: boolean;
   statusField?: string;
-  onRowClick?: (row: Row) => void;
-  onIdClick?: (id: string, row: Row) => void;
-  onStatusClick?: (id: string, status: string, row: Row) => void;
+  onRowClick?: (row: T) => void;
+  onIdClick?: (id: string, row: T) => void;
+  onStatusClick?: (id: string, status: string, row: T) => void;
   rowSelectionModel?: GridRowSelectionModel;
   setRowSelectionModel?: (selected: GridRowSelectionModel) => void;
-  setSelectedRows?: (rows: Row[]) => void;
-  processedRows?: Row[];
+  setSelectedRows?: (rows: T[]) => void;
+  processedRows?: T[];
 }
 
-export default function Table({
+export default function Table<T extends Row>({
   columns,
   rows,
   rowIdField,
@@ -46,13 +46,11 @@ export default function Table({
   setRowSelectionModel,
   setSelectedRows,
   processedRows = [],
-}: TableProps) {
+}: TableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
-
   const { user } = useVLife();
 
   const safeRows = Array.isArray(rows) ? rows : [];
-  const totalEntries = safeRows.length;
   const paginatedRows = useMemo(
     () => safeRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
     [safeRows, currentPage, pageSize]
@@ -62,7 +60,6 @@ export default function Table({
     return columns.map((col, idx) => {
       const isIdCol = col.field === rowIdField || idx === 0;
       const isStatusCol = statusField && col.field === statusField;
-
       if (!isIdCol && !isStatusCol) return col;
 
       return {
@@ -101,7 +98,6 @@ export default function Table({
               raw === "paid" ||
               raw === "true" ||
               raw === "yes";
-
             const Icon = isActive ? GrStatusGood : MdCancel;
 
             return (
@@ -109,7 +105,7 @@ export default function Table({
                 type="button"
                 title={isActive ? "Active" : "Inactive"}
                 onClick={(e) => {
-                  if (user?.role !== "admin") return; // prevent non-admin clicks
+                  if (user?.role !== "admin") return;
                   e.stopPropagation();
                   onStatusClick?.(id, raw, params.row);
                 }}
@@ -123,40 +119,36 @@ export default function Table({
                   height: "100%",
                   width: "100%",
                 }}
-                disabled={user?.role !== "admin"} // disable for non-admins
+                disabled={user?.role !== "admin"}
               >
                 <Icon size={20} color={isActive ? "green" : "red"} />
               </button>
             );
           }
-
           return value ?? "-";
         },
       };
     });
-  }, [columns, rowIdField, statusField, onIdClick, onStatusClick]);
+  }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);
 
-  const handleSelectionChange = (
-    newSelectionModel: GridRowSelectionModel,
-    details: GridCallbackDetails<any>
-  ) => {
-    if (!checkboxSelection || !setRowSelectionModel || !setSelectedRows) return;
+const handleSelectionChange = (newSelectionModel: GridRowSelectionModel) => {
+  console.log("Raw selection model:", newSelectionModel);
 
-    setRowSelectionModel(newSelectionModel);
+  if (!checkboxSelection || !setSelectedRows) return;
 
-    const selectedIds: string[] = [];
-    if (Array.isArray(newSelectionModel)) {
-      newSelectionModel.forEach((id) => selectedIds.push(String(id)));
-    }
+  // Ensure it's an array
+  const selectedIds = Array.isArray(newSelectionModel)
+    ? newSelectionModel.map(String)
+    : [String(newSelectionModel)];
 
-    const selectedData = selectedIds
-      .map((id) => processedRows.find((row) => String(row[rowIdField]) === id))
-      .filter((row): row is Row => row !== undefined);
+  const selectedData = rows.filter((row) =>
+    selectedIds.includes(String(row[rowIdField]))
+  );
 
-    setSelectedRows(selectedData);
-  };
+  console.log("Selected rows data:", selectedData);
+  setSelectedRows(selectedData);
+};
 
-  
 
   return (
     <div

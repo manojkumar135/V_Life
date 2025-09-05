@@ -179,7 +179,7 @@ export default function LeftTeam() {
             onIdClick={(id) => handleEdit(id)}
             onStatusClick={handleStatusClick}
             checkboxSelection
-            // setSelectedRows={setSelectedRows}
+            setSelectedRows={setSelectedRows}
             onRowClick={(row) => console.log("User clicked:", row)}
           />
 
