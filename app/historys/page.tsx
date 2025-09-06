@@ -6,6 +6,20 @@ import { FaPlusCircle, FaMinusCircle } from "react-icons/fa";
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
+import { useVLife } from "@/store/context";
+import axios from "axios";
+import { useEffect } from "react";
+import Loader from "@/components/common/loader";
+
+interface User {
+  _id: string;
+  user_id: string;
+  user_name: string;
+  contact?: string;
+  mail?: string;
+  role?: string;
+  user_status: "active" | "inactive" | string;
+}
 
 const transactionData = [
   {
@@ -91,8 +105,12 @@ const transactionData = [
 ];
 
 export default function TransactionHistory() {
+  const { user } = useVLife();
+
+  const API_URL = "/api/history-operations";
+
   const columns = [
-    { field: "id", headerName: "# ID", flex: 1 },
+    { field: "id", headerName: " ID", flex: 1 },
     { field: "date", headerName: "Date", flex: 1 },
     { field: "detail", headerName: "Detail", flex: 2 },
     {
@@ -128,7 +146,9 @@ export default function TransactionHistory() {
     },
   ];
 
-  const { query, setQuery,debouncedQuery } = useSearch(); 
+  const [historyData, setHistoryData] = useState(transactionData);
+  const [loading, setLoading] = useState(false);
+  const { query, setQuery, debouncedQuery } = useSearch();
   const [totalItems, setTotalItems] = useState(transactionData.length);
   const [currentBalance, setCurrentBalance] = useState(5300.0); // Initial balance from last transaction
 
@@ -138,6 +158,32 @@ export default function TransactionHistory() {
     },
     [query]
   );
+
+  // Fetch History
+  // const fetchHistory = useCallback(
+  //   async (search: string) => {
+  //     if (!user?.user_id) return;
+  //     try {
+  //       setLoading(true);
+  //       const { data } = await axios.get(API_URL, {
+  //         params: { user_id: user.user_id, search },
+  //       });
+  //       const users: User[] = data.data || [];
+  //       setHistoryData(users);
+  //       setTotalItems(users.length);
+  //     } catch (error) {
+  //       console.error("Error fetching history:", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   },
+  //   [user?.user_id]
+  // );
+
+  // useEffect(() => {
+  //   if (!user?.user_id) return;
+  //   fetchHistory(debouncedQuery);
+  // }, [debouncedQuery, user?.user_id]);
 
   const {
     currentPage,

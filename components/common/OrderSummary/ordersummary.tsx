@@ -5,6 +5,7 @@ import InputField from "@/components/common/inputtype1";
 import TextareaField from "@/components/common/textareainput";
 import SubmitButton from "@/components/common/submitbutton";
 import PaymentModal from "@/components/common/PaymentModal/paymentmodal";
+import ShowToast from "@/components/common/Toast/toast";
 import {
   IoRemove,
   IoAdd,
@@ -59,11 +60,11 @@ export default function OrderFormCartSection({
         !formData.customerEmail ||
         !formData.shippingAddress
       ) {
-        alert("Please fill in all required customer information");
+        ShowToast.warning("Please fill in all required customer information");
         return;
       }
     } else if (activeTab === "cart" && cart.length === 0) {
-      alert("Your cart is empty");
+      ShowToast.error("Your cart is empty");
       return;
     }
 
@@ -75,7 +76,7 @@ export default function OrderFormCartSection({
 
     // Validate payment details based on method
     if (paymentMethod === "upi" && !paymentDetails.upiId) {
-      alert("Please enter your UPI ID");
+      ShowToast.warning("Please enter your UPI ID");
       return;
     }
 
@@ -85,7 +86,7 @@ export default function OrderFormCartSection({
         !paymentDetails.expiryDate ||
         !paymentDetails.cvv)
     ) {
-      alert("Please fill in all card details");
+      ShowToast.error("Please fill in all card details");
       return;
     }
 

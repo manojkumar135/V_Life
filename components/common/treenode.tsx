@@ -7,6 +7,8 @@ export interface TreeNode {
   user_status: string;
   contact?: string;
   mail?: string;
+  referBy?: string;
+  parent?: string;
   left?: TreeNode | null;
   right?: TreeNode | null;
 }
@@ -77,6 +79,18 @@ const BinaryTreeNode: React.FC<Props> = ({
               <div className="flex">
                 <strong className="w-20">Email:</strong>
                 <span className="truncate">{node.mail}</span>
+              </div>
+            )}
+            {node.referBy && (
+              <div className="flex">
+                <strong className="w-20">Refer By:</strong>
+                <span className="truncate">{node.referBy}</span>
+              </div>
+            )}
+            {node.parent && (
+              <div className="flex">
+                <strong className="w-20">Parent:</strong>
+                <span className="truncate">{node.parent}</span>
               </div>
             )}
           </div>

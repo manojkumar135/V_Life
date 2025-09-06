@@ -8,6 +8,7 @@ import axios from "axios";
 import { useVLife } from "@/store/context";
 import { useSearch } from "@/hooks/useSearch";
 import SubmitButton from "@/components/common/submitbutton";
+import ShowToast from "@/components/common/Toast/toast";
 
 // Node type
 interface TreeNode {
@@ -16,13 +17,15 @@ interface TreeNode {
   user_status: string;
   contact?: string;
   mail?: string;
+  referBy?: string;
+  parent?: string;
   left?: TreeNode | null;
   right?: TreeNode | null;
 }
 
 export default function TreeView() {
   const { user } = useVLife();
-  const { query } = useSearch();
+  const { query, setQuery, debouncedQuery } = useSearch();
   const router = useRouter();
 
   const [tree, setTree] = useState<TreeNode | null>(null);
@@ -47,7 +50,7 @@ export default function TreeView() {
   };
 
   // Fetch full binary tree for root user
-  const fetchTree = useCallback(async () => {
+  const fetchTree = useCallback(async (search: string) => {
     try {
       const { data } = await axios.get(API_URL, {
         params: {
@@ -65,8 +68,9 @@ export default function TreeView() {
   }, [user.user_id, query]);
 
   useEffect(() => {
-    fetchTree();
-  }, [fetchTree]);
+      if (!user?.user_id) return;
+      fetchTree(debouncedQuery);
+    }, [debouncedQuery, user?.user_id]);
 
   // Recursive search
   const findNode = (node: TreeNode | null, searchText: string): TreeNode | null => {
@@ -95,7 +99,7 @@ export default function TreeView() {
       setCurrentRoot(found);
       setHighlightedId(found.user_id);
     } else {
-      alert("User not found!");
+      ShowToast.error("User not found!");
     }
   };
 
@@ -106,6 +110,7 @@ export default function TreeView() {
       setHighlightedId(null);
     }
   }, [search, tree]);
+
 
   return (
     <Layout>

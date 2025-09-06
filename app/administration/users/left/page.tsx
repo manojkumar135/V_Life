@@ -47,13 +47,18 @@ export default function LeftTeam() {
     row: User;
   } | null>(null);
 
+  const [downloading, setDownloading] = useState(false);
+
   const handleDownloadClick = () => {
-  handleDownload<User>({
-    rows: selectedRows,
-    fileName: "left-team",
-    format: "csv", // or "json"
-  });
-};
+    handleDownload<User>({
+      rows: selectedRows,
+      fileName: "left-team",
+      format: "xlsx",
+      excludeHeaders: ["_id", "__v", "created_at", "last_modified_at"], // ✅ skip these
+      onStart: () => setDownloading(true),
+      onFinish: () => setDownloading(false),
+    });
+  };
 
   // Fetch users
   const fetchUsers = useCallback(
@@ -144,7 +149,7 @@ export default function LeftTeam() {
   return (
     <>
       <Layout>
-        {loading && (
+        {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>

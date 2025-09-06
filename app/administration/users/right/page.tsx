@@ -9,7 +9,8 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
-import StatusModal from "@/components/common/statusModal"; // ✅ confirm modal
+import StatusModal from "@/components/common/statusModal";
+import { handleDownload } from "@/utils/handleDownload";
 
 // User type
 interface User {
@@ -26,7 +27,9 @@ export default function RightTeam() {
   const { user } = useVLife();
   const team = "right";
   const router = useRouter();
-  const { query, setQuery,debouncedQuery } = useSearch(); 
+  const { query, setQuery, debouncedQuery } = useSearch();
+    const [selectedRows, setSelectedRows] = useState<User[]>([]);
+  
   const [usersData, setUsersData] = useState<User[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -42,33 +45,48 @@ export default function RightTeam() {
     row: User;
   } | null>(null);
 
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadClick = () => {
+    handleDownload<User>({
+      rows: selectedRows,
+      fileName: "right-team",
+      format: "xlsx",
+      excludeHeaders: ["_id", "__v", "created_at","last_modified_at"], // ✅ skip these
+      onStart: () => setDownloading(true),
+      onFinish: () => setDownloading(false),
+    });
+  };
+
   // Fetch users
-  const fetchUsers = useCallback(async (search: string) => {
-    if (!user?.user_id) return;
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL, {
-        params: {
-          user_id: user.user_id,
-          team,
-          search: query,
-        },
-      });
-      const users: User[] = data.data || [];
-      setUsersData(users);
-      setTotalItems(users.length);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.user_id, query]);
+  const fetchUsers = useCallback(
+    async (search: string) => {
+      if (!user?.user_id) return;
+      try {
+        setLoading(true);
+        const { data } = await axios.get(API_URL, {
+          params: {
+            user_id: user.user_id,
+            team,
+            search: query,
+          },
+        });
+        const users: User[] = data.data || [];
+        setUsersData(users);
+        setTotalItems(users.length);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.user_id, query]
+  );
 
   useEffect(() => {
     if (!user?.user_id) return;
-    fetchUsers(debouncedQuery); 
+    fetchUsers(debouncedQuery);
   }, [debouncedQuery, user?.user_id]);
-  
 
   // Navigate to edit
   const handleEdit = (id: string) => {
@@ -120,18 +138,12 @@ export default function RightTeam() {
     [query]
   );
 
-  const {
-    currentPage,
-    totalPages,
-    nextPage,
-    prevPage,
-    startItem,
-    endItem,
-  } = usePagination({
-    totalItems,
-    itemsPerPage: 14,
-    onPageChange: handlePageChange,
-  });
+  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
+    usePagination({
+      totalItems,
+      itemsPerPage: 14,
+      onPageChange: handlePageChange,
+    });
 
   const handleAddUser = () => {
     router.push("/administration/users/adduser?team=right");
@@ -140,7 +152,7 @@ export default function RightTeam() {
   return (
     <Layout>
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
-        {loading && (
+        {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
@@ -149,12 +161,12 @@ export default function RightTeam() {
         <HeaderWithActions
           title="Right Team"
           search={query}
-            setSearch={setQuery} // ✅ string setter
+          setSearch={setQuery} // ✅ string setter
           addLabel="+ ADD USER"
           showAddButton
           showBack
           onAdd={handleAddUser}
-          onMore={() => console.log("More options clicked")}
+            onMore={handleDownloadClick} // ✅ Now Download
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -175,6 +187,7 @@ export default function RightTeam() {
           onStatusClick={handleStatusClick} // ✅ added
           checkboxSelection
           onRowClick={(row) => console.log("User clicked:", row)}
+          setSelectedRows={setSelectedRows}
         />
 
         {/* ✅ Status confirmation modal */}

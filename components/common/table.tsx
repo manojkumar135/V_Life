@@ -131,23 +131,42 @@ export default function Table<T extends Row>({
     });
   }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);
 
-const handleSelectionChange = (newSelectionModel: GridRowSelectionModel) => {
-  console.log("Raw selection model:", newSelectionModel);
+const handleSelectionChange = (newSelectionModel: any) => {
+  // console.log("Raw selection model:", newSelectionModel);
 
   if (!checkboxSelection || !setSelectedRows) return;
 
-  // Ensure it's an array
-  const selectedIds = Array.isArray(newSelectionModel)
-    ? newSelectionModel.map(String)
-    : [String(newSelectionModel)];
+  let selectedIds: string[] = [];
+
+  // MUI v6+ selection model
+  if (
+    newSelectionModel &&
+    typeof newSelectionModel === "object" &&
+    "ids" in newSelectionModel
+  ) {
+    if (newSelectionModel.type === "exclude") {
+      // All rows are selected except those in ids
+      selectedIds = rows
+        .map((row) => String(row[rowIdField]))
+        .filter((id) => !newSelectionModel.ids.has(id));
+    } else {
+      // Only rows in ids are selected
+      selectedIds = Array.from(newSelectionModel.ids).map(String);
+    }
+  }
+  // MUI v5 selection model (array)
+  else if (Array.isArray(newSelectionModel)) {
+    selectedIds = (newSelectionModel as (string | number)[]).map(String);
+  }
 
   const selectedData = rows.filter((row) =>
     selectedIds.includes(String(row[rowIdField]))
   );
 
-  console.log("Selected rows data:", selectedData);
+  // console.log("Selected rows data:", selectedData);
   setSelectedRows(selectedData);
 };
+
 
 
   return (

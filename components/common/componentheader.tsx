@@ -10,7 +10,7 @@ import {
 } from "react-icons/md";
 import { MdOutlineMoreVert } from "react-icons/md";
 import { IoMdAdd } from "react-icons/io";
-
+import { IoMdDownload } from "react-icons/io";
 import { useRouter } from "next/navigation";
 
 interface HeaderWithActionsProps {
@@ -189,12 +189,13 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
             {showDropdown && (
               <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded shadow-md z-50">
                 <button
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
+                  className="w-full flex items-center gap-2 text-left px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer"
                   onClick={() => {
                     setShowDropdown(false);
                     onMore?.(); // ✅ call download handler from parent
                   }}
                 >
+                  <IoMdDownload className="text-base" />
                   Download
                 </button>
               </div>

@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { RiLogoutCircleRLine } from "react-icons/ri";
@@ -16,7 +15,6 @@ import { useVLife } from "@/store/context";
 import axios from "axios";
 import Loader from "@/components/common/loader";
 
-
 export default function SideNav({
   isOpen,
   setIsOpen,
@@ -26,8 +24,7 @@ export default function SideNav({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const {user, clearUser } = useVLife();
-
+  const { user, clearUser } = useVLife();
 
   const [isLogoutOpen, setIsLogoutOpen] = useState(false); // ✅ modal state
   const [loading, setLoading] = useState(false);
@@ -37,16 +34,18 @@ export default function SideNav({
       href: "/dashboard",
       icon: <LuLayoutDashboard />,
       label: "Dashboard",
+      match: "dashboard",
     },
     {
       href: user?.role === "admin" ? "/administration" : "/administration/users",
       icon: <IoPeople />,
       label: "Administration",
+      match: "administration",
     },
-    { href: "/wallet", icon: <FaWallet />, label: "Wallet" },
-    { href: "/orders", icon: <FaBoxesPacking />, label: "Orders" },
-    { href: "/historys", icon: <FaHistory />, label: "History" },
-    { href: "/settings", icon: <IoSettings />, label: "Settings" },
+    { href: "/wallet", icon: <FaWallet />, label: "Wallet", match: "wallet" },
+    { href: "/orders", icon: <FaBoxesPacking />, label: "Orders", match: "orders" },
+    { href: "/historys", icon: <FaHistory />, label: "History", match: "history" },
+    { href: "/settings", icon: <IoSettings />, label: "Settings", match: "settings" },
   ];
 
   const handleNavigation = (path: string) => {
@@ -54,24 +53,23 @@ export default function SideNav({
     setIsOpen(false); // Close sidebar on mobile after navigation
   };
 
-  const handleLogout = async() => {
-   setLoading(true);
-  try {
-    await axios.post("/api/logout");
-    clearUser();
-    router.push("/auth/login");
-  } catch (err) {
-    console.error("Logout failed:", err);
-    clearUser();
-    router.push("/auth/login");
-  } finally {
-    setLoading(false);
-  }
+  const handleLogout = async () => {
+    setLoading(true);
+    try {
+      await axios.post("/api/logout");
+      clearUser();
+      router.push("/auth/login");
+    } catch (err) {
+      console.error("Logout failed:", err);
+      clearUser();
+      router.push("/auth/login");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <>
-
       {/* Desktop SideNav */}
       <div className="hidden md:flex flex-col items-center w-20 bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-500 pt-20 pb-6 rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative">
         {/* Logo */}
@@ -90,7 +88,7 @@ export default function SideNav({
         {/* Menu Items */}
         <div className="flex flex-col items-center gap-2 flex-grow w-full mt-10">
           {menuItems.map((item, index) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname.includes(item.match);
             return (
               <div key={index} className="relative group">
                 <button
@@ -111,12 +109,11 @@ export default function SideNav({
           })}
         </div>
 
-        {/* Logout */}
         {/* Logout (Desktop) */}
         <div className="w-full flex justify-center">
           <div className="relative">
             <button
-              onClick={() => setIsLogoutOpen(true)} // ✅ open modal
+              onClick={() => setIsLogoutOpen(true)}
               className="group p-3 rounded-xl w-12 h-12 flex items-center justify-center text-white hover:bg-white/90 hover:text-black hover:shadow-md transition-all duration-300"
             >
               <span className="text-[26px]">
@@ -166,7 +163,7 @@ export default function SideNav({
         {/* Menu Items */}
         <div className="flex flex-col space-y-3 w-[110%]">
           {menuItems.map((item, index) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname.includes(item.match);
             return (
               <button
                 key={index}
@@ -188,7 +185,7 @@ export default function SideNav({
 
         {/* Logout (Mobile) */}
         <button
-          onClick={() => setIsLogoutOpen(true)} // ✅ same modal trigger
+          onClick={() => setIsLogoutOpen(true)}
           className="mt-10 max-sm:mt-40 flex items-center gap-3 px-3 py-2 rounded-md text-white hover:bg-white/10"
         >
           <span className="text-[22px] max-md:text-[18px]">
@@ -197,6 +194,7 @@ export default function SideNav({
           <span className="text-sm font-medium">Logout</span>
         </button>
       </div>
+
       {/* ✅ Logout Modal */}
       <LogoutModal
         isOpen={isLogoutOpen}
@@ -204,13 +202,11 @@ export default function SideNav({
         onLogout={handleLogout}
       />
 
-      
-     {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  backdrop-blur-sm">
-            <Loader />
-          </div>
-        )}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
     </>
-
   );
 }

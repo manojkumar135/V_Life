@@ -20,6 +20,7 @@ import { useVLife } from "@/store/context";
 import ChangePasswordForm from "@/components/changePasswordForm";
 import ShowToast from "@/components/common/Toast/toast";
 import { toTitleCase } from "@/utils/convertString";
+import InviteForm from "@/components/invite";
 
 // Validation Schema
 const profileSchema = Yup.object().shape({
@@ -228,7 +229,7 @@ const Page = () => {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    alert("Referral link copied to clipboard!");
+    ShowToast.success("Referral link copied to clipboard!");
   };
 
   return (
@@ -440,36 +441,41 @@ const Page = () => {
           </form>
 
           {/* Accordion Sections */}
-          {["Change Password", "Activate / Re-Activate ID", "Support"].map(
-            (section) => (
-              <Accordion
-                key={section}
-                expanded={expanded === section}
-                onChange={handleAccordionChange(section)}
-                className="mb-4 bg-[#f7f7f7] shadow-sm rounded-md"
-              >
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography
-                    variant="subtitle1"
-                    fontSize={expanded === section ? "1.2rem" : "1rem"}
-                    fontWeight={expanded === section ? "bold" : "normal"}
-                    className="text-base"
-                  >
-                    {section}
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  {section === "Change Password" ? (
-                    <ChangePasswordForm onSuccess={() => setExpanded(false)} />
-                  ) : (
-                    <p className="text-gray-600 text-sm">
-                      Content for "{section}" goes here.
-                    </p>
-                  )}
-                </AccordionDetails>
-              </Accordion>
-            )
-          )}
+          {[
+            "Change Password",
+            "Activate / Re-Activate ID",
+            "Invite",
+            "Support",
+          ].map((section) => (
+            <Accordion
+              key={section}
+              expanded={expanded === section}
+              onChange={handleAccordionChange(section)}
+              className="mb-4 bg-[#f7f7f7] shadow-sm rounded-md"
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography
+                  variant="subtitle1"
+                  fontSize={expanded === section ? "1.2rem" : "1rem"}
+                  fontWeight={expanded === section ? "bold" : "normal"}
+                  className="text-base"
+                >
+                  {section}
+                </Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {section === "Change Password" ? (
+                  <ChangePasswordForm onSuccess={() => setExpanded(false)} />
+                ) : section === "Invite" ? (
+                  <InviteForm />
+                ) : (
+                  <p className="text-gray-600 text-sm">
+                    Content for "{section}" goes here.
+                  </p>
+                )}
+              </AccordionDetails>
+            </Accordion>
+          ))}
         </div>
 
         {/* Fullscreen Preview */}

@@ -15,6 +15,8 @@ async function buildTree(userId) {
     user_status: node.status || "inactive",
     contact: node.contact || "",
     mail: node.mail || "",
+    referBy: node.referBy || "",
+    parent: node.parent || "",
 
     left: node.left ? await buildTree(node.left) : null,
     right: node.right ? await buildTree(node.right) : null,
