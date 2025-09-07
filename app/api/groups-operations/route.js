@@ -121,22 +121,28 @@ export async function PATCH(request) {
   try {
     await connectDB();
 
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("group_id"); // could be group_id or _id
+    const body = await request.json();
+    const { id, group_id, ...rest } = body;
 
-    if (!id) {
+    // pick whichever exists
+    const updateId = id || group_id;
+
+    if (!updateId) {
       return NextResponse.json(
-        { success: false, message: "group_id or _id is required" },
+        { success: false, message: "id or group_id is required" },
         { status: 400 }
       );
     }
 
-    const body = await request.json();
+    let updatedGroup;
 
-    // If it starts with GR → use group_id, else use _id
-    const filter = id.startsWith("GR") ? { group_id: id } : { _id: id };
-
-    const updatedGroup = await Group.findOneAndUpdate(filter, body, { new: true });
+    // If valid ObjectId → use _id
+    if (mongoose.Types.ObjectId.isValid(updateId)) {
+      updatedGroup = await Group.findByIdAndUpdate(updateId, rest, { new: true });
+    } else {
+      // Otherwise assume it's a group_id (like "GR123")
+      updatedGroup = await Group.findOneAndUpdate({ group_id: updateId }, rest, { new: true });
+    }
 
     if (!updatedGroup) {
       return NextResponse.json(
@@ -153,7 +159,6 @@ export async function PATCH(request) {
     );
   }
 }
-
 
 // DELETE - Remove a group
 export async function DELETE(request) {

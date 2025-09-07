@@ -2,101 +2,113 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
-import { FaTrash } from "react-icons/fa";
-import { GoPencil } from "react-icons/go";
 import { useRouter } from "next/navigation";
 import HeaderWithActions from "@/components/common/componentheader";
 import usePagination from "@/hooks/usepagination";
 import { useSearch } from "@/hooks/useSearch";
 import axios from "axios";
+import StatusModal from "@/components/common/statusModal"; 
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
+import ShowToast from "@/components/common/Toast/toast"
+
+interface Group {
+  _id: string;
+  group_id: string;
+  group_name: string;
+  roles?: string[];
+  group_status: "active" | "inactive" | string;
+}
 
 export default function GroupsPage() {
   const { user } = useVLife();
   const router = useRouter();
-  const { query, setQuery,debouncedQuery } = useSearch(); 
-  const [groupsData, setGroupsData] = useState([]);
+  const { query, setQuery, debouncedQuery } = useSearch(); 
+
+  const [groupsData, setGroupsData] = useState<Group[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = "/api/groups-operations"; // Change this to your actual API route
+  const API_URL = "/api/groups-operations"; 
+
+  // ✅ modal states
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [selected, setSelected] = useState<{
+    id: string;
+    status: string;
+    row: Group;
+  } | null>(null);
 
   const fetchGroups = useCallback(async (search: string) => {
-  try {
-    setLoading(true);
-    const { data } = await axios.get(API_URL, {
-      params: { search: query }, 
-    });
-    setGroupsData(data.data || []);
-    setTotalItems(data.data?.length || 0);
-  } catch (error) {
-    console.error("Error fetching groups:", error);
-  } finally {
-    setLoading(false);
-  }
-}, [query]);
-
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL, {
+        params: { search },
+      });
+      setGroupsData(data.data || []);
+      setTotalItems(data.data?.length || 0);
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!user?.user_id) return;
     fetchGroups(debouncedQuery); 
-  }, [debouncedQuery, user?.user_id]);
+  }, [debouncedQuery, user?.user_id, fetchGroups]);
 
-  // Delete group
-  const handleDelete = async (id: string) => {
-    try {
-      await axios.delete(`${API_URL}?group_id=${id}`);
-      setGroupsData((prev) => prev.filter((group: any) => group._id !== id));
-      setTotalItems((prev) => prev - 1);
-    } catch (error) {
-      console.error("Error deleting group:", error);
+  // Ask before toggling status
+  const handleStatusClick = (id: string, status: string, row: Group) => {
+    setSelected({ id, status, row });
+    setIsStatusModalOpen(true);
+  };
+
+  // Confirm status change
+const confirmStatusChange = async () => {
+  if (!selected) return;
+  try {
+    setLoading(true);
+
+    const { id, status, row } = selected;
+    const res = await axios.patch(API_URL, {
+      id, // ObjectId
+      group_id: row.group_id, // Business key
+      group_status: status === "active" ? "inactive" : "active", // toggle
+    });
+
+    if (res.data.success) {
+      // ✅ Update UI
+      setGroupsData((prev) =>
+        prev.map((g) =>
+          g._id === id ? { ...g, group_status: res.data.data.group_status } : g
+        )
+      );
+
+      // 🎉 Success toast
+      ShowToast.success(`Group ${row.group_name} status updated to ${res.data.data.group_status}`);
+    } else {
+      // ⚠️ Fallback toast
+      ShowToast.error(res.data.message || "Failed to update status");
     }
-  };
+  } catch (error: any) {
+    console.error("Error updating group status:", error);
+    ShowToast.error( error.response?.data?.message || "Error updating group status");
+  } finally {
+    setSelected(null);
+    setLoading(false);
+  }
+};
 
-  // Edit group
-  const handleEdit = (id: string) => {
-    // console.log("Editing group with id:", id);
-    router.push(`/administration/groups/editgroup/${id}`);
-  };
+
 
   const columns = [
     { field: "group_id", headerName: "Group ID", flex: 1 },
     { field: "group_name", headerName: "Group Name", flex: 1 },
     { field: "roles", headerName: "Roles", flex: 2 },
     { field: "group_status", headerName: "Status", flex: 1 },
-
-    // {
-    //   field: "actions",
-    //   headerName: "Actions",
-    //   flex: 1,
-    //   sortable: false,
-    //   disableColumnMenu: true,
-    //   renderCell: (params: any) => (
-    //     <div className="flex gap-2 items-center">
-    //       <button
-    //         className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
-    //         onClick={() => handleEdit(params.row._id)}
-    //       >
-    //         <GoPencil size={18} />
-    //       </button>
-    //       <button
-    //         className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
-    //         onClick={() => handleDelete(params.row._id)}
-    //       >
-    //         <FaTrash size={16} />
-    //       </button>
-    //     </div>
-    //   ),
-    // },
   ];
-
-  const handlePageChange = useCallback(
-    (page: number, offset: number, limit: number) => {
-      // Optional: Implement API pagination if backend supports it
-    },
-    [query]
-  );
 
   const {
     currentPage,
@@ -105,12 +117,10 @@ export default function GroupsPage() {
     prevPage,
     startItem,
     endItem,
-    isFirstPage,
-    isLastPage,
   } = usePagination({
     totalItems,
     itemsPerPage: 14,
-    onPageChange: handlePageChange,
+    onPageChange: () => {},
   });
 
   const handleAddGroup = () => {
@@ -132,8 +142,8 @@ export default function GroupsPage() {
 
         <HeaderWithActions
           title="Groups"
-           search={query}
-            setSearch={setQuery} // ✅ string setter
+          search={query}
+          setSearch={setQuery}
           showAddButton
           showBack
           onBack={onBack}
@@ -141,13 +151,13 @@ export default function GroupsPage() {
           onAdd={handleAddGroup}
           onMore={() => console.log("More options clicked")}
           showPagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            startItem={startItem}
-            endItem={endItem}
-            onNext={nextPage}
-            onPrev={prevPage}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          startItem={startItem}
+          endItem={endItem}
+          onNext={nextPage}
+          onPrev={prevPage}
         />
 
         {/* Table with checkbox selection */}
@@ -156,12 +166,21 @@ export default function GroupsPage() {
           rows={groupsData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
           pageSize={14}
-          statusField="group_status" // ← show icon & click
-          onIdClick={(id) => handleEdit(id)}
-          // onStatusClick={(id, status, row) => toggleStatus(id, status, row)}
+          statusField="group_status"
+          onIdClick={(id) => router.push(`/administration/groups/editgroup/${id}`)}
+          onStatusClick={handleStatusClick}
           checkboxSelection
-          // loading={loading}
           onRowClick={(row) => console.log("Group clicked:", row)}
+        />
+
+        {/* ✅ Reusable Status confirmation modal */}
+        <StatusModal
+          isOpen={isStatusModalOpen}
+          setIsOpen={setIsStatusModalOpen}
+          currentStatus={selected?.status === "active" ? "active" : "inactive"}
+          selected={selected}
+          onConfirm={confirmStatusChange}
+          idKey="group_id" // ✅ will display correct ID
         />
       </div>
     </Layout>

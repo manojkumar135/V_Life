@@ -1,24 +1,22 @@
 "use client";
 
-import { Dialog, DialogPanel } from "@headlessui/react";
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
 
-interface StatusModalProps {
+interface StatusConfirmProps {
   isOpen: boolean;
   setIsOpen: (val: boolean) => void;
   onConfirm: () => void;
   currentStatus: "active" | "inactive";
-  selected: { id: string; status: string; row: any } | null;
-  idKey?: string; // ✅ NEW: dynamic field name (default "id")
+  selectedUser: { id: string; status: string; row: any } | null; // ✅ added
 }
 
-export default function StatusModal({
+export default function StatusConfirm({
   isOpen,
   setIsOpen,
   onConfirm,
   currentStatus,
-  selected,
-  idKey = "id", // fallback to generic "id"
-}: StatusModalProps) {
+  selectedUser, // ✅ destructured
+}: StatusConfirmProps) {
   const nextStatus = currentStatus === "active" ? "Inactive" : "Active";
 
   return (
@@ -29,16 +27,19 @@ export default function StatusModal({
     >
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm "
         aria-hidden="true"
       />
 
-      <div className="fixed inset-0 flex items-center justify-center p-4">
+      <div className="fixed inset-0 flex items-center justify-center p-4 ">
         <DialogPanel className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl border border-gray-200">
+          {/* <DialogTitle className="text-center text-lg font-semibold text-gray-800">
+            Change Status
+          </DialogTitle> */}
           <p className="text-center text-gray-600 mt-2">
-            Are you sure to set{" "}
-            <span className="font-bold text-blue-600">
-              "{selected?.row?.[idKey] || selected?.id}"
+            Are you sure to set this user with User ID{" "}
+            <span className="font-bold text-blue-600 ">
+              "{selectedUser?.row.user_id}"
             </span>{" "}
             as{" "}
             <span

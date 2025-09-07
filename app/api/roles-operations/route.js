@@ -95,32 +95,46 @@ export async function GET(request) {
 export async function PUT(request) {
   try {
     await connectDB();
-    const { id, role_id, ...rest } = await request.json();
-    const updateId = id || role_id;
+    const body = await request.json();
+    const { id, role_id, role_status, ...rest } = body;
 
+    const updateId = id || role_id;
     if (!updateId) {
       return NextResponse.json(
-        { success: false, message: "ID or role_id is required" },
+        { success: false, message: "id or role_id is required" },
         { status: 400 }
       );
     }
 
+    // include role_status explicitly
+    const updateFields = { ...rest };
+    if (role_status !== undefined) {
+      updateFields.role_status = role_status;
+    }
+
     let updatedRole;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedRole = await Role.findByIdAndUpdate(updateId, rest, { new: true });
+      updatedRole = await Role.findByIdAndUpdate(updateId, updateFields, { new: true });
     } else {
-      updatedRole = await Role.findOneAndUpdate({ role_id: updateId }, rest, { new: true });
+      updatedRole = await Role.findOneAndUpdate({ role_id: updateId }, updateFields, { new: true });
     }
 
     if (!updatedRole) {
-      return NextResponse.json({ success: false, message: "Role not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Role not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ success: true, data: updatedRole }, { status: 200 });
+    return NextResponse.json({ success: true, data: updatedRole });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
+
 
 // PATCH - Partial update
 export async function PATCH(request) {

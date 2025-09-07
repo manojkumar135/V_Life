@@ -8,7 +8,7 @@ import { useSearch } from "@/hooks/useSearch";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useVLife } from "@/store/context";
-import StatusModal from "@/components/common/statusModal"; // ✅ confirm modal
+import StatusModal from "@/components/common/userStatusModal"; 
 import Loader from "@/components/common/loader";
 import { handleDownload } from "@/utils/handleDownload";
 

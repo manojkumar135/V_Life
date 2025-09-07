@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
-import StatusModal from "@/components/common/statusModal";
+import StatusModal from "@/components/common/userStatusModal";
 import { handleDownload } from "@/utils/handleDownload";
 
 // User type

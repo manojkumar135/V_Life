@@ -10,6 +10,7 @@ const RoleSchema = new mongoose.Schema(
     created_by: { type: String },
     last_modified_by: { type: String },
     last_modified_at: { type: Date },
+    role_status: { type: String},
   },
   {
     timestamps: false, // manual date fields
