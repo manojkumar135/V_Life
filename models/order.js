@@ -33,6 +33,10 @@ const OrderSchema = new mongoose.Schema(
     payment_id: { type: String, required: true },
     payment_type:{ type: String, required: true },
     amount: { type: Number, required: true }, // total order amount
+     total_amount:{ type: Number,  },
+        final_amount:{ type: Number,  },
+    advance_deducted: { type: Number, default: 0 }, // amount deducted from advance
+    is_first_order: { type: Boolean, default: false },
 
     items: [OrderItemSchema],
 

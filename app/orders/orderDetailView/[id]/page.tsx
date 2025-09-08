@@ -212,7 +212,7 @@ export default function OrderDetailView() {
             </div>
 
             {/* Footer */}
-            <div className="border-t mt-4 pt-4 flex justify-between items-center text-base sm:text-lg font-semibold sticky bottom-0 bg-white py-3">
+            <div className="border-t mt-4 pt-4 lg:px-10 flex justify-between items-center text-base sm:text-lg font-semibold sticky bottom-0 bg-white py-3">
               <span>Total Paid:</span>
               <span className="text-black">
                 ₹ {order.totalAmount.toFixed(2)}

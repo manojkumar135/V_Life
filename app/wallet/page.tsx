@@ -23,7 +23,7 @@ const page = () => {
 
           {/* Withdraw Card */}
           <div
-            onClick={() => router.push("/wallet/withdraw")}
+            onClick={() => router.push("/wallet/payout")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <Banknote size={32} />

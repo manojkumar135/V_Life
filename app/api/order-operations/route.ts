@@ -77,6 +77,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id") || searchParams.get("order_id");
     const search = searchParams.get("search");
+    const user_id = searchParams.get("user_id"); // ✅ new param
 
     // 🔹 If ID or order_id is provided → fetch single order
     if (id) {
@@ -100,6 +101,11 @@ export async function GET(request: Request) {
     // ✅ Build search query
     let query: Record<string, any> = {};
 
+    // 🔹 If user_id is provided → filter by user
+    if (user_id) {
+      query.user_id = user_id;
+    }
+
     if (search) {
       const searchTerms = search
         .split(",")
@@ -121,19 +127,19 @@ export async function GET(request: Request) {
           { shipping_address: regex },
         ];
 
-         // ✅ Numeric search → compare floored integer part of amount
-    if (!isNaN(Number(term))) {
-      const num = Number(term);
-      conditions.push({
-        $expr: { $eq: [{ $floor: "$amount" }, num] },
-      });
-    }
+        // ✅ Numeric search → compare floored integer part of amount
+        if (!isNaN(Number(term))) {
+          const num = Number(term);
+          conditions.push({
+            $expr: { $eq: [{ $floor: "$amount" }, num] },
+          });
+        }
 
         return conditions;
       });
     }
 
-    const orders = await Order.find(query).sort({ createdAt: -1 });
+    const orders = await Order.find(query).sort({ created_at: -1 });
 
     return NextResponse.json({ success: true, data: orders }, { status: 200 });
   } catch (error: any) {
@@ -144,6 +150,7 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 // ----------------- PUT -----------------
 export async function PUT(request: Request) {

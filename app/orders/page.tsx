@@ -11,10 +11,18 @@ import axios from "axios";
 import Loader from "@/components/common/loader";
 import { GridColDef } from "@mui/x-data-grid";
 import { useVLife } from "@/store/context";
+import { IoClose } from "react-icons/io5";
+import AlertBox from "@/components/Alerts/advanceAlert";
+import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 
 export default function OrdersPage() {
   const { user } = useVLife();
   const router = useRouter();
+  const [showAlert, setShowAlert] = useState(false);
+  const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
+
+  const user_id = user?.user_id || "";
+
   const { query, setQuery, debouncedQuery } = useSearch();
   const [ordersData, setOrdersData] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -22,22 +30,38 @@ export default function OrdersPage() {
 
   const API_URL = "/api/order-operations"; // Replace with your actual API endpoint
 
+  useEffect(() => {
+    const checkAdvancePayment = async () => {
+      const paid = await hasAdvancePaid(user_id, 10000);
+      setHasPaidAdvance(paid);
+
+      if (!paid) {
+        setShowAlert(true);
+      }
+    };
+
+    if (user_id) checkAdvancePayment();
+  }, [user_id]);
+
   // Fetch orders from API
-  const fetchOrders = useCallback(async (search: string) => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL,{
-      params: { search: query }, 
-    });
-      const orders = data.data || [];
-      setOrdersData(orders);
-      setTotalItems(orders.length);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [query]);
+  const fetchOrders = useCallback(
+    async (search: string) => {
+      try {
+        setLoading(true);
+        const { data } = await axios.get(API_URL, {
+          params: { search: query },
+        });
+        const orders = data.data || [];
+        setOrdersData(orders);
+        setTotalItems(orders.length);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [query]
+  );
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -113,6 +137,21 @@ export default function OrdersPage() {
 
   return (
     <Layout>
+      {/* 🔔 Right Side Alert */}
+      <AlertBox
+        visible={showAlert}
+        title="Action Required!"
+        message={
+          <>
+            To activate your account, please pay{" "}
+            <span className="font-semibold text-lg">₹10,000</span> as prepaid.
+            This will be adjusted in your first order.
+          </>
+        }
+        buttonLabel="Pay Now"
+        buttonAction={() => router.push("/wallet/payout/payAdvance")}
+        onClose={() => setShowAlert(false)}
+      />
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -125,7 +164,7 @@ export default function OrdersPage() {
           search={query}
           setSearch={setQuery}
           addLabel="+ ADD ORDER"
-          showAddButton
+          showAddButton={user?.role === "user" ? hasPaidAdvance : true}
           onAdd={handleAddOrder}
           onMore={() => console.log("More options clicked")}
           showPagination

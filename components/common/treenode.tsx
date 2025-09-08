@@ -11,6 +11,8 @@ export interface TreeNode {
   parent?: string;
   left?: TreeNode | null;
   right?: TreeNode | null;
+  leftCount?: string;  
+  rightCount?: string;
 }
 
 interface Props {
@@ -93,6 +95,16 @@ const BinaryTreeNode: React.FC<Props> = ({
                 <span className="truncate">{node.parent}</span>
               </div>
             )}
+
+             {/* 👇 Add team counts */}
+    <div className="flex">
+      <strong className="w-20">Left Team:</strong>
+      <span>{node.leftCount ?? 0}</span>
+    </div>
+    <div className="flex">
+      <strong className="w-20">Right Team:</strong>
+      <span>{node.rightCount ?? 0}</span>
+    </div>
           </div>
         )}
       </div>

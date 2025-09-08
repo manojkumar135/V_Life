@@ -19,9 +19,11 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     await connectDB();
-
     const { searchParams } = new URL(request.url);
+
     const id = searchParams.get("id") || searchParams.get("transaction_id");
+    const userId = searchParams.get("user_id");
+    const minAmount = parseFloat(searchParams.get("minAmount") || "10000");
     const search = searchParams.get("search");
 
     // 🔹 If ID or transaction_id is provided → fetch single history record
@@ -43,9 +45,20 @@ export async function GET(request) {
       return NextResponse.json({ success: true, data: history }, { status: 200 });
     }
 
-    // ✅ Build search query
+    // ✅ Build query
     let query = {};
 
+    // If user_id is passed
+    if (userId) {
+      query.user_id = userId;
+    }
+
+    // If minAmount is passed
+    if (!isNaN(minAmount) && minAmount > 0) {
+      query.amount = { $gte: minAmount };
+    }
+
+    // If search is passed
     if (search) {
       const searchTerms = search
         .split(",")
@@ -53,12 +66,12 @@ export async function GET(request) {
         .filter(Boolean);
 
       query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp(term, "i"); // case-insensitive
+        const regex = new RegExp(term, "i");
         return [
           { transaction_id: regex },
           { user_id: regex },
-          { amount: regex },       // depends on your schema, adjust if numeric
-          { type: regex },         // e.g. "credit"/"debit"
+          { amount: regex },
+          { type: regex },
           { status: regex },
           { description: regex },
         ];
@@ -76,6 +89,7 @@ export async function GET(request) {
     );
   }
 }
+
 
 // PUT - Replace a history record
 export async function PUT(request) {

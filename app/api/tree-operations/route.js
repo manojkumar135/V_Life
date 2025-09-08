@@ -2,12 +2,22 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import TreeNode from "@/models/tree";
 
-// 🛠 Recursive builder
+// 🛠 Recursive builder with counts
 async function buildTree(userId) {
   if (!userId) return null;
 
   const node = await TreeNode.findOne({ user_id: userId }).lean();
   if (!node) return null;
+
+  // Recursively build children
+  const leftNode = node.left ? await buildTree(node.left) : null;
+  const rightNode = node.right ? await buildTree(node.right) : null;
+
+  // Count members in left & right subtrees
+  const countMembers = (subtree) => {
+    if (!subtree) return 0;
+    return 1 + countMembers(subtree.left) + countMembers(subtree.right);
+  };
 
   return {
     user_id: node.user_id,
@@ -18,10 +28,14 @@ async function buildTree(userId) {
     referBy: node.referBy || "",
     parent: node.parent || "",
 
-    left: node.left ? await buildTree(node.left) : null,
-    right: node.right ? await buildTree(node.right) : null,
+    left: leftNode,
+    right: rightNode,
+
+    leftCount: countMembers(leftNode),
+    rightCount: countMembers(rightNode),
   };
 }
+
 
 // 📌 API handler
 export async function GET(req) {

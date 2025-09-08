@@ -466,8 +466,22 @@ const Page = () => {
               <AccordionDetails>
                 {section === "Change Password" ? (
                   <ChangePasswordForm onSuccess={() => setExpanded(false)} />
+                ): section === "Activate / Re-Activate ID" ? (
+                  <p className="text-gray-600 text-sm">
+                    Content for "{section}" goes here.
+                  </p>
                 ) : section === "Invite" ? (
                   <InviteForm />
+                ) : section === "Support" ? (
+                  <p className="text-gray-600 text-sm">
+                    For support, please contact us at{" "}
+                    <a
+                      href="mailto:maverick@gmail.com"
+                      className="text-blue-600 hover:underline"
+                    >
+                      maverick@gmail.com
+                    </a>
+                  </p>
                 ) : (
                   <p className="text-gray-600 text-sm">
                     Content for "{section}" goes here.

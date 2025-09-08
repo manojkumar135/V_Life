@@ -123,8 +123,8 @@ export default function WithdrawPage() {
     onPageChange: handlePageChange,
   });
 
-  const handleMakeWithdraw = () => {
-    router.push("/wallet/withdraw/makewithdraw");
+  const handlePayAdvance = () => {
+    router.push("/wallet/payout/payAdvance");
   };
 
   const onBack = () => {
@@ -140,14 +140,14 @@ export default function WithdrawPage() {
           </div>
         )}
         <HeaderWithActions
-          title="Withdrawals"
+          title="Payouts"
           search={query}
           setSearch={setQuery}
           showAddButton
           showBack
           onBack={onBack}
-          addLabel="Make Withdrawal"
-          onAdd={handleMakeWithdraw}
+          addLabel="Make Payment"
+          onAdd={handlePayAdvance}
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}

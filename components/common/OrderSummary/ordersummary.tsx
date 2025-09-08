@@ -6,6 +6,11 @@ import TextareaField from "@/components/common/textareainput";
 import SubmitButton from "@/components/common/submitbutton";
 import PaymentModal from "@/components/common/PaymentModal/paymentmodal";
 import ShowToast from "@/components/common/Toast/toast";
+import axios from "axios";
+import { useVLife } from "@/store/context";
+import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { useEffect } from "react";
+
 import {
   IoRemove,
   IoAdd,
@@ -37,12 +42,21 @@ export default function OrderFormCartSection({
   formData,
   setFormData,
   handleInputChange,
+  isFirstOrder,
 }: any) {
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"qr" | "upi" | "card">(
     "qr"
   );
+
+  // console.log("isFirstOrder in OrderFormCartSection:", isFirstOrder);
+
+  const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
+  // console.log(hasPaidAdvance)
+
+  const { user } = useVLife();
+  const user_id = user?.user_id || "";
   const [paymentDetails, setPaymentDetails] = useState({
     upiId: "",
     cardNumber: "",
@@ -50,26 +64,69 @@ export default function OrderFormCartSection({
     cvv: "",
   });
 
-  const handlePlaceOrder = (e: React.MouseEvent) => {
+  useEffect(() => {
+    const checkAdvancePayment = async () => {
+      try {
+        const paid = await hasAdvancePaid(user_id, 10000);
+        // console.log("Advance payment status:", paid);
+        setHasPaidAdvance(paid); // true or false
+      } catch (error) {
+        console.error("Error checking advance payment:", error);
+        setHasPaidAdvance(false);
+      }
+    };
+
+    if (user_id) {
+      checkAdvancePayment();
+    }
+  }, [user_id]);
+
+  const handlePlaceOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
 
-    // Validate customer info if on that tab
-    if (activeTab === "customer") {
-      if (
-        !formData.customerName ||
-        !formData.customerEmail ||
-        !formData.shippingAddress
-      ) {
-        ShowToast.warning("Please fill in all required customer information");
+    try {
+      // ✅ Validate customer info if on that tab
+      if (activeTab === "customer") {
+        if (
+          !formData.customerName ||
+          !formData.customerEmail ||
+          !formData.shippingAddress
+        ) {
+          ShowToast.warning("Please fill in all required customer information");
+          return;
+        }
+      } else if (activeTab === "cart" && cart.length === 0) {
+        ShowToast.error("Your cart is empty");
         return;
       }
-    } else if (activeTab === "cart" && cart.length === 0) {
-      ShowToast.error("Your cart is empty");
-      return;
-    }
 
-    setShowPayment(true);
+      const totalAmount = getTotalPrice();
+
+      // ✅ First order validation
+      if (isFirstOrder && totalAmount < 10000) {
+        ShowToast.error("First order must be at least ₹10,000");
+        return;
+      }
+
+      // 🔹 Check advance payment state
+      if (!hasPaidAdvance) {
+        ShowToast.error(
+          "You must pay an advance of ₹10,000 before placing an order"
+        );
+        return;
+      }
+
+      // ✅ User is allowed to proceed
+      setShowPayment(true);
+    } catch (error) {
+      console.error("Error in handlePlaceOrder:", error);
+      ShowToast.error("Something went wrong. Please try again later.");
+    }
   };
+
+  const finalAmount = isFirstOrder
+    ? Math.max(0, getTotalPrice() - 10000)
+    : getTotalPrice();
 
   const handlePaymentSubmit = () => {
     handleSubmit();
@@ -121,6 +178,24 @@ export default function OrderFormCartSection({
   const handleRemoveItem = (itemId: number) => {
     removeFromCart(Number(itemId));
   };
+
+  // console.log("isFirstOrder:", isFirstOrder);
+  // console.log("hasPaidAdvance:", hasPaidAdvance);
+
+  // const isCustomerInfoMissing =
+  // !((formData.customerName?.trim() || user?.user_name?.trim())) ||
+  // !((formData.customerEmail?.trim() || user?.mail?.trim())) ||
+  // !((formData.shippingAddress?.trim() || user?.address?.trim()));
+
+  const isCustomerInfoMissing = false;
+
+  const isDisabled =
+    isCustomerInfoMissing ||
+    cart.length === 0 ||
+    (isFirstOrder && getTotalPrice() < 10000) ||
+    !hasPaidAdvance;
+
+  // console.log( (isCustomerInfoMissing),isDisabled)
 
   return (
     <div className="relative">
@@ -314,18 +389,63 @@ export default function OrderFormCartSection({
 
                 {/* Total Section */}
                 <div className="xl:pt-4 xl:border-t self-end fixed bottom-0 left-0 right-0 max-lg:bg-white max-lg:shadow-[0_-4px_6px_rgba(0,0,0,0.1)] max-lg:z-50 max-lg:rounded-t-xl">
-                  <div className="flex justify-between items-center text-lg font-semibold px-5 mt-3">
-                    <span>Total:</span>
-                    <span>₹ {getTotalPrice().toFixed(2)}</span>
+                  <div className="px-6 py-4 bg-white -mt-4">
+                    {/* Show Subtotal & Advance only for first order + advance paid */}
+                    {isFirstOrder && hasPaidAdvance && (
+                      <>
+                        <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
+                          <span>Subtotal</span>
+                          <span className="font-semibold">
+                            ₹ {getTotalPrice().toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-sm text-red-500 mt-1">
+                          <span>Advance Paid</span>
+                          <span>- ₹ 10,000.00</span>
+                        </div>
+
+                        <div className="border-t border-gray-200 my-3"></div>
+                      </>
+                    )}
+
+                    {/* Final Amount (always visible) */}
+                    <div className="flex justify-between items-center text-lg md:text-xl font-bold text-gray-900">
+                      <span>Total Amount</span>
+
+                      {isFirstOrder ? (
+                        getTotalPrice() < 10000 ? (
+                          <span className="text-red-600 text-sm md:text-base font-semibold">
+                            Must be ≥ ₹10,000
+                          </span>
+                        ) : (
+                          <span className="text-green-600">
+                            ₹ {finalAmount.toFixed(2)}
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-green-600">
+                          ₹ {finalAmount.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
                   <div className="flex justify-end px-5 pb-3">
-                    <SubmitButton
+                    <button
                       type="button"
                       onClick={handlePlaceOrder}
-                      className="w-full lg:w-1/2 mt-4 text-black py-3 px-4 rounded-md"
+                      disabled={isDisabled}
+                      className={`w-full lg:w-1/2 mt-2 py-3 px-4 rounded-md transition-colors duration-200 font-semibold
+      ${
+        isDisabled
+          ? "bg-gray-400 text-white cursor-not-allowed"
+          : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer "
+      }
+    `}
                     >
                       Place Order
-                    </SubmitButton>
+                    </button>
                   </div>
                 </div>
               </>
@@ -341,7 +461,7 @@ export default function OrderFormCartSection({
               name="customerName"
               type="text"
               placeholder="Full Name"
-              value={formData.customerName}
+              value={formData.customerName || user.user_name || ""}
               onChange={handleInputChange}
               required
             />
@@ -351,7 +471,7 @@ export default function OrderFormCartSection({
               name="customerEmail"
               type="email"
               placeholder="email@example.com"
-              value={formData.customerEmail}
+              value={formData.customerEmail || user.mail || ""}
               onChange={handleInputChange}
               required
             />
@@ -360,7 +480,7 @@ export default function OrderFormCartSection({
               label="Shipping Address"
               name="shippingAddress"
               placeholder="Full shipping address"
-              value={formData.shippingAddress}
+              value={formData.shippingAddress || user.address || "none"}
               onChange={handleInputChange}
               className="w-full"
             />
@@ -369,18 +489,25 @@ export default function OrderFormCartSection({
               label="Notes"
               name="notes"
               placeholder="Additional notes"
-              value={formData.notes}
+              value={formData.notes || user.contact || ""}
               onChange={handleInputChange}
               className="w-full"
             />
 
-            <SubmitButton
+            <button
               type="button"
               onClick={handlePlaceOrder}
-              className="w-full mt-4 text-black py-3 px-4 rounded-md"
+              // disabled={isDisabled}
+              className={`w-full mt-2 py-3 px-4 rounded-md transition-colors duration-200  font-semibold
+    ${
+      isDisabled
+        ? "bg-gray-400 text-white cursor-not-allowed"
+        : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+    }
+  `}
             >
               Continue to Payment
-            </SubmitButton>
+            </button>
           </form>
         )}
       </div>

@@ -204,6 +204,22 @@ export default function AddOrderPage() {
   });
   const [showCart, setShowCart] = useState(false);
   const [activeCategory, setActiveCategory] = useState(categories[0].name);
+  const [isFirstOrder, setIsFirstOrder] = useState(false);
+
+  // ✅ Check if this is user's first order
+  useEffect(() => {
+    const checkFirstOrder = async () => {
+      try {
+        const res = await axios.get(
+          `/api/order-operations?user_id=${user.user_id}`
+        );
+        setIsFirstOrder(!res.data?.data || res.data.data.length === 0);
+      } catch (error) {
+        console.error("Failed to check first order:", error);
+      }
+    };
+    checkFirstOrder();
+  }, [user.user_id]);
 
   useEffect(() => {
     if (user.items) {
@@ -295,6 +311,18 @@ export default function AddOrderPage() {
       return;
     }
 
+    const totalAmount = getTotalPrice();
+    let finalAmount = totalAmount;
+
+    // ✅ Enforce first order rule
+    if (isFirstOrder) {
+      if (totalAmount < 10000) {
+        ShowToast.error("First order must be at least ₹10,000");
+        return;
+      }
+      finalAmount = totalAmount - 10000; // deduct advance
+    }
+
     try {
       const orderItems = cart.map((item) => ({
         product_id: String(item.id), // ✅ convert only here
@@ -320,6 +348,11 @@ export default function AddOrderPage() {
         payment_type: "cash",
         items: orderItems,
         order_status: "pending",
+        amount: totalAmount,
+        total_amount: totalAmount,
+        final_amount: finalAmount,
+        advance_deducted: isFirstOrder ? 10000 : 0,
+        is_first_order: isFirstOrder,
       };
 
       const response = await axios.post("/api/order-operations", payload, {
@@ -491,6 +524,7 @@ export default function AddOrderPage() {
               formData={formData}
               setFormData={setFormData}
               handleInputChange={handleInputChange}
+              isFirstOrder={isFirstOrder}
             />
           </div>
         </div>
