@@ -207,7 +207,7 @@ export default function OrderFormCartSection({
         {/* Tabs */}
         <div className="flex border-b mb-3 w-full">
           <button
-            className={`px-2 py-2 font-medium w-1/2 ${
+            className={`px-2 py-2 font-medium max-md:text-sm w-1/2 ${
               activeTab === "cart"
                 ? "border-b-2 border-blue-600 text-blue-600"
                 : "text-gray-500 hover:text-gray-700"
@@ -217,7 +217,7 @@ export default function OrderFormCartSection({
             Shopping Cart
           </button>
           <button
-            className={`ml-6 px-4 py-2 font-medium w-1/2 ${
+            className={`ml-6 px-4 py-2 font-medium max-md:text-sm w-1/2 ${
               activeTab === "customer"
                 ? "border-b-2 border-blue-600 text-blue-600"
                 : "text-gray-500 hover:text-gray-700"
