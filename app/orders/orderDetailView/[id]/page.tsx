@@ -19,7 +19,10 @@ interface CartItem {
 interface OrderData {
   orderId: string | number;
   cart: CartItem[];
-  totalAmount: number;
+  totalAmount: number; // final amount after advance deduction
+  subtotal?: number; // full order value before advance
+  advanceDeducted?: number; // advance amount deducted
+  isFirstOrder?: boolean;
   paymentDate?: string;
   paymentId?: string;
 }
@@ -49,12 +52,15 @@ export default function OrderDetailView() {
             cart: raw.items.map((item: any) => ({
               id: item.product_id,
               name: item.name,
-              price: item.price,
+              price: item.unit_price, // ⚠️ use unit_price, not total item price
               quantity: item.quantity,
               image: item.image,
               description: item.description,
             })),
-            totalAmount: raw.amount,
+            subtotal: raw.total_amount, // original total before advance
+            totalAmount: raw.final_amount ?? raw.amount, // after advance deduction
+            advanceDeducted: raw.advance_deducted,
+            isFirstOrder: raw.is_first_order,
             paymentDate: raw.payment_date,
             paymentId: raw.payment_id,
           };
@@ -98,9 +104,9 @@ export default function OrderDetailView() {
 
   return (
     <Layout>
-      <div className="rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-full">
-        {/* Back + Order Info */}
-        <div className="border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row justify-between gap-2 xl:items-center xl:pr-15">
+      <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-[100%]">
+        {/* Header - Order Info */}
+        <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row justify-between gap-2 xl:items-center xl:pr-15">
           <button
             onClick={() => router.push("/orders")}
             className="flex max-lg:flex-col flex-row max-lg:items-start items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
@@ -111,115 +117,145 @@ export default function OrderDetailView() {
               <span className="text-black font-semibold">{order.orderId}</span>
             </span>
           </button>
-          
-          <span className="text-sm font-medium text-gray-600">
-               Payment Date:{" "}
-              <span className="text-black font-semibold"> {order.paymentDate}</span>
-            </span>
 
-              <span className="text-sm font-medium text-gray-600">
-                Payment ID:{" "}
-              <span className="text-black font-semibold"> {order.paymentId}</span>
+          <span className="text-sm font-medium text-gray-600">
+            Payment Date:{" "}
+            <span className="text-black font-semibold">
+              {order.paymentDate}
             </span>
-          
+          </span>
+
+          <span className="text-sm font-medium text-gray-600">
+            Payment ID:{" "}
+            <span className="text-black font-semibold">{order.paymentId}</span>
+          </span>
         </div>
 
-        {/* Cart */}
-        {order.cart.length === 0 ? (
-          <p className="text-gray-500 text-center py-6">
-            No items in this order
-          </p>
-        ) : (
-          <>
-            {/* Header Row (Desktop) */}
-            <div className="hidden lg:grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 xl:px-15">
-              <div className="col-span-6">Product</div>
-              <div className="col-span-2 text-center">Quantity</div>
-              <div className="col-span-2 text-right">Unit Price</div>
-              <div className="col-span-2 text-right">Total</div>
-            </div>
+        {/* Cart - ONLY THIS SCROLLS */}
+        <div className="flex-1 overflow-y-auto pr-2">
+          {order.cart.length === 0 ? (
+            <p className="text-gray-500 text-center py-6">
+              No items in this order
+            </p>
+          ) : (
+            <>
+              {/* Header Row (Desktop) */}
+              <div className="hidden lg:grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 xl:px-15">
+                <div className="col-span-6">Product</div>
+                <div className="col-span-2 text-center">Quantity</div>
+                <div className="col-span-2 text-right">Unit Price</div>
+                <div className="col-span-2 text-right">Total</div>
+              </div>
 
-            {/* Items */}
-            <div className="space-y-4 max-h-96 max-md:max-h-110 max-lg:max-h-250 overflow-y-auto pr-2 lg:scrollbar-custom">
-              {order.cart.map((item) => (
-                <div
-                  key={item.id}
-                  className=" w-full rounded-xl p-4 transition-all shadow-sm hover:shadow-lg border border-gray-200"
-                >
-                  {/* Desktop */}
-                  <div className="hidden lg:grid grid-cols-12 items-center xl:px-5">
-                    <div className="col-span-6 flex items-center gap-4">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-lg border"
-                      />
-                      <div>
-                        <p className="font-semibold text-gray-900 text-sm lg:text-base">
-                          {item.name}
-                        </p>
-                        <p className="text-gray-600 text-xs mt-1 line-clamp-1">
-                          {item.description}
-                        </p>
-                        <p className="text-gray-500 text-xs mt-1">
-                          ₹ {item.price.toFixed(2)} each
-                        </p>
+              {/* Items (scrollable list) */}
+              <div className="space-y-4 lg:scrollbar-custom">
+                {order.cart.map((item) => (
+                  <div
+                    key={item.id}
+                    className="w-full rounded-xl p-4 transition-all shadow-sm hover:shadow-lg border border-gray-200"
+                  >
+                    {/* Desktop */}
+                    <div className="hidden lg:grid grid-cols-12 items-center xl:px-5">
+                      <div className="col-span-6 flex items-center gap-4">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded-lg border"
+                        />
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm lg:text-base">
+                            {item.name}
+                          </p>
+                          <p className="text-gray-600 text-xs mt-1 line-clamp-1">
+                            {item.description}
+                          </p>
+                          <p className="text-gray-500 text-xs mt-1">
+                            ₹ {item.price.toFixed(2)} each
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="col-span-2 text-center font-medium">
-                      {item.quantity}
-                    </div>
-                    <div className="col-span-2 text-right text-gray-700">
-                      ₹ {item.price.toFixed(2)}
-                    </div>
-                    <div className="col-span-2 text-right font-bold text-gray-900">
-                      ₹ {(item.price * item.quantity).toFixed(2)}
-                    </div>
-                  </div>
-
-                  {/* Mobile */}
-                  <div className="lg:hidden flex flex-col gap-3">
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-16 h-16 object-cover rounded-lg border"
-                      />
-                      <div className="flex-1">
-                        <p className="font-semibold text-gray-900 text-sm">
-                          {item.name}
-                        </p>
-                        <p className="text-gray-600 text-xs mt-1 line-clamp-1">
-                          {item.description}
-                        </p>
-                        <p className="text-gray-500 text-xs mt-1">
-                          ₹ {item.price.toFixed(2)} each
-                        </p>
+                      <div className="col-span-2 text-center font-medium">
+                        {item.quantity}
                       </div>
-                    </div>
-                    <div className="flex justify-between items-center text-sm pl-4">
-                      <p className="text-gray-700">
-                        Qty:{" "}
-                        <span className="font-medium">{item.quantity}</span>
-                      </p>
-                      <p className="font-bold text-gray-900">
+                      <div className="col-span-2 text-right text-gray-700">
+                        ₹ {item.price.toFixed(2)}
+                      </div>
+                      <div className="col-span-2 text-right font-bold text-gray-900">
                         ₹ {(item.price * item.quantity).toFixed(2)}
-                      </p>
+                      </div>
+                    </div>
+
+                    {/* Mobile */}
+                    <div className="lg:hidden flex flex-col gap-3">
+                      <div className="flex items-start gap-3">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded-lg border"
+                        />
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 text-sm">
+                            {item.name}
+                          </p>
+                          <p className="text-gray-600 text-xs mt-1 line-clamp-1">
+                            {item.description}
+                          </p>
+                          <p className="text-gray-500 text-xs mt-1">
+                            ₹ {item.price.toFixed(2)} each
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center text-sm pl-4">
+                        <p className="text-gray-700">
+                          Qty:{" "}
+                          <span className="font-medium">{item.quantity}</span>
+                        </p>
+                        <p className="font-bold text-gray-900">
+                          ₹ {(item.price * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
-            {/* Footer */}
-            <div className="border-t mt-4 pt-4 lg:px-10 flex justify-between items-center text-base sm:text-lg font-semibold sticky bottom-0 bg-white py-3">
+        {/* Footer */}
+        <div className="flex-none border-t pt-4 lg:px-10 bg-white py-3">
+          {order.isFirstOrder && order.advanceDeducted ? (
+            <>
+              <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
+                <span>Subtotal</span>
+                <span className="font-semibold">
+                  ₹ {order.subtotal?.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center text-sm text-red-500 mt-1">
+                <span>Advance Paid</span>
+                <span>- ₹ {order.advanceDeducted.toFixed(2)}</span>
+              </div>
+
+              <div className="border-t border-gray-200 my-3"></div>
+
+              <div className="flex justify-between items-center text-base sm:text-lg font-semibold">
+                <span>Total Paid:</span>
+                <span className="text-black">
+                  ₹ {order.totalAmount.toFixed(2)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between items-center text-base sm:text-lg font-semibold">
               <span>Total Paid:</span>
               <span className="text-black">
                 ₹ {order.totalAmount.toFixed(2)}
               </span>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </Layout>
   );

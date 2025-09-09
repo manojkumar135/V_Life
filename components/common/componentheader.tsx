@@ -145,7 +145,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
       <div className="flex justify-end items-center flex-wrap gap-2 w-full xl:w-[70%]">
         {/* Search */}
         {setSearch && (
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <div className="relative flex-1 min-w-[180px] max-w-xs ">
             <input
               type="text"
               value={localSearch}
@@ -154,7 +154,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
                 setSearch(e.target.value);
               }}
               placeholder="Search"
-              className="pl-10 pr-4 rounded-md h-8 border border-gray-500 focus:outline-none w-full text-xs"
+              className="pl-10 pr-4 rounded-md h-8 border border-gray-500 focus:outline-none w-full text-xs "
             />
             <MdOutlineSearch
               className="absolute left-3 top-2 text-gray-500"

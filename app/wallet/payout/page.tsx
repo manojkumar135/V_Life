@@ -12,6 +12,7 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
+import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 
 export default function WithdrawPage() {
   const { user } = useVLife();
@@ -20,8 +21,19 @@ export default function WithdrawPage() {
   const [withdrawData, setWithdrawData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
+    const [advancePaid, setAdvancePaid] = useState<boolean>(false);
+
 
   const API_URL = "/api/withdraw-operations";
+
+  // ✅ Check if advance is paid
+  useEffect(() => {
+    if (!user?.user_id) return;
+    (async () => {
+      const paid = await hasAdvancePaid(user.user_id, 10000);
+      setAdvancePaid(paid);
+    })();
+  }, [user?.user_id]);
 
   // Fetch withdrawals
   const fetchWithdrawals = useCallback(
@@ -143,7 +155,7 @@ export default function WithdrawPage() {
           title="Payouts"
           search={query}
           setSearch={setQuery}
-          showAddButton
+          showAddButton={!advancePaid}
           showBack
           onBack={onBack}
           addLabel="Make Payment"
