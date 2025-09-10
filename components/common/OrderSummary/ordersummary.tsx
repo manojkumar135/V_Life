@@ -50,8 +50,9 @@ export default function OrderFormCartSection({
     "qr"
   );
 
+  console.log(formData,"order summary")
   // console.log("isFirstOrder in OrderFormCartSection:", isFirstOrder);
-
+  const [address, setAddress] = useState("");
   const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
   // console.log(hasPaidAdvance)
 
@@ -76,10 +77,28 @@ export default function OrderFormCartSection({
       }
     };
 
+    const fetchAddress = async () => {
+      try {
+        const res = await axios.post("/api/address-operations", {
+          user_id: user_id,
+        });
+        if (res.data.success) {
+          setAddress(res.data.address);
+        } else {
+          setAddress("No address available");
+        }
+      } catch (err) {
+        setAddress("Error fetching address");
+      }
+    };
+
     if (user_id) {
       checkAdvancePayment();
+      fetchAddress();
     }
   }, [user_id]);
+
+
 
   const handlePlaceOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -182,10 +201,7 @@ export default function OrderFormCartSection({
   // console.log("isFirstOrder:", isFirstOrder);
   // console.log("hasPaidAdvance:", hasPaidAdvance);
 
-  // const isCustomerInfoMissing =
-  // !((formData.customerName?.trim() || user?.user_name?.trim())) ||
-  // !((formData.customerEmail?.trim() || user?.mail?.trim())) ||
-  // !((formData.shippingAddress?.trim() || user?.address?.trim()));
+  
 
   const isCustomerInfoMissing = false;
 
@@ -465,9 +481,18 @@ export default function OrderFormCartSection({
               onChange={handleInputChange}
               required
             />
+            <InputField
+              label="Contact"
+              name="customerContact"
+              type="text"
+              placeholder="1234567890"
+              value={formData.customerContact || user.contact || ""}
+              onChange={handleInputChange}
+              required
+            />
 
             <InputField
-              label="Email Address"
+              label="Email"
               name="customerEmail"
               type="email"
               placeholder="email@example.com"
@@ -480,9 +505,10 @@ export default function OrderFormCartSection({
               label="Shipping Address"
               name="shippingAddress"
               placeholder="Full shipping address"
-              value={formData.shippingAddress || user.address || "none"}
+              value={formData.shippingAddress ||  " "}
               onChange={handleInputChange}
-              className="w-full"
+              className="w-full h-15 max-md:h-24"
+              required
             />
 
             <TextareaField
@@ -491,7 +517,7 @@ export default function OrderFormCartSection({
               placeholder="Additional notes"
               value={formData.notes || ""}
               onChange={handleInputChange}
-              className="w-full"
+              className="w-full h-15 max-md:h-24"
             />
 
             <button

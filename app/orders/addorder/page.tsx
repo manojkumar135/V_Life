@@ -195,16 +195,35 @@ export default function AddOrderPage() {
 
   // Initialize cart
   const [cart, setCart] = useState<CartItem[]>(user.items || []);
+  const [address, setAddress] = useState("");
+
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
     customerEmail: user.mail || "",
     contact: user.contact || "",
-    shippingAddress: user.address || "",
+    shippingAddress: address || "",
     notes: "",
   });
+
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        customerName: user.user_name || "",
+        customerEmail: user.mail || "",
+        contact: user.contact || "",
+        shippingAddress: address || "",
+        notes: "",
+      }));
+    }
+  }, [user]);
+
   const [showCart, setShowCart] = useState(false);
+
   const [activeCategory, setActiveCategory] = useState(categories[0].name);
   const [isFirstOrder, setIsFirstOrder] = useState(false);
+
+  console.log(formData, "add order");
 
   // ✅ Check if this is user's first order
   useEffect(() => {
@@ -227,6 +246,25 @@ export default function AddOrderPage() {
       setCart(user.items.map((i: any) => ({ ...i, id: Number(i.id) })));
     }
   }, [user.items]);
+
+  useEffect(() => {
+    const fetchAddress = async () => {
+      try {
+        const res = await axios.post("/api/address-operations", {
+          user_id: user.user_id,
+        });
+        if (res.data.success) {
+          setAddress(res.data.address);
+        } else {
+          setAddress("No address available");
+        }
+      } catch (err) {
+        setAddress("Error fetching address");
+      }
+    };
+
+    if (user.user_id) fetchAddress();
+  }, [user.user_id]);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -338,7 +376,7 @@ export default function AddOrderPage() {
 
       const payload = {
         user_id: user.user_id,
-        user_name: user.user_name || "",
+        user_name: formData.customerName || user.user_name,
         contact: formData.contact || user.contact,
         mail: formData.customerEmail || user.mail,
         address: formData.shippingAddress || user.address,

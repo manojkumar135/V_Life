@@ -51,7 +51,7 @@ export default function OrderDetailView() {
       try {
         setLoading(true);
         const res = await axios.get(`/api/order-operations?id=${orderId}`);
-        console.log("API Response:", res.data);
+        // console.log("API Response:", res.data);
 
         if (res?.data?.success) {
           const raw = res.data.data;
