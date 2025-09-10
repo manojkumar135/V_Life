@@ -12,9 +12,9 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Image from "next/image";
 import Images from "@/constant/Image";
 import { FiEdit2 } from "react-icons/fi";
-import InputField from "@/components/common/inputtype1";
+import InputField from "@/components/InputFields/inputtype1";
 import SubmitButton from "@/components/common/submitbutton";
-import SelectField from "@/components/common/selectinput";
+import SelectField from "@/components/InputFields/selectinput";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
 import ChangePasswordForm from "@/components/changePasswordForm";
@@ -344,11 +344,11 @@ const Page = () => {
             {/* Shipping Section */}
             <section className="mb-10 mx-5 max-md:mx-0">
               <h3 className="text-xl max-md:text-lg font-bold text-gray-800 mb-5">
-                Shipping Details
+                Address
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 <InputField
-                  label="Address"
+                  label="D.No / Street"
                   name="address"
                   placeholder="D.NO : 123, left street"
                   value={toTitleCase(formik.values.address)}
@@ -441,12 +441,7 @@ const Page = () => {
           </form>
 
           {/* Accordion Sections */}
-          {[
-            "Change Password",
-            "Activate / Re-Activate ID",
-            "Invite",
-            "Support",
-          ].map((section) => (
+          {["Change Password", "Invite", "Support"].map((section) => (
             <Accordion
               key={section}
               expanded={expanded === section}
@@ -466,7 +461,7 @@ const Page = () => {
               <AccordionDetails>
                 {section === "Change Password" ? (
                   <ChangePasswordForm onSuccess={() => setExpanded(false)} />
-                ): section === "Activate / Re-Activate ID" ? (
+                ) : section === "Activate / Re-Activate ID" ? (
                   <p className="text-gray-600 text-sm">
                     Content for "{section}" goes here.
                   </p>

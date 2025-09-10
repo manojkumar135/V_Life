@@ -25,9 +25,12 @@ const LoginSchema = new mongoose.Schema(
     login_id: { type: String, required: true, unique: true },
     user_id: { type: String, required: true }, // link to User schema
     user_name: { type: String, required: true },
+    dob: { type: String,required: true },
     role: { type: String },
     role_id: { type: String },
     title: { type: String },
+    group: { type: String },
+    group_id: { type: String },
     first_name: { type: String },
     last_name: { type: String },
     referBy: { type: String },
@@ -44,8 +47,8 @@ const LoginSchema = new mongoose.Schema(
     authenticator_secret: { type: String },
 
     contact: { type: String, required: true },
-    address: { type: String,},
-    pincode: { type: String,  },
+    address: { type: String, },
+    pincode: { type: String, },
     locality: { type: String },
 
     sponsor: { type: String },

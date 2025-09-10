@@ -6,6 +6,7 @@ import axios from "axios";
 import { IoIosArrowBack } from "react-icons/io";
 import Loader from "@/components/common/loader";
 import Layout from "@/layout/Layout";
+import SubmitButton from "@/components/common/submitbutton";
 
 interface CartItem {
   id: string | number;
@@ -18,6 +19,13 @@ interface CartItem {
 
 interface OrderData {
   orderId: string | number;
+  userId?: string;
+  userName?: string;
+  mail?: string;
+  contact?: string;
+  address?: string;
+  description?: string;
+  orderStatus?: string;
   cart: CartItem[];
   totalAmount: number; // final amount after advance deduction
   subtotal?: number; // full order value before advance
@@ -25,6 +33,7 @@ interface OrderData {
   isFirstOrder?: boolean;
   paymentDate?: string;
   paymentId?: string;
+  shippingAddress?: string; // ✅ new field
 }
 
 export default function OrderDetailView() {
@@ -34,6 +43,7 @@ export default function OrderDetailView() {
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [showAddress, setShowAddress] = useState<boolean>(false); // ✅ popup state
 
   // Fetch order data
   useEffect(() => {
@@ -49,6 +59,13 @@ export default function OrderDetailView() {
           // ✅ Map backend response to frontend-friendly structure
           const mappedOrder: OrderData = {
             orderId: raw.order_id,
+            userId: raw.user_id,
+            userName: raw.user_name,
+            mail: raw.mail,
+            contact: raw.contact,
+            address: raw.address,
+            description: raw.description,
+            orderStatus: raw.order_status,
             cart: raw.items.map((item: any) => ({
               id: item.product_id,
               name: item.name,
@@ -63,6 +80,7 @@ export default function OrderDetailView() {
             isFirstOrder: raw.is_first_order,
             paymentDate: raw.payment_date,
             paymentId: raw.payment_id,
+            shippingAddress: raw.shipping_address, // ✅ map shipping address
           };
 
           setOrder(mappedOrder);
@@ -106,29 +124,48 @@ export default function OrderDetailView() {
     <Layout>
       <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-[100%]">
         {/* Header - Order Info */}
-        <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row justify-between gap-2 xl:items-center xl:pr-15">
+        <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row gap-3 xl:items-center xl:pr-1">
+          {/* 🔙 Back Button */}
           <button
             onClick={() => router.push("/orders")}
-            className="flex max-lg:flex-col flex-row max-lg:items-start items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
+            className="flex items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
+            aria-label="Go back to Orders"
           >
             <IoIosArrowBack size={25} />
-            <span className="text-sm font-medium text-gray-600">
-              Order ID:{" "}
-              <span className="text-black font-semibold">{order.orderId}</span>
-            </span>
           </button>
 
-          <span className="text-sm font-medium text-gray-600">
-            Payment Date:{" "}
-            <span className="text-black font-semibold">
-              {order.paymentDate}
-            </span>
-          </span>
+          {/* 📦 Order Info + View Address */}
+          <div className="flex flex-wrap items-center justify-between gap-4 w-full">
+            {/* 📦 Order Info */}
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center xl:justify-between xl:w-[80%] gap-1 sm:gap-6 ">
+              <span className="text-sm font-medium text-gray-600">
+                Order ID:{" "}
+                <span className="text-black font-semibold">
+                  {order.orderId}
+                </span>
+              </span>
+              <span className="text-sm font-medium text-gray-600">
+                Payment Date:{" "}
+                <span className="text-black font-semibold">
+                  {order.paymentDate}
+                </span>
+              </span>
+              <span className="text-sm font-medium text-gray-600">
+                Payment ID:{" "}
+                <span className="text-black font-semibold">
+                  {order.paymentId}
+                </span>
+              </span>
+            </div>
 
-          <span className="text-sm font-medium text-gray-600">
-            Payment ID:{" "}
-            <span className="text-black font-semibold">{order.paymentId}</span>
-          </span>
+            {/* ✅ View Address Button */}
+            <SubmitButton
+              onClick={() => setShowAddress(true)}
+              className=" text-sm transition-colors duration-200"
+            >
+              View Shipping Details
+            </SubmitButton>
+          </div>
         </div>
 
         {/* Cart - ONLY THIS SCROLLS */}
@@ -257,6 +294,70 @@ export default function OrderDetailView() {
           )}
         </div>
       </div>
+
+      {/* ✅ Shipping Address Popup */}
+      {showAddress && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
+          onClick={() => setShowAddress(false)} // Close on backdrop click
+        >
+          <div
+            className="bg-white rounded-xl shadow-lg w-[90%] max-w-md p-6 relative"
+            onClick={(e) => e.stopPropagation()} // Prevent close when clicking inside modal
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowAddress(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-black text-lg font-bold"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+
+            <p className="text-lg font-semibold mb-4">Shipping Details</p>
+
+            <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
+              <span className="font-bold text-black">Order ID</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black">{order.orderId}</span>
+
+              <span className="font-bold text-black ">User ID</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black">{order.userId}</span>
+
+              <span className="font-bold text-black ">User Name</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black">{order.userName}</span>
+
+              <span className="font-bold text-black ">Email</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black">{order.mail}</span>
+
+              <span className="font-bold text-black ">Contact</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black">{order.contact}</span>
+
+              <span className="font-bold text-black ">Address</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black whitespace-pre-line">
+                {order.address || "No address available"}
+              </span>
+
+              <span className="font-bold text-black ">Description</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black whitespace-pre-line">
+                {order.description || "N/A"}
+              </span>
+
+              <span className="font-bold text-black ">Order Status</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black">
+                {order.orderStatus}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

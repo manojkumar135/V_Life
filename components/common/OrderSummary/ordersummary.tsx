@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import InputField from "@/components/common/inputtype1";
-import TextareaField from "@/components/common/textareainput";
+import InputField from "@/components/InputFields/inputtype1";
+import TextareaField from "@/components/InputFields/textareainput";
 import SubmitButton from "@/components/common/submitbutton";
 import PaymentModal from "@/components/common/PaymentModal/paymentmodal";
 import ShowToast from "@/components/common/Toast/toast";
@@ -489,7 +489,7 @@ export default function OrderFormCartSection({
               label="Notes"
               name="notes"
               placeholder="Additional notes"
-              value={formData.notes || user.contact || ""}
+              value={formData.notes || ""}
               onChange={handleInputChange}
               className="w-full"
             />

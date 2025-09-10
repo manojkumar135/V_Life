@@ -101,7 +101,7 @@ export default function SideNav({
                 >
                   <span className="text-[24px]">{item.icon}</span>
                 </button>
-                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[800ms] transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none group-hover:pointer-events-auto">
+                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[400ms] transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none group-hover:pointer-events-auto">
                   {item.label}
                 </span>
               </div>

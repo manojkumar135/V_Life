@@ -7,9 +7,10 @@ const TreeNodeSchema = new Schema(
     // 🔑 Basic
     user_id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
+    dob: { type: String, required: true },
     status: { type: String, default: "active" }, // active, inactive, suspended
-    contact: { type: String,  },
-    mail: { type: String,  },
+    contact: { type: String, },
+    mail: { type: String, },
     address: { type: String },
     pincode: { type: String },
     country: { type: String },

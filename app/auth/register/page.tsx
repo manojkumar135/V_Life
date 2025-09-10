@@ -89,7 +89,7 @@ export default function RegisterPage() {
           className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-10 px-8 bg-[#fffff0] 
     rounded-3xl shadow-lg border-gray-200 border max-lg:py-8"
         >
-          <p className="text-[2rem] max-md:text-[1.5rem] max-lg:text-[1.5rem] font-bold text-black mb-8 max-lg:mb-5">
+          <p className="text-[1.5rem] max-md:text-[1.2rem] max-lg:text-[1.2rem] font-bold text-black mb-8 max-lg:mb-5">
             Sign Up
           </p>
 

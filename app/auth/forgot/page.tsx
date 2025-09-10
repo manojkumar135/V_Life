@@ -7,11 +7,11 @@ import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import ShowToast from "@/components/common/Toast/toast";
 import Images from "@/constant/Image";
-import InputField from "@/components/common/inputtype1";
+import InputField from "@/components/InputFields/inputtype1";
 import axios from "axios";
 import SubmitButton from "@/components/common/submitbutton";
 import Loader from "@/components/common/loader";
-import PasswordInput from "@/components/common/passwordinput";
+import PasswordInput from "@/components/InputFields/passwordinput";
 
 // Define TypeScript interfaces
 interface OTPInputProps {

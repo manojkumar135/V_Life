@@ -21,8 +21,7 @@ export default function WithdrawPage() {
   const [withdrawData, setWithdrawData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
-    const [advancePaid, setAdvancePaid] = useState<boolean>(false);
-
+  const [advancePaid, setAdvancePaid] = useState<boolean>(false);
 
   const API_URL = "/api/withdraw-operations";
 

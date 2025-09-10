@@ -4,7 +4,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import SubmitButton from "@/components/common/submitbutton";
-import PasswordInput from "@/components/common/passwordinput";
+import PasswordInput from "@/components/InputFields/passwordinput";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 

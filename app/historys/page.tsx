@@ -70,7 +70,7 @@ export default function TransactionHistory() {
         </span>
       ),
     },
-    
+
     {
       field: "status",
       headerName: "Status",
@@ -91,18 +91,12 @@ export default function TransactionHistory() {
     [query]
   );
 
-  const {
-    currentPage,
-    totalPages,
-    nextPage,
-    prevPage,
-    startItem,
-    endItem,
-  } = usePagination({
-    totalItems,
-    itemsPerPage: 14,
-    onPageChange: handlePageChange,
-  });
+  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
+    usePagination({
+      totalItems,
+      itemsPerPage: 14,
+      onPageChange: handlePageChange,
+    });
 
   const onBack = () => {
     router.push("/wallet");

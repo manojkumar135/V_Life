@@ -203,15 +203,14 @@ export default function LoginPage() {
 
               {/* Signup prompt */}
               <div className="text-center text-sm text-gray-800 -mt-3">
-  Don&apos;t have an account? {" "}
-  <span
-    onClick={handleNavigateToSignup}
-    className="inline-flex items-center text-blue-600 font-medium cursor-pointer"
-  >
-    Sign Up!
-  </span>
-</div>
-
+                Don&apos;t have an account ?{" "}
+                <span
+                  onClick={handleNavigateToSignup}
+                  className="inline-flex items-center text-blue-600 font-medium cursor-pointer"
+                >
+                  Sign Up!
+                </span>
+              </div>
             </form>
           </div>
         </div>

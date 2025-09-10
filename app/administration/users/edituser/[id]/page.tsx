@@ -7,15 +7,17 @@ import axios from "axios";
 import Layout from "@/layout/Layout";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter, useParams } from "next/navigation";
-import InputField from "@/components/common/inputtype1";
-import SelectField from "@/components/common/selectinput";
+import InputField from "@/components/InputFields/inputtype1";
+import SelectField from "@/components/InputFields/selectinput";
+import DateField from "@/components/InputFields/dateField";
 import Button from "@/components/common/submitbutton";
 import ShowToast from "@/components/common/Toast/toast";
-import Loader from "@/components/common/loader"
+import Loader from "@/components/common/loader";
 
 interface UserData {
   user_id: string;
   user_name: string;
+  dob: string;
   mail: string;
   contact: string;
   address: string;
@@ -39,6 +41,7 @@ export default function AddEditUserForm() {
     user_name: "",
     mail: "",
     contact: "",
+    dob: "",
     address: "",
     pincode: "",
     country: "",
@@ -56,6 +59,25 @@ export default function AddEditUserForm() {
     contact: Yup.string()
       .matches(/^[0-9]{10}$/, "Contact must be 10 digits")
       .required("Contact is required"),
+    dob: Yup.date()
+      .required("Date of Birth is required")
+      .max(new Date(), "Date of Birth cannot be in the future")
+      .test("age", "You must be at least 18 years old", function (value) {
+        if (!value) return false;
+        const today = new Date();
+        const birthDate = new Date(value);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        const dayDiff = today.getDate() - birthDate.getDate();
+
+        if (
+          age > 18 ||
+          (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
+        ) {
+          return true;
+        }
+        return false;
+      }),
     address: Yup.string().required("Address is required"),
     pincode: Yup.string()
       .matches(/^[0-9]{6}$/, "Pincode must be 6 digits")
@@ -80,13 +102,10 @@ export default function AddEditUserForm() {
 
         const res = await axios.put("/api/users-operations", payload);
         if (res?.data?.success) {
-          // alert("User saved successfully");
           ShowToast.success("User updated successfully!");
-
           router.push("/administration/users");
         } else {
           console.error("Save failed:", res?.data);
-          // alert("Failed to save user");
           ShowToast.error("Failed to save user.");
         }
       } catch (err: any) {
@@ -95,7 +114,6 @@ export default function AddEditUserForm() {
           err.response?.data?.message ||
           err.message ||
           "Failed to Update user.";
-
         ShowToast.error(errorMessage);
       } finally {
         setSubmitting(false);
@@ -119,6 +137,7 @@ export default function AddEditUserForm() {
             user_id: user.user_id ?? "",
             user_name: user.user_name ?? "",
             mail: user.mail ?? "",
+            dob: user.dob ?? "",
             contact: user.contact ?? "",
             address: user.address ?? "",
             pincode: user.pincode ?? "",
@@ -127,7 +146,7 @@ export default function AddEditUserForm() {
             district: user.district ?? "",
             locality: user.locality ?? "",
           });
-          // If pincode exists, fetch postOfficeData so locality select is populated
+          // If pincode exists, fetch postOfficeData
           if (user.pincode) {
             try {
               const locRes = await axios.get(
@@ -175,7 +194,6 @@ export default function AddEditUserForm() {
           formik.setFieldValue("state", state ?? formik.values.state);
           formik.setFieldValue("country", country ?? formik.values.country);
           setPostOfficeData(postOffices ?? []);
-          // Only set locality if current value is empty or not in the options
           if (postOffices && postOffices.length > 0) {
             const localityNames = postOffices.map((p: any) => p.Name);
             if (
@@ -205,7 +223,6 @@ export default function AddEditUserForm() {
     value: p.Name,
   }));
 
-  // Ensure the saved locality is always present in the options
   const mergedLocalityOptions =
     formik.values.locality &&
     !localityOptions.some((opt) => opt.value === formik.values.locality)
@@ -241,7 +258,8 @@ export default function AddEditUserForm() {
     { name: "user_name", label: "Full Name", kind: "input", inputType: "text" },
     { name: "mail", label: "Email", kind: "input", inputType: "email" },
     { name: "contact", label: "Contact", kind: "input", inputType: "text" },
-    { name: "address", label: "Address", kind: "input", inputType: "text" },
+    { name: "dob", label: "Date of Birth", kind: "input", inputType: "date" },
+    { name: "address", label: "D.NO & Street", kind: "input", inputType: "text" },
     { name: "pincode", label: "Pincode", kind: "input", inputType: "text" },
     {
       name: "country",
@@ -283,7 +301,7 @@ export default function AddEditUserForm() {
   if (loading) {
     return (
       <Layout>
-           {loading && (
+        {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
@@ -307,12 +325,12 @@ export default function AddEditUserForm() {
 
   return (
     <Layout>
-       {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <Loader />
-          </div>
-        )}
-      
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
+
       <div className="p-4">
         <div className="flex items-center mb-4">
           <IoIosArrowBack
@@ -332,6 +350,26 @@ export default function AddEditUserForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {formFields.map((f) => {
               if (f.kind === "input") {
+                if (f.inputType === "date") {
+                  return (
+                    <DateField
+                      key={String(f.name)}
+                      label={f.label}
+                      name={String(f.name)}
+                      value={formik.values[f.name]}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      min="1900-01-01"
+                      max={new Date().toISOString().split("T")[0]} // ✅ no future dates
+                      required
+                      error={
+                        formik.touched[f.name]
+                          ? (formik.errors[f.name] as string | undefined)
+                          : undefined
+                      }
+                    />
+                  );
+                }
                 return (
                   <InputField
                     key={String(f.name)}
@@ -351,7 +389,6 @@ export default function AddEditUserForm() {
                   />
                 );
               } else {
-                // select field
                 return (
                   <SelectField
                     key={String(f.name)}

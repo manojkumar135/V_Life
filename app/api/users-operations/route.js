@@ -377,7 +377,7 @@ export async function GET(request) {
 export async function PUT(request) {
   try {
     await connectDB();
-    const { id, user_id, ...rest } = await request.json();
+    const { id, user_id, dob, ...rest } = await request.json();
     const updateId = id || user_id;
 
     if (!updateId) {
@@ -407,14 +407,23 @@ export async function PUT(request) {
       }
     }
 
-    // 🔄 Update User
+    // 🔄 Update User (safe with $set)
     let updatedUser;
+    const updateFields = { ...rest };
+    if (dob !== undefined) updateFields.dob = dob; // Ensure dob is always included
+
     if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedUser = await User.findByIdAndUpdate(updateId, rest, { new: true });
+      updatedUser = await User.findByIdAndUpdate(
+        updateId,
+        { $set: updateFields },
+        { new: true }
+      );
     } else {
-      updatedUser = await User.findOneAndUpdate({ user_id: updateId }, rest, {
-        new: true,
-      });
+      updatedUser = await User.findOneAndUpdate(
+        { user_id: updateId },
+        { $set: updateFields },
+        { new: true }
+      );
     }
 
     if (!updatedUser) {
@@ -424,43 +433,22 @@ export async function PUT(request) {
       );
     }
 
-    // 🔄 Sync Login
+    // 🔄 Sync Login (update any matching fields dynamically)
     await Login.findOneAndUpdate(
       { user_id: updatedUser.user_id },
-      {
-        ...(rest.user_name && { user_name: rest.user_name }),
-        ...(rest.first_name && { first_name: rest.first_name }),
-        ...(rest.last_name && { last_name: rest.last_name }),
-        ...(rest.role && { role: rest.role }),
-        ...(rest.role_id && { role_id: rest.role_id }),
-        ...(rest.title && { title: rest.title }),
-        ...(rest.mail && { mail: rest.mail }),
-        ...(rest.contact && { contact: rest.contact }),
-        ...(rest.address && { address: rest.address }),
-        ...(rest.locality && { locality: rest.locality }),
-        ...(rest.pincode && { pincode: rest.pincode }),
-        ...(rest.status && { status: rest.status }),
-
-      },
+      { $set: updateFields },
       { new: true }
     );
 
-    // 🔄 Sync TreeNode
+    // 🔄 Sync TreeNode (map some fields explicitly, others dynamically)
+    const treeNodeData = {
+      ...(updateFields.user_id && { name: updateFields.user_id }),
+      ...updateFields, // add all other fields dynamically (dob, gender, etc.)
+    };
+
     await TreeNode.findOneAndUpdate(
       { user_id: updatedUser.user_id },
-      {
-        ...(rest.user_name && { name: rest.user_name }),
-        ...(rest.contact && { contact: rest.contact }),
-        ...(rest.mail && { mail: rest.mail }),
-        ...(rest.address && { address: rest.address }),
-        ...(rest.locality && { locality: rest.locality }),
-        ...(rest.pincode && { pincode: rest.pincode }),
-        ...(rest.country && { country: rest.country }),
-        ...(rest.state && { state: rest.state }),
-        ...(rest.district && { district: rest.district }),
-        ...(rest.status && { status: rest.status }),
-
-      },
+      { $set: treeNodeData },
       { new: true }
     );
 
@@ -475,7 +463,6 @@ export async function PUT(request) {
     );
   }
 }
-
 
 // PATCH - Partial update
 export async function PATCH(request) {
@@ -582,7 +569,6 @@ export async function PATCH(request) {
     );
   }
 }
-
 
 
 // DELETE - Remove a user

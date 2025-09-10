@@ -7,9 +7,10 @@ import axios from "axios";
 import Layout from "@/layout/Layout";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter, useSearchParams } from "next/navigation";
-import InputField from "@/components/common/inputtype1";
+import InputField from "@/components/InputFields/inputtype1";
+import DateField from "@/components/InputFields/dateField";
 import Button from "@/components/common/submitbutton";
-import SelectField from "@/components/common/selectinput";
+import SelectField from "@/components/InputFields/selectinput";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
@@ -20,11 +21,30 @@ const validationSchema = Yup.object().shape({
     .min(3, "Full Name must be at least 3 characters"),
   email: Yup.string()
     .email("Invalid email address")
-      .transform((val) => (val ? val.toLowerCase() : val))
+    .transform((val) => (val ? val.toLowerCase() : val))
     .required("Email is required"),
   contact: Yup.string()
     .required("Contact is required")
     .matches(/^[0-9]{10}$/, "Contact must be 10 digits"),
+  dob: Yup.date()
+    .required("Date of Birth is required")
+    .max(new Date(), "Date of Birth cannot be in the future") // ✅ prevent upcoming dates
+    .test("age", "You must be at least 18 years old", function (value) {
+      if (!value) return false;
+      const today = new Date();
+      const birthDate = new Date(value);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+
+      if (
+        age > 18 ||
+        (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
+      ) {
+        return true;
+      }
+      return false;
+    }),
   // address: Yup.string().required("Address is required"),
   // city: Yup.string().required("City is required"),
   // state: Yup.string().required("State is required"),
@@ -46,6 +66,7 @@ function AddUserFormContent() {
   const formik = useFormik({
     initialValues: {
       fullName: "",
+      dob: "",
       email: "",
       contact: "",
       address: "",
@@ -61,6 +82,7 @@ function AddUserFormContent() {
       try {
         const res = await axios.post("/api/users-operations", {
           user_name: values.fullName,
+          dob: values.dob,
           mail: values.email,
           contact: values.contact,
           address: values.address,
@@ -203,20 +225,28 @@ function AddUserFormContent() {
               value={formik.values.contact}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={
-                formik.touched.contact ? formik.errors.contact : undefined
-              }
+              error={formik.touched.contact ? formik.errors.contact : undefined}
               required
             />
+            <DateField
+              label="Date of Birth"
+              name="dob"
+              value={formik.values.dob}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              min="1900-01-01"
+              max={new Date().toISOString().split("T")[0]} // ✅ restricts to today
+              required
+              error={formik.touched.dob ? formik.errors.dob : ""}
+            />
+
             <InputField
-              label="Address"
+              label="D.No & Street"
               name="address"
               value={formik.values.address}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={
-                formik.touched.address ? formik.errors.address : undefined
-              }
+              error={formik.touched.address ? formik.errors.address : undefined}
               // required
             />
             <InputField
@@ -225,9 +255,7 @@ function AddUserFormContent() {
               value={formik.values.pincode}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={
-                formik.touched.pincode ? formik.errors.pincode : undefined
-              }
+              error={formik.touched.pincode ? formik.errors.pincode : undefined}
               // required
               disabled={loading}
             />
@@ -238,9 +266,7 @@ function AddUserFormContent() {
               value={formik.values.country}
               onChange={formik.handleChange}
               onBlur={formik.handleBlur}
-              error={
-                formik.touched.country ? formik.errors.country : undefined
-              }
+              error={formik.touched.country ? formik.errors.country : undefined}
               // required
               disabled={loading}
             />
@@ -299,7 +325,13 @@ function AddUserFormContent() {
 
 export default function AddNewUserForm() {
   return (
-    <Suspense fallback={<div className="flex justify-center items-center h-screen"><Loader /></div>}>
+    <Suspense
+      fallback={
+        <div className="flex justify-center items-center h-screen">
+          <Loader />
+        </div>
+      }
+    >
       <AddUserFormContent />
     </Suspense>
   );

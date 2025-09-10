@@ -1,4 +1,6 @@
+import { group } from "console";
 import mongoose from "mongoose";
+import { title } from "process";
 
 const BonusHistorySchema = new mongoose.Schema({
   type: { type: String, enum: ["matching", "leadership", "referral"], required: true },
@@ -12,6 +14,7 @@ const UserSchema = new mongoose.Schema(
   {
     user_id: { type: String, required: true, unique: true },
     user_name: { type: String, required: true },
+    dob: { type: String,required: true },
     mail: { type: String, required: true },
     contact: { type: String, required: true },
     address: { type: String },
@@ -26,6 +29,10 @@ const UserSchema = new mongoose.Schema(
     last_modified_by: { type: String },
     last_modified_at: { type: Date },
     role: { type: String },
+    role_id: { type: String },
+    group: { type: String },
+    group_id: { type: String },
+    title: { type: String },
     profile: { type: String }, // URL or file path
     user_status: { type: String, default: "active" },
 

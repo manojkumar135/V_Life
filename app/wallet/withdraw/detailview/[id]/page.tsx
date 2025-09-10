@@ -4,7 +4,7 @@ import React, { useState, ChangeEvent, useEffect, FormEvent } from "react";
 import Layout from "@/layout/Layout";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter, useParams } from "next/navigation";
-import InputField from "@/components/common/inputtype1";
+import InputField from "@/components/InputFields/inputtype1";
 import SubmitButton from "@/components/common/submitbutton";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
