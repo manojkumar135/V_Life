@@ -5,21 +5,54 @@ import { FiMail } from "react-icons/fi";
 import { TfiLock } from "react-icons/tfi";
 import { FaUser, FaPhone } from "react-icons/fa";
 import { IoIosLink } from "react-icons/io";
+import { IoCalendarOutline } from "react-icons/io5";
+import { FaUsers } from "react-icons/fa";
 
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import Image from "next/image";
 import Images from "@/constant/Image";
+import Select, { components } from "react-select";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
+
+const teams = [
+  { value: "left", label: "Left" },
+  { value: "right", label: "Right" },
+];
 
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Custom single value component to include icon
+  const SingleValue = (props: any) => (
+    <components.SingleValue {...props}>
+      {props.data.label}
+    </components.SingleValue>
+  );
+
+  // Custom Input component to add left padding for icon
+  const customStyles = {
+    control: (provided: any, state: any) => ({
+      ...provided,
+      paddingLeft: "2.5rem", // leave space for icon
+      borderRadius: "0.375rem",
+      border: "1px solid #cbd5e1", // border-gray-400
+      minHeight: "2.5rem",
+      boxShadow: state.isFocused
+        ? "0 0 0 2px rgba(156, 163, 175, 0.3)"
+        : undefined,
+    }),
+    valueContainer: (provided: any) => ({
+      ...provided,
+      padding: "0 0.75rem",
+    }),
+  };
 
   // Form validation schema
   const validationSchema = Yup.object({
@@ -34,20 +67,43 @@ export default function RegisterPage() {
     contact: Yup.string()
       .required("* Contact is required")
       .matches(/^[0-9]{10}$/, "* Contact must be a 10-digit number"),
+
+    dob: Yup.date()
+      .required("Date of Birth is required")
+      .max(new Date(), "Date of Birth cannot be in the future") // ✅ prevent upcoming dates
+      .test("age", "You must be at least 18 years old", function (value) {
+        if (!value) return false;
+        const today = new Date();
+        const birthDate = new Date(value);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        const dayDiff = today.getDate() - birthDate.getDate();
+
+        if (
+          age > 18 ||
+          (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
+        ) {
+          return true;
+        }
+        return false;
+      }),
     // password: Yup.string()
     //   .required("* Password is required")
     //   .min(6, "* Password must be at least 6 characters"),
     referBy: Yup.string().required("* Referral ID is required"),
+    team: Yup.string().required("* Team is required"),
   });
 
   const formik = useFormik({
     initialValues: {
       user_name: "",
+      dob: "",
       mail: "",
       contact: "",
       password: "",
       referBy: "",
       role: "user",
+      team: "",
     },
     validationSchema,
     onSubmit: async (values) => {
@@ -86,18 +142,18 @@ export default function RegisterPage() {
       {/* Left Illustration Section */}
       <div className="w-1/2 max-md:w-full max-lg:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:h-full">
         <div
-          className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-10 px-8 bg-[#fffff0] 
+          className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] 
     rounded-3xl shadow-lg border-gray-200 border max-lg:py-8"
         >
-          <p className="text-[1.5rem] max-md:text-[1.2rem] max-lg:text-[1.2rem] font-bold text-black mb-8 max-lg:mb-5">
+          <p className="text-[1.5rem] max-md:text-[1.2rem] max-lg:text-[1.2rem] font-bold text-black mb-5 max-lg:mb-5">
             Sign Up
           </p>
 
-          <form onSubmit={formik.handleSubmit} className="w-full space-y-4">
+          <form onSubmit={formik.handleSubmit} className="w-full space-y-3">
             {/* Name */}
             <div className="flex flex-col">
               <div className="relative">
-                <FaUser className="absolute left-3 top-3.5 text-gray-500" />
+                <FaUser className="absolute left-3 top-3 text-gray-500" />
                 <input
                   type="text"
                   name="user_name"
@@ -115,10 +171,34 @@ export default function RegisterPage() {
               </span>
             </div>
 
+            {/* DOB */}
+            <div className="flex flex-col">
+              <div className="relative">
+                <IoCalendarOutline className="absolute left-3 top-3 text-gray-500" />
+                <input
+                  type="date"
+                  name="dob"
+                  placeholder="Date of Birth"
+                  value={formik.values.dob}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  min="1900-01-01"
+                  max={new Date().toISOString().split("T")[0]}
+                  required
+                  className="uppercase w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+              </div>
+              <span className="text-red-500 text-sm mt-1 h-4 block">
+                {formik.touched.dob && formik.errors.dob
+                  ? formik.errors.dob
+                  : "\u00A0"}
+              </span>
+            </div>
+
             {/* Email */}
             <div className="flex flex-col">
               <div className="relative">
-                <FiMail className="absolute left-3 top-3.5 text-gray-500" />
+                <FiMail className="absolute left-3 top-3 text-gray-500" />
                 <input
                   type="email"
                   name="mail"
@@ -139,7 +219,7 @@ export default function RegisterPage() {
             {/* Contact */}
             <div className="flex flex-col">
               <div className="relative">
-                <FaPhone className="absolute left-3 top-3.5 text-gray-500" />
+                <FaPhone className="absolute left-3 top-3 text-gray-500" />
                 <input
                   type="text"
                   name="contact"
@@ -160,7 +240,7 @@ export default function RegisterPage() {
             {/* Password */}
             {/* <div className="flex flex-col">
               <div className="relative">
-                <TfiLock className="absolute left-3 top-3.5 text-gray-500" />
+                <TfiLock className="absolute left-3 top-3 text-gray-500" />
                 <input
                   type="password"
                   name="password"
@@ -179,7 +259,7 @@ export default function RegisterPage() {
             {/* Referral ID */}
             <div className="flex flex-col">
               <div className="relative">
-                <IoIosLink className="absolute left-3 top-3.5 text-gray-500" />
+                <IoIosLink className="absolute left-3 top-3 text-gray-500" />
                 <input
                   type="text"
                   name="referBy"
@@ -193,6 +273,31 @@ export default function RegisterPage() {
               <span className="text-red-500 text-sm mt-1 h-4 block">
                 {formik.touched.referBy && formik.errors.referBy
                   ? formik.errors.referBy
+                  : "\u00A0"}
+              </span>
+            </div>
+
+            {/* Team */}
+            <div className="flex flex-col">
+              <div className="relative">
+                <FaUsers className="absolute left-3 top-3 text-gray-500 " />
+                <Select
+                  options={teams}
+                  name="team"
+                  value={teams.find((t) => t.value === formik.values.team)}
+                  onChange={(selectedOption: any) =>
+                    formik.setFieldValue("team", selectedOption?.value || "")
+                  }
+                  onBlur={() => formik.setFieldTouched("team", true)}
+                  styles={customStyles}
+                  components={{ SingleValue }}
+                  placeholder="Select Team"
+                  className="text-black w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+              </div>
+              <span className="text-red-500 text-sm mt-1 h-4 block">
+                {formik.touched.team && formik.errors.team
+                  ? formik.errors.team
                   : "\u00A0"}
               </span>
             </div>

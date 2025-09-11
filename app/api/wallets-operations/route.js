@@ -1,33 +1,38 @@
+// wallets-operations/route.js
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Wallet } from "@/models/wallet";
 import mongoose from "mongoose";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
+// Helper: Find wallet by either ObjectId or wallet_id
+async function findWalletByIdOrWalletId(idOrWalletId) {
+  if (mongoose.Types.ObjectId.isValid(idOrWalletId)) {
+    return Wallet.findById(idOrWalletId);
+  }
+  return Wallet.findOne({ wallet_id: idOrWalletId });
+}
 
 // POST - Create new wallet
 export async function POST(request) {
   try {
     await connectDB();
-
     const body = await request.json();
 
-    // Generate unique wallet_id with prefix "WA"
-    const wallet_id = await generateUniqueCustomId("WA", Wallet, 8, 8);
+    if (!body.user_id || !body.user_name || !body.account_holder_name || !body.bank_name || !body.account_number || !body.ifsc_code) {
+      return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 });
+    }
 
-    // Attach wallet_id before saving
+    const wallet_id = await generateUniqueCustomId("WA", Wallet, 8, 8);
     const newWallet = await Wallet.create({ ...body, wallet_id });
 
     return NextResponse.json({ success: true, data: newWallet }, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
-// GET - Fetch all wallets OR single wallet by id / wallet_id
+// GET - Fetch all wallets OR single wallet
 export async function GET(request) {
   try {
     await connectDB();
@@ -36,37 +41,21 @@ export async function GET(request) {
     const id = searchParams.get("id") || searchParams.get("wallet_id");
     const search = searchParams.get("search") || "";
 
-    // ✅ If id is provided → find one
+    // ✅ Get single wallet
     if (id) {
-      let wallet;
-      if (mongoose.Types.ObjectId.isValid(id)) {
-        wallet = await Wallet.findById(id);
-      } else {
-        wallet = await Wallet.findOne({ wallet_id: id });
-      }
-
+      const wallet = await findWalletByIdOrWalletId(id);
       if (!wallet) {
-        return NextResponse.json(
-          { success: false, message: "Wallet not found" },
-          { status: 404 }
-        );
+        return NextResponse.json({ success: false, message: "Wallet not found" }, { status: 404 });
       }
-      return NextResponse.json({ success: true, data: wallet }, { status: 200 });
+      return NextResponse.json({ success: true, data: wallet });
     }
 
-    // ✅ Build query for search
+    // ✅ Build search query
     const query = {};
-
     if (search) {
-      // Split by comma and trim spaces
-      const searchTerms = search
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      // Build OR conditions across all wallet fields
-      query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp(term, "i"); // case-insensitive
+      const terms = search.split(",").map((t) => t.trim()).filter(Boolean);
+      query.$or = terms.flatMap((term) => {
+        const regex = new RegExp(term, "i");
         return [
           { wallet_id: regex },
           { user_id: regex },
@@ -80,44 +69,33 @@ export async function GET(request) {
       });
     }
 
-    // ✅ Find all (with or without search)
     const wallets = await Wallet.find(query);
-
-    return NextResponse.json({ success: true, data: wallets }, { status: 200 });
+    return NextResponse.json({ success: true, data: wallets });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
-// PUT - Replace a wallet
+// PUT - Replace wallet
 export async function PUT(request) {
   try {
     await connectDB();
-    const { id, wallet_id, ...rest } = await request.json();
+    const { id, wallet_id, ...updates } = await request.json();
     const updateId = id || wallet_id;
 
     if (!updateId) {
-      return NextResponse.json(
-        { success: false, message: "ID or wallet_id is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, message: "ID or wallet_id is required" }, { status: 400 });
     }
 
-    let updatedWallet;
-    if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedWallet = await Wallet.findByIdAndUpdate(updateId, rest, { new: true });
-    } else {
-      updatedWallet = await Wallet.findOneAndUpdate({ wallet_id: updateId }, rest, { new: true });
-    }
-
-    if (!updatedWallet) {
+    const wallet = await findWalletByIdOrWalletId(updateId);
+    if (!wallet) {
       return NextResponse.json({ success: false, message: "Wallet not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, data: updatedWallet }, { status: 200 });
+    Object.assign(wallet, updates);
+    await wallet.save();
+
+    return NextResponse.json({ success: true, data: wallet });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
@@ -131,59 +109,68 @@ export async function PATCH(request) {
     const { searchParams } = new URL(request.url);
     const walletIdFromQuery = searchParams.get("wallet_id");
 
-    const { id, wallet_id, ...updates } = await request.json();
+    const body = await request.json();
+    const { id, wallet_id, ...updates } = body;
 
-    const finalWalletId = id || wallet_id || walletIdFromQuery;
+    const updateId = id || wallet_id || walletIdFromQuery;
 
-    let updatedWallet;
-    if (id && mongoose.Types.ObjectId.isValid(id)) {
-      updatedWallet = await Wallet.findByIdAndUpdate(id, updates, { new: true });
-    } else if (finalWalletId) {
-      updatedWallet = await Wallet.findOneAndUpdate({ wallet_id: finalWalletId }, updates, { new: true });
+    if (!updateId) {
+      return NextResponse.json(
+        { success: false, message: "ID or wallet_id is required" },
+        { status: 400 }
+      );
     }
 
+    const updatedWallet = await Wallet.findOneAndUpdate(
+      {
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(updateId) ? updateId : null },
+          { wallet_id: updateId },
+        ],
+      },
+      { $set: updates },  // ✅ dynamically updates all fields in payload
+      { new: true, runValidators: true } // return updated doc
+    ).lean();
+
     if (!updatedWallet) {
-      return NextResponse.json({ success: false, message: "Wallet not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Wallet not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ success: true, data: updatedWallet });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
-// DELETE - Remove a wallet
+
+
+// DELETE - Remove wallet
 export async function DELETE(request) {
   try {
     await connectDB();
-
     const { searchParams } = new URL(request.url);
     const idParam = searchParams.get("id");
     const walletIdParam = searchParams.get("wallet_id");
 
-    let deletedWallet;
-
-    // If walletIdParam looks like a Mongo ObjectId, delete by _id
-    if (walletIdParam && mongoose.Types.ObjectId.isValid(walletIdParam)) {
-      deletedWallet = await Wallet.findByIdAndDelete(walletIdParam);
-    }
-    // If walletIdParam is a string ID field
-    else if (walletIdParam) {
-      deletedWallet = await Wallet.findOneAndDelete({ wallet_id: walletIdParam });
-    }
-    // Or delete by explicit ?id= param
-    else if (idParam && mongoose.Types.ObjectId.isValid(idParam)) {
-      deletedWallet = await Wallet.findByIdAndDelete(idParam);
+    const deleteId = idParam || walletIdParam;
+    if (!deleteId) {
+      return NextResponse.json({ success: false, message: "ID or wallet_id is required" }, { status: 400 });
     }
 
-    if (!deletedWallet) {
+    const wallet = await findWalletByIdOrWalletId(deleteId);
+    if (!wallet) {
       return NextResponse.json({ success: false, message: "Wallet not found" }, { status: 404 });
     }
 
+    await wallet.deleteOne();
     return NextResponse.json({ success: true, message: "Wallet deleted" });
   } catch (error) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
-
-

@@ -98,7 +98,9 @@ export default function OrdersPage() {
       align: "right",
       flex: 1,
       renderCell: (params) => (
-        <span>₹ {Number(params.value)?.toFixed(2) || "0.00"}</span>
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
       ),
     },
     { field: "order_status", headerName: "Status", flex: 1 },
