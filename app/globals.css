@@ -62,3 +62,31 @@ body {
 .scrollbar-custom::-webkit-scrollbar-thumb:hover {
   background: #0c3978; /* Thumb hover color */
 }
+
+
+/* Hide date format hint when input is empty (Chrome/Webkit only) */
+input[type="date"]:not(:focus):placeholder-shown::-webkit-datetime-edit-text,
+input[type="date"]:not(:focus):placeholder-shown::-webkit-datetime-edit-month-field,
+input[type="date"]:not(:focus):placeholder-shown::-webkit-datetime-edit-day-field,
+input[type="date"]:not(:focus):placeholder-shown::-webkit-datetime-edit-year-field {
+  color: transparent;
+}
+
+/* Ensure selected date is visible */
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #000;
+}
+
+
+/* input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+input[type="date"]::-ms-clear {
+  display: none;
+}
+input[type="date"]::-ms-expand {
+  display: none;
+} */

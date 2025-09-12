@@ -14,6 +14,7 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import customSelectStyles from "@/components/common/CustomSelectStyles";
 
 const teams = [
   { value: "left", label: "Left" },
@@ -23,31 +24,6 @@ const teams = [
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  // Custom styles for React Select
-  const customStyles = {
-    control: (provided: any, state: any) => ({
-      ...provided,
-      paddingLeft: "1.8rem", // space for icon
-      borderRadius: "0.375rem",
-      border: "1px solid #94a3b8",
-      minHeight: "1.5rem",
-      backgroundColor: "transparent",
-      // boxShadow: state.isFocused
-      //   ? "0 0 0 2px rgba(156, 163, 175, 0.3)"
-      //   : undefined,
-      "&:hover": { borderColor: "#94a3b8" }, // gray-400 hover
-    }),
-    valueContainer: (provided: any) => ({
-      ...provided,
-      padding: "0 0.75rem",
-    }),
-    placeholder: (provided: any) => ({
-      ...provided,
-      color: "#9ca3af", // gray-400
-      // color: "#6b7280", // gray-500
-    }),
-  };
 
   const validationSchema = Yup.object({
     user_name: Yup.string()
@@ -60,9 +36,9 @@ export default function RegisterPage() {
       .required("* Contact is required")
       .matches(/^[0-9]{10}$/, "* Contact must be a 10-digit number"),
     dob: Yup.date()
-      .required("Date of Birth is required")
-      .max(new Date(), "Date of Birth cannot be in the future")
-      .test("age", "You must be at least 18 years old", function (value) {
+      .required("* Date of Birth is required")
+      .max(new Date(), "* Date of Birth cannot be in the future")
+      .test("age", "* You must be at least 18 years old", function (value) {
         if (!value) return false;
         const today = new Date();
         const birthDate = new Date(value);
@@ -134,16 +110,19 @@ export default function RegisterPage() {
 
       {/* Left Form Section */}
       <div className="w-1/2 max-md:w-full max-lg:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:h-full">
-        <div className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border-gray-200 border xl:h-[85%]">
-          <p className="text-[1.5rem] max-md:text-[1.2rem] max-lg:text-[1.2rem] font-bold text-black mb-5">
-            Sign Up
+        <div
+          className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-6 max-md:py-4 px-8 bg-[#fffff0]
+         rounded-3xl shadow-lg border-gray-200 border xl:h-[90%] max-md:h-[80%]"
+        >
+          <p className="text-[1.5rem] max-md:text-[1.5rem] max-lg:text-[1.2rem] font-bold text-black xl:mb-3 mb-5">
+            SIGN UP
           </p>
 
-          <form onSubmit={formik.handleSubmit} className="w-full space-y-3">
+          <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
             {/* Name */}
             <div className="flex flex-col">
               <div className="relative">
-                <FaUser className="absolute left-3 top-3 text-gray-500" />
+                <FaUser className="absolute left-3 top-2 text-gray-500" />
                 <input
                   type="text"
                   name="user_name"
@@ -151,44 +130,66 @@ export default function RegisterPage() {
                   value={formik.values.user_name}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
               </div>
-              <span className="text-red-500 text-sm mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 h-4 block">
                 {formik.touched.user_name && formik.errors.user_name
                   ? formik.errors.user_name
                   : "\u00A0"}
               </span>
             </div>
 
-            {/* DOB */}
-            <div className="flex flex-col">
-              <div className="relative">
-                <IoCalendarOutline className="absolute left-3 top-3 text-gray-500" />
-                <input
-                  type="date"
-                  name="dob"
-                  placeholder="Date of Birth"
-                  value={formik.values.dob}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  min="1900-01-01"
-                  max={new Date().toISOString().split("T")[0]}
-                  required
-                  className="uppercase w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-              </div>
-              <span className="text-red-500 text-sm mt-1 h-4 block">
-                {formik.touched.dob && formik.errors.dob
-                  ? formik.errors.dob
-                  : "\u00A0"}
-              </span>
-            </div>
+           {/* DOB */}
+<div className="flex flex-col">
+  <div className="relative">
+    {/* Custom calendar icon (purely decorative) */}
+    <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none" />
+
+    <input
+      type="date"
+      id="dob"
+      name="dob"
+      value={formik.values.dob}
+      onChange={formik.handleChange}
+      onBlur={formik.handleBlur}
+      min="1900-01-01"
+      max={new Date().toISOString().split("T")[0]}
+      required
+      className="peer uppercase w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none 
+      focus:ring-2 focus:ring-gray-200
+      [appearance:none] 
+      [&::-webkit-calendar-picker-indicator]:absolute 
+      [&::-webkit-calendar-picker-indicator]:inset-0 
+      [&::-webkit-calendar-picker-indicator]:w-full 
+      [&::-webkit-calendar-picker-indicator]:h-full 
+      [&::-webkit-calendar-picker-indicator]:cursor-pointer 
+      [&::-webkit-calendar-picker-indicator]:opacity-0 
+      [&::-webkit-calendar-picker-indicator]:pointer-events-auto"
+    />
+
+    {/* Only show label when empty */}
+    {!formik.values.dob && (
+      <label
+        htmlFor="dob"
+        className="lg:hidden absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 text-md pointer-events-none"
+      >
+        Date of Birth
+      </label>
+    )}
+  </div>
+
+  {/* Error message */}
+  <span className="text-red-500 text-xs mt-1 h-4 block">
+    {formik.touched.dob && formik.errors.dob ? formik.errors.dob : "\u00A0"}
+  </span>
+</div>
+
 
             {/* Email */}
             <div className="flex flex-col">
               <div className="relative">
-                <FiMail className="absolute left-3 top-3 text-gray-500" />
+                <FiMail className="absolute left-3 top-2 text-gray-500" />
                 <input
                   type="email"
                   name="mail"
@@ -196,10 +197,10 @@ export default function RegisterPage() {
                   value={formik.values.mail}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
               </div>
-              <span className="text-red-500 text-sm mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 h-4 block">
                 {formik.touched.mail && formik.errors.mail
                   ? formik.errors.mail
                   : "\u00A0"}
@@ -209,7 +210,7 @@ export default function RegisterPage() {
             {/* Contact */}
             <div className="flex flex-col">
               <div className="relative">
-                <FaPhone className="absolute left-3 top-3 text-gray-500" />
+                <FaPhone className="absolute left-3 top-2 text-gray-500" />
                 <input
                   type="text"
                   name="contact"
@@ -217,10 +218,10 @@ export default function RegisterPage() {
                   value={formik.values.contact}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
               </div>
-              <span className="text-red-500 text-sm mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 h-4 block">
                 {formik.touched.contact && formik.errors.contact
                   ? formik.errors.contact
                   : "\u00A0"}
@@ -230,7 +231,7 @@ export default function RegisterPage() {
             {/* Referral ID */}
             <div className="flex flex-col">
               <div className="relative">
-                <IoIosLink className="absolute left-3 top-3 text-gray-500" />
+                <IoIosLink className="absolute left-3 top-2 text-gray-500" />
                 <input
                   type="text"
                   name="referBy"
@@ -238,10 +239,10 @@ export default function RegisterPage() {
                   value={formik.values.referBy}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
               </div>
-              <span className="text-red-500 text-sm mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 h-4 block">
                 {formik.touched.referBy && formik.errors.referBy
                   ? formik.errors.referBy
                   : "\u00A0"}
@@ -251,7 +252,7 @@ export default function RegisterPage() {
             {/* Team */}
             <div className="flex flex-col">
               <div className="relative">
-                <FaUsers className="absolute left-3 top-3 text-gray-500" />
+                <FaUsers className="absolute left-3 top-2.5 text-gray-500" />
                 <Select
                   options={teams}
                   name="team"
@@ -260,12 +261,12 @@ export default function RegisterPage() {
                     formik.setFieldValue("team", selectedOption?.value || "")
                   }
                   onBlur={() => formik.setFieldTouched("team", true)}
-                  styles={customStyles}
+                  styles={customSelectStyles}
                   placeholder="Select Team"
                   className="w-full "
                 />
               </div>
-              <span className="text-red-500 text-sm mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 h-4 block">
                 {formik.touched.team && formik.errors.team
                   ? formik.errors.team
                   : "\u00A0"}
@@ -273,7 +274,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Terms and Conditions */}
-            <div className="flex items-center space-x-2 mt-1">
+            <div className="flex items-center space-x-2 mt-0 max-md:mt-5">
               <input
                 type="checkbox"
                 name="terms"
@@ -281,18 +282,22 @@ export default function RegisterPage() {
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 className="
-    h-4 w-4
-    border border-gray-400 rounded
-    bg-white
-    appearance-none
-    checked:bg-yellow-500
-    checked:border-yellow-500
-    checked:before:content-['✔']
-    checked:before:text-black
-    checked:before:flex
-    checked:before:items-center
-    checked:before:justify-center
-  "
+  h-4 w-4
+  border border-gray-400 rounded
+  bg-white
+  appearance-none
+  checked:bg-yellow-500
+  checked:border-yellow-500
+  relative
+  checked:before:content-['✔']
+  checked:before:absolute
+  checked:before:top-[1px]      /* ✅ move up */
+  checked:before:left-1/2
+  checked:before:-translate-x-1/2
+  checked:before:text-[0.75rem] /* smaller tick */
+  checked:before:leading-none
+  checked:before:text-black
+"
               />
 
               <label htmlFor="terms" className="text-sm text-gray-700">
@@ -302,11 +307,11 @@ export default function RegisterPage() {
                 </span>
               </label>
             </div>
-            <span className="text-red-500 text-sm mt-1 h-4 block">
+            {/* <span className="text-red-500 text-xs mt-1 h-4 block">
               {formik.touched.terms && formik.errors.terms
                 ? formik.errors.terms
                 : "\u00A0"}
-            </span>
+            </span> */}
 
             {/* Register Button */}
             <button
@@ -317,7 +322,7 @@ export default function RegisterPage() {
                 !formik.dirty ||
                 !formik.values.terms
               }
-              className={`w-full py-2 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
+              className={`w-full py-1 mt-1 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
     ${
       loading || !formik.isValid || !formik.dirty
         ? "bg-gray-400 text-white cursor-not-allowed"
@@ -328,7 +333,7 @@ export default function RegisterPage() {
             </button>
 
             {/* Login prompt */}
-            <div className="text-center text-sm text-black -mt-1 leading-tight">
+            <div className="text-center text-sm text-black mt-1 max-md:!mt-2 leading-tight">
               Already have an account ?{" "}
               <span
                 onClick={handleNavigateToLogin}
