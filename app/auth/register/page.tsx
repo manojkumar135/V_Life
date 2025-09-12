@@ -140,10 +140,10 @@ export default function RegisterPage() {
               </span>
             </div>
 
-           {/* DOB */}
+        {/* DOB */}
 <div className="flex flex-col">
   <div className="relative">
-    {/* Custom calendar icon (purely decorative) */}
+    {/* Calendar icon */}
     <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none" />
 
     <input
@@ -156,23 +156,23 @@ export default function RegisterPage() {
       min="1900-01-01"
       max={new Date().toISOString().split("T")[0]}
       required
-      className="peer uppercase w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none 
-      focus:ring-2 focus:ring-gray-200
-      [appearance:none] 
-      [&::-webkit-calendar-picker-indicator]:absolute 
-      [&::-webkit-calendar-picker-indicator]:inset-0 
-      [&::-webkit-calendar-picker-indicator]:w-full 
-      [&::-webkit-calendar-picker-indicator]:h-full 
-      [&::-webkit-calendar-picker-indicator]:cursor-pointer 
-      [&::-webkit-calendar-picker-indicator]:opacity-0 
-      [&::-webkit-calendar-picker-indicator]:pointer-events-auto"
+      className="peer w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 
+                 focus:outline-none focus:ring-2 focus:ring-gray-200
+                 [appearance:none] 
+                 [&::-webkit-calendar-picker-indicator]:absolute 
+                 [&::-webkit-calendar-picker-indicator]:inset-0 
+                 [&::-webkit-calendar-picker-indicator]:w-full 
+                 [&::-webkit-calendar-picker-indicator]:h-full 
+                 [&::-webkit-calendar-picker-indicator]:cursor-pointer 
+                 [&::-webkit-calendar-picker-indicator]:opacity-0 
+                 [&::-webkit-calendar-picker-indicator]:pointer-events-auto"
     />
 
-    {/* Only show label when empty */}
+    {/* Show "Date of Birth" when empty */}
     {!formik.values.dob && (
       <label
         htmlFor="dob"
-        className="lg:hidden absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 text-md pointer-events-none"
+        className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 text-md pointer-events-none"
       >
         Date of Birth
       </label>
@@ -184,6 +184,7 @@ export default function RegisterPage() {
     {formik.touched.dob && formik.errors.dob ? formik.errors.dob : "\u00A0"}
   </span>
 </div>
+
 
 
             {/* Email */}
