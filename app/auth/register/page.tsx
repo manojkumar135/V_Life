@@ -15,6 +15,7 @@ import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import customSelectStyles from "@/components/common/CustomSelectStyles";
+import TermsModal from "@/components/TermsModal/terms";
 
 const teams = [
   { value: "left", label: "Left" },
@@ -23,6 +24,8 @@ const teams = [
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+
   const router = useRouter();
 
   const validationSchema = Yup.object({
@@ -109,9 +112,9 @@ export default function RegisterPage() {
       )}
 
       {/* Left Form Section */}
-      <div className="w-1/2 max-md:w-full max-lg:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:h-full">
+      <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:h-full">
         <div
-          className="w-[70%] max-lg:w-[90%] xl:w-[70%] flex flex-col justify-center items-center py-6 max-md:py-4 px-8 bg-[#fffff0]
+          className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 max-md:py-4 px-8 bg-[#fffff0]
          rounded-3xl shadow-lg border-gray-200 border xl:h-[90%] max-md:h-[80%]"
         >
           <p className="text-[1.5rem] max-md:text-[1.5rem] max-lg:text-[1.2rem] font-bold text-black xl:mb-3 mb-5">
@@ -140,23 +143,23 @@ export default function RegisterPage() {
               </span>
             </div>
 
-        {/* DOB */}
-<div className="flex flex-col">
-  <div className="relative">
-    {/* Calendar icon */}
-    <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none" />
+            {/* DOB */}
+            <div className="flex flex-col">
+              <div className="relative">
+                {/* Calendar icon */}
+                <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none" />
 
-    <input
-      type="date"
-      id="dob"
-      name="dob"
-      value={formik.values.dob}
-      onChange={formik.handleChange}
-      onBlur={formik.handleBlur}
-      min="1900-01-01"
-      max={new Date().toISOString().split("T")[0]}
-      required
-      className="peer w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 
+                <input
+                  type="date"
+                  id="dob"
+                  name="dob"
+                  value={formik.values.dob}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  min="1900-01-01"
+                  max={new Date().toISOString().split("T")[0]}
+                  required
+                  className="peer w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 
                  focus:outline-none focus:ring-2 focus:ring-gray-200
                  [appearance:none] 
                  [&::-webkit-calendar-picker-indicator]:absolute 
@@ -166,26 +169,26 @@ export default function RegisterPage() {
                  [&::-webkit-calendar-picker-indicator]:cursor-pointer 
                  [&::-webkit-calendar-picker-indicator]:opacity-0 
                  [&::-webkit-calendar-picker-indicator]:pointer-events-auto"
-    />
+                />
 
-    {/* Show "Date of Birth" when empty */}
-    {!formik.values.dob && (
-      <label
-        htmlFor="dob"
-        className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 text-md pointer-events-none"
-      >
-        Date of Birth
-      </label>
-    )}
-  </div>
+                {/* Show "Date of Birth" when empty */}
+                {!formik.values.dob && (
+                  <label
+                    htmlFor="dob"
+                    className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 text-md pointer-events-none"
+                  >
+                    Date of Birth
+                  </label>
+                )}
+              </div>
 
-  {/* Error message */}
-  <span className="text-red-500 text-xs mt-1 h-4 block">
-    {formik.touched.dob && formik.errors.dob ? formik.errors.dob : "\u00A0"}
-  </span>
-</div>
-
-
+              {/* Error message */}
+              <span className="text-red-500 text-xs mt-1 h-4 block">
+                {formik.touched.dob && formik.errors.dob
+                  ? formik.errors.dob
+                  : "\u00A0"}
+              </span>
+            </div>
 
             {/* Email */}
             <div className="flex flex-col">
@@ -303,7 +306,10 @@ export default function RegisterPage() {
 
               <label htmlFor="terms" className="text-sm text-gray-700">
                 I agree to the{" "}
-                <span className="text-blue-600 cursor-pointer">
+                <span
+                  className="text-blue-600 cursor-pointer"
+                  onClick={() => setIsTermsOpen(true)}
+                >
                   Terms and Conditions
                 </span>
               </label>
@@ -347,13 +353,15 @@ export default function RegisterPage() {
         </div>
       </div>
 
+      <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+
       {/* Right Illustration */}
-      <div className="w-1/2 max-lg:w-2/5 flex items-center justify-center p-1 max-lg:p-0 max-md:hidden">
+      <div className="w-1/2 max-xl:w-2/5 flex items-center justify-center p-1 max-lg:p-0 max-lg:hidden">
         <DotLottieReact
           src="https://lottie.host/b80db1a0-c452-4ff8-847a-eed370430e0e/DePiYXvQ6y.lottie"
           loop
           autoplay
-          style={{ width: "70%", height: "70%" }}
+          style={{ width: "70%", height: "78%" }}
         />
       </div>
     </div>

@@ -171,6 +171,7 @@ async function createTreeNode(user, referrerId, team) {
       name: user.user_name,
       status: user.user_status || "active",
       contact: user.contact || "",
+      dob: user.dob || "",
       mail: user.mail || "",
       address: user.address || "",
       pincode: user.pincode || "",
@@ -233,6 +234,7 @@ async function createUserAndLogin(body) {
   const {
     mail,
     contact,
+    dob,
     user_name,
     first_name,
     last_name,
@@ -284,6 +286,7 @@ async function createUserAndLogin(body) {
     user_name,
     first_name,
     last_name,
+    dob,
     role,
     role_id,
     title,
