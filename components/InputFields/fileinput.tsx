@@ -80,7 +80,7 @@ const FileInput: React.FC<FileInputProps> = ({
 
       <div className="flex flex-col gap-1">
         <div
-          className={`flex flex-col sm:flex-row items-start sm:items-center w-full px-3 py-2 border ${
+          className={`flex flex-col sm:flex-row items-start sm:items-center w-full cursor-pointer px-3 py-2 border ${
             error ? "border-red-500" : "border-gray-400"
           } rounded-lg bg-white text-sm transition-all ${className}`}
         >

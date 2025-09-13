@@ -11,6 +11,7 @@ import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader";
 
 interface WalletFormData {
   walletId: string;
@@ -28,8 +29,8 @@ const WalletSchema = Yup.object().shape({
   accountHolderName: Yup.string().required("Account Holder Name is required"),
   bankName: Yup.string().required("Bank Name is required"),
   accountNumber: Yup.string()
-    .matches(/^\d{9}$|^\d{11}$/, "Account number must be 9 or 11 digits")
-    .required("Account Number is required"),
+  .matches(/^\d{9,18}$/, "Account number must be 9 to 18 digits")
+  .required("Account Number is required"),
   ifscCode: Yup.string()
     .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format")
     .required("IFSC Code is required"),
@@ -146,7 +147,6 @@ export default function EditWalletPage() {
       if (!aadharFileUrl || !panFileUrl) return;
 
       const payload = {
-        wallet_id: values.walletId,
         account_holder_name: values.accountHolderName,
         bank_name: values.bankName,
         account_number: values.accountNumber,
@@ -166,17 +166,28 @@ export default function EditWalletPage() {
       } else {
         ShowToast.error(res.data.message || "Failed to update wallet.");
       }
-    } catch (error) {
-      console.error(error);
-      ShowToast.error("Something went wrong while updating wallet.");
-    } finally {
-      setLoading(false);
-      actions.setSubmitting(false);
-    }
+    }  catch (error: any) {
+          console.error("Add wallet error:", error);
+    
+          if (error.response?.data?.message) {
+            ShowToast.error(error.response.data.message); // ✅ API error message
+          } else {
+            ShowToast.error("Something went wrong while adding wallet."); // fallback
+          }
+        } finally {
+          setLoading(false);
+          actions.setSubmitting(false);
+        }
   };
 
   return (
     <Layout>
+
+       {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
       <div className="p-4">
         <div className="flex items-center mb-4">
           <IoIosArrowBack

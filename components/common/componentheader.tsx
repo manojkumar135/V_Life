@@ -167,7 +167,8 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
         {showAddButton && (
           <button
             onClick={onAdd}
-            className="bg-yellow-300 hover:bg-yellow-400 text-black px-4 max-lg:px-2 py-1.5 max-lg:py-1 font-semibold text-sm rounded-md h-8 flex items-center justify-center"
+            className="bg-yellow-300 hover:bg-yellow-400 text-black px-4 max-lg:px-2 py-1.5 max-lg:py-1 font-semibold text-sm
+             rounded-md h-8 flex items-center justify-center cursor-pointer"
           >
             <span className="block lg:hidden">
               <IoMdAdd size={18} />

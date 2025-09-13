@@ -77,7 +77,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id") || searchParams.get("order_id");
     const search = searchParams.get("search");
-    const user_id = searchParams.get("user_id"); // ✅ new param
+    const user_id = searchParams.get("user_id");
+    const role = searchParams.get("role"); // ✅ role comes from query
 
     // 🔹 If ID or order_id is provided → fetch single order
     if (id) {
@@ -98,14 +99,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: order }, { status: 200 });
     }
 
-    // ✅ Build search query
+    // ✅ Build base query
     let query: Record<string, any> = {};
 
-    // 🔹 If user_id is provided → filter by user
-    if (user_id) {
-      query.user_id = user_id;
+    // 🔹 Role-based access control
+    if (role === "user") {
+      if (!user_id) {
+        return NextResponse.json(
+          { success: false, message: "User ID required for role=user" },
+          { status: 400 }
+        );
+      }
+      query.user_id = user_id; // only their own orders
     }
+    // 🔹 role=admin → no restriction, gets all orders
 
+    // ✅ Apply search if provided
     if (search) {
       const searchTerms = search
         .split(",")
@@ -150,6 +159,7 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 
 // ----------------- PUT -----------------

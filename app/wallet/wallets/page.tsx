@@ -15,7 +15,7 @@ import { useVLife } from "@/store/context";
 
 export default function WalletsPage() {
   const router = useRouter();
-  const { query, setQuery,debouncedQuery } = useSearch(); 
+  const { query, setQuery, debouncedQuery } = useSearch();
   const [walletsData, setWalletsData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -24,13 +24,27 @@ export default function WalletsPage() {
   const API_URL = "/api/wallets-operations";
 
   // Fetch wallets
-  const fetchWallets = useCallback(async (search: string) => {
+  const fetchWallets = useCallback(
+  async (search: string, walletId?: string, id?: string) => {
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL,{
-      params: { search: query }, 
-    });
+
+      const params: any = {
+        search: search || "",
+      };
+
+      // ✅ if not admin, include user_id
+      if (user?.role !== "admin" && user?.user_id) {
+        params.user_id = user.user_id;
+      }
+
+      // ✅ optionally include wallet_id and id if passed
+      if (walletId) params.wallet_id = walletId;
+      if (id) params.id = id;
+
+      const { data } = await axios.get(API_URL, { params });
       const wallets = data.data || [];
+
       setWalletsData(wallets);
       setTotalItems(wallets.length);
     } catch (error) {
@@ -39,12 +53,15 @@ export default function WalletsPage() {
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  },
+  [user?.role, user?.user_id]
+);
 
-    useEffect(() => {
-      if (!user?.user_id) return;
-      fetchWallets(debouncedQuery);
-    }, [debouncedQuery, user?.user_id]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetchWallets(debouncedQuery);
+  }, [debouncedQuery, user, fetchWallets]);
 
   // Delete wallet
   const handleDelete = async (id: string) => {
@@ -71,30 +88,6 @@ export default function WalletsPage() {
     { field: "account_number", headerName: "Account Number", flex: 1.5 },
     { field: "ifsc_code", headerName: "IFSC Code", flex: 1.5 },
     { field: "wallet_status", headerName: "Status", flex: 1 },
-
-    // {
-    //   field: "actions",
-    //   headerName: "Actions",
-    //   flex: 1,
-    //   sortable: false,
-    //   disableColumnMenu: true,
-    //   renderCell: (params: any) => (
-    //     <div className="flex gap-2 items-center">
-    //       <button
-    //         className="text-green-600 cursor-pointer ml-5 mt-2 mr-5"
-    //         onClick={() => handleEdit(params.row._id)}
-    //       >
-    //         <GoPencil size={18} />
-    //       </button>
-    //       <button
-    //         className="text-red-600 cursor-pointer ml-5 mt-2 mr-5"
-    //         onClick={() => handleDelete(params.row._id)}
-    //       >
-    //         <FaTrash size={16} />
-    //       </button>
-    //     </div>
-    //   ),
-    // },
   ];
 
   const handlePageChange = useCallback(
@@ -139,7 +132,7 @@ export default function WalletsPage() {
           title="Wallets"
           search={query}
           setSearch={setQuery}
-          showAddButton
+          showAddButton={walletsData.length === 0} // ✅ show only if no records
           showBack
           onBack={onBack}
           addLabel="+ ADD WALLET"
@@ -159,11 +152,9 @@ export default function WalletsPage() {
           rows={walletsData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
           pageSize={14}
-          statusField="wallet_status" // ← show icon & click
+          statusField="wallet_status"
           onIdClick={(id) => handleEdit(id)}
-          // onStatusClick={(id, status, row) => toggleStatus(id, status, row)}
           checkboxSelection
-          // loading={loading}
           onRowClick={(row) => console.log("Wallet clicked:", row)}
         />
       </div>

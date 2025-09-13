@@ -12,12 +12,12 @@ export async function POST(request) {
     const body = await request.json();
 
     // Generate unique role_id with prefix "RL"
-    const role_id = await generateUniqueCustomId("RL", Role, 8, 8);
+    const group_id = await generateUniqueCustomId("GR", Group, 8, 8);
 
     // Attach role_id to body before saving
-    const newRole = await Role.create({ ...body, role_id });
+    const newGroup = await Group.create({ ...body, group_id });
 
-    return NextResponse.json({ success: true, data: newRole }, { status: 201 });
+    return NextResponse.json({ success: true, data: newGroup }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
       { success: false, message: error.message },

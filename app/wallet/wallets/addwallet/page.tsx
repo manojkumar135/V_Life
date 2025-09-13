@@ -14,6 +14,7 @@ import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader";
 
 interface WalletFormData {
   accountHolderName: string;
@@ -31,7 +32,7 @@ const WalletSchema = Yup.object().shape({
   accountHolderName: Yup.string().required("Account Holder Name is required"),
   bankName: Yup.string().required("Bank Name is required"),
   accountNumber: Yup.string()
-    .matches(/^\d{9}$|^\d{11}$/, "Account number must be 9 or 11 digits")
+    .matches(/^\d{9,18}$/, "Account number must be 9 to 18 digits")
     .required("Account Number is required"),
   confirmAccountNumber: Yup.string()
     .oneOf([Yup.ref("accountNumber")], "Account numbers do not match")
@@ -52,7 +53,10 @@ const WalletSchema = Yup.object().shape({
       "Aadhaar must be an image or PDF",
       (value) =>
         !value ||
-        (value && ["image/", "application/pdf"].some((type) => value.type.startsWith(type)))
+        (value &&
+          ["image/", "application/pdf"].some((type) =>
+            value.type.startsWith(type)
+          ))
     ),
   panFile: Yup.mixed<File>()
     .required("PAN file is required")
@@ -61,7 +65,10 @@ const WalletSchema = Yup.object().shape({
       "PAN must be an image or PDF",
       (value) =>
         !value ||
-        (value && ["image/", "application/pdf"].some((type) => value.type.startsWith(type)))
+        (value &&
+          ["image/", "application/pdf"].some((type) =>
+            value.type.startsWith(type)
+          ))
     ),
 });
 
@@ -112,9 +119,13 @@ export default function AddWalletForm() {
       setLoading(true);
 
       const aadharFileUrl =
-        values.aadharFile instanceof File ? await uploadFile(values.aadharFile) : values.aadharFile;
+        values.aadharFile instanceof File
+          ? await uploadFile(values.aadharFile)
+          : values.aadharFile;
       const panFileUrl =
-        values.panFile instanceof File ? await uploadFile(values.panFile) : values.panFile;
+        values.panFile instanceof File
+          ? await uploadFile(values.panFile)
+          : values.panFile;
 
       if (!aadharFileUrl || !panFileUrl) return;
 
@@ -141,9 +152,14 @@ export default function AddWalletForm() {
       } else {
         ShowToast.error(res.data.message || "Failed to add wallet.");
       }
-    } catch (error) {
-      console.error(error);
-      ShowToast.error("Something went wrong while adding wallet.");
+    } catch (error: any) {
+      console.error("Add wallet error:", error);
+
+      if (error.response?.data?.message) {
+        ShowToast.error(error.response.data.message); // ✅ API error message
+      } else {
+        ShowToast.error("Something went wrong while adding wallet."); // fallback
+      }
     } finally {
       setLoading(false);
       actions.setSubmitting(false);
@@ -152,6 +168,11 @@ export default function AddWalletForm() {
 
   return (
     <Layout>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
       <div className="p-4 max-md:p-2">
         {/* Header */}
         <div className="flex items-center mb-6 max-md:mb-2">
@@ -181,9 +202,13 @@ export default function AddWalletForm() {
                     name="accountHolderName"
                     placeholder="User Name"
                     value={values.accountHolderName}
-                    onChange={(e) => setFieldValue("accountHolderName", e.target.value)}
+                    onChange={(e) =>
+                      setFieldValue("accountHolderName", e.target.value)
+                    }
                     onBlur={handleBlur}
-                    error={touched.accountHolderName ? errors.accountHolderName : ""}
+                    error={
+                      touched.accountHolderName ? errors.accountHolderName : ""
+                    }
                   />
                   <InputField
                     label="Bank Name"
@@ -199,7 +224,9 @@ export default function AddWalletForm() {
                     name="accountNumber"
                     placeholder="1234XXXXXX"
                     value={values.accountNumber}
-                    onChange={(e) => setFieldValue("accountNumber", e.target.value)}
+                    onChange={(e) =>
+                      setFieldValue("accountNumber", e.target.value)
+                    }
                     onBlur={handleBlur}
                     error={touched.accountNumber ? errors.accountNumber : ""}
                   />
@@ -207,9 +234,15 @@ export default function AddWalletForm() {
                     label="Confirm Account Number"
                     name="confirmAccountNumber"
                     value={values.confirmAccountNumber}
-                    onChange={(e) => setFieldValue("confirmAccountNumber", e.target.value)}
+                    onChange={(e) =>
+                      setFieldValue("confirmAccountNumber", e.target.value)
+                    }
                     onBlur={handleBlur}
-                    error={touched.confirmAccountNumber ? errors.confirmAccountNumber : ""}
+                    error={
+                      touched.confirmAccountNumber
+                        ? errors.confirmAccountNumber
+                        : ""
+                    }
                   />
                   <InputField
                     label="IFSC Code"
@@ -228,7 +261,9 @@ export default function AddWalletForm() {
                     label="Aadhar Number"
                     name="aadharNumber"
                     value={values.aadharNumber}
-                    onChange={(e) => setFieldValue("aadharNumber", e.target.value)}
+                    onChange={(e) =>
+                      setFieldValue("aadharNumber", e.target.value)
+                    }
                     onBlur={handleBlur}
                     error={touched.aadharNumber ? errors.aadharNumber : ""}
                   />
@@ -236,7 +271,12 @@ export default function AddWalletForm() {
                     label="Upload Aadhar"
                     name="aadharFile"
                     value={values.aadharFile}
-                    onChange={(e) => setFieldValue("aadharFile", e.currentTarget.files?.[0] || null)}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "aadharFile",
+                        e.currentTarget.files?.[0] || null
+                      )
+                    }
                     onBlur={handleBlur}
                     error={touched.aadharFile ? errors.aadharFile : ""}
                   />
@@ -255,7 +295,12 @@ export default function AddWalletForm() {
                     label="Upload PAN"
                     name="panFile"
                     value={values.panFile}
-                    onChange={(e) => setFieldValue("panFile", e.currentTarget.files?.[0] || null)}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "panFile",
+                        e.currentTarget.files?.[0] || null
+                      )
+                    }
                     onBlur={handleBlur}
                     error={touched.panFile ? errors.panFile : ""}
                   />

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { FaUserCircle } from "react-icons/fa";
 
 export interface TreeNode {
@@ -11,7 +11,7 @@ export interface TreeNode {
   parent?: string;
   left?: TreeNode | null;
   right?: TreeNode | null;
-  leftCount?: string;  
+  leftCount?: string;
   rightCount?: string;
 }
 
@@ -31,12 +31,47 @@ const BinaryTreeNode: React.FC<Props> = ({
   maxLevel = 4,
 }) => {
   const [hovered, setHovered] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+  const nodeRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+
   const isHighlighted = highlightedId === node.user_id;
+
+  useEffect(() => {
+    if (hovered && nodeRef.current && tooltipRef.current) {
+      const nodeRect = nodeRef.current.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
+
+      let top = nodeRect.bottom + window.scrollY + 8; // default below
+      let left = nodeRect.left + nodeRect.width / 2 + window.scrollX - tooltipRect.width / 2;
+
+      // If tooltip goes beyond right edge → clamp
+      if (left + tooltipRect.width > window.innerWidth - 8) {
+        left = window.innerWidth - tooltipRect.width - 8;
+      }
+
+      // If tooltip goes beyond left edge → clamp
+      if (left < 8) {
+        left = 8;
+      }
+
+      // If tooltip goes beyond bottom → show above node
+      if (top + tooltipRect.height > window.scrollY + window.innerHeight - 8) {
+        top = nodeRect.top + window.scrollY - tooltipRect.height - 8;
+      }
+
+      setTooltipPos({ top, left });
+    }
+  }, [hovered]);
 
   return (
     <div className="flex flex-col items-center relative">
       {/* Node */}
       <div
+        ref={nodeRef}
         className="flex flex-col items-center relative cursor-pointer"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
@@ -51,63 +86,67 @@ const BinaryTreeNode: React.FC<Props> = ({
         <span className="text-xs text-center mt-1 font-semibold">
           {node.user_id}
         </span>
-
-        {/* Tooltip */}
-        {hovered && (
-          <div className="absolute top-14 z-10 bg-white border shadow-md rounded-md p-2 text-xs w-60 max-w-65 space-y-1">
-            <div className="flex">
-              <strong className="w-20">ID:</strong>
-              <span className="truncate">{node.user_id}</span>
-            </div>
-            <div className="flex">
-              <strong className="w-20">Name:</strong>
-              <span className="capitalize truncate">{node.name}</span>
-            </div>
-            <div className="flex">
-              <strong className="w-20">Status:</strong>
-              <span
-                className={`${getColor(node.user_status)} capitalize truncate`}
-              >
-                {node.user_status}
-              </span>
-            </div>
-            {node.contact && (
-              <div className="flex">
-                <strong className="w-20">Contact:</strong>
-                <span className="truncate">{node.contact}</span>
-              </div>
-            )}
-            {node.mail && (
-              <div className="flex">
-                <strong className="w-20">Email:</strong>
-                <span className="truncate">{node.mail}</span>
-              </div>
-            )}
-            {node.referBy && (
-              <div className="flex">
-                <strong className="w-20">Refer By:</strong>
-                <span className="truncate">{node.referBy}</span>
-              </div>
-            )}
-            {node.parent && (
-              <div className="flex">
-                <strong className="w-20">Parent:</strong>
-                <span className="truncate">{node.parent}</span>
-              </div>
-            )}
-
-             {/* 👇 Add team counts */}
-    <div className="flex">
-      <strong className="w-20">Left Team:</strong>
-      <span>{node.leftCount ?? 0}</span>
-    </div>
-    <div className="flex">
-      <strong className="w-20">Right Team:</strong>
-      <span>{node.rightCount ?? 0}</span>
-    </div>
-          </div>
-        )}
       </div>
+
+      {/* Tooltip */}
+      {hovered && (
+        <div
+          ref={tooltipRef}
+          className="fixed z-50 bg-white border shadow-md rounded-md p-2 text-xs w-60 max-w-[90vw] space-y-1"
+          style={{ top: tooltipPos.top, left: tooltipPos.left }}
+        >
+          <div className="flex">
+            <strong className="w-20">ID:</strong>
+            <span className="truncate">{node.user_id}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">Name:</strong>
+            <span className="capitalize truncate">{node.name}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">Status:</strong>
+            <span
+              className={`${getColor(node.user_status)} capitalize truncate`}
+            >
+              {node.user_status}
+            </span>
+          </div>
+          {node.contact && (
+            <div className="flex">
+              <strong className="w-20">Contact:</strong>
+              <span className="truncate">{node.contact}</span>
+            </div>
+          )}
+          {node.mail && (
+            <div className="flex">
+              <strong className="w-20">Email:</strong>
+              <span className="truncate">{node.mail}</span>
+            </div>
+          )}
+          {node.referBy && (
+            <div className="flex">
+              <strong className="w-20">Refer By:</strong>
+              <span className="truncate">{node.referBy}</span>
+            </div>
+          )}
+          {node.parent && (
+            <div className="flex">
+              <strong className="w-20">Parent:</strong>
+              <span className="truncate">{node.parent}</span>
+            </div>
+          )}
+
+          {/* 👇 Team counts */}
+          <div className="flex">
+            <strong className="w-20">Left Team:</strong>
+            <span>{node.leftCount ?? 0}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">Right Team:</strong>
+            <span>{node.rightCount ?? 0}</span>
+          </div>
+        </div>
+      )}
 
       {/* Show children only if within level limit */}
       {level < maxLevel && (

@@ -27,7 +27,7 @@ const AlertBox: React.FC<AlertBoxProps> = ({
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-2 right-4 z-50 transition-transform duration-500 ease-in-out transform translate-x-0">
+    <div className="fixed bottom-2 right-4 z-20 transition-transform duration-500 ease-in-out transform translate-x-0">
       <div
         className={`${bgColor} text-white shadow-lg rounded-lg p-4 w-74 relative`}
       >
