@@ -44,7 +44,7 @@ export default function PayAdvancePage() {
   };
 
   const onBack = () => {
-    router.push("/wallet/payout");
+    router.push("/historys");
   };
 
   return (

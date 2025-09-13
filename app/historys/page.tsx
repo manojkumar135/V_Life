@@ -11,17 +11,33 @@ import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
 import { FaPlusCircle, FaMinusCircle } from "react-icons/fa";
+import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import AlertBox from "@/components/Alerts/advanceAlert";
 
 export default function TransactionHistory() {
   const router = useRouter();
   const { user } = useVLife();
+    const user_id = user?.user_id || "";
+
   const { query, setQuery, debouncedQuery } = useSearch();
 
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [advancePaid, setAdvancePaid] = useState<boolean>(false);
 
   const API_URL = "/api/history-operations";
+
+  // ✅ Check if advance is paid (same as payout code)
+  useEffect(() => {
+    if (!user?.user_id) return;
+    (async () => {
+      const paid = await hasAdvancePaid(user.user_id, 10000);
+      setAdvancePaid(paid);
+      setShowAlert(!paid);
+    })();
+  }, [user?.user_id]);
 
   // ✅ Fetch transactions
   const fetchHistory = useCallback(
@@ -33,7 +49,6 @@ export default function TransactionHistory() {
           params: { user_id: user.user_id, search },
         });
         const history = data.data || [];
-        // console.log("Fetched history:", history);
         setHistoryData(history);
         setTotalItems(history.length);
       } catch (error) {
@@ -70,7 +85,6 @@ export default function TransactionHistory() {
         </span>
       ),
     },
-
     {
       field: "status",
       headerName: "Status",
@@ -102,8 +116,29 @@ export default function TransactionHistory() {
     router.push("/wallet");
   };
 
+  // ✅ Navigate to Pay Advance (like payout page)
+  const handlePayAdvance = () => {
+    router.push("/historys/payAdvance");
+  };
+
   return (
     <Layout>
+      {/* 🔔 Right Side Alert */}
+      <AlertBox
+        visible={showAlert}
+        title="Action Required!"
+        message={
+          <>
+            To activate your account, please pay{" "}
+            <span className="font-semibold text-lg">₹10,000</span> as prepaid.
+            This will be adjusted in your first order.
+          </>
+        }
+        buttonLabel="Pay Now"
+        buttonAction={() => router.push("/historys/payAdvance")}
+        onClose={() => setShowAlert(false)}
+      />
+
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -115,6 +150,9 @@ export default function TransactionHistory() {
           title="History"
           search={query}
           setSearch={setQuery}
+          showAddButton={!advancePaid} // ✅ show button only if advance not paid
+          addLabel="Make Payment"
+          onAdd={handlePayAdvance}
           showBack
           onBack={onBack}
           showPagination

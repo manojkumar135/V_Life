@@ -71,7 +71,9 @@ export default function SideNav({
   return (
     <>
       {/* Desktop SideNav */}
-      <div className="hidden md:flex flex-col items-center w-20 bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-500 pt-20 pb-6 rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative">
+      <div className="hidden md:flex flex-col items-center
+       w-20 bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-500 pt-20 pb-6 
+       rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative">
         {/* Logo */}
         <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">
           <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden flex items-center justify-center">
@@ -93,7 +95,7 @@ export default function SideNav({
               <div key={index} className="relative group">
                 <button
                   onClick={() => handleNavigation(item.href)}
-                  className={`group p-2 rounded-xl w-12 h-12 flex items-center justify-center transition-all duration-300 ease-in-out ${
+                  className={`group p-2 rounded-xl w-12 h-12 flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out ${
                     isActive
                       ? "bg-white text-black shadow-lg scale-110"
                       : "text-white hover:text-black hover:scale-105"
@@ -101,7 +103,10 @@ export default function SideNav({
                 >
                   <span className="text-[24px]">{item.icon}</span>
                 </button>
-                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[400ms] transition-opacity duration-200 whitespace-nowrap z-50 pointer-events-none group-hover:pointer-events-auto">
+                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs 
+                font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100
+                 group-hover:delay-[400ms] transition-opacity duration-200 whitespace-nowrap z-50 
+                 pointer-events-none group-hover:pointer-events-auto cursor-pointer">
                   {item.label}
                 </span>
               </div>

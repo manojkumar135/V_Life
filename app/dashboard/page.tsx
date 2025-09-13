@@ -42,6 +42,8 @@ const page = () => {
       checkAdvancePayment();
     }
   }, [user_id]);
+
+  
   return (
     <Layout>
       <div className=" space-y-6 bg-white px-6 scrollbar-hide">
@@ -57,7 +59,7 @@ const page = () => {
             </>
           }
           buttonLabel="Pay Now"
-          buttonAction={() => router.push("/wallet/payout/payAdvance")}
+          buttonAction={() => router.push("/historys/payAdvance")}
           onClose={() => setShowAlert(false)}
         />
 

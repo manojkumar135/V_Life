@@ -134,8 +134,8 @@ export default function WithdrawPage() {
     onPageChange: handlePageChange,
   });
 
-  const handlePayAdvance = () => {
-    router.push("/wallet/payout/payAdvance");
+  const handlePayOut = () => {
+    router.push("/wallet/payout/create");
   };
 
   const onBack = () => {
@@ -154,11 +154,11 @@ export default function WithdrawPage() {
           title="Payouts"
           search={query}
           setSearch={setQuery}
-          showAddButton={!advancePaid}
+          showAddButton={user?.role === "admin"}
           showBack
           onBack={onBack}
-          addLabel="Make Payment"
-          onAdd={handlePayAdvance}
+          addLabel="Make Payout"
+          onAdd={handlePayOut}
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}

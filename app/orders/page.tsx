@@ -168,7 +168,7 @@ export default function OrdersPage() {
           </>
         }
         buttonLabel="Pay Now"
-        buttonAction={() => router.push("/wallet/payout/payAdvance")}
+        buttonAction={() => router.push("/historys/payAdvance")}
         onClose={() => setShowAlert(false)}
       />
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
