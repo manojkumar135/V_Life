@@ -145,7 +145,7 @@ export default function TreeView() {
 
         {/* Tree View */}
         <div className="flex-1 max-lg:flex overflow-x-auto pt-5">
-          <div className="flex justify-center min-w-[900px] xl:min-w-[1000px] max-md:pl-[100%] max-lg:pl-[50%]">
+          <div className="flex justify-center min-w-[950px] lg:min-w-[900px] xl:min-w-[1000px]  max-md:ml-[5%] max-lg:ml-[10%]">
             {currentRoot ? (
               <BinaryTreeNode
                 node={currentRoot}

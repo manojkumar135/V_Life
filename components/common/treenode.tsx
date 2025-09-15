@@ -72,7 +72,7 @@ const BinaryTreeNode: React.FC<Props> = ({
   }, [hovered]);
 
   return (
-    <div className="flex flex-col items-center relative w-14/15">
+    <div className="flex flex-col items-center relative w-full xl:w-14/15 ">
       {/* Node */}
       <div
         ref={nodeRef}
@@ -82,9 +82,9 @@ const BinaryTreeNode: React.FC<Props> = ({
       >
         <FaUserCircle
           className={`${getColor(node.user_status)} ${
-            isHighlighted ? "ring-4 ring-blue-700 rounded-full" : ""
+            isHighlighted ? "ring-4 ring-blue-700 rounded-full" : "mt-1"
           }`}
-          size={40}
+          size={35}
         />
         <span className="text-xs text-center mt-1 capitalize">{node.name}</span>
         <span className="text-xs text-center mt-1 font-semibold">
@@ -156,8 +156,8 @@ const BinaryTreeNode: React.FC<Props> = ({
       {level < maxLevel && (
         <>
           {/* Connector lines */}
-          <div className="relative flex justify-center mt-2 w-full">
-            <div className="absolute top-0 left-1/4 right-1/4 border-t border-gray-400" />
+          <div className="relative flex justify-center mt-2 w-full max-lg:min-w-[250px]">
+            <div className="absolute top-0 left-1/4  right-1/4  border-t border-gray-400 " />
             <div className="absolute top-0 left-1/4 border-l border-gray-400 h-2" />
             <div className="absolute top-0 right-1/4 border-l border-gray-400 h-2" />
           </div>
@@ -175,7 +175,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   maxLevel={maxLevel}
                 />
               ) : (
-                <div className="w-12 h-12 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400">
+                <div className="w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1">
                   Empty
                 </div>
               )}
@@ -192,7 +192,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   maxLevel={maxLevel}
                 />
               ) : (
-                <div className="w-12 h-12 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400">
+                <div className="w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1">
                   Empty
                 </div>
               )}
