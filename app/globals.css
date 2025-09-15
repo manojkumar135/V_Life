@@ -1,9 +1,14 @@
 @import "tailwindcss";
 
-/* Base (default to light) */
+/* Base (default to light theme) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #ffffff;   /* white */
+  --foreground: #171717;   /* dark gray text */
+}
+
+.dark {
+  --background: #171717;   /* dark gray background */
+  --foreground: #ffffff;   /* white text */
 }
 
 /* Explicit light theme */
@@ -18,21 +23,13 @@
   --foreground: #ededed;
 }
 
-/* If user chooses "system", fallback to OS preference */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]):not([data-theme="dark"]) {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 /* Tailwind inline theme vars */
-@theme inline {
+/* @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
+} */
 
 body {
   background: var(--background);
@@ -48,16 +45,6 @@ body {
 .MuiDataGrid-columnHeaderCheckbox svg {
   color: white !important;
 }
-
-/* [data-sonner-toast] {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-[data-sonner-toast] [data-close-button] {
-  margin-left: auto;
-} */
 
 /* Custom scrollbar */
 .scrollbar-custom::-webkit-scrollbar {
@@ -78,9 +65,6 @@ body {
 .scrollbar-custom::-webkit-scrollbar-thumb:hover {
   background: #0c3978; /* Thumb hover color */
 }
-
-
-
 
 /* Hide Chrome/Edge/Safari's native DD-MM-YYYY hint when empty */
 input[type="date"]::-webkit-datetime-edit {

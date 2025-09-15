@@ -266,7 +266,7 @@ export default function RegisterPage() {
                   }
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
-                  placeholder="Select Team"
+                  placeholder="Select Position"
                   className="w-full "
                 />
               </div>

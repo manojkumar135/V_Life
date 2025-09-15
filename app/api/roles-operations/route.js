@@ -137,10 +137,6 @@ export async function PUT(request) {
 
 
 // PATCH - Partial update
-import { NextResponse } from "next/server";
-import mongoose from "mongoose";
-import connectDB from "@/lib/connectDB";
-import Role from "@/models/Role";
 
 export async function PATCH(request) {
   try {

@@ -131,7 +131,7 @@ export default function TreeView() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by ID or name..."
-              className="border px-2 py-1 rounded-md w-64 max-md:w-52"
+              className="border px-2 py-1 rounded-md w-64 max-md:w-58"
             />
             <SubmitButton
               type="button"

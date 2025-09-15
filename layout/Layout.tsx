@@ -23,24 +23,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-        <RefreshHandler />
+      <RefreshHandler />
 
-        {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <Loader />
-          </div>
-        )}
-        {/* <Toaster position="top-right" richColors expand headless /> */}
-
-        <div className="flex h-screen bg-white overflow-hidden w-screen">
-          <SideNav isOpen={showSidebar} setIsOpen={setShowSidebar} />
-          <div className="flex flex-col flex-1">
-            <Header onMenuClick={() => setShowSidebar(true)} />
-            <main className="flex-1 overflow-y-auto p-0 bg-white scrollbar-hide max-md:w-screen">
-              {children}
-            </main>
-          </div>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
         </div>
+      )}
+      {/* <Toaster position="top-right" richColors expand headless /> */}
+
+      <div className="flex h-screen bg-[var(--background)] text-[var(--foreground)]  overflow-hidden w-screen">
+        <SideNav isOpen={showSidebar} setIsOpen={setShowSidebar} />
+        <div className="flex flex-col flex-1">
+          <Header onMenuClick={() => setShowSidebar(true)} />
+          <main className="flex-1 overflow-y-auto p-0  scrollbar-hide max-md:w-screen">
+            {children}
+          </main>
+        </div>
+      </div>
     </>
   );
 }

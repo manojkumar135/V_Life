@@ -41,38 +41,37 @@ const BinaryTreeNode: React.FC<Props> = ({
   const isHighlighted = highlightedId === node.user_id;
 
   useEffect(() => {
-  if (hovered && nodeRef.current && tooltipRef.current) {
-    const nodeRect = nodeRef.current.getBoundingClientRect();
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+    if (hovered && nodeRef.current && tooltipRef.current) {
+      const nodeRect = nodeRef.current.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-    const LEFT_MARGIN = 80; // increased left margin
+      const LEFT_MARGIN = 80; // increased left margin
 
-    let top = nodeRect.bottom + window.scrollY + 8; // default below
-    let left =
-      nodeRect.left +
-      nodeRect.width / 2 +
-      window.scrollX -
-      tooltipRect.width / 2;
+      let top = nodeRect.bottom + window.scrollY + 8; // default below
+      let left =
+        nodeRect.left +
+        nodeRect.width / 2 +
+        window.scrollX -
+        tooltipRect.width / 2;
 
-    // If tooltip goes beyond right edge → clamp
-    if (left + tooltipRect.width > window.innerWidth - 8) {
-      left = window.innerWidth - tooltipRect.width - 8;
+      // If tooltip goes beyond right edge → clamp
+      if (left + tooltipRect.width > window.innerWidth - 8) {
+        left = window.innerWidth - tooltipRect.width - 8;
+      }
+
+      // If tooltip goes beyond left edge → clamp
+      if (left < LEFT_MARGIN) {
+        left = LEFT_MARGIN;
+      }
+
+      // If tooltip goes beyond bottom → show above node
+      if (top + tooltipRect.height > window.scrollY + window.innerHeight - 8) {
+        top = nodeRect.top + window.scrollY - tooltipRect.height - 8;
+      }
+
+      setTooltipPos({ top, left });
     }
-
-    // If tooltip goes beyond left edge → clamp
-    if (left < LEFT_MARGIN) {
-      left = LEFT_MARGIN;
-    }
-
-    // If tooltip goes beyond bottom → show above node
-    if (top + tooltipRect.height > window.scrollY + window.innerHeight - 8) {
-      top = nodeRect.top + window.scrollY - tooltipRect.height - 8;
-    }
-
-    setTooltipPos({ top, left });
-  }
-}, [hovered]);
-
+  }, [hovered]);
 
   return (
     <div className="flex flex-col items-center relative w-full xl:w-14/15 ">

@@ -18,14 +18,14 @@ import Image from "next/image";
 import ShowToast from "@/components/common/Toast/toast";
 import Images from "@/constant/Image";
 import Loader from "@/components/common/loader";
-import { useVLife } from "@/store/context";
+import { useVLife,ThemeType  } from "@/store/context";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { user, setUser, clearUser } = useVLife();
+  const { user, setUser,setTheme, clearUser } = useVLife();
 
   // Formik + Yup schema
   const formik = useFormik({
@@ -55,9 +55,12 @@ export default function LoginPage() {
             role: res.data.data.role,
             mail: res.data.data.mail,
             contact: res.data.data.contact,
-            
             status: res.data.data.status,
           });
+          // ✅ Pass theme string directly
+      if (res.data.data.theme) {
+        setTheme(res.data.data.theme as ThemeType);
+      }
 
           ShowToast.success("Login successful!");
           router.push("/dashboard");
