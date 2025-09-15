@@ -49,19 +49,16 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             className="text-gray-800 dark:text-gray-200"
           />
         </button>
-        <h1 className="text-[1.5rem] max-md:text-[1rem] font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[400px] max-md:max-w-[150px]">
+        <h1 className="text-[1.5rem] max-md:text-[1rem] font-semibold text-gray-800 truncate max-w-[400px] max-md:max-w-[150px]">
           Hello, {user?.user_name || "User"}
         </h1>
       </div>
 
       <div className="flex items-center space-x-4 max-md:space-x-2">
         <button className="p-1 rounded-full bg-gray-100 ">
-          <MdNotificationsNone className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+          <MdNotificationsNone className="w-6 h-6 text-gray-700" />
         </button>
-        <button
-          className="p-2 rounded-full bg-gray-100 "
-          onClick={toggleTheme}
-        >
+        <button className="p-2 rounded-full bg-gray-100 " onClick={toggleTheme}>
           {theme === "dark" ? (
             <FaSun className="w-5 h-5 text-yellow-400" />
           ) : (
@@ -72,7 +69,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           className="px-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
           title={user?.user_id}
         >
-          <HiUserCircle className="w-10 h-10 max-md:w-8 max-md:h-8 text-black dark:text-purple-400" />
+          <HiUserCircle className="w-10 h-10 max-md:w-8 max-md:h-8 text-black" />
         </button>
       </div>
     </header>
