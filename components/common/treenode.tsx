@@ -46,7 +46,11 @@ const BinaryTreeNode: React.FC<Props> = ({
       const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
       let top = nodeRect.bottom + window.scrollY + 8; // default below
-      let left = nodeRect.left + nodeRect.width / 2 + window.scrollX - tooltipRect.width / 2;
+      let left =
+        nodeRect.left +
+        nodeRect.width / 2 +
+        window.scrollX -
+        tooltipRect.width / 2;
 
       // If tooltip goes beyond right edge → clamp
       if (left + tooltipRect.width > window.innerWidth - 8) {
@@ -68,7 +72,7 @@ const BinaryTreeNode: React.FC<Props> = ({
   }, [hovered]);
 
   return (
-    <div className="flex flex-col items-center relative">
+    <div className="flex flex-col items-center relative w-14/15">
       {/* Node */}
       <div
         ref={nodeRef}
@@ -159,7 +163,7 @@ const BinaryTreeNode: React.FC<Props> = ({
           </div>
 
           {/* Children */}
-          <div className="flex justify-between mt-2 w-auto xl:w-full min-w-[300px] lg:min-w-[260px] px-4">
+          <div className="flex justify-center mt-2 w-full">
             {/* Left */}
             <div className="flex flex-col items-center flex-1">
               {node.left ? (

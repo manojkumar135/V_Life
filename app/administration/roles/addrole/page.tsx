@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState } from "react";
 import Layout from "@/layout/Layout";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
@@ -10,72 +10,72 @@ import TextareaField from "@/components/InputFields/textareainput";
 import SubmitButton from "@/components/common/submitbutton";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import Loader from "@/components/common/loader";
 
-interface RoleFormData {
-  roleId: string;
-  roleName: string;
-  components: string[];
-  description: string;
-}
+// ✅ Validation Schema
+const validationSchema = Yup.object({
+  roleName: Yup.string().required("* Role Name is required"),
+  components: Yup.array()
+    .of(Yup.string())
+    .min(1, "* At least one component must be selected"),
+  description: Yup.string().optional(),
+});
 
 export default function AddRoleForm() {
   const router = useRouter();
-
-  const [formData, setFormData] = useState<RoleFormData>({
-    roleId: "",
-    roleName: "",
-    components: [],
-    description: "",
-  });
+  const [loading, setLoading] = useState(false);
 
   const componentOptions = ["Administration", "Wallet", "Orders", "History"];
 
-  const handleInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  // ✅ Formik Setup
+  const formik = useFormik({
+    initialValues: {
+      roleName: "",
+      components: [] as string[],
+      description: "",
+    },
+    validationSchema,
+    onSubmit: async (values) => {
+      try {
+        setLoading(true);
 
-  const handleCheckboxChange = (value: string) => {
-    setFormData((prev) => {
-      const exists = prev.components.includes(value);
-      return {
-        ...prev,
-        components: exists
-          ? prev.components.filter((c) => c !== value)
-          : [...prev.components, value],
-      };
-    });
-  };
+        const payload = {
+          role_name: values.roleName,
+          components: values.components,
+          description: values.description,
+          created_by: "admin",
+          last_modified_by: "admin",
+          role_status: "active",
+        };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        // role_id: formData.roleId,
-        role_name: formData.roleName,
-        components: formData.components,
-        description: formData.description,
-        created_by: "admin",
-        last_modified_by: "admin",
-        role_status: "active",
-      };
+        const res = await axios.post("/api/roles-operations", payload);
 
-      const res = await axios.post("/api/roles-operations", payload);
-
-      if (res.data.success) {
-        ShowToast.success("Role created successfully!");
-        router.push("/administration/roles");
+        if (res.data.success) {
+          ShowToast.success("Role created successfully!");
+          router.push("/administration/roles");
+        }
+      } catch (error: any) {
+        console.error(error);
+        const errorMessage =
+          error.response?.data?.message || "Failed to create role.";
+        ShowToast.error(errorMessage);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error(error);
-      ShowToast.error("Failed to create role.");
-    }
-  };
+    },
+  });
 
   return (
     <Layout>
+      {/* Loader Overlay */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
+
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center mb-4">
@@ -91,23 +91,20 @@ export default function AddRoleForm() {
 
         {/* Form Card */}
         <div className="rounded-xl p-6 bg-white">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={formik.handleSubmit} className="space-y-6">
             {/* Input Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {/* <InputField
-                label="Role ID"
-                name="roleId"
-                type="text"
-                value={formData.roleId}
-                onChange={handleInputChange}
-              /> */}
               <InputField
                 label="Role Name"
                 name="roleName"
                 type="text"
                 placeholder="Role Name"
-                value={formData.roleName}
-                onChange={handleInputChange}
+                value={formik.values.roleName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.roleName ? formik.errors.roleName : undefined
+                }
               />
             </div>
 
@@ -115,8 +112,17 @@ export default function AddRoleForm() {
             <CheckboxField
               label="Components"
               options={componentOptions}
-              selected={formData.components}
-              onChange={handleCheckboxChange}
+              selected={formik.values.components}
+              onChange={(value) => {
+                const exists = formik.values.components.includes(value);
+                const newComponents = exists
+                  ? formik.values.components.filter((c) => c !== value)
+                  : [...formik.values.components, value];
+                formik.setFieldValue("components", newComponents);
+              }}
+              error={
+                formik.touched.components ? formik.errors.components : undefined
+              }
             />
 
             {/* Description */}
@@ -124,8 +130,14 @@ export default function AddRoleForm() {
               label="Description"
               name="description"
               placeholder="Description"
-              value={formData.description}
-              onChange={handleInputChange}
+              value={formik.values.description}
+              onChange={formik.handleChange}
+              // onBlur={formik.handleBlur}
+              // error={
+              //   formik.touched.description
+              //     ? formik.errors.description
+              //     : undefined
+              // }
             />
 
             {/* Submit Button */}

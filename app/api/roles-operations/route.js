@@ -137,25 +137,58 @@ export async function PUT(request) {
 
 
 // PATCH - Partial update
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+import connectDB from "@/lib/connectDB";
+import Role from "@/models/Role";
+
 export async function PATCH(request) {
   try {
     await connectDB();
-    const { id, role_id, ...updates } = await request.json();
+
+    const body = await request.json();
+    const { id, role_id, ...updates } = body;
+
+    // also check query params
+    const { searchParams } = new URL(request.url);
+    const queryRoleId = searchParams.get("role_id");
+
+    // pick whichever is available
+    const updateId = id || role_id || queryRoleId;
+
+    if (!updateId) {
+      return NextResponse.json(
+        { success: false, message: "id or role_id is required" },
+        { status: 400 }
+      );
+    }
 
     let updatedRole;
-    if (mongoose.Types.ObjectId.isValid(id || role_id)) {
-      updatedRole = await Role.findByIdAndUpdate(id || role_id, updates, { new: true });
+
+    if (mongoose.Types.ObjectId.isValid(updateId)) {
+      // if it's a MongoDB ObjectId → update by _id
+      updatedRole = await Role.findByIdAndUpdate(updateId, updates, { new: true });
     } else {
-      updatedRole = await Role.findOneAndUpdate({ role_id }, updates, { new: true });
+      // otherwise → update by custom role_id (e.g., RL123)
+      updatedRole = await Role.findOneAndUpdate({ role_id: updateId }, updates, { new: true });
     }
 
     if (!updatedRole) {
-      return NextResponse.json({ success: false, message: "Role not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Role not found" },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json({ success: true, data: updatedRole }, { status: 200 });
+    return NextResponse.json(
+      { success: true, data: updatedRole },
+      { status: 200 }
+    );
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 

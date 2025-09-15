@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, ChangeEvent, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/layout/Layout";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter, useParams } from "next/navigation";
@@ -10,25 +10,23 @@ import TextareaField from "@/components/InputFields/textareainput";
 import SubmitButton from "@/components/common/submitbutton";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader";
+import { useFormik } from "formik";
+import * as Yup from "yup";
 
-interface GroupFormData {
-  groupId: string;
-  groupName: string;
-  components: string[];
-  description: string;
-}
+// ✅ Validation Schema
+const validationSchema = Yup.object({
+  groupName: Yup.string().required("* Group Name is required"),
+  components: Yup.array()
+    .of(Yup.string())
+    .min(1, "* At least one component must be selected"),
+  description: Yup.string().optional(),
+});
 
 export default function EditGroupPage() {
   const router = useRouter();
   const params = useParams();
   const groupId = params?.id as string;
-
-  const [formData, setFormData] = useState<GroupFormData>({
-    groupId: "",
-    groupName: "",
-    components: [],
-    description: "",
-  });
 
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +38,47 @@ export default function EditGroupPage() {
     "None",
   ];
 
-  // Fetch group data on mount
+  // ✅ Initialize Formik
+  const formik = useFormik({
+    initialValues: {
+      groupId: "",
+      groupName: "",
+      components: [] as string[],
+      description: "",
+    },
+    validationSchema,
+    enableReinitialize: true, // important to allow async data load
+    onSubmit: async (values) => {
+      try {
+        setLoading(true);
+        const payload = {
+          group_name: values.groupName,
+          roles: values.components,
+          description: values.description,
+          last_modified_by: "admin", // dynamic if needed
+        };
+
+        const res = await axios.patch(
+          `/api/groups-operations?group_id=${groupId}`,
+          payload
+        );
+
+        if (res.data.success) {
+          ShowToast.success("Group updated successfully!");
+          router.push("/administration/groups");
+        }
+      } catch (error: any) {
+        console.error("Error updating group:", error);
+        const errorMessage =
+          error.response?.data?.message || "Failed to update group.";
+        ShowToast.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+  });
+
+  // ✅ Fetch existing group details
   useEffect(() => {
     if (!groupId) return;
     const fetchGroup = async () => {
@@ -50,15 +88,18 @@ export default function EditGroupPage() {
           `/api/groups-operations?group_id=${groupId}`
         );
         if (data?.data) {
-          setFormData({
+          formik.setValues({
             groupId: data.data.group_id,
             groupName: data.data.group_name,
             components: data.data.roles || [],
             description: data.data.description || "",
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching group:", error);
+        const errorMessage =
+          error.response?.data?.message || "Failed to fetch group.";
+        ShowToast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -66,52 +107,15 @@ export default function EditGroupPage() {
     fetchGroup();
   }, [groupId]);
 
-  const handleInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (value: string) => {
-    setFormData((prev) => {
-      const exists = prev.components.includes(value);
-      return {
-        ...prev,
-        components: exists
-          ? prev.components.filter((c) => c !== value)
-          : [...prev.components, value],
-      };
-    });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      // console.log(groupId)
-      const payload = {
-        // group_id: formData.groupId,
-        group_name: formData.groupName,
-        roles: formData.components,
-        description: formData.description,
-        last_modified_by: "admin", // you can set dynamically
-      };
-
-      await axios.patch(`/api/groups-operations?group_id=${groupId}`, payload);
-      ShowToast.success("Group updated successfully!");
-
-      router.push("/administration/groups");
-    } catch (error) {
-      console.error("Error updating group:", error);
-      ShowToast.error("Failed to update Group.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Layout>
+      {/* Loader Overlay */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
+
       <div className="p-4">
         {/* Header */}
         <div className="flex items-center mb-4">
@@ -127,14 +131,13 @@ export default function EditGroupPage() {
 
         {/* Form Card */}
         <div className="rounded-xl p-6 bg-white">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={formik.handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <InputField
                 label="Group ID"
                 name="groupId"
                 type="text"
-                value={formData.groupId}
-                // onChange={handleInputChange}
+                value={formik.values.groupId}
                 readOnly
                 disabled
               />
@@ -143,24 +146,43 @@ export default function EditGroupPage() {
                 name="groupName"
                 type="text"
                 placeholder="Group Name"
-                value={formData.groupName}
-                onChange={handleInputChange}
+                value={formik.values.groupName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.groupName ? formik.errors.groupName : undefined
+                }
               />
             </div>
 
             <CheckboxField
               label="Components"
               options={componentOptions}
-              selected={formData.components}
-              onChange={handleCheckboxChange}
+              selected={formik.values.components}
+              onChange={(value) => {
+                const exists = formik.values.components.includes(value);
+                const newComponents = exists
+                  ? formik.values.components.filter((c) => c !== value)
+                  : [...formik.values.components, value];
+                formik.setFieldValue("components", newComponents);
+              }}
+              error={
+                formik.touched.components ? formik.errors.components : undefined
+              }
             />
 
             <TextareaField
               label="Description"
               name="description"
               placeholder="Description"
-              value={formData.description}
-              onChange={handleInputChange}
+              value={formik.values.description}
+              onChange={formik.handleChange}
+              // onBlur={formik.handleBlur}
+              // error={
+              //   formik.touched.description
+              //     ? formik.errors.description
+              //     : undefined
+              // }
             />
 
             <div className="flex justify-end">

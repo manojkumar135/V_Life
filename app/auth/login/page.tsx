@@ -55,6 +55,7 @@ export default function LoginPage() {
             role: res.data.data.role,
             mail: res.data.data.mail,
             contact: res.data.data.contact,
+            
             status: res.data.data.status,
           });
 

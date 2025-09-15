@@ -8,7 +8,7 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 export async function POST(request) {
   try {
     await connectDB();
-
+ 
     const body = await request.json();
 
     // Generate unique role_id with prefix "RL"
@@ -124,8 +124,11 @@ export async function PATCH(request) {
     const body = await request.json();
     const { id, group_id, ...rest } = body;
 
-    // pick whichever exists
-    const updateId = id || group_id;
+    // also check query params
+    const { searchParams } = new URL(request.url);
+    const queryGroupId = searchParams.get("group_id");
+
+    const updateId = id || group_id || queryGroupId; // ✅ check query too
 
     if (!updateId) {
       return NextResponse.json(
@@ -135,12 +138,9 @@ export async function PATCH(request) {
     }
 
     let updatedGroup;
-
-    // If valid ObjectId → use _id
     if (mongoose.Types.ObjectId.isValid(updateId)) {
       updatedGroup = await Group.findByIdAndUpdate(updateId, rest, { new: true });
     } else {
-      // Otherwise assume it's a group_id (like "GR123")
       updatedGroup = await Group.findOneAndUpdate({ group_id: updateId }, rest, { new: true });
     }
 
@@ -159,6 +159,7 @@ export async function PATCH(request) {
     );
   }
 }
+
 
 // DELETE - Remove a group
 export async function DELETE(request) {

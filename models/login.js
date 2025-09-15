@@ -25,7 +25,7 @@ const LoginSchema = new mongoose.Schema(
     login_id: { type: String, required: true, unique: true },
     user_id: { type: String, required: true }, // link to User schema
     user_name: { type: String, required: true },
-    dob: { type: String,required: true },
+    dob: { type: String, required: true },
     role: { type: String },
     role_id: { type: String },
     title: { type: String },
@@ -34,6 +34,11 @@ const LoginSchema = new mongoose.Schema(
     first_name: { type: String },
     last_name: { type: String },
     referBy: { type: String },
+    theme: {
+      type: String,
+      enum: ["light", "dark", "system"],
+      default: "light",
+    },
 
     mail: { type: String, required: true },
     password: { type: String, required: true }, // hashed password
