@@ -498,7 +498,7 @@ export default function AddOrderPage() {
             border border-yellow-400
             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)]
             active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)]
-            transition-all duration-200
+            transition-all duration-200 cursor-pointer
           "
           onClick={() => setShowCart(true)}
         >

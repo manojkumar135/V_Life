@@ -8,7 +8,7 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 export async function POST(request) {
   try {
     await connectDB();
- 
+
     const body = await request.json();
 
     // Generate unique role_id with prefix "RL"
@@ -64,10 +64,10 @@ export async function GET(request) {
 
       // Build OR conditions for each search term across all fields
       query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp(term, "i"); // case-insensitive
+        const regex = new RegExp("^" + term, "i");
         return [
-          { group_id: regex },  
-          { group_name: regex }, 
+          { group_id: regex },
+          { group_name: regex },
           { description: regex },
           { roles: regex },
           { group_status: regex },

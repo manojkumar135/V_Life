@@ -17,6 +17,9 @@ import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 
 interface WalletFormData {
+  userId: string;
+  userName: string;
+  contact: string;
   accountHolderName: string;
   bankName: string;
   accountNumber: string;
@@ -28,78 +31,15 @@ interface WalletFormData {
   panFile: File | null;
 }
 
-const WalletSchema = Yup.object().shape({
-  accountHolderName: Yup.string().required("Account Holder Name is required"),
-  bankName: Yup.string().required("Bank Name is required"),
-  accountNumber: Yup.string()
-    .matches(/^\d{9,18}$/, "Account number must be 9 to 18 digits")
-    .required("Account Number is required"),
-  confirmAccountNumber: Yup.string()
-    .oneOf([Yup.ref("accountNumber")], "Account numbers do not match")
-    .required("Confirm Account Number is required"),
-  ifscCode: Yup.string()
-    .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format")
-    .required("IFSC Code is required"),
-  aadharNumber: Yup.string()
-    .matches(/^\d{12}$/, "Aadhaar must be 12 digits")
-    .required("Aadhaar Number is required"),
-  panNumber: Yup.string()
-    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "PAN must be 10 characters")
-    .required("PAN Number is required"),
-  aadharFile: Yup.mixed<File>()
-    .required("Aadhaar file is required")
-    .test(
-      "fileType",
-      "Aadhaar must be an image or PDF",
-      (value) =>
-        !value ||
-        (value &&
-          ["image/", "application/pdf"].some((type) =>
-            value.type.startsWith(type)
-          ))
-    ),
-  panFile: Yup.mixed<File>()
-    .required("PAN file is required")
-    .test(
-      "fileType",
-      "PAN must be an image or PDF",
-      (value) =>
-        !value ||
-        (value &&
-          ["image/", "application/pdf"].some((type) =>
-            value.type.startsWith(type)
-          ))
-    ),
-});
-
 export default function AddWalletForm() {
   const router = useRouter();
   const { user } = useVLife();
   const [loading, setLoading] = useState(false);
 
-  const uploadFile = async (file: File): Promise<string | null> => {
-    try {
-      const fileForm = new FormData();
-      fileForm.append("file", file);
-
-      const res = await axios.post("/api/getFileUrl", fileForm, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-
-      if (res.data.success) {
-        return res.data.fileUrl;
-      } else {
-        ShowToast.error(res.data.message || "File upload failed");
-        return null;
-      }
-    } catch (error) {
-      console.error("File upload error:", error);
-      ShowToast.error("Failed to upload file");
-      return null;
-    }
-  };
-
   const initialValues: WalletFormData = {
+    userId: user.role === "user" ? user.user_id : "",
+    userName: user.role === "user" ? user.user_name : "",
+    contact: user.role === "user" ? user.contact || "" : "",
     accountHolderName: "",
     bankName: "",
     accountNumber: "",
@@ -111,12 +51,114 @@ export default function AddWalletForm() {
     panFile: null,
   };
 
+  const WalletSchema = Yup.object().shape({
+    userId: Yup.string().required("* User ID is required"),
+    userName: Yup.string().required("* User Name is required"),
+    contact: Yup.string().required("* Contact is required"),
+    accountHolderName: Yup.string().required("* Account Holder Name is required"),
+    bankName: Yup.string().required("* Bank Name is required"),
+    accountNumber: Yup.string()
+      .matches(/^\d{9,18}$/, "Account number must be 9 to 18 digits")
+      .required("Account Number is required"),
+    confirmAccountNumber: Yup.string()
+      .oneOf([Yup.ref("accountNumber")], "Account numbers do not match")
+      .required("* Confirm Account Number is required"),
+    ifscCode: Yup.string()
+      .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format")
+      .required("IFSC Code is required"),
+    aadharNumber: Yup.string()
+      .matches(/^\d{12}$/, "Aadhaar must be 12 digits")
+      .required("* Aadhaar Number is required"),
+    panNumber: Yup.string()
+      .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "* PAN must be 10 characters")
+      .required("* PAN Number is required"),
+    aadharFile: Yup.mixed<File>()
+      .required("* Aadhaar file is required")
+      .test(
+        "fileType",
+        "* Aadhaar must be an image or PDF",
+        (value) =>
+          !value ||
+          (value &&
+            ["image/", "application/pdf"].some((type) =>
+              value.type.startsWith(type)
+            ))
+      ),
+    panFile: Yup.mixed<File>()
+      .required("* PAN file is required")
+      .test(
+        "fileType",
+        "* PAN must be an image or PDF",
+        (value) =>
+          !value ||
+          (value &&
+            ["image/", "application/pdf"].some((type) =>
+              value.type.startsWith(type)
+            ))
+      ),
+  });
+
+  const uploadFile = async (file: File): Promise<string | null> => {
+    try {
+      const fileForm = new FormData();
+      fileForm.append("file", file);
+
+      const res = await axios.post("/api/getFileUrl", fileForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (res.data.success) return res.data.fileUrl;
+      ShowToast.error(res.data.message || "File upload failed");
+      return null;
+    } catch (error) {
+      console.error("File upload error:", error);
+      ShowToast.error("Failed to upload file");
+      return null;
+    }
+  };
+
+  const fetchUserById = async (
+    userId: string,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
+    try {
+      const res = await axios.get(`/api/users-operations?id=${userId}`);
+      if (res.data.success && res.data.data) {
+        const userData = res.data.data;
+        setFieldValue("userName", userData.user_name);
+        setFieldValue("contact", userData.contact || "");
+        // setFieldValue("accountHolderName", userData.user_name);
+      } else {
+        ShowToast.error("User not found");
+        setFieldValue("userName", "");
+        setFieldValue("contact", "");
+        // setFieldValue("accountHolderName", "");
+      }
+    } catch (error) {
+      console.error(error);
+      ShowToast.error("Failed to fetch user");
+    }
+  };
+
   const handleSubmit = async (
     values: WalletFormData,
     actions: FormikHelpers<WalletFormData>
   ) => {
     try {
       setLoading(true);
+
+      if (user.role === "admin") {
+        // Check if user exists and has no wallet
+        const walletCheck = await axios.get(
+          `/api/wallets-operations?user_id=${values.userId}`
+        );
+        if (!walletCheck.data.success || walletCheck.data.exists) {
+          ShowToast.error(
+            "Wallet already exists for this user or user not found"
+          );
+          return;
+        }
+      }
 
       const aadharFileUrl =
         values.aadharFile instanceof File
@@ -130,6 +172,9 @@ export default function AddWalletForm() {
       if (!aadharFileUrl || !panFileUrl) return;
 
       const payload = {
+        user_id: values.userId,
+        user_name: values.userName,
+        contact: values.contact,
         account_holder_name: values.accountHolderName,
         bank_name: values.bankName,
         account_number: values.accountNumber,
@@ -139,8 +184,6 @@ export default function AddWalletForm() {
         aadhar_file: aadharFileUrl,
         pan_file: panFileUrl,
         created_by: user.user_id,
-        user_id: user.user_id,
-        user_name: user.user_name,
         wallet_status: "active",
       };
 
@@ -154,12 +197,10 @@ export default function AddWalletForm() {
       }
     } catch (error: any) {
       console.error("Add wallet error:", error);
-
-      if (error.response?.data?.message) {
-        ShowToast.error(error.response.data.message); // ✅ API error message
-      } else {
-        ShowToast.error("Something went wrong while adding wallet."); // fallback
-      }
+      ShowToast.error(
+        error.response?.data?.message ||
+          "Something went wrong while adding wallet."
+      );
     } finally {
       setLoading(false);
       actions.setSubmitting(false);
@@ -196,7 +237,73 @@ export default function AddWalletForm() {
           >
             {({ values, setFieldValue, errors, touched, handleBlur }) => (
               <Form className="grid grid-cols-1 gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {/* User Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <InputField
+                    label="User ID"
+                    name="userId"
+                    placeholder="Enter User ID"
+                    value={values.userId}
+                    readOnly={user.role === "user"}
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setFieldValue("userId", value);
+
+                      if (user.role === "admin" && value.length === 10) {
+                        try {
+                          // Step 1: check if wallet already exists
+                          const res = await axios.get(
+                            `/api/wallets-operations?user_id=${value}`
+                          );
+                          console.log(res);
+
+                          if (
+                            res.data?.success &&
+                            Array.isArray(res.data.data) &&
+                            res.data.data.length > 0
+                          ) {
+                            // Wallet already exists
+                            ShowToast.error(
+                              "This User ID already has a wallet"
+                            );
+
+                            // Reset form fields so admin cannot proceed
+                            setFieldValue("userId", "");
+                            setFieldValue("userName", "");
+                            setFieldValue("contact", "");
+
+                            return; // 🚨 Stop here (don’t fetch user details)
+                          }
+
+                          // Step 2: fetch user details only if no wallet exists
+                          await fetchUserById(value, setFieldValue);
+                        } catch (err) {
+                          console.error(err);
+                          ShowToast.error("Error while checking wallet/user");
+                        }
+                      }
+                    }}
+                    onBlur={handleBlur}
+                    error={touched.userId ? errors.userId : ""}
+                  />
+                  <InputField
+                    label="User Name"
+                    name="userName"
+                    placeholder="User Name"
+                    value={values.userName}
+                    readOnly={true}
+                  />
+                  <InputField
+                    label="Contact"
+                    name="contact"
+                    placeholder="Contact"
+                    value={values.contact}
+                    readOnly={true}
+                  />
+                </div>
+
+                {/* Account Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-4">
                   <InputField
                     label="Account Holder Name"
                     name="accountHolderName"
@@ -256,7 +363,7 @@ export default function AddWalletForm() {
                 </div>
 
                 {/* Aadhaar & PAN */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-0">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
                   <InputField
                     label="Aadhar Number"
                     name="aadharNumber"
@@ -282,7 +389,7 @@ export default function AddWalletForm() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-0 lg:-mt-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2 lg:-mt-3">
                   <InputField
                     label="PAN Number"
                     name="panNumber"

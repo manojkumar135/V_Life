@@ -60,7 +60,7 @@ export async function GET(req) {
 
       // Build OR conditions for each search term across all fields
       query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp(term, "i");
+        const regex = new RegExp("^" + term, "i");
         return [
           { user_id: regex },
           { user_name: regex },

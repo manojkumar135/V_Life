@@ -63,8 +63,8 @@ export async function GET(request) {
         .filter(Boolean);
 
       query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp(term, "i"); // case-insensitive
-        const conditions= [
+        const regex = new RegExp("^" + term, "i");
+        const conditions = [
           { withdraw_id: regex },
           { user_id: regex },
           { user_name: regex },

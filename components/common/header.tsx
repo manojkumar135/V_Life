@@ -46,7 +46,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
         >
           <HiOutlineMenuAlt2
             size={30}
-            className="text-gray-800 dark:text-gray-200"
+            className="text-gray-800 "
           />
         </button>
         <h1 className="text-[1.5rem] max-md:text-[1rem] font-semibold text-gray-800 truncate max-w-[400px] max-md:max-w-[150px]">
@@ -66,7 +66,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           )}
         </button>
         <button
-          className="px-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="px-1 rounded-full hover:bg-gray-100"
           title={user?.user_id}
         >
           <HiUserCircle className="w-10 h-10 max-md:w-8 max-md:h-8 text-black" />

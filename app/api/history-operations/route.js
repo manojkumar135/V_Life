@@ -66,7 +66,7 @@ export async function GET(request) {
         .filter(Boolean);
 
       query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp(term, "i");
+        const regex = new RegExp("^" + term, "i"); 
         return [
           { transaction_id: regex },
           { user_id: regex },

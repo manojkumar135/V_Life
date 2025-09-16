@@ -15,6 +15,9 @@ import Loader from "@/components/common/loader";
 
 interface WalletFormData {
   walletId: string;
+  userId: string;
+  userName: string;
+  contact: string;
   accountHolderName: string;
   bankName: string;
   accountNumber: string;
@@ -29,8 +32,8 @@ const WalletSchema = Yup.object().shape({
   accountHolderName: Yup.string().required("Account Holder Name is required"),
   bankName: Yup.string().required("Bank Name is required"),
   accountNumber: Yup.string()
-  .matches(/^\d{9,18}$/, "Account number must be 9 to 18 digits")
-  .required("Account Number is required"),
+    .matches(/^\d{9,18}$/, "Account number must be 9 to 18 digits")
+    .required("Account Number is required"),
   ifscCode: Yup.string()
     .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format")
     .required("IFSC Code is required"),
@@ -47,7 +50,10 @@ const WalletSchema = Yup.object().shape({
       "Aadhaar must be an image or PDF",
       (value) =>
         !value ||
-        (typeof value === "string" || ["image/", "application/pdf"].some((type) => (value as File).type.startsWith(type)))
+        (typeof value === "string" ||
+          ["image/", "application/pdf"].some((type) =>
+            (value as File).type.startsWith(type)
+          ))
     ),
   panFile: Yup.mixed<File | string>()
     .required("PAN file is required")
@@ -56,7 +62,10 @@ const WalletSchema = Yup.object().shape({
       "PAN must be an image or PDF",
       (value) =>
         !value ||
-        (typeof value === "string" || ["image/", "application/pdf"].some((type) => (value as File).type.startsWith(type)))
+        (typeof value === "string" ||
+          ["image/", "application/pdf"].some((type) =>
+            (value as File).type.startsWith(type)
+          ))
     ),
 });
 
@@ -68,6 +77,9 @@ export default function EditWalletPage() {
   const [loading, setLoading] = useState(false);
   const [initialValues, setInitialValues] = useState<WalletFormData>({
     walletId: "",
+    userId: "",
+    userName: "",
+    contact: "",
     accountHolderName: "",
     bankName: "",
     accountNumber: "",
@@ -85,11 +97,16 @@ export default function EditWalletPage() {
     const fetchWallet = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get(`/api/wallets-operations?wallet_id=${walletId}`);
+        const { data } = await axios.get(
+          `/api/wallets-operations?wallet_id=${walletId}`
+        );
         if (data?.data) {
           const wallet = data.data;
           setInitialValues({
             walletId: wallet.wallet_id || "",
+            userId: wallet.user_id || "",
+            userName: wallet.user_name || "",
+            contact: wallet.contact || "",
             accountHolderName: wallet.account_holder_name || "",
             bankName: wallet.bank_name || "",
             accountNumber: wallet.account_number || "",
@@ -137,12 +154,15 @@ export default function EditWalletPage() {
     try {
       setLoading(true);
 
-      // Handle files
-      let aadharFileUrl: string | null = typeof values.aadharFile === "string" ? values.aadharFile : null;
-      let panFileUrl: string | null = typeof values.panFile === "string" ? values.panFile : null;
+      let aadharFileUrl: string | null =
+        typeof values.aadharFile === "string" ? values.aadharFile : null;
+      let panFileUrl: string | null =
+        typeof values.panFile === "string" ? values.panFile : null;
 
-      if (values.aadharFile instanceof File) aadharFileUrl = await uploadFile(values.aadharFile);
-      if (values.panFile instanceof File) panFileUrl = await uploadFile(values.panFile);
+      if (values.aadharFile instanceof File)
+        aadharFileUrl = await uploadFile(values.aadharFile);
+      if (values.panFile instanceof File)
+        panFileUrl = await uploadFile(values.panFile);
 
       if (!aadharFileUrl || !panFileUrl) return;
 
@@ -158,7 +178,10 @@ export default function EditWalletPage() {
         last_modified_by: "admin",
       };
 
-      const res = await axios.patch(`/api/wallets-operations?wallet_id=${walletId}`, payload);
+      const res = await axios.patch(
+        `/api/wallets-operations?wallet_id=${walletId}`,
+        payload
+      );
 
       if (res.data.success) {
         ShowToast.success("Wallet updated successfully!");
@@ -166,24 +189,23 @@ export default function EditWalletPage() {
       } else {
         ShowToast.error(res.data.message || "Failed to update wallet.");
       }
-    }  catch (error: any) {
-          console.error("Add wallet error:", error);
-    
-          if (error.response?.data?.message) {
-            ShowToast.error(error.response.data.message); // ✅ API error message
-          } else {
-            ShowToast.error("Something went wrong while adding wallet."); // fallback
-          }
-        } finally {
-          setLoading(false);
-          actions.setSubmitting(false);
-        }
+    } catch (error: any) {
+      console.error("Update wallet error:", error);
+
+      if (error.response?.data?.message) {
+        ShowToast.error(error.response.data.message);
+      } else {
+        ShowToast.error("Something went wrong while updating wallet.");
+      }
+    } finally {
+      setLoading(false);
+      actions.setSubmitting(false);
+    }
   };
 
   return (
     <Layout>
-
-       {loading && (
+      {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
         </div>
@@ -195,7 +217,9 @@ export default function EditWalletPage() {
             className="mr-3 cursor-pointer"
             onClick={() => router.push("/wallet/wallets")}
           />
-          <h2 className="text-xl max-sm:text-[1rem] font-semibold">Edit Wallet</h2>
+          <h2 className="text-xl max-sm:text-[1rem] font-semibold">
+            Edit Wallet
+          </h2>
         </div>
 
         <div className="rounded-xl p-6 bg-white">
@@ -207,20 +231,27 @@ export default function EditWalletPage() {
           >
             {({ values, setFieldValue, errors, touched, handleBlur }) => (
               <Form className="grid grid-cols-1 gap-6">
+                {/* Readonly fields */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <InputField label="Wallet ID" name="walletId" value={values.walletId} disabled />
+                  <InputField label="User ID" name="userId" value={values.userId} disabled />
+                  <InputField label="User Name" name="userName" value={values.userName} disabled />
+                  <InputField label="Contact" name="contact" value={values.contact} disabled />
+                </div>
+
+                {/* Editable fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  <InputField
-                    label="Wallet ID"
-                    name="walletId"
-                    value={values.walletId}
-                    disabled
-                  />
                   <InputField
                     label="Account Holder Name"
                     name="accountHolderName"
                     value={values.accountHolderName}
-                    onChange={(e) => setFieldValue("accountHolderName", e.target.value)}
+                    onChange={(e) =>
+                      setFieldValue("accountHolderName", e.target.value)
+                    }
                     onBlur={handleBlur}
-                    error={touched.accountHolderName ? errors.accountHolderName : ""}
+                    error={
+                      touched.accountHolderName ? errors.accountHolderName : ""
+                    }
                   />
                   <InputField
                     label="Bank Name"
@@ -234,7 +265,9 @@ export default function EditWalletPage() {
                     label="Account Number"
                     name="accountNumber"
                     value={values.accountNumber}
-                    onChange={(e) => setFieldValue("accountNumber", e.target.value)}
+                    onChange={(e) =>
+                      setFieldValue("accountNumber", e.target.value)
+                    }
                     onBlur={handleBlur}
                     error={touched.accountNumber ? errors.accountNumber : ""}
                   />
@@ -248,12 +281,15 @@ export default function EditWalletPage() {
                   />
                 </div>
 
+                {/* Aadhaar & PAN */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-0">
                   <InputField
                     label="Aadhar Number"
                     name="aadharNumber"
                     value={values.aadharNumber}
-                    onChange={(e) => setFieldValue("aadharNumber", e.target.value)}
+                    onChange={(e) =>
+                      setFieldValue("aadharNumber", e.target.value)
+                    }
                     onBlur={handleBlur}
                     error={touched.aadharNumber ? errors.aadharNumber : ""}
                   />
@@ -261,7 +297,12 @@ export default function EditWalletPage() {
                     label="Upload Aadhar"
                     name="aadharFile"
                     value={values.aadharFile}
-                    onChange={(e) => setFieldValue("aadharFile", e.currentTarget.files?.[0] || null)}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "aadharFile",
+                        e.currentTarget.files?.[0] || null
+                      )
+                    }
                     onBlur={handleBlur}
                     error={touched.aadharFile ? errors.aadharFile : ""}
                   />
@@ -280,14 +321,19 @@ export default function EditWalletPage() {
                     label="Upload PAN"
                     name="panFile"
                     value={values.panFile}
-                    onChange={(e) => setFieldValue("panFile", e.currentTarget.files?.[0] || null)}
+                    onChange={(e) =>
+                      setFieldValue("panFile", e.currentTarget.files?.[0] || null)
+                    }
                     onBlur={handleBlur}
                     error={touched.panFile ? errors.panFile : ""}
                   />
                 </div>
 
+                {/* Submit */}
                 <div className="flex justify-end">
-                  <SubmitButton type="submit">{loading ? "Updating..." : "Update"}</SubmitButton>
+                  <SubmitButton type="submit">
+                    {loading ? "Updating..." : "Update"}
+                  </SubmitButton>
                 </div>
               </Form>
             )}

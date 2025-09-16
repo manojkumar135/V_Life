@@ -10,30 +10,25 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
-import { FaPlusCircle, FaMinusCircle } from "react-icons/fa";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
-import AlertBox from "@/components/Alerts/advanceAlert";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 
-export default function TransactionHistory() {
-  const router = useRouter();
+export default function WithdrawPage() {
   const { user } = useVLife();
-  const user_id = user?.user_id || "";
-
+  const router = useRouter();
   const { query, setQuery, debouncedQuery } = useSearch();
 
-  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [withdrawData, setWithdrawData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
   const [advancePaid, setAdvancePaid] = useState<boolean>(false);
 
   // ✅ date filter state
   const [dateFilter, setDateFilter] = useState<any>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(true); // open on first load
 
-  const API_URL = "/api/history-operations";
+  const API_URL = "/api/withdraw-operations";
 
   // ✅ Check if advance is paid
   useEffect(() => {
@@ -41,18 +36,15 @@ export default function TransactionHistory() {
     (async () => {
       const paid = await hasAdvancePaid(user.user_id, 10000);
       setAdvancePaid(paid);
-      setShowAlert(!paid);
     })();
   }, [user?.user_id]);
 
-  // ✅ Fetch transactions with date filters
-  const fetchHistory = useCallback(async () => {
-    if (!user?.user_id) return;
+  // ✅ Fetch withdrawals
+  const fetchWithdrawals = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await axios.get(API_URL, {
         params: {
-          user_id: user.user_id,
           search: query,
           ...(dateFilter?.type === "on" && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
@@ -61,54 +53,33 @@ export default function TransactionHistory() {
           }),
         },
       });
-      const history = data.data || [];
-      setHistoryData(history);
-      setTotalItems(history.length);
+      const withdrawals = data.data || [];
+      setWithdrawData(withdrawals);
+      setTotalItems(withdrawals.length);
     } catch (error) {
-      console.error("Error fetching history:", error);
-      ShowToast.error("Failed to load history");
+      console.error("Error fetching withdrawals:", error);
+      ShowToast.error("Failed to load withdrawals");
     } finally {
       setLoading(false);
     }
-  }, [user?.user_id, query, dateFilter]);
+  }, [query, dateFilter]);
 
   useEffect(() => {
     if (!user?.user_id) return;
-    fetchHistory();
+    fetchWithdrawals();
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
-  // ✅ Columns setup
+  // ✅ Table columns
   const columns = [
-    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
-    { field: "date", headerName: "Date", flex: 1 },
-    { field: "details", headerName: "Detail", flex: 2 },
-    {
-      field: "amount",
-      headerName: "Amount",
-      flex: 1,
-      renderCell: (params: any) => (
-        <span
-          className={
-            params.row.status === "credit" ? "text-green-600" : "text-red-600"
-          }
-        >
-          ₹ {Number(params.value).toFixed(2)}
-        </span>
-      ),
-    },
-    {
-      field: "status",
-      headerName: "Status",
-      flex: 1,
-      renderCell: (params: any) =>
-        params.value === "credit" ? (
-          <FaPlusCircle className="text-green-600 text-lg mt-2" />
-        ) : (
-          <FaMinusCircle className="text-red-600 text-lg mt-2" />
-        ),
-    },
+    { field: "withdraw_id", headerName: "Transaction ID", flex: 1 },
+    { field: "wallet_id", headerName: "Wallet ID", flex: 1.5 },
+    { field: "user_id", headerName: "Withdraw Address", flex: 2 },
+    { field: "date", headerName: "Date", flex: 1.5 },
+    { field: "withdraw_amount", headerName: "Amount", flex: 1 },
+    { field: "withdraw_status", headerName: "Status", flex: 1 },
   ];
 
+  // ✅ Pagination hook
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({
       totalItems,
@@ -116,32 +87,17 @@ export default function TransactionHistory() {
       onPageChange: () => {},
     });
 
-  const onBack = () => {
-    router.push("/wallet");
+  // ✅ Button actions
+  const handlePayOut = () => {
+    router.push("/wallet/payout/create");
   };
 
-  const handlePayAdvance = () => {
-    router.push("/historys/payAdvance");
+  const onBack = () => {
+    router.push("/wallet/payout");
   };
 
   return (
     <Layout>
-      {/* 🔔 Right Side Alert */}
-      <AlertBox
-        visible={showAlert}
-        title="Action Required!"
-        message={
-          <>
-            To activate your account, please pay{" "}
-            <span className="font-semibold text-lg">₹10,000</span> as prepaid.
-            This will be adjusted in your first order.
-          </>
-        }
-        buttonLabel="Pay Now"
-        buttonAction={handlePayAdvance}
-        onClose={() => setShowAlert(false)}
-      />
-
       <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -150,14 +106,14 @@ export default function TransactionHistory() {
         )}
 
         <HeaderWithActions
-          title="History"
+          title="Daily Payouts"
           search={query}
           setSearch={setQuery}
-          showAddButton={!advancePaid}
-          addLabel="Make Payment"
-          onAdd={handlePayAdvance}
+          showAddButton={user?.role === "admin"}
           showBack
           onBack={onBack}
+          addLabel="Make Payout"
+          onAdd={handlePayOut}
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -171,7 +127,15 @@ export default function TransactionHistory() {
         {/* Floating Filter Icon */}
         <div className="fixed bottom-8 right-8 z-10">
           <button
-            className="relative w-12 h-12 rounded-full bg-black text-yellow-300 flex items-center justify-center shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-yellow-400 hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
+            className="
+                    relative w-12 h-12 rounded-full 
+                    bg-black text-yellow-300 flex items-center justify-center 
+                    shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)]
+                    border border-yellow-400
+                    hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)]
+                    active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)]
+                    transition-all duration-200 cursor-pointer
+                  "
             onClick={() => setShowModal(true)}
           >
             <FiFilter size={20} />
@@ -180,11 +144,11 @@ export default function TransactionHistory() {
 
         <Table
           columns={columns}
-          rows={historyData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={withdrawData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
           pageSize={14}
-          onRowClick={(row) => console.log("Transaction clicked:", row)}
-          checkboxSelection
+          statusField="withdraw_status"
+          onIdClick={(id) => router.push(`/wallet/withdraw/detailview/${id}`)}
         />
 
         {/* Date Filter Modal */}

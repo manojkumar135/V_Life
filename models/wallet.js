@@ -5,6 +5,9 @@ const WalletSchema = new mongoose.Schema(
     wallet_id: { type: String, required: true, unique: true },
     user_id: { type: String, required: true }, // link to User
     user_name: { type: String, required: true },
+    contact: { type: String },
+    mail: { type: String },
+
 
     account_holder_name: { type: String, required: true },
     bank_name: { type: String, required: true },

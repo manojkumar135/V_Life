@@ -122,7 +122,7 @@ export async function GET(request: Request) {
         .filter(Boolean);
 
       query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp(term, "i"); // case-insensitive
+        const regex = new RegExp("^" + term, "i");
         const conditions: any[] = [
           { order_id: regex },
           { user_id: regex },
@@ -159,8 +159,6 @@ export async function GET(request: Request) {
     );
   }
 }
-
-
 
 // ----------------- PUT -----------------
 export async function PUT(request: Request) {

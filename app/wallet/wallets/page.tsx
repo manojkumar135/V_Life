@@ -25,38 +25,37 @@ export default function WalletsPage() {
 
   // Fetch wallets
   const fetchWallets = useCallback(
-  async (search: string, walletId?: string, id?: string) => {
-    try {
-      setLoading(true);
+    async (search: string, walletId?: string, id?: string) => {
+      try {
+        setLoading(true);
 
-      const params: any = {
-        search: search || "",
-      };
+        const params: any = {
+          search: search || "",
+        };
 
-      // ✅ if not admin, include user_id
-      if (user?.role !== "admin" && user?.user_id) {
-        params.user_id = user.user_id;
+        // ✅ if not admin, include user_id
+        if (user?.role !== "admin" && user?.user_id) {
+          params.user_id = user.user_id;
+        }
+
+        // ✅ optionally include wallet_id and id if passed
+        if (walletId) params.wallet_id = walletId;
+        if (id) params.id = id;
+
+        const { data } = await axios.get(API_URL, { params });
+        const wallets = data.data || [];
+
+        setWalletsData(wallets);
+        setTotalItems(wallets.length);
+      } catch (error) {
+        console.error("Error fetching wallets:", error);
+        ShowToast.error("Failed to load wallets");
+      } finally {
+        setLoading(false);
       }
-
-      // ✅ optionally include wallet_id and id if passed
-      if (walletId) params.wallet_id = walletId;
-      if (id) params.id = id;
-
-      const { data } = await axios.get(API_URL, { params });
-      const wallets = data.data || [];
-
-      setWalletsData(wallets);
-      setTotalItems(wallets.length);
-    } catch (error) {
-      console.error("Error fetching wallets:", error);
-      ShowToast.error("Failed to load wallets");
-    } finally {
-      setLoading(false);
-    }
-  },
-  [user?.role, user?.user_id]
-);
-
+    },
+    [user?.role, user?.user_id]
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -83,7 +82,7 @@ export default function WalletsPage() {
 
   const columns = [
     { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
-    { field: "account_holder_name", headerName: "Name", flex: 1 },
+    { field: "user_id", headerName: "User ID", flex: 1 },
     { field: "bank_name", headerName: "Bank Name", flex: 2 },
     { field: "account_number", headerName: "Account Number", flex: 1.5 },
     { field: "ifsc_code", headerName: "IFSC Code", flex: 1.5 },
@@ -132,7 +131,10 @@ export default function WalletsPage() {
           title="Wallets"
           search={query}
           setSearch={setQuery}
-          showAddButton={walletsData.length === 0} // ✅ show only if no records
+          showAddButton={
+            user.role === "admin" ||
+            (user.role === "user" && walletsData.length === 0)
+          }
           showBack
           onBack={onBack}
           addLabel="+ ADD WALLET"

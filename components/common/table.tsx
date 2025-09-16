@@ -131,47 +131,45 @@ export default function Table<T extends Row>({
     });
   }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);
 
-const handleSelectionChange = (newSelectionModel: any) => {
-  // console.log("Raw selection model:", newSelectionModel);
+  const handleSelectionChange = (newSelectionModel: any) => {
+    // console.log("Raw selection model:", newSelectionModel);
 
-  if (!checkboxSelection || !setSelectedRows) return;
+    if (!checkboxSelection || !setSelectedRows) return;
 
-  let selectedIds: string[] = [];
+    let selectedIds: string[] = [];
 
-  // MUI v6+ selection model
-  if (
-    newSelectionModel &&
-    typeof newSelectionModel === "object" &&
-    "ids" in newSelectionModel
-  ) {
-    if (newSelectionModel.type === "exclude") {
-      // All rows are selected except those in ids
-      selectedIds = rows
-        .map((row) => String(row[rowIdField]))
-        .filter((id) => !newSelectionModel.ids.has(id));
-    } else {
-      // Only rows in ids are selected
-      selectedIds = Array.from(newSelectionModel.ids).map(String);
+    // MUI v6+ selection model
+    if (
+      newSelectionModel &&
+      typeof newSelectionModel === "object" &&
+      "ids" in newSelectionModel
+    ) {
+      if (newSelectionModel.type === "exclude") {
+        // All rows are selected except those in ids
+        selectedIds = rows
+          .map((row) => String(row[rowIdField]))
+          .filter((id) => !newSelectionModel.ids.has(id));
+      } else {
+        // Only rows in ids are selected
+        selectedIds = Array.from(newSelectionModel.ids).map(String);
+      }
     }
-  }
-  // MUI v5 selection model (array)
-  else if (Array.isArray(newSelectionModel)) {
-    selectedIds = (newSelectionModel as (string | number)[]).map(String);
-  }
+    // MUI v5 selection model (array)
+    else if (Array.isArray(newSelectionModel)) {
+      selectedIds = (newSelectionModel as (string | number)[]).map(String);
+    }
 
-  const selectedData = rows.filter((row) =>
-    selectedIds.includes(String(row[rowIdField]))
-  );
+    const selectedData = rows.filter((row) =>
+      selectedIds.includes(String(row[rowIdField]))
+    );
 
-  // console.log("Selected rows data:", selectedData);
-  setSelectedRows(selectedData);
-};
-
-
+    // console.log("Selected rows data:", selectedData);
+    setSelectedRows(selectedData);
+  };
 
   return (
     <div
-      className={`flex flex-col w-full min-h-124 max-md:min-h-150 max-lg:min-h-250 ${className}`}
+      className={`flex flex-col w-full min-h-124 max-md:min-h-150 max-lg:min-h-250 2xl:min-h-[85vh] ${className}`}
     >
       <div className=" bg-white shadow-md rounded-lg min-h-124 max-md:min-h-150 max-lg:min-h-250 w-full flex-grow">
         <DataGrid
@@ -291,9 +289,9 @@ const handleSelectionChange = (newSelectionModel: any) => {
                   // flexGrow: 1,
                 },
 
-                "& .MuiDataGrid-scrollbarFiller--header": {
-              backgroundColor: "gray !important", // ✅ header filler gray
-            },
+              "& .MuiDataGrid-scrollbarFiller--header": {
+                backgroundColor: "gray !important", // ✅ header filler gray
+              },
 
               // ✅ Hide the empty "ghost" cells
               "& .MuiDataGrid-cellEmpty": {
@@ -306,7 +304,7 @@ const handleSelectionChange = (newSelectionModel: any) => {
                 display: "none !important",
               },
             },
-           
+
             "& .MuiDataGrid-scrollbarFiller--header": {
               backgroundColor: "gray !important", // ✅ header filler gray
             },

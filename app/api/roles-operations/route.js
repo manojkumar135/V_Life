@@ -59,15 +59,13 @@ export async function GET(request) {
     let query = {};
 
     if (search) {
-      // Split by comma and trim spaces
       const searchTerms = search
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
 
-      // Build OR conditions for each search term across all fields
       query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp(term, "i"); // case-insensitive
+        const regex = new RegExp("^" + term, "i");
         return [
           { role_id: regex },
           { role_name: regex },
