@@ -30,6 +30,43 @@ export default function PaymentModal({
     setPaymentDetails((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleRazorpayPayment = async () => {
+  // Step 1: create order from backend
+  const res = await fetch("/api/payment/order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount: getTotalPrice() }),
+  });
+
+  const { order } = await res.json();
+
+  // Step 2: open Razorpay popup
+  const options: any = {
+    key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+    amount: order.amount,
+    currency: order.currency,
+    name: "V Life Global",
+    description: "Payment Transaction",
+    order_id: order.id,
+    handler: async function (response: any) {
+      // Send response.razorpay_payment_id and order_id to backend for verification
+      console.log("Payment Success", response);
+    },
+    prefill: {
+      name: "Test User",
+      email: "test@example.com",
+      contact: "9999999999",
+    },
+    theme: {
+      color: "#0c3978",
+    },
+  };
+
+  const rzp1 = new (window as any).Razorpay(options);
+  rzp1.open();
+};
+
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl p-5 w-full max-w-md h-[560px] flex flex-col">
@@ -157,13 +194,13 @@ export default function PaymentModal({
         </div>
 
         {/* Footer */}
-        <SubmitButton
-          type="button"
-          onClick={(e) => handleSubmit(e as any)}
-          className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md"
-        >
-          Pay Now
-        </SubmitButton>
+       <SubmitButton
+  type="button"
+  onClick={handleRazorpayPayment}
+  className="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md"
+>
+  Pay Now
+</SubmitButton>
       </div>
     </div>
   );

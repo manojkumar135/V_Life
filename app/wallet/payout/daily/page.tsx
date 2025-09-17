@@ -89,7 +89,7 @@ export default function WithdrawPage() {
 
   // ✅ Button actions
   const handlePayOut = () => {
-    router.push("/wallet/payout/create");
+    router.push("/wallet/payout/addpayout");
   };
 
   const onBack = () => {
@@ -112,7 +112,7 @@ export default function WithdrawPage() {
           showAddButton={user?.role === "admin"}
           showBack
           onBack={onBack}
-          addLabel="Make Payout"
+          addLabel="Add Payout"
           onAdd={handlePayOut}
           showPagination
           currentPage={currentPage}

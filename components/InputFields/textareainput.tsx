@@ -23,7 +23,7 @@ const TextareaField: React.FC<TextareaFieldProps> = ({
   <div className="flex flex-col items-start">
     <label className="text-[0.9rem] max-md:text-[0.8rem] font-semibold text-gray-700 mb-2">
       {label}
-      {required && <span className="text-red-500 ml-1">*</span>} :
+      {required && <span className="text-red-500 ml-1">*</span>} 
     </label>
     <textarea
       name={name}

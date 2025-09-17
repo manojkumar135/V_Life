@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Wallet } from "@/models/wallet";
+import mongoose from "mongoose";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
 function formatField(str: string) {
@@ -21,9 +22,20 @@ function formatField(str: string) {
 }
 
 // Helper → Find wallet by either Mongo _id or wallet_id
-async function findWalletByIdOrWalletId(id: string) {
-  if (!id) return null;
-  return await Wallet.findOne({ $or: [{ _id: id }, { wallet_id: id }] });
+async function findWalletByIdOrWalletId(value: string) {
+  if (!value) return null;
+
+  const query: any[] = [];
+
+  // Only add _id condition if it's a valid ObjectId
+  if (mongoose.Types.ObjectId.isValid(value)) {
+    query.push({ _id: value });
+  }
+
+  // Always allow wallet_id match
+  query.push({ wallet_id: value });
+
+  return await Wallet.findOne({ $or: query });
 }
 
 /**
@@ -33,6 +45,7 @@ export async function GET(request: Request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
+
     const search = searchParams.get("search") || "";
     const user_id = searchParams.get("user_id") || "";
     const id = searchParams.get("id");
@@ -50,6 +63,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: wallet });
     }
 
+    // ✅ Build query for multiple wallets
     let query: any = {};
     if (search) {
       query.$or = [
@@ -62,7 +76,7 @@ export async function GET(request: Request) {
         { ifsc_code: { $regex: search, $options: "i" } },
         { aadhar_number: { $regex: search, $options: "i" } },
         { pan_number: { $regex: search, $options: "i" } },
-        {wallet_status: { $regex: search, $options: "i" } },
+        { wallet_status: { $regex: search, $options: "i" } },
       ];
     }
     if (user_id) {
@@ -78,7 +92,6 @@ export async function GET(request: Request) {
     );
   }
 }
-
 /**
  * POST → Create new wallet
  */

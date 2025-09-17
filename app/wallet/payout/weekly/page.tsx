@@ -111,7 +111,7 @@ export default function WithdrawPage() {
           >
             <GoPencil size={18} />
           </button>
-          <button
+          <button 
             className="text-red-600 cursor-pointer ml-2"
             onClick={() => handleDelete(params.row._id)}
           >
@@ -132,7 +132,7 @@ export default function WithdrawPage() {
 
   // ✅ Navigation actions
   const handlePayOut = () => {
-    router.push("/wallet/payout/create");
+    router.push("/wallet/payout/addpayout");
   };
 
   const onBack = () => {
@@ -149,13 +149,13 @@ export default function WithdrawPage() {
         )}
 
         <HeaderWithActions
-          title="Weekly Withdrawals"
+          title="Weekly Payouts"
           search={query}
           setSearch={setQuery}
           showAddButton={user?.role === "admin"}
           showBack
           onBack={onBack}
-          addLabel="Make Payout"
+          addLabel="Add Payout"
           onAdd={handlePayOut}
           showPagination
           currentPage={currentPage}
