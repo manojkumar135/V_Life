@@ -4,7 +4,6 @@ import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import Layout from "@/layout/Layout";
 import { IoCartOutline, IoClose } from "react-icons/io5";
 import { IoIosArrowBack } from "react-icons/io";
-
 import { useRouter } from "next/navigation";
 import ShowToast from "@/components/common/Toast/toast";
 import ProductCard from "@/components/common/productcard";
@@ -13,7 +12,7 @@ import axios from "axios";
 import { useVLife } from "@/store/context";
 import { formatDate } from "@/components/common/formatDate";
 
-// Categories with their products
+// Product categories and products
 const categories = [
   {
     id: 1,
@@ -174,7 +173,8 @@ const categories = [
 interface CartItem {
   id: number;
   name: string;
-  price: number;
+  unit_price: number; // per-item price
+  price: number; // total price = unit_price * quantity
   quantity: number;
   image: string;
   description: string;
@@ -193,9 +193,31 @@ export default function AddOrderPage() {
   const { user, updateUserCart } = useVLife();
   const router = useRouter();
 
-  // Initialize cart
-  const [cart, setCart] = useState<CartItem[]>(user.items || []);
+  // --- FIX: Always restore correct unit_price and price ---
+  const normalizeCart = (items: any[]): CartItem[] =>
+    (items || []).map((i: any) => {
+      const quantity = Number(i.quantity) || 1;
+      // If unit_price is missing, recover from price/quantity
+      const unit_price =
+        typeof i.unit_price === "number"
+          ? i.unit_price
+          : i.price && quantity
+          ? Number(i.price) / quantity
+          : 0;
+      return {
+        ...i,
+        id: Number(i.id),
+        unit_price,
+        quantity,
+        price: unit_price * quantity,
+      };
+    });
+
+  const [cart, setCart] = useState<CartItem[]>(normalizeCart(user.items ?? []));
   const [address, setAddress] = useState("");
+  const [showCart, setShowCart] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(categories[0].name);
+  const [isFirstOrder, setIsFirstOrder] = useState(false);
 
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
@@ -205,6 +227,7 @@ export default function AddOrderPage() {
     notes: "",
   });
 
+  // Sync form data with user info
   useEffect(() => {
     if (user) {
       setFormData((prev) => ({
@@ -216,16 +239,9 @@ export default function AddOrderPage() {
         notes: "",
       }));
     }
-  }, [user]);
+  }, [user, address]);
 
-  const [showCart, setShowCart] = useState(false);
-
-  const [activeCategory, setActiveCategory] = useState(categories[0].name);
-  const [isFirstOrder, setIsFirstOrder] = useState(false);
-
-  console.log(formData, "add order");
-
-  // ✅ Check if this is user's first order
+  // Fetch first order status
   useEffect(() => {
     const checkFirstOrder = async () => {
       try {
@@ -240,29 +256,25 @@ export default function AddOrderPage() {
     checkFirstOrder();
   }, [user.user_id]);
 
+  // --- FIX: Normalize cart on user.items change ---
   useEffect(() => {
-    if (user.items) {
-      // Normalize ids to numbers
-      setCart(user.items.map((i: any) => ({ ...i, id: Number(i.id) })));
-    }
+    setCart(normalizeCart(user.items ?? []));
   }, [user.items]);
 
+  // Fetch user address
   useEffect(() => {
     const fetchAddress = async () => {
       try {
         const res = await axios.post("/api/address-operations", {
           user_id: user.user_id,
         });
-        if (res.data.success) {
-          setAddress(res.data.address);
-        } else {
-          setAddress("No address available");
-        }
-      } catch (err) {
+        setAddress(
+          res.data.success ? res.data.address : "No address available"
+        );
+      } catch {
         setAddress("Error fetching address");
       }
     };
-
     if (user.user_id) fetchAddress();
   }, [user.user_id]);
 
@@ -270,14 +282,13 @@ export default function AddOrderPage() {
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-
     setFormData((prev) => ({
       ...prev,
       [name]: name === "customerEmail" ? value.toLowerCase() : value,
     }));
   };
 
-  // In your AddOrderPage component, update the addToCart function:
+  // Add product to cart
   const addToCart = async (product: any) => {
     const updatedCart = [...cart];
     const productId = Number(product.id);
@@ -286,11 +297,13 @@ export default function AddOrderPage() {
 
     if (existingItem) {
       existingItem.quantity += 1;
+      existingItem.price = existingItem.unit_price * existingItem.quantity; // always recalc
     } else {
       updatedCart.push({
         id: productId,
         name: product.name,
-        price: product.price,
+        unit_price: product.price,
+        price: product.price, // quantity=1, so price = unit_price
         quantity: 1,
         image: product.image,
         description: product.description || "",
@@ -301,7 +314,7 @@ export default function AddOrderPage() {
     setCart(updatedCart);
     try {
       await updateUserCart(updatedCart);
-    } catch (error) {
+    } catch {
       ShowToast.error("Failed to update cart");
     }
   };
@@ -313,32 +326,85 @@ export default function AddOrderPage() {
     }
 
     const updatedCart = cart.map((item) =>
-      Number(item.id) === Number(id) ? { ...item, quantity: newQuantity } : item
+      item.id === id
+        ? {
+            ...item,
+            quantity: newQuantity,
+            price: item.unit_price * newQuantity,
+          }
+        : item
     );
 
     setCart(updatedCart);
-
     try {
       await updateUserCart(updatedCart);
-    } catch (error) {
+    } catch {
       ShowToast.error("Failed to update cart");
     }
   };
 
   const removeFromCart = async (id: number) => {
-    const updatedCart = cart.filter((item) => Number(item.id) !== Number(id));
+    const updatedCart = cart.filter((item) => item.id !== id);
     setCart(updatedCart);
-
     try {
       await updateUserCart(updatedCart);
-    } catch (error) {
+    } catch {
       ShowToast.error("Failed to update cart");
     }
   };
 
-  // console.log(cart)
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+  const getTotalPrice = () =>
+    cart.reduce((total, item) => total + item.price, 0);
+
+  const createOrder = async (finalAmount: number) => {
+    try {
+      const orderItems = cart.map((item) => ({
+        product_id: String(item.id),
+        product: String(item.id),
+        category: item.category,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        price: item.price,
+        description: item.description,
+        image: item.image,
+      }));
+
+      const payload = {
+        user_id: user.user_id,
+        user_name: formData.customerName || user.user_name,
+        contact: formData.contact || user.contact,
+        mail: formData.customerEmail || user.mail,
+        address: formData.shippingAddress || address,
+        description: formData.notes,
+        payment_date: formatDate(new Date()),
+        payment_id: "payment-id-" + Date.now(),
+        payment_type: "razorpay",
+        items: orderItems,
+        order_status: "pending",
+        amount: getTotalPrice(),
+        total_amount: getTotalPrice(),
+        final_amount: finalAmount,
+        advance_deducted: isFirstOrder ? 10000 : 0,
+        is_first_order: isFirstOrder,
+      };
+
+      const response = await axios.post("/api/order-operations", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.data.success) {
+        setCart([]);
+        await updateUserCart([]);
+        ShowToast.success("Order created successfully!");
+        router.push("/orders");
+      } else {
+        ShowToast.error(response.data.message || "Failed to create order");
+      }
+    } catch (error: any) {
+      console.error("Error creating order:", error);
+      ShowToast.error("Failed to create order: " + error.message);
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -352,78 +418,15 @@ export default function AddOrderPage() {
     const totalAmount = getTotalPrice();
     let finalAmount = totalAmount;
 
-    // ✅ Enforce first order rule
     if (isFirstOrder) {
       if (totalAmount < 10000) {
         ShowToast.error("First order must be at least ₹10,000");
         return;
       }
-      finalAmount = totalAmount - 10000; // deduct advance
+      finalAmount = totalAmount - 10000;
     }
 
-    try {
-      const orderItems = cart.map((item) => ({
-        product_id: String(item.id), // ✅ convert only here
-        product: String(item.id),
-        category: item.category,
-        name: item.name,
-        quantity: item.quantity,
-        unit_price: item.price,
-        price: item.price * item.quantity,
-        description: item.description,
-        image: item.image,
-      }));
-
-      const payload = {
-        user_id: user.user_id,
-        user_name: formData.customerName || user.user_name,
-        contact: formData.contact || user.contact,
-        mail: formData.customerEmail || user.mail,
-        address: formData.shippingAddress || user.address,
-        description: formData.notes,
-        payment_date: formatDate(new Date()),
-        payment_id: "payment-id-" + Date.now(),
-        payment_type: "cash",
-        items: orderItems,
-        order_status: "pending",
-        amount: totalAmount,
-        total_amount: totalAmount,
-        final_amount: finalAmount,
-        advance_deducted: isFirstOrder ? 10000 : 0,
-        is_first_order: isFirstOrder,
-      };
-
-      const response = await axios.post("/api/order-operations", payload, {
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (response.data.success) {
-        const emptyCart: CartItem[] = [];
-        setCart(emptyCart);
-
-        try {
-          await updateUserCart(emptyCart);
-        } catch (error) {
-          console.error("Failed to clear cart:", error);
-        }
-
-        ShowToast.success("Order created successfully!");
-        router.push("/orders");
-      } else {
-        ShowToast.error(response.data.message || "Failed to create order");
-      }
-    } catch (error: any) {
-      console.error("Error creating order:", error);
-      if (error.response) {
-        ShowToast.error(
-          error.response.data.message || "Failed to create order"
-        );
-      } else if (error.request) {
-        ShowToast.error("No response from server. Please try again.");
-      } else {
-        ShowToast.error("Failed to create order: " + error.message);
-      }
-    }
+    await createOrder(finalAmount);
   };
 
   const activeCategoryProducts =
@@ -464,17 +467,16 @@ export default function AddOrderPage() {
 
         {/* Products Grid */}
         <div
-          className={`rounded-xl px-6 max-lg:px-3 py-3 bg-white mb-5 transition-all duration-300  
-            ${showCart ? "lg:pr-[470px]" : ""}`}
+          className={`rounded-xl px-6 max-lg:px-3 py-3 bg-white mb-5 transition-all duration-300 ${
+            showCart ? "lg:pr-[470px]" : ""
+          }`}
         >
           <div
-            className={`grid gap-4 max-lg:gap-3 
-              grid-cols-1 sm:grid-cols-2 
-              ${
-                showCart
-                  ? "lg:grid-cols-2 xl:grid-cols-2"
-                  : "lg:grid-cols-3 xl:grid-cols-3"
-              }`}
+            className={`grid gap-4 max-lg:gap-3 grid-cols-1 sm:grid-cols-2 ${
+              showCart
+                ? "lg:grid-cols-2 xl:grid-cols-2"
+                : "lg:grid-cols-3 xl:grid-cols-3"
+            }`}
           >
             {activeCategoryProducts.map((product) => (
               <ProductCard
@@ -507,11 +509,11 @@ export default function AddOrderPage() {
           {cart.length > 0 && (
             <span
               className="
-                absolute -top-1 -right-1 
-                bg-red-600 text-white text-xs font-bold 
-                rounded-full w-6 h-6 flex items-center justify-center
-                shadow-[0_2px_6px_rgba(0,0,0,0.4)]
-              "
+              absolute -top-1 -right-1 
+              bg-red-600 text-white text-xs font-bold 
+              rounded-full w-6 h-6 flex items-center justify-center
+              shadow-[0_2px_6px_rgba(0,0,0,0.4)]
+            "
             >
               {cart.reduce((sum, item) => sum + item.quantity, 0)}
             </span>
@@ -563,6 +565,7 @@ export default function AddOrderPage() {
               setFormData={setFormData}
               handleInputChange={handleInputChange}
               isFirstOrder={isFirstOrder}
+              createOrder={createOrder}
             />
           </div>
         </div>

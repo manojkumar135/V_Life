@@ -10,6 +10,7 @@ import axios from "axios";
 import { useVLife } from "@/store/context";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   IoRemove,
@@ -26,6 +27,7 @@ interface CartItem {
   id: number;
   product_id: string;
   name: string;
+  unit_price: number;
   price: number;
   quantity: number;
   image: string;
@@ -43,6 +45,7 @@ export default function OrderFormCartSection({
   setFormData,
   handleInputChange,
   isFirstOrder,
+  createOrder,
 }: any) {
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
@@ -50,8 +53,10 @@ export default function OrderFormCartSection({
     "qr"
   );
 
-  console.log(formData,"order summary")
+  // console.log(formData, "order summary");
   // console.log("isFirstOrder in OrderFormCartSection:", isFirstOrder);
+  const router = useRouter();
+
   const [address, setAddress] = useState("");
   const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
   // console.log(hasPaidAdvance)
@@ -98,8 +103,6 @@ export default function OrderFormCartSection({
     }
   }, [user_id]);
 
-
-
   const handlePlaceOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
 
@@ -109,7 +112,8 @@ export default function OrderFormCartSection({
         if (
           !formData.customerName ||
           !formData.customerEmail ||
-          !formData.shippingAddress
+          !formData.shippingAddress ||
+          !formData.contact
         ) {
           ShowToast.warning("Please fill in all required customer information");
           return;
@@ -171,6 +175,8 @@ export default function OrderFormCartSection({
     console.log("Payment details:", paymentDetails);
   };
 
+  console.log(cart, "order summary");
+
   const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setPaymentDetails((prev) => ({
@@ -201,9 +207,11 @@ export default function OrderFormCartSection({
   // console.log("isFirstOrder:", isFirstOrder);
   // console.log("hasPaidAdvance:", hasPaidAdvance);
 
-  
-
-  const isCustomerInfoMissing = false;
+  const isCustomerInfoMissing =
+    !formData.customerName ||
+    !formData.customerEmail ||
+    !formData.shippingAddress ||
+    !formData.contact;
 
   const isDisabled =
     isCustomerInfoMissing ||
@@ -261,7 +269,7 @@ export default function OrderFormCartSection({
                 </div>
 
                 {/* Cart Items */}
-                <div className="space-y-4 max-h-80 max-lg:max-h-95 max-lg:min-h-[600px] overflow-y-auto pr-2">
+                <div className="space-y-4 max-h-70 max-lg:max-h-95 max-lg:min-h-[600px] overflow-y-auto pr-2">
                   {cart.map((item: CartItem) => (
                     <div
                       key={item.id || item.product_id}
@@ -287,7 +295,7 @@ export default function OrderFormCartSection({
                               {item.description}
                             </p>
                             <p className="text-gray-700 text-xs mt-1">
-                              ₹ {item.price.toFixed(2)} each
+                              ₹ {item.unit_price.toFixed(2)} each
                             </p>
                           </div>
                         </div>
@@ -317,7 +325,7 @@ export default function OrderFormCartSection({
 
                           {/* Price */}
                           <div className="font-bold text-gray-800 text-right">
-                            ₹ {(item.price * item.quantity).toFixed(2)}
+                            ₹ {item.price.toFixed(2)}
                           </div>
 
                           {/* Delete */}
@@ -505,7 +513,7 @@ export default function OrderFormCartSection({
               label="Shipping Address"
               name="shippingAddress"
               placeholder="Full shipping address"
-              value={formData.shippingAddress ||  " "}
+              value={formData.shippingAddress || " "}
               onChange={handleInputChange}
               className="w-full h-15 max-md:h-24"
               required
@@ -541,9 +549,21 @@ export default function OrderFormCartSection({
       {/* Payment Modal */}
       {showPayment && (
         <PaymentModal
-          getTotalPrice={getTotalPrice}
-          handleSubmit={handleSubmit}
-          setShowPayment={setShowPayment}
+          amount={finalAmount.toFixed(2)}
+          user={{
+            name: user?.user_name,
+            email: user?.mail,
+            contact: user?.contact,
+          }}
+          onSuccess={async (res) => {
+            console.log("✅ Payment successful:", res);
+            await createOrder(finalAmount); // ✅ directly create order
+            setShowPayment(false);
+          }}
+          onClose={() => {
+            setShowPayment(false);
+            router.push("/orders");
+          }}
         />
       )}
     </div>

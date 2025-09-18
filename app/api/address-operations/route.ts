@@ -24,20 +24,19 @@ export async function POST(request: Request) {
     }
 
     // Extract fields
-    const {
-      address,
-      locality,
-      district,
-      state,
-      country,
-      pincode,
-    } = user;
+    const { address, locality, district, state, country, pincode } = user;
 
-    // Format address
-    const formattedAddress = `${address|| ""}, ${locality || ""}, ${district || ""}, ${state || ""}, ${country || ""} - ${pincode || ""}`
-      .replace(/\s+,/g, ",") // clean up extra spaces before commas
-      .replace(/,\s+,/g, ",") // remove double commas
-      .replace(/,\s*$/, ""); // remove trailing comma
+    // Build address parts, filter out empty/undefined
+    const addressParts = [address, locality, district, state, country]
+      .filter((part) => part && part.trim() !== "");
+
+    // Join with commas
+    let formattedAddress = addressParts.join(", ");
+
+    // Add pincode if present
+    if (pincode && pincode.toString().trim() !== "") {
+      formattedAddress += ` - ${pincode}`;
+    }
 
     return NextResponse.json({
       success: true,

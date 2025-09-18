@@ -6,7 +6,8 @@ import axios from "axios";
 export interface CartItem {
   id: number;
   name: string;
-  price: number;
+  price: number; // total price for that line (unit_price * quantity)
+  unit_price: number; // price per single unit
   quantity: number;
   image: string;
   description: string;
@@ -114,42 +115,66 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserCart = async (cartItems: CartItem[]) => {
-    try {
-      const transformedCartItems = cartItems.map((item) => ({
+  try {
+    const transformedCartItems = cartItems.map((item) => {
+      // Always use item.unit_price if available, else fallback to price/quantity
+      const unitPrice =
+        typeof item.unit_price === "number"
+          ? item.unit_price
+          : item.price && item.quantity
+          ? Number(item.price) / Number(item.quantity)
+          : 0;
+      const totalPrice = unitPrice * item.quantity;
+
+      return {
         id: String(item.id),
         product: String(item.id),
         name: item.name,
-        price: item.price,
+        unit_price: unitPrice,
+        price: totalPrice,
         quantity: item.quantity,
         image: item.image,
         description: item.description || "",
         category: item.category,
         created_at: new Date().toISOString(),
+      };
+    });
+
+    const updatePayload: any = { items: transformedCartItems };
+
+    if (user._id) updatePayload._id = user._id;
+    else if (user.user_id) updatePayload.user_id = user.user_id;
+    else if (user.login_id) updatePayload.login_id = user.login_id;
+    else throw new Error("No user identifier available to update cart");
+
+    const response = await axios.patch("/api/login-operations", updatePayload);
+
+    if (response.data.success) {
+      const normalized = cartItems.map((i) => ({
+        ...i,
+        unit_price:
+          typeof i.unit_price === "number"
+            ? i.unit_price
+            : i.price && i.quantity
+            ? Number(i.price) / Number(i.quantity)
+            : 0,
+        price:
+          (typeof i.unit_price === "number"
+            ? i.unit_price
+            : i.price && i.quantity
+            ? Number(i.price) / Number(i.quantity)
+            : 0) * i.quantity,
+        id: Number(i.id),
       }));
-
-      const updatePayload: any = { items: transformedCartItems };
-
-      if (user._id) updatePayload._id = user._id;
-      else if (user.user_id) updatePayload.user_id = user.user_id;
-      else if (user.login_id) updatePayload.login_id = user.login_id;
-      else throw new Error("No user identifier available to update cart");
-
-      const response = await axios.patch("/api/login-operations", updatePayload);
-
-      if (response.data.success) {
-        const normalized = cartItems.map((i) => ({
-          ...i,
-          id: Number(i.id),
-        }));
-        setUserState((prev) => ({ ...prev, items: normalized }));
-      } else {
-        throw new Error(response.data.message || "Failed to update cart");
-      }
-    } catch (error) {
-      console.error("Error updating cart:", error);
-      throw error;
+      setUserState((prev) => ({ ...prev, items: normalized }));
+    } else {
+      throw new Error(response.data.message || "Failed to update cart");
     }
-  };
+  } catch (error) {
+    console.error("Error updating cart:", error);
+    throw error;
+  }
+};
 
   return (
     <VLifeContext.Provider
