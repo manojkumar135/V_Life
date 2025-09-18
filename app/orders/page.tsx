@@ -120,7 +120,7 @@ export default function OrdersPage() {
         </span>
       ),
     },
-    { field: "order_status", headerName: "Status", flex: 1 },
+    { field: "payment", headerName: "Status", flex: 1 },
   ];
 
   const handlePageChange = useCallback(

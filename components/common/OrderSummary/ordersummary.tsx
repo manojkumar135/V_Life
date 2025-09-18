@@ -53,7 +53,7 @@ export default function OrderFormCartSection({
     "qr"
   );
 
-  // console.log(formData, "order summary");
+  console.log(cart, "order summary");
   // console.log("isFirstOrder in OrderFormCartSection:", isFirstOrder);
   const router = useRouter();
 
@@ -151,31 +151,31 @@ export default function OrderFormCartSection({
     ? Math.max(0, getTotalPrice() - 10000)
     : getTotalPrice();
 
-  const handlePaymentSubmit = () => {
-    handleSubmit();
+  // const handlePaymentSubmit = () => {
+  //   handleSubmit();
 
-    // Validate payment details based on method
-    if (paymentMethod === "upi" && !paymentDetails.upiId) {
-      ShowToast.warning("Please enter your UPI ID");
-      return;
-    }
+  //   // Validate payment details based on method
+  //   if (paymentMethod === "upi" && !paymentDetails.upiId) {
+  //     ShowToast.warning("Please enter your UPI ID");
+  //     return;
+  //   }
 
-    if (
-      paymentMethod === "card" &&
-      (!paymentDetails.cardNumber ||
-        !paymentDetails.expiryDate ||
-        !paymentDetails.cvv)
-    ) {
-      ShowToast.error("Please fill in all card details");
-      return;
-    }
+  //   if (
+  //     paymentMethod === "card" &&
+  //     (!paymentDetails.cardNumber ||
+  //       !paymentDetails.expiryDate ||
+  //       !paymentDetails.cvv)
+  //   ) {
+  //     ShowToast.error("Please fill in all card details");
+  //     return;
+  //   }
 
-    // Process payment logic here
-    console.log("Processing payment with method:", paymentMethod);
-    console.log("Payment details:", paymentDetails);
-  };
+  //   // Process payment logic here
+  //   console.log("Processing payment with method:", paymentMethod);
+  //   console.log("Payment details:", paymentDetails);
+  // };
 
-  console.log(cart, "order summary");
+  // console.log(cart, "order summary");
 
   const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -377,7 +377,7 @@ export default function OrderFormCartSection({
                         {/* Row 2: Unit Price + Quantity + Total */}
                         <div className="flex justify-between items-center mt-3 -mb-2">
                           <p className="text-xs text-gray-800">
-                            ₹ {item.price.toFixed(2)} each
+                            ₹ {item.unit_price.toFixed(2)} each
                           </p>
 
                           {/* Quantity Controls */}
@@ -403,7 +403,7 @@ export default function OrderFormCartSection({
 
                           {/* Total */}
                           <div className="font-bold text-gray-800">
-                            ₹ {(item.price * item.quantity).toFixed(2)}
+                            ₹ {(item.price).toFixed(2)}
                           </div>
                         </div>
                       </div>

@@ -33,6 +33,7 @@ interface OrderData {
   isFirstOrder?: boolean;
   paymentDate?: string;
   paymentId?: string;
+  payment?: string;
   shippingAddress?: string; // ✅ new field
 }
 
@@ -80,6 +81,7 @@ export default function OrderDetailView() {
             isFirstOrder: raw.is_first_order,
             paymentDate: raw.payment_date,
             paymentId: raw.payment_id,
+            payment:raw.payment|| "completed",
             shippingAddress: raw.shipping_address, // ✅ map shipping address
           };
 
@@ -336,6 +338,10 @@ export default function OrderDetailView() {
               <span className="font-bold text-black ">Contact</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black">{order.contact}</span>
+
+              <span className="font-bold text-black ">Payment</span>
+              <span className="font-bold text-black text-center">:</span>
+              <span className="font-normal text-black">{order.payment}</span>
 
               <span className="font-bold text-black ">Address</span>
               <span className="font-bold text-black text-center">:</span>

@@ -114,10 +114,11 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
     setUserState(defaultUser);
   };
 
-  const updateUserCart = async (cartItems: CartItem[]) => {
+const updateUserCart = async (cartItems: CartItem[]) => {
   try {
     const transformedCartItems = cartItems.map((item) => {
-      // Always use item.unit_price if available, else fallback to price/quantity
+      console.log(cartItems)
+      console.log(item)
       const unitPrice =
         typeof item.unit_price === "number"
           ? item.unit_price
@@ -150,22 +151,20 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
     const response = await axios.patch("/api/login-operations", updatePayload);
 
     if (response.data.success) {
-      const normalized = cartItems.map((i) => ({
-        ...i,
-        unit_price:
+      const normalized = cartItems.map((i) => {
+        const unitPrice =
           typeof i.unit_price === "number"
             ? i.unit_price
             : i.price && i.quantity
             ? Number(i.price) / Number(i.quantity)
-            : 0,
-        price:
-          (typeof i.unit_price === "number"
-            ? i.unit_price
-            : i.price && i.quantity
-            ? Number(i.price) / Number(i.quantity)
-            : 0) * i.quantity,
-        id: Number(i.id),
-      }));
+            : 0;
+        return {
+          ...i,
+          unit_price: unitPrice,
+          price: unitPrice * i.quantity,
+          id: Number(i.id),
+        };
+      });
       setUserState((prev) => ({ ...prev, items: normalized }));
     } else {
       throw new Error(response.data.message || "Failed to update cart");
@@ -175,6 +174,7 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
     throw error;
   }
 };
+
 
   return (
     <VLifeContext.Provider

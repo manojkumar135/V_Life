@@ -195,23 +195,22 @@ export default function AddOrderPage() {
 
   // --- FIX: Always restore correct unit_price and price ---
   const normalizeCart = (items: any[]): CartItem[] =>
-    (items || []).map((i: any) => {
-      const quantity = Number(i.quantity) || 1;
-      // If unit_price is missing, recover from price/quantity
-      const unit_price =
-        typeof i.unit_price === "number"
-          ? i.unit_price
-          : i.price && quantity
-          ? Number(i.price) / quantity
-          : 0;
-      return {
-        ...i,
-        id: Number(i.id),
-        unit_price,
-        quantity,
-        price: unit_price * quantity,
-      };
-    });
+  (items || []).map((i: any) => {
+    const quantity = Number(i.quantity) || 1;
+    const unit_price =
+      typeof i.unit_price === "number"
+        ? i.unit_price
+        : i.price && quantity
+        ? Number(i.price) / quantity
+        : 0;
+    return {
+      ...i,
+      id: Number(i.id),
+      unit_price,
+      quantity,
+      price: unit_price * quantity,
+    };
+  });
 
   const [cart, setCart] = useState<CartItem[]>(normalizeCart(user.items ?? []));
   const [address, setAddress] = useState("");
@@ -377,6 +376,7 @@ export default function AddOrderPage() {
         mail: formData.customerEmail || user.mail,
         address: formData.shippingAddress || address,
         description: formData.notes,
+        payment:"completed",
         payment_date: formatDate(new Date()),
         payment_id: "payment-id-" + Date.now(),
         payment_type: "razorpay",
