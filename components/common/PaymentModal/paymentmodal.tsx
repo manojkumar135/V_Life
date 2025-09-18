@@ -4,7 +4,7 @@ import React, { useEffect } from "react";
 import axios from "axios";
 
 interface PaymentModalProps {
-  amount: number;
+  amount: number; // amount in rupees (e.g. 19.99)
   user?: {
     name: string;
     email: string;
@@ -20,7 +20,7 @@ export default function PaymentModal({
   onSuccess,
   onClose,
 }: PaymentModalProps) {
-  // Load Razorpay script
+  // Load Razorpay script once
   useEffect(() => {
     if (!document.getElementById("razorpay-script")) {
       const script = document.createElement("script");
@@ -31,29 +31,37 @@ export default function PaymentModal({
     }
   }, []);
 
-  // Trigger Razorpay
+  // Trigger Razorpay on mount
   useEffect(() => {
     const startPayment = async () => {
       try {
+        // Send rupee amount to backend
         const res = await axios.post("/api/payment-operations", { amount });
-        const { order } = res.data;
 
+// backend should return the created Razorpay order object
+const order = res.data.order || res.data;
+
+if (!order || !order.amount) {
+  throw new Error("Invalid Razorpay order response");
+}
         const options: any = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: order.amount,
+          amount: order.amount, // comes in paise from backend
           currency: order.currency,
           name: "V Life Global",
           description: "Payment Transaction",
           order_id: order.id,
           handler: async (response: any) => {
             try {
-              const verifyRes = await axios.post("/api/payment-verify-operations", {
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_signature: response.razorpay_signature,
-              });
+              const verifyRes = await axios.post(
+                "/api/payment-verify-operations",
+                {
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_signature: response.razorpay_signature,
+                }
+              );
 
-              console.log(verifyRes)
               if (verifyRes.data.success) {
                 onSuccess(response);
               } else {
@@ -71,9 +79,7 @@ export default function PaymentModal({
             contact: user?.contact || "9999999999",
           },
           theme: { color: "#facc15" },
-          modal: {
-            ondismiss: () => onClose(), // ✅ navigate to /ordersummary on close
-          },
+          modal: { ondismiss: () => onClose() },
         };
 
         const rzp1 = new (window as any).Razorpay(options);

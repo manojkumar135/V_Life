@@ -403,7 +403,7 @@ export default function OrderFormCartSection({
 
                           {/* Total */}
                           <div className="font-bold text-gray-800">
-                            ₹ {(item.price).toFixed(2)}
+                            ₹ {item.price.toFixed(2)}
                           </div>
                         </div>
                       </div>
@@ -549,7 +549,7 @@ export default function OrderFormCartSection({
       {/* Payment Modal */}
       {showPayment && (
         <PaymentModal
-          amount={finalAmount.toFixed(2)}
+          amount={Number(finalAmount.toFixed(2))}
           user={{
             name: user?.user_name,
             email: user?.mail,

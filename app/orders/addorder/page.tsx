@@ -194,23 +194,19 @@ export default function AddOrderPage() {
   const router = useRouter();
 
   // --- FIX: Always restore correct unit_price and price ---
-  const normalizeCart = (items: any[]): CartItem[] =>
+ const normalizeCart = (items: any[]): CartItem[] =>
   (items || []).map((i: any) => {
     const quantity = Number(i.quantity) || 1;
-    const unit_price =
-      typeof i.unit_price === "number"
-        ? i.unit_price
-        : i.price && quantity
-        ? Number(i.price) / quantity
-        : 0;
+    const unit_price = Number(i.unit_price) || 0; // ✅ trust backend unit_price
     return {
       ...i,
       id: Number(i.id),
       unit_price,
       quantity,
-      price: unit_price * quantity,
+      price: unit_price * quantity, // ✅ always recalc line total
     };
   });
+
 
   const [cart, setCart] = useState<CartItem[]>(normalizeCart(user.items ?? []));
   const [address, setAddress] = useState("");

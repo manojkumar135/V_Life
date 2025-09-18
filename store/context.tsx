@@ -115,31 +115,20 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
 const updateUserCart = async (cartItems: CartItem[]) => {
+  console.log(cartItems,"context")
   try {
-    const transformedCartItems = cartItems.map((item) => {
-      console.log(cartItems)
-      console.log(item)
-      const unitPrice =
-        typeof item.unit_price === "number"
-          ? item.unit_price
-          : item.price && item.quantity
-          ? Number(item.price) / Number(item.quantity)
-          : 0;
-      const totalPrice = unitPrice * item.quantity;
-
-      return {
-        id: String(item.id),
-        product: String(item.id),
-        name: item.name,
-        unit_price: unitPrice,
-        price: totalPrice,
-        quantity: item.quantity,
-        image: item.image,
-        description: item.description || "",
-        category: item.category,
-        created_at: new Date().toISOString(),
-      };
-    });
+    const transformedCartItems = cartItems.map((item) => ({
+      id: String(item.id),
+      product: String(item.id),
+      name: item.name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,   // ✅ per item price
+      price: item.unit_price * item.quantity, // ✅ line total
+      image: item.image,
+      description: item.description || "",
+      category: item.category,
+      created_at: new Date().toISOString(),
+    }));
 
     const updatePayload: any = { items: transformedCartItems };
 
@@ -151,20 +140,13 @@ const updateUserCart = async (cartItems: CartItem[]) => {
     const response = await axios.patch("/api/login-operations", updatePayload);
 
     if (response.data.success) {
-      const normalized = cartItems.map((i) => {
-        const unitPrice =
-          typeof i.unit_price === "number"
-            ? i.unit_price
-            : i.price && i.quantity
-            ? Number(i.price) / Number(i.quantity)
-            : 0;
-        return {
-          ...i,
-          unit_price: unitPrice,
-          price: unitPrice * i.quantity,
-          id: Number(i.id),
-        };
-      });
+      // Normalize back to numbers
+      const normalized = cartItems.map((i) => ({
+        ...i,
+        id: Number(i.id),
+        unit_price: Number(i.unit_price),
+        price: Number(i.unit_price) * Number(i.quantity),
+      }));
       setUserState((prev) => ({ ...prev, items: normalized }));
     } else {
       throw new Error(response.data.message || "Failed to update cart");
@@ -174,6 +156,7 @@ const updateUserCart = async (cartItems: CartItem[]) => {
     throw error;
   }
 };
+
 
 
   return (
