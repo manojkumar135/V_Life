@@ -9,32 +9,32 @@ import { useVLife } from "@/store/context";
 import axios from "axios";
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
-  const { user, theme, setTheme } = useVLife();
+  const { user } = useVLife();
 
   // console.log(user,theme,"from header")
 
   // Apply theme globally
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    if (theme === "dark") root.classList.add("dark");
-    else root.classList.add("light");
-  }, [theme]);
+  // useEffect(() => {
+  //   const root = document.documentElement;
+  //   root.classList.remove("light", "dark");
+  //   if (theme === "dark") root.classList.add("dark");
+  //   else root.classList.add("light");
+  // }, [theme]);
 
-  const toggleTheme = async () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
+  // const toggleTheme = async () => {
+  //   const newTheme = theme === "dark" ? "light" : "dark";
+  //   setTheme(newTheme);
 
-    // ✅ Update user theme in backend
-    try {
-      await axios.patch("/api/theme-operations", {
-        user_id: user.user_id,
-        theme: newTheme,
-      });
-    } catch (error) {
-      console.error("Failed to update theme:", error);
-    }
-  };
+  //   // ✅ Update user theme in backend
+  //   try {
+  //     await axios.patch("/api/theme-operations", {
+  //       user_id: user.user_id,
+  //       theme: newTheme,
+  //     });
+  //   } catch (error) {
+  //     console.error("Failed to update theme:", error);
+  //   }
+  // };
 
   return (
     <header className="flex items-center justify-between w-full max-md:w-screen px-4 py-2 bg-[var(--background)] text-[var(--foreground)] h-[60px] shadow-sm">

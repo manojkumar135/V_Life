@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
+import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 
 const page = () => {
   const { user } = useVLife();
@@ -22,14 +23,9 @@ const page = () => {
   useEffect(() => {
     const checkAdvancePayment = async () => {
       try {
-        const res = await axios.get(
-          `/api/history-operations?user_id=${user_id}&minAmount=10000`
-        );
-        const records = res.data?.data || [];
+        const paid = await hasAdvancePaid(user_id, 10000);
 
-        // If no records → user hasn’t paid yet
-        if (records.length === 0) {
-          // console.log("No payment history found.");
+        if (!paid) {
           setShowAlert(true);
         }
       } catch (err) {
@@ -43,7 +39,6 @@ const page = () => {
     }
   }, [user_id]);
 
-  
   return (
     <Layout>
       <div className=" space-y-6 bg-white px-6 scrollbar-hide">

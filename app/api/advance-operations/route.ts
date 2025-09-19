@@ -17,13 +17,14 @@ export async function GET(request: Request) {
       );
     }
 
-    const exists = await History.findOne({
+    // ✅ Only need one valid record
+    const record = await History.findOne({
       user_id,
       amount: { $gte: minAmount },
     });
 
     return NextResponse.json(
-      { success: true, hasAdvance: !!exists, data: exists },
+      { success: true, hasAdvance: !!record, data: record },
       { status: 200 }
     );
   } catch (error: any) {

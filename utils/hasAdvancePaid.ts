@@ -1,4 +1,3 @@
-// utils/hasAdvancePaid.ts
 import axios from "axios";
 
 /**
@@ -15,13 +14,17 @@ export async function hasAdvancePaid(
 
   try {
     const res = await axios.get(
-      `/api/history-operations?user_id=${user_id}&minAmount=${minAmount}`
+      `/api/advance-operations?user_id=${user_id}&minAmount=${minAmount}`
     );
 
-    const records = res.data?.data || [];
+    // ✅ API returns: { success, hasAdvance, data }
+    const { hasAdvance, data } = res.data;
 
-    // ✅ true if any record with Completed status
-    return records.some((r: any) => r.status === "Completed");
+    // Prefer using hasAdvance flag
+    if (hasAdvance) return true;
+
+    // Fallback double-check
+    return data?.status === "Completed";
   } catch (error) {
     console.error("Error checking advance payment:", error);
     return false;
