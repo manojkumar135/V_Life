@@ -107,7 +107,7 @@ export default function OrdersPage() {
     { field: "user_id", headerName: "User ID", flex: 1 },
     { field: "user_name", headerName: "Name", flex: 1 },
     { field: "contact", headerName: "Contact", flex: 1 },
-    { field: "payment_id", headerName: "Transaction ID", flex: 1 },
+    { field: "payment_id", headerName: "Transaction ID", flex: 1.5 },
     { field: "payment_date", headerName: "Order Date", flex: 1 },
     {
       field: "amount",

@@ -38,12 +38,12 @@ export default function PaymentModal({
         // Send rupee amount to backend
         const res = await axios.post("/api/payment-operations", { amount });
 
-// backend should return the created Razorpay order object
-const order = res.data.order || res.data;
+        // backend should return the created Razorpay order object
+        const order = res.data.order || res.data;
 
-if (!order || !order.amount) {
-  throw new Error("Invalid Razorpay order response");
-}
+        if (!order || !order.amount) {
+          throw new Error("Invalid Razorpay order response");
+        }
         const options: any = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
           amount: order.amount, // comes in paise from backend

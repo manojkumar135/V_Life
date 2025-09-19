@@ -194,19 +194,18 @@ export default function AddOrderPage() {
   const router = useRouter();
 
   // --- FIX: Always restore correct unit_price and price ---
- const normalizeCart = (items: any[]): CartItem[] =>
-  (items || []).map((i: any) => {
-    const quantity = Number(i.quantity) || 1;
-    const unit_price = Number(i.unit_price) || 0; // ✅ trust backend unit_price
-    return {
-      ...i,
-      id: Number(i.id),
-      unit_price,
-      quantity,
-      price: unit_price * quantity, // ✅ always recalc line total
-    };
-  });
-
+  const normalizeCart = (items: any[]): CartItem[] =>
+    (items || []).map((i: any) => {
+      const quantity = Number(i.quantity) || 1;
+      const unit_price = Number(i.unit_price) || 0; // ✅ trust backend unit_price
+      return {
+        ...i,
+        id: Number(i.id),
+        unit_price,
+        quantity,
+        price: unit_price * quantity, // ✅ always recalc line total
+      };
+    });
 
   const [cart, setCart] = useState<CartItem[]>(normalizeCart(user.items ?? []));
   const [address, setAddress] = useState("");
@@ -351,7 +350,7 @@ export default function AddOrderPage() {
   const getTotalPrice = () =>
     cart.reduce((total, item) => total + item.price, 0);
 
-  const createOrder = async (finalAmount: number) => {
+  const createOrder = async (finalAmount: number, razorpayResponse: any) => {
     try {
       const orderItems = cart.map((item) => ({
         product_id: String(item.id),
@@ -372,10 +371,13 @@ export default function AddOrderPage() {
         mail: formData.customerEmail || user.mail,
         address: formData.shippingAddress || address,
         description: formData.notes,
-        payment:"completed",
-        payment_date: formatDate(new Date()),
-        payment_id: "payment-id-" + Date.now(),
-        payment_type: "razorpay",
+        payment: "completed",
+        payment_date: formatDate(new Date()), // Or get from Razorpay if available
+        payment_time: new Date().toLocaleTimeString(), // store human-readable
+        payment_id: razorpayResponse.razorpay_payment_id,
+        payment_order_id: razorpayResponse.razorpay_order_id,
+        payment_signature: razorpayResponse.razorpay_signature,
+        payment_type: razorpayResponse.method || "razorpay", // UPI / card / netbanking
         items: orderItems,
         order_status: "pending",
         amount: getTotalPrice(),
@@ -422,7 +424,7 @@ export default function AddOrderPage() {
       finalAmount = totalAmount - 10000;
     }
 
-    await createOrder(finalAmount);
+    // await createOrder(finalAmount);
   };
 
   const activeCategoryProducts =
@@ -448,10 +450,10 @@ export default function AddOrderPage() {
             {categories.map((category) => (
               <button
                 key={category.id}
-                className={`px-4 py-2 font-medium whitespace-nowrap ${
+                className={`px-4 py-2 font-medium whitespace-nowrap  ${
                   activeCategory === category.name
                     ? "border-b-2 border-blue-600 text-blue-600"
-                    : "text-gray-500 hover:text-gray-700"
+                    : ""
                 }`}
                 onClick={() => setActiveCategory(category.name)}
               >

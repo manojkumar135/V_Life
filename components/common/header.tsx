@@ -58,13 +58,13 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
         <button className="p-1 rounded-full bg-gray-100 ">
           <MdNotificationsNone className="w-6 h-6 text-gray-700" />
         </button>
-        <button className="p-2 rounded-full bg-gray-100 " onClick={toggleTheme}>
+        {/* <button className="p-2 rounded-full bg-gray-100 " onClick={toggleTheme}>
           {theme === "dark" ? (
             <FaSun className="w-5 h-5 text-yellow-400" />
           ) : (
             <FaMoon className="w-5 h-5 text-gray-700" />
           )}
-        </button>
+        </button> */}
         <button
           className="px-1 rounded-full hover:bg-gray-100"
           title={user?.user_id}

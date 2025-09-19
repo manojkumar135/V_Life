@@ -31,6 +31,7 @@ const OrderSchema = new mongoose.Schema(
 
     payment_date: { type: String, required: true },
     payment:{ type: String, required: true },
+    payment_time :{ type: String, required: true },
     payment_id: { type: String, required: true },
     payment_type: { type: String, required: true },
     amount: { type: Number, required: true }, // total order amount

@@ -70,6 +70,14 @@ export default function OrderFormCartSection({
     cvv: "",
   });
 
+  const handleGoToCustomerInfo = () => {
+    if (cart.length === 0) {
+      ShowToast.error("Your cart is empty");
+      return;
+    }
+    setActiveTab("customer");
+  };
+
   useEffect(() => {
     const checkAdvancePayment = async () => {
       try {
@@ -116,6 +124,12 @@ export default function OrderFormCartSection({
           !formData.contact
         ) {
           ShowToast.warning("Please fill in all required customer information");
+          return;
+        }
+        if (formData.shippingAddress.length < 15) {
+          ShowToast.error(
+            "Shipping address must be Valid Address"
+          );
           return;
         }
       } else if (activeTab === "cart" && cart.length === 0) {
@@ -214,7 +228,6 @@ export default function OrderFormCartSection({
     !formData.contact;
 
   const isDisabled =
-    isCustomerInfoMissing ||
     cart.length === 0 ||
     (isFirstOrder && getTotalPrice() < 10000) ||
     !hasPaidAdvance;
@@ -458,7 +471,7 @@ export default function OrderFormCartSection({
                   <div className="flex justify-end px-5 pb-3">
                     <button
                       type="button"
-                      onClick={handlePlaceOrder}
+                      onClick={handleGoToCustomerInfo}
                       disabled={isDisabled}
                       className={`w-full lg:w-1/2 mt-2 py-3 px-4 rounded-md transition-colors duration-200 font-semibold
       ${
@@ -534,7 +547,7 @@ export default function OrderFormCartSection({
               // disabled={isDisabled}
               className={`w-full mt-2 py-3 px-4 rounded-md transition-colors duration-200  font-semibold
     ${
-      isDisabled
+      isDisabled || isCustomerInfoMissing
         ? "bg-gray-400 text-white cursor-not-allowed"
         : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
     }
@@ -557,7 +570,7 @@ export default function OrderFormCartSection({
           }}
           onSuccess={async (res) => {
             console.log("✅ Payment successful:", res);
-            await createOrder(finalAmount); // ✅ directly create order
+            await createOrder(finalAmount, res); // ✅ directly create order
             setShowPayment(false);
           }}
           onClose={() => {
