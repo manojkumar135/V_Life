@@ -22,11 +22,11 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
 
     const id = searchParams.get("id") || searchParams.get("transaction_id");
-    const userId = searchParams.get("user_id");
-    const minAmount = parseFloat(searchParams.get("minAmount") || "10000");
+    const user_id = searchParams.get("user_id");
     const search = searchParams.get("search");
+    const role = searchParams.get("role");
 
-    // 🔹 If ID or transaction_id is provided → fetch single history record
+    // ✅ Fetch by ID / transaction_id
     if (id) {
       let history;
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -37,7 +37,7 @@ export async function GET(request) {
 
       if (!history) {
         return NextResponse.json(
-          { success: false, message: "History record not found" },
+          { success: false, message: "History not found" },
           { status: 404 }
         );
       }
@@ -45,36 +45,47 @@ export async function GET(request) {
       return NextResponse.json({ success: true, data: history }, { status: 200 });
     }
 
-    // ✅ Build query
+    // ✅ Role-based query
     let query = {};
-
-    // If user_id is passed
-    if (userId) {
-      query.user_id = userId;
+    if (role) {
+      if (role === "user") {
+        if (!user_id) {
+          return NextResponse.json(
+            { success: false, message: "user_id is required for role=user" },
+            { status: 400 }
+          );
+        }
+        query.user_id = user_id;
+      } else if (role === "admin") {
+        query = {};
+      } else {
+        return NextResponse.json(
+          { success: false, message: "Invalid role" },
+          { status: 400 }
+        );
+      }
     }
 
-    // If minAmount is passed
-    if (!isNaN(minAmount) && minAmount > 0) {
-      query.amount = { $gte: minAmount };
-    }
-
-    // If search is passed
+    // ✅ Search
     if (search) {
-      const searchTerms = search
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const searchTerms = search.split(",").map((s) => s.trim()).filter(Boolean);
 
       query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp("^" + term, "i"); 
-        return [
+        const regex = new RegExp("^" + term, "i");
+        const conditions = [
           { transaction_id: regex },
           { user_id: regex },
-          { amount: regex },
-          { type: regex },
+          { user_name: regex },
           { status: regex },
-          { description: regex },
+          { details: regex },
         ];
+
+        if (!isNaN(Number(term))) {
+          const num = Number(term);
+          conditions.push({ $expr: { $eq: [{ $floor: "$amount" }, num] } });
+        }
+
+        return conditions;
       });
     }
 
@@ -89,6 +100,7 @@ export async function GET(request) {
     );
   }
 }
+
 
 
 // PUT - Replace a history record

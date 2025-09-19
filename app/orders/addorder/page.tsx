@@ -193,6 +193,8 @@ export default function AddOrderPage() {
   const { user, updateUserCart } = useVLife();
   const router = useRouter();
 
+  // console.log(user,"addorder")
+
   // --- FIX: Always restore correct unit_price and price ---
   const normalizeCart = (items: any[]): CartItem[] =>
     (items || []).map((i: any) => {
@@ -240,15 +242,16 @@ export default function AddOrderPage() {
     const checkFirstOrder = async () => {
       try {
         const res = await axios.get(
-          `/api/order-operations?user_id=${user.user_id}`
+           `/api/order-operations?role=${user.role}&user_id=${user.user_id}`
         );
+        // console.log(res)
         setIsFirstOrder(!res.data?.data || res.data.data.length === 0);
       } catch (error) {
         console.error("Failed to check first order:", error);
       }
     };
     checkFirstOrder();
-  }, [user.user_id]);
+  }, [user?.user_id]);
 
   // --- FIX: Normalize cart on user.items change ---
   useEffect(() => {
@@ -350,60 +353,90 @@ export default function AddOrderPage() {
   const getTotalPrice = () =>
     cart.reduce((total, item) => total + item.price, 0);
 
-  const createOrder = async (finalAmount: number, razorpayResponse: any) => {
-    try {
-      const orderItems = cart.map((item) => ({
-        product_id: String(item.id),
-        product: String(item.id),
-        category: item.category,
-        name: item.name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        price: item.price,
-        description: item.description,
-        image: item.image,
-      }));
+ const createOrder = async (finalAmount: number, razorpayResponse: any) => {
+  try {
+    const orderItems = cart.map((item) => ({
+      product_id: String(item.id),
+      product: String(item.id),
+      category: item.category,
+      name: item.name,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      price: item.price,
+      description: item.description,
+      image: item.image,
+    }));
 
-      const payload = {
-        user_id: user.user_id,
-        user_name: formData.customerName || user.user_name,
-        contact: formData.contact || user.contact,
-        mail: formData.customerEmail || user.mail,
-        address: formData.shippingAddress || address,
-        description: formData.notes,
-        payment: "completed",
-        payment_date: formatDate(new Date()), // Or get from Razorpay if available
-        payment_time: new Date().toLocaleTimeString(), // store human-readable
-        payment_id: razorpayResponse.razorpay_payment_id,
-        payment_order_id: razorpayResponse.razorpay_order_id,
-        payment_signature: razorpayResponse.razorpay_signature,
-        payment_type: razorpayResponse.method || "razorpay", // UPI / card / netbanking
-        items: orderItems,
-        order_status: "pending",
-        amount: getTotalPrice(),
-        total_amount: getTotalPrice(),
-        final_amount: finalAmount,
-        advance_deducted: isFirstOrder ? 10000 : 0,
-        is_first_order: isFirstOrder,
-      };
+    const payload = {
+      user_id: user.user_id,
+      user_name: formData.customerName || user.user_name,
+      contact: formData.contact || user.contact,
+      mail: formData.customerEmail || user.mail,
+      address: formData.shippingAddress || address,
+      description: formData.notes,
+      payment: "completed",
+      payment_date: formatDate(new Date()),
+      payment_time: new Date().toLocaleTimeString(),
+      payment_id: razorpayResponse.razorpay_payment_id,
+      payment_order_id: razorpayResponse.razorpay_order_id,
+      payment_signature: razorpayResponse.razorpay_signature,
+      payment_type: razorpayResponse.method || "razorpay",
+      items: orderItems,
+      order_status: "pending",
+      amount: getTotalPrice(),
+      total_amount: getTotalPrice(),
+      final_amount: finalAmount,
+      advance_deducted: isFirstOrder ? 10000 : 0,
+      is_first_order: isFirstOrder,
+    };
 
-      const response = await axios.post("/api/order-operations", payload, {
-        headers: { "Content-Type": "application/json" },
-      });
+    const response = await axios.post("/api/order-operations", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
 
-      if (response.data.success) {
-        setCart([]);
-        await updateUserCart([]);
-        ShowToast.success("Order created successfully!");
-        router.push("/orders");
-      } else {
-        ShowToast.error(response.data.message || "Failed to create order");
+    if (response.data.success) {
+      // ✅ Clear cart
+      setCart([]);
+      await updateUserCart([]);
+
+      // ✅ Create history record
+      try {
+        await axios.post("/api/history-operations", {
+          transaction_id: razorpayResponse.razorpay_payment_id,
+          wallet_id: user?.wallet_id || "",
+          user_id: user?.user_id,
+          user_name: user?.user_name,
+          account_holder_name: user?.user_name,
+          bank_name: "Razorpay",
+          account_number: "N/A",
+          ifsc_code: "N/A",
+          date: formatDate(new Date()),
+          time: new Date().toLocaleTimeString(),
+          available_balance: 0,
+          amount: finalAmount,
+          transaction_type: "Debit",
+          details: isFirstOrder
+            ? "Order Payment (₹10,000 Advance Deducted)"
+            : "Order Payment",
+          status: "Completed",
+          created_by: user?.user_id,
+        });
+      } catch (historyError: any) {
+        console.error("Error saving history:", historyError);
+        ShowToast.error("Order saved but failed to save history!");
       }
-    } catch (error: any) {
-      console.error("Error creating order:", error);
-      ShowToast.error("Failed to create order: " + error.message);
+
+      ShowToast.success("Order created successfully!");
+      router.push("/orders");
+    } else {
+      ShowToast.error(response.data.message || "Failed to create order");
     }
-  };
+  } catch (error: any) {
+    console.error("Error creating order:", error);
+    ShowToast.error("Failed to create order: " + error.message);
+  }
+};
+
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

@@ -78,7 +78,7 @@ export async function GET(request: Request) {
     const id = searchParams.get("id") || searchParams.get("order_id");
     const search = searchParams.get("search");
     const user_id = searchParams.get("user_id");
-    const role = searchParams.get("role"); // ✅ role comes from query
+    const role = searchParams.get("role"); // 🔹 role from query
 
     // 🔹 If ID or order_id is provided → fetch single order
     if (id) {
@@ -99,20 +99,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, data: order }, { status: 200 });
     }
 
-    // ✅ Build base query
+    // ✅ Role-based filtering
     let query: Record<string, any> = {};
-
-    // 🔹 Role-based access control
     if (role === "user") {
       if (!user_id) {
         return NextResponse.json(
-          { success: false, message: "User ID required for role=user" },
+          { success: false, message: "user_id is required for role=user" },
           { status: 400 }
         );
       }
-      query.user_id = user_id; // only their own orders
+      query.user_id = user_id; // only this user’s orders
+    } else if (role === "admin") {
+      query = {}; // all orders
+    } else {
+      return NextResponse.json(
+        { success: false, message: "Invalid role. Must be 'user' or 'admin'" },
+        { status: 400 }
+      );
     }
-    // 🔹 role=admin → no restriction, gets all orders
 
     // ✅ Apply search if provided
     if (search) {
@@ -136,7 +140,7 @@ export async function GET(request: Request) {
           { shipping_address: regex },
         ];
 
-        // ✅ Numeric search → compare floored integer part of amount
+        // ✅ Numeric search
         if (!isNaN(Number(term))) {
           const num = Number(term);
           conditions.push({
@@ -159,6 +163,7 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 // ----------------- PUT -----------------
 export async function PUT(request: Request) {

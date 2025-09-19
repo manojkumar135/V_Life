@@ -53,7 +53,7 @@ export default function OrderFormCartSection({
     "qr"
   );
 
-  console.log(cart, "order summary");
+  // console.log(cart, "order summary");
   // console.log("isFirstOrder in OrderFormCartSection:", isFirstOrder);
   const router = useRouter();
 
@@ -233,6 +233,7 @@ export default function OrderFormCartSection({
     !hasPaidAdvance;
 
   // console.log( (isCustomerInfoMissing),isDisabled)
+  // console.log(isFirstOrder,"ordersummary")
 
   return (
     <div className="relative">

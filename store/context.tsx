@@ -14,6 +14,8 @@ export interface CartItem {
   category: string;
 }
 
+export type ThemeType = "light" | "dark" | "system";
+
 export interface UserType {
   login_id: string;
   user_id: string;
@@ -24,6 +26,8 @@ export interface UserType {
   status: string;
   token?: string;
   items?: CartItem[];
+  wallet_id?: string;
+  theme?: ThemeType; // ✅ added theme to userType
 
   address?: string;
   pincode?: string;
@@ -37,15 +41,11 @@ export interface UserType {
   __v?: number;
 }
 
-export type ThemeType = "light" | "dark" | "system";
-
 export interface VLifeContextType {
   user: UserType;
   setUser: (user: Partial<UserType>) => void;
   clearUser: () => void;
   updateUserCart: (cartItems: CartItem[]) => Promise<void>;
-  theme: ThemeType;
-  setTheme: (theme: ThemeType) => void;
 }
 
 const defaultUser: UserType = {
@@ -58,6 +58,8 @@ const defaultUser: UserType = {
   status: "",
   token: "",
   items: [],
+  wallet_id: "",
+  theme: "light", // ✅ default theme in user
   address: "",
   pincode: "",
   intro: false,
@@ -74,20 +76,19 @@ const VLifeContext = createContext<VLifeContextType | undefined>(undefined);
 
 export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<UserType>(defaultUser);
-  const [theme, setThemeState] = useState<ThemeType>("light");
 
-  // ✅ Load theme from localStorage
+  // ✅ Load theme from localStorage or user
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as ThemeType | null;
     if (savedTheme) {
-      setThemeState(savedTheme);
+      setUserState((prev) => ({ ...prev, theme: savedTheme }));
       applyTheme(savedTheme);
     } else {
-      applyTheme("light");
+      applyTheme(user.theme || "light");
     }
   }, []);
 
-  // ✅ Apply theme globally (to <html> class)
+  // ✅ Apply theme globally
   const applyTheme = (theme: ThemeType) => {
     const root = document.documentElement;
     root.classList.remove("light", "dark");
@@ -99,69 +100,65 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ Update theme & persist
-  const setTheme = (t: ThemeType) => {
-    setThemeState(t);
-    localStorage.setItem("theme", t);
-    applyTheme(t);
-  };
-
+  // ✅ Update theme and persist
   const setUser = (u: Partial<UserType>) => {
+    if (u.theme) {
+      localStorage.setItem("theme", u.theme);
+      applyTheme(u.theme);
+    }
     setUserState((prev) => ({ ...prev, ...u }));
   };
 
   const clearUser = () => {
     setUserState(defaultUser);
+    applyTheme(defaultUser.theme || "light");
   };
 
-const updateUserCart = async (cartItems: CartItem[]) => {
-  console.log(cartItems,"context")
-  try {
-    const transformedCartItems = cartItems.map((item) => ({
-      id: String(item.id),
-      product: String(item.id),
-      name: item.name,
-      quantity: item.quantity,
-      unit_price: item.unit_price,   // ✅ per item price
-      price: item.unit_price * item.quantity, // ✅ line total
-      image: item.image,
-      description: item.description || "",
-      category: item.category,
-      created_at: new Date().toISOString(),
-    }));
-
-    const updatePayload: any = { items: transformedCartItems };
-
-    if (user._id) updatePayload._id = user._id;
-    else if (user.user_id) updatePayload.user_id = user.user_id;
-    else if (user.login_id) updatePayload.login_id = user.login_id;
-    else throw new Error("No user identifier available to update cart");
-
-    const response = await axios.patch("/api/login-operations", updatePayload);
-
-    if (response.data.success) {
-      // Normalize back to numbers
-      const normalized = cartItems.map((i) => ({
-        ...i,
-        id: Number(i.id),
-        unit_price: Number(i.unit_price),
-        price: Number(i.unit_price) * Number(i.quantity),
+  const updateUserCart = async (cartItems: CartItem[]) => {
+    try {
+      const transformedCartItems = cartItems.map((item) => ({
+        id: String(item.id),
+        product: String(item.id),
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        price: item.unit_price * item.quantity,
+        image: item.image,
+        description: item.description || "",
+        category: item.category,
+        created_at: new Date().toISOString(),
       }));
-      setUserState((prev) => ({ ...prev, items: normalized }));
-    } else {
-      throw new Error(response.data.message || "Failed to update cart");
+
+      const updatePayload: any = { items: transformedCartItems };
+
+      if (user._id) updatePayload._id = user._id;
+      else if (user.user_id) updatePayload.user_id = user.user_id;
+      else if (user.login_id) updatePayload.login_id = user.login_id;
+      else throw new Error("No user identifier available to update cart");
+
+      const response = await axios.patch("/api/login-operations", updatePayload);
+
+      if (response.data.success) {
+        // Normalize back to numbers
+        const normalized = cartItems.map((i) => ({
+          ...i,
+          id: Number(i.id),
+          unit_price: Number(i.unit_price),
+          price: Number(i.unit_price) * Number(i.quantity),
+        }));
+        setUserState((prev) => ({ ...prev, items: normalized }));
+      } else {
+        throw new Error(response.data.message || "Failed to update cart");
+      }
+    } catch (error) {
+      console.error("Error updating cart:", error);
+      throw error;
     }
-  } catch (error) {
-    console.error("Error updating cart:", error);
-    throw error;
-  }
-};
-
-
+  };
 
   return (
     <VLifeContext.Provider
-      value={{ user, setUser, clearUser, updateUserCart, theme, setTheme }}
+      value={{ user, setUser, clearUser, updateUserCart }}
     >
       {children}
     </VLifeContext.Provider>

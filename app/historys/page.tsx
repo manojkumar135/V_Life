@@ -20,6 +20,7 @@ export default function TransactionHistory() {
   const router = useRouter();
   const { user } = useVLife();
   const user_id = user?.user_id || "";
+  console.log(user.role)
 
   const { query, setQuery, debouncedQuery } = useSearch();
 
@@ -46,35 +47,40 @@ export default function TransactionHistory() {
   }, [user?.user_id]);
 
   // ✅ Fetch transactions with date filters
-  const fetchHistory = useCallback(async () => {
-    if (!user?.user_id) return;
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL, {
-        params: {
-          user_id: user.user_id,
-          search: query,
-          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
-          ...(dateFilter?.type === "range" && {
-            from: dateFilter.from,
-            to: dateFilter.to,
-          }),
-        },
-      });
-      const history = data.data || [];
-      setHistoryData(history);
-      setTotalItems(history.length);
-    } catch (error) {
-      console.error("Error fetching history:", error);
-      ShowToast.error("Failed to load history");
-    } finally {
-      setLoading(false);
-    }
-  }, [user?.user_id, query, dateFilter]);
+  const fetchHistory = useCallback(
+    async (search: string, orderId?: string, id?: string) => {
+      if (!user?.user_id) return;
+      try {
+        setLoading(true);
+        const { data } = await axios.get(API_URL, {
+          params: {
+            search: search || "",
+            role: user?.role,
+            user_id: user_id,
+            ...(dateFilter?.type === "on" && { date: dateFilter.date }),
+            ...(dateFilter?.type === "range" && {
+              from: dateFilter.from,
+              to: dateFilter.to,
+            }),
+          },
+        });
+        const history = data.data || [];
+        console.log(data)
+        setHistoryData(history);
+        setTotalItems(history.length);
+      } catch (error) {
+        console.error("Error fetching history:", error);
+        ShowToast.error("Failed to load history");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.user_id, query, dateFilter]
+  );
 
   useEffect(() => {
     if (!user?.user_id) return;
-    fetchHistory();
+    fetchHistory(debouncedQuery);
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // ✅ Columns setup

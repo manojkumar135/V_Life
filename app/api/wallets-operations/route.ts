@@ -1,40 +1,32 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Wallet } from "@/models/wallet";
+import { Login } from "@/models/login";
 import mongoose from "mongoose";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
+// Format field for error messages
 function formatField(str: string) {
-  // Special cases that should always be uppercase
   const specialCases: Record<string, string> = {
     pan: "PAN",
     ifsc: "IFSC",
   };
-
   return str
     .split("_")
     .map((word) => {
       const lower = word.toLowerCase();
-      if (specialCases[lower]) return specialCases[lower]; // PAN, IFSC
+      if (specialCases[lower]) return specialCases[lower];
       return word.charAt(0).toUpperCase() + word.slice(1);
     })
     .join(" ");
 }
 
-// Helper → Find wallet by either Mongo _id or wallet_id
+// Find wallet by _id or wallet_id
 async function findWalletByIdOrWalletId(value: string) {
   if (!value) return null;
-
   const query: any[] = [];
-
-  // Only add _id condition if it's a valid ObjectId
-  if (mongoose.Types.ObjectId.isValid(value)) {
-    query.push({ _id: value });
-  }
-
-  // Always allow wallet_id match
+  if (mongoose.Types.ObjectId.isValid(value)) query.push({ _id: value });
   query.push({ wallet_id: value });
-
   return await Wallet.findOne({ $or: query });
 }
 
@@ -45,25 +37,21 @@ export async function GET(request: Request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
-
     const search = searchParams.get("search") || "";
     const user_id = searchParams.get("user_id") || "";
     const id = searchParams.get("id");
     const wallet_id = searchParams.get("wallet_id");
 
-    // ✅ Fetch single wallet by id/wallet_id
     if (id || wallet_id) {
       const wallet = await findWalletByIdOrWalletId(id || wallet_id!);
-      if (!wallet) {
+      if (!wallet)
         return NextResponse.json(
           { success: false, message: "Wallet not found" },
           { status: 404 }
         );
-      }
       return NextResponse.json({ success: true, data: wallet });
     }
 
-    // ✅ Build query for multiple wallets
     let query: any = {};
     if (search) {
       query.$or = [
@@ -79,21 +67,17 @@ export async function GET(request: Request) {
         { wallet_status: { $regex: search, $options: "i" } },
       ];
     }
-    if (user_id) {
-      query.user_id = user_id;
-    }
+    if (user_id) query.user_id = user_id;
 
     const wallets = await Wallet.find(query).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: wallets });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
+
 /**
- * POST → Create new wallet
+ * POST → Create new wallet & sync Login
  */
 export async function POST(request: Request) {
   try {
@@ -108,23 +92,19 @@ export async function POST(request: Request) {
       !body.bank_name ||
       !account_number ||
       !body.ifsc_code
-    ) {
+    )
       return NextResponse.json(
         { success: false, message: "Missing required fields" },
         { status: 400 }
       );
-    }
 
-    // ✅ Check if this user already has a wallet
     const existingWallet = await Wallet.findOne({ user_id });
-    if (existingWallet) {
+    if (existingWallet)
       return NextResponse.json(
         { success: false, message: "This user already has a wallet" },
         { status: 400 }
       );
-    }
 
-    // ✅ Uniqueness check for account_number, aadhar_number, pan_number
     const duplicate = await Wallet.findOne({
       $or: [
         { account_number },
@@ -137,7 +117,7 @@ export async function POST(request: Request) {
       if (duplicate.aadhar_number === aadhar_number) field = "aadhar_number";
       if (duplicate.pan_number === pan_number) field = "pan_number";
       return NextResponse.json(
-        { success: false, message: `${field} already exists.` },
+        { success: false, message: `${formatField(field)} already exists.` },
         { status: 400 }
       );
     }
@@ -145,56 +125,55 @@ export async function POST(request: Request) {
     const wallet_id = await generateUniqueCustomId("WA", Wallet, 8, 8);
     const newWallet = await Wallet.create({ ...body, wallet_id });
 
-    return NextResponse.json(
-      { success: true, data: newWallet },
-      { status: 201 }
-    );
+    // ✅ Always sync with Login
+    const login = await Login.findOne({ user_id });
+    if (login) {
+      login.wallet_id = wallet_id || login.wallet_id || "";
+      login.aadhar = aadhar_number || login.aadhar || "";
+      login.pan = pan_number || login.pan || "";
+      await login.save();
+    }
+
+    return NextResponse.json({ success: true, data: newWallet }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
 /**
- * PUT → Replace entire wallet
+ * PUT → Replace entire wallet & sync Login
  */
 export async function PUT(request: Request) {
   try {
     await connectDB();
-    const { id, wallet_id, ...updates } = await request.json();
+    const { id, wallet_id, aadhar_number, pan_number, ...updates } = await request.json();
     const updateId = id || wallet_id;
-
-    if (!updateId) {
+    if (!updateId)
       return NextResponse.json(
         { success: false, message: "ID or wallet_id is required" },
         { status: 400 }
       );
-    }
 
     const wallet = await findWalletByIdOrWalletId(updateId);
-    if (!wallet) {
+    if (!wallet)
       return NextResponse.json(
         { success: false, message: "Wallet not found" },
         { status: 404 }
       );
-    }
 
-    const { user_id, account_number, aadhar_number, pan_number } = updates;
+    const { user_id, account_number } = updates;
 
-    // ✅ Prevent assigning wallet to a user that already has one
+    // Check for duplicate user wallet
     if (user_id && user_id !== wallet.user_id) {
       const userWallet = await Wallet.findOne({ user_id });
-      if (userWallet) {
+      if (userWallet)
         return NextResponse.json(
           { success: false, message: "This user already has a wallet" },
           { status: 400 }
         );
-      }
     }
 
-    // ✅ Uniqueness check
+    // Uniqueness check
     if (account_number || aadhar_number || pan_number) {
       const duplicate = await Wallet.findOne({
         $and: [
@@ -220,64 +199,64 @@ export async function PUT(request: Request) {
     }
 
     Object.assign(wallet, updates);
+    wallet.wallet_id = wallet_id || wallet.wallet_id || "";
+    wallet.aadhar_number = aadhar_number || wallet.aadhar_number || "";
+    wallet.pan_number = pan_number || wallet.pan_number || "";
     await wallet.save();
+
+    // ✅ Always sync Login
+    const login = await Login.findOne({ user_id: wallet.user_id });
+    if (login) {
+      login.wallet_id = wallet.wallet_id;
+      login.aadhar = wallet.aadhar_number;
+      login.pan = wallet.pan_number;
+      await login.save();
+    }
 
     return NextResponse.json({ success: true, data: wallet });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
 /**
- * PATCH → Update partial wallet fields
+ * PATCH → Partial update wallet & sync Login
  */
 export async function PATCH(request: Request) {
   try {
     await connectDB();
-
-    // ✅ Get wallet_id from query params (if provided)
     const { searchParams } = new URL(request.url);
-    const walletIdFromQuery =
-      searchParams.get("wallet_id") || searchParams.get("id");
+    const walletIdFromQuery = searchParams.get("wallet_id") || searchParams.get("id");
 
-    // ✅ Get wallet_id from request body
     const body = await request.json();
-    const { id, wallet_id, ...updates } = body;
-
+    const { id, wallet_id, aadhar_number, pan_number, ...updates } = body;
     const updateId = id || wallet_id || walletIdFromQuery;
 
-    if (!updateId) {
+    if (!updateId)
       return NextResponse.json(
         { success: false, message: "ID or wallet_id is required" },
         { status: 400 }
       );
-    }
 
     const wallet = await findWalletByIdOrWalletId(updateId);
-    if (!wallet) {
+    if (!wallet)
       return NextResponse.json(
         { success: false, message: "Wallet not found" },
         { status: 404 }
       );
-    }
 
-    const { user_id, account_number, aadhar_number, pan_number } = updates;
+    const { user_id, account_number } = updates;
 
-    // ✅ Prevent assigning wallet to a user that already has one
     if (user_id && user_id !== wallet.user_id) {
       const userWallet = await Wallet.findOne({ user_id });
-      if (userWallet) {
+      if (userWallet)
         return NextResponse.json(
           { success: false, message: "This user already has a wallet" },
           { status: 400 }
         );
-      }
     }
 
-    // ✅ Uniqueness check
+    // Uniqueness check
     if (account_number || aadhar_number || pan_number) {
       const duplicate = await Wallet.findOne({
         $and: [
@@ -304,14 +283,23 @@ export async function PATCH(request: Request) {
     }
 
     Object.assign(wallet, updates);
+    wallet.wallet_id = wallet_id || wallet.wallet_id || "";
+    wallet.aadhar_number = aadhar_number || wallet.aadhar_number || "";
+    wallet.pan_number = pan_number || wallet.pan_number || "";
     await wallet.save();
+
+    // ✅ Always sync Login
+    const login = await Login.findOne({ user_id: wallet.user_id });
+    if (login) {
+      login.wallet_id = wallet.wallet_id;
+      login.aadhar = wallet.aadhar_number;
+      login.pan = wallet.pan_number;
+      await login.save();
+    }
 
     return NextResponse.json({ success: true, data: wallet });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
@@ -326,30 +314,26 @@ export async function DELETE(request: Request) {
     const wallet_id = searchParams.get("wallet_id");
     const deleteId = id || wallet_id;
 
-    if (!deleteId) {
+    if (!deleteId)
       return NextResponse.json(
         { success: false, message: "ID or wallet_id is required" },
         { status: 400 }
       );
-    }
 
     const wallet = await findWalletByIdOrWalletId(deleteId);
-    if (!wallet) {
+    if (!wallet)
       return NextResponse.json(
         { success: false, message: "Wallet not found" },
         { status: 404 }
       );
-    }
 
     await Wallet.deleteOne({ _id: wallet._id });
+
     return NextResponse.json({
       success: true,
       message: "Wallet deleted successfully",
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
