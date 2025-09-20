@@ -16,6 +16,7 @@ export async function POST(request) {
 }
 
 // GET - Fetch all history records OR single history record by id / transaction_id
+
 export async function GET(request) {
   try {
     await connectDB();
@@ -25,8 +26,13 @@ export async function GET(request) {
     const user_id = searchParams.get("user_id");
     const search = searchParams.get("search");
     const role = searchParams.get("role");
+    const date = searchParams.get("date");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
 
-    // ✅ Fetch by ID / transaction_id
+    // -------------------
+    // Lookup by ID or transaction_id
+    // -------------------
     if (id) {
       let history;
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -37,69 +43,151 @@ export async function GET(request) {
 
       if (!history) {
         return NextResponse.json(
-          { success: false, message: "History not found" },
+          { success: false, message: "History not found", data: [] },
           { status: 404 }
         );
       }
 
-      return NextResponse.json({ success: true, data: history }, { status: 200 });
+      return NextResponse.json({ success: true, data: [history] }, { status: 200 });
     }
 
-    // ✅ Role-based query
-    let query = {};
+    // -------------------
+    // Role-based query
+    // -------------------
+    let baseQuery = {};
     if (role) {
       if (role === "user") {
         if (!user_id) {
           return NextResponse.json(
-            { success: false, message: "user_id is required for role=user" },
+            { success: false, message: "user_id is required for role=user", data: [] },
             { status: 400 }
           );
         }
-        query.user_id = user_id;
+        baseQuery.user_id = user_id;
       } else if (role === "admin") {
-        query = {};
+        baseQuery = {};
       } else {
         return NextResponse.json(
-          { success: false, message: "Invalid role" },
+          { success: false, message: "Invalid role", data: [] },
           { status: 400 }
         );
       }
     }
 
-    // ✅ Search
-    if (search) {
-      const searchTerms = search.split(",").map((s) => s.trim()).filter(Boolean);
+    // -------------------
+    // Date parsing helper
+    // -------------------
+    function parseDate(input) {
+      if (!input) return null;
+      input = input.trim();
 
-      query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp("^" + term, "i");
-        const conditions = [
-          { transaction_id: regex },
-          { user_id: regex },
-          { user_name: regex },
-          { status: regex },
-          { details: regex },
-        ];
+      // dd-mm-yyyy or dd/mm/yyyy
+      let match = input.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
+      if (match) {
+        const [_, day, month, year] = match;
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
 
-        if (!isNaN(Number(term))) {
-          const num = Number(term);
-          conditions.push({ $expr: { $eq: [{ $floor: "$amount" }, num] } });
-        }
+      // yyyy-mm-dd or yyyy/mm/dd
+      match = input.match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/);
+      if (match) {
+        const [_, year, month, day] = match;
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
 
-        return conditions;
-      });
+      // fallback
+      const d = new Date(input);
+      return isNaN(d.getTime()) ? null : d;
     }
 
-    const histories = await History.find(query).sort({ createdAt: -1 });
+    // -------------------
+    // Build filter conditions
+    // -------------------
+    const conditions = [];
+
+    // Search filter
+    if (search) {
+      const searchTerms = search
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (searchTerms.length) {
+        const searchConditions = searchTerms.flatMap((term) => {
+          const regex = new RegExp("^" + term, "i");
+          const conds = [
+            { transaction_id: regex },
+            { user_id: regex },
+            { user_name: regex },
+            { status: regex },
+            { details: regex },
+          ];
+          if (!isNaN(Number(term))) {
+            const num = Number(term);
+            conds.push({ $expr: { $eq: [{ $floor: "$amount" }, num] } });
+          }
+          return conds;
+        });
+
+        conditions.push({ $or: searchConditions });
+      }
+    }
+
+    // -------------------
+    // Single date filter (date field is string 'dd-mm-yyyy')
+    // -------------------
+    if (date && !from && !to) {
+      const parsedDate = parseDate(date);
+      if (parsedDate) {
+        const day = ("0" + parsedDate.getDate()).slice(-2);
+        const month = ("0" + (parsedDate.getMonth() + 1)).slice(-2);
+        const year = parsedDate.getFullYear();
+        const formatted = `${day}-${month}-${year}`; // dd-mm-yyyy
+        conditions.push({ date: formatted });
+      }
+    }
+
+    // -------------------
+    // Date range filter (from/to)
+    // -------------------
+    if (from || to) {
+      const startDate = parseDate(from);
+      const endDate = parseDate(to);
+
+      if (startDate && endDate) {
+        const startDay = ("0" + startDate.getDate()).slice(-2);
+        const startMonth = ("0" + (startDate.getMonth() + 1)).slice(-2);
+        const startYear = startDate.getFullYear();
+
+        const endDay = ("0" + endDate.getDate()).slice(-2);
+        const endMonth = ("0" + (endDate.getMonth() + 1)).slice(-2);
+        const endYear = endDate.getFullYear();
+
+        const startFormatted = `${startDay}-${startMonth}-${startYear}`;
+        const endFormatted = `${endDay}-${endMonth}-${endYear}`;
+
+        conditions.push({ date: { $gte: startFormatted, $lte: endFormatted } });
+      }
+    }
+
+    // -------------------
+    // Combine baseQuery with all conditions
+    // -------------------
+    const finalQuery =
+      conditions.length > 0 ? { $and: [baseQuery, ...conditions] } : baseQuery;
+
+    const histories = await History.find(finalQuery).sort({ date: -1 });
 
     return NextResponse.json({ success: true, data: histories }, { status: 200 });
   } catch (error) {
     console.error("GET history error:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Server error" },
+      { success: false, message: error.message || "Server error", data: [] },
       { status: 500 }
     );
   }
 }
+
 
 
 

@@ -16,26 +16,48 @@ import AlertBox from "@/components/Alerts/advanceAlert";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 import { GridColDef } from "@mui/x-data-grid";
+import { handleDownload } from "@/utils/handleDownload"; // ✅ import
+import { formatDate } from "@/components/common/formatDate";
 
 export default function TransactionHistory() {
   const router = useRouter();
   const { user } = useVLife();
   const user_id = user?.user_id || "";
-  // console.log(user.role)
 
   const { query, setQuery, debouncedQuery } = useSearch();
 
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false); // ✅
+  const [selectedRows, setSelectedRows] = useState<any[]>([]); // ✅
+
   const [showAlert, setShowAlert] = useState(false);
   const [advancePaid, setAdvancePaid] = useState<boolean>(false);
 
-  // ✅ date filter state
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
 
   const API_URL = "/api/history-operations";
+
+  // ✅ handle download click
+  const handleDownloadClick = () => {
+    handleDownload<any>({
+      rows: selectedRows,
+      fileName: "transaction_history",
+      format: "xlsx",
+      excludeHeaders: [
+        "_id",
+        "__v",
+        "created_at",
+        "created_by",
+        "last_modified_by",
+        "last_modified_at",
+      ], // remove backend-only fields
+      onStart: () => setDownloading(true),
+      onFinish: () => setDownloading(false),
+    });
+  };
 
   // ✅ Check if advance is paid
   useEffect(() => {
@@ -49,7 +71,7 @@ export default function TransactionHistory() {
 
   // ✅ Fetch transactions with date filters
   const fetchHistory = useCallback(
-    async (search: string, orderId?: string, id?: string) => {
+    async (search: string) => {
       if (!user?.user_id) return;
       try {
         setLoading(true);
@@ -65,8 +87,8 @@ export default function TransactionHistory() {
             }),
           },
         });
-        const history = data.data || [];
         console.log(data);
+        const history = data.data || [];
         setHistoryData(history);
         setTotalItems(history.length);
       } catch (error) {
@@ -126,17 +148,11 @@ export default function TransactionHistory() {
       onPageChange: () => {},
     });
 
-  const onBack = () => {
-    router.push("/wallet");
-  };
-
-  const handlePayAdvance = () => {
-    router.push("/historys/payAdvance");
-  };
+  const onBack = () => router.push("/wallet");
+  const handlePayAdvance = () => router.push("/historys/payAdvance");
 
   return (
     <Layout>
-      {/* 🔔 Right Side Alert */}
       <AlertBox
         visible={showAlert}
         title="Action Required!"
@@ -153,7 +169,7 @@ export default function TransactionHistory() {
       />
 
       <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
-        {loading && (
+        {(loading || downloading) && ( // ✅ show loader for download too
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
@@ -166,8 +182,8 @@ export default function TransactionHistory() {
           showAddButton={!advancePaid}
           addLabel="Make Payment"
           onAdd={handlePayAdvance}
-          // showBack
           onBack={onBack}
+          onMore={handleDownloadClick} // ✅ added export
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -195,9 +211,9 @@ export default function TransactionHistory() {
           pageSize={14}
           onRowClick={(row) => console.log("Transaction clicked:", row)}
           checkboxSelection
+          setSelectedRows={setSelectedRows} // ✅ enable row selection
         />
 
-        {/* Date Filter Modal */}
         <DateFilterModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}

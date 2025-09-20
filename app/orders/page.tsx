@@ -15,6 +15,9 @@ import { IoClose } from "react-icons/io5";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import ShowToast from "@/components/common/Toast/toast";
+import { FiFilter } from "react-icons/fi";
+import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
+import { handleDownload } from "@/utils/handleDownload";
 
 export default function OrdersPage() {
   const { user } = useVLife();
@@ -28,8 +31,30 @@ export default function OrdersPage() {
   const [ordersData, setOrdersData] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [dateFilter, setDateFilter] = useState<any>(null);
+
+  const [showModal, setShowModal] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
   const API_URL = "/api/order-operations"; // Replace with your actual API endpoint
+
+  const handleDownloadClick = () => {
+    handleDownload<any>({
+      rows: selectedRows, // or selected rows if you want selection-based export
+      fileName: "orders",
+      format: "xlsx",
+      excludeHeaders: [
+        "_id",
+        "__v",
+        "created_at",
+        "last_modified_at",
+        "items", // items array may not be needed in export
+      ],
+      onStart: () => setDownloading(true),
+      onFinish: () => setDownloading(false),
+    });
+  };
 
   useEffect(() => {
     const checkAdvancePayment = async () => {
@@ -172,11 +197,21 @@ export default function OrdersPage() {
         onClose={() => setShowAlert(false)}
       />
       <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
-        {loading && (
+        {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
         )}
+
+        {/* Floating Filter Icon */}
+        <div className="fixed bottom-6 right-6 z-10">
+          <button
+            className="relative w-12 h-12 rounded-full bg-black text-yellow-300 flex items-center justify-center shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-yellow-400 hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
+            onClick={() => setShowModal(true)}
+          >
+            <FiFilter size={20} />
+          </button>
+        </div>
 
         <HeaderWithActions
           title="Orders"
@@ -185,7 +220,7 @@ export default function OrdersPage() {
           addLabel="+ ADD ORDER"
           showAddButton={user?.role === "user" ? hasPaidAdvance : true}
           onAdd={handleAddOrder}
-          onMore={() => console.log("More options clicked")}
+          onMore={handleDownloadClick}
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -206,6 +241,17 @@ export default function OrdersPage() {
           checkboxSelection
           // loading={loading}
           onRowClick={handleRowClick}
+          setSelectedRows={setSelectedRows} // ✅ add this
+        />
+
+        {/* Date Filter Modal */}
+        <DateFilterModal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          onSubmit={(filter) => {
+            setDateFilter(filter);
+            setShowModal(false);
+          }}
         />
       </div>
     </Layout>
