@@ -151,7 +151,7 @@ export default function RightTeam() {
 
   return (
     <Layout>
-      <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+      <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
         {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />

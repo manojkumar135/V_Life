@@ -26,7 +26,7 @@ export default function SideNav({
   const router = useRouter();
   const { user, clearUser } = useVLife();
 
-  const [isLogoutOpen, setIsLogoutOpen] = useState(false); // ✅ modal state
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const menuItems = [
@@ -37,7 +37,8 @@ export default function SideNav({
       match: "dashboard",
     },
     {
-      href: user?.role === "admin" ? "/administration" : "/administration/users",
+      href:
+        user?.role === "admin" ? "/administration" : "/administration/users",
       icon: <IoPeople />,
       label: "Administration",
       match: "administration",
@@ -50,7 +51,7 @@ export default function SideNav({
 
   const handleNavigation = (path: string) => {
     router.push(path);
-    setIsOpen(false); // Close sidebar on mobile after navigation
+    setIsOpen(false); // close sidebar on mobile
   };
 
   const handleLogout = async () => {
@@ -71,9 +72,11 @@ export default function SideNav({
   return (
     <>
       {/* Desktop SideNav */}
-      <div className="hidden md:flex flex-col items-center
+      <div
+        className="hidden md:flex flex-col items-center
        w-20 bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-500 pt-20 pb-6 
-       rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative">
+       rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative"
+      >
         {/* Logo */}
         <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">
           <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden flex items-center justify-center">
@@ -95,7 +98,7 @@ export default function SideNav({
               <div key={index} className="relative group">
                 <button
                   onClick={() => handleNavigation(item.href)}
-                  className={`group p-2 rounded-xl w-12 h-12 flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out ${
+                  className={`p-2 rounded-xl w-12 h-12 flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out ${
                     isActive
                       ? "bg-white text-black shadow-lg scale-110"
                       : "text-white hover:text-black hover:scale-105"
@@ -103,10 +106,12 @@ export default function SideNav({
                 >
                   <span className="text-[24px]">{item.icon}</span>
                 </button>
-                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs 
-                font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100
-                 group-hover:delay-[400ms] transition-opacity duration-200 whitespace-nowrap z-50 
-                 pointer-events-none group-hover:pointer-events-auto cursor-pointer">
+                {/* Tooltip */}
+                <span
+                  className="absolute left-full top-1/2 -translate-y-1/2 ml-1.5 px-2 py-1 text-xs 
+                  font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[400ms]
+                  translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50"
+                >
                   {item.label}
                 </span>
               </div>
@@ -116,16 +121,23 @@ export default function SideNav({
 
         {/* Logout (Desktop) */}
         <div className="w-full flex justify-center">
-          <div className="relative">
+          <div className="relative group">
             <button
               onClick={() => setIsLogoutOpen(true)}
-              className="group p-3 rounded-xl w-12 h-12 flex items-center justify-center text-white hover:bg-white/90 hover:text-black hover:shadow-md transition-all duration-300"
+              className="p-3 rounded-xl w-12 h-12 flex items-center justify-center text-white hover:bg-black/90
+              hover:shadow-md transition-all duration-300 cursor-pointer max-lg:-mt-35"
             >
               <span className="text-[26px]">
                 <RiLogoutCircleRLine />
               </span>
             </button>
-            <span className="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2 py-1 text-xs font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap z-50">
+
+            {/* Tooltip */}
+            <span
+              className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs font-medium 
+              text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[300ms]
+              translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50"
+            >
               Logout
             </span>
           </div>
@@ -140,7 +152,7 @@ export default function SideNav({
         />
       )}
 
-      {/* Mobile SideNav Overlay */}
+      {/* Mobile SideNav */}
       <div
         className={`md:hidden fixed top-0 left-0 z-50 h-full w-[200px] rounded-r-xl bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-500 p-6 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
@@ -191,24 +203,25 @@ export default function SideNav({
         {/* Logout (Mobile) */}
         <button
           onClick={() => setIsLogoutOpen(true)}
-          className="mt-10 max-sm:mt-40 flex items-center gap-3 px-3 py-2 rounded-md text-white hover:bg-white/10"
+          className="mt-10 max-sm:mt-40 flex items-center gap-3 px-3 py-2 rounded-md text-black hover:bg-white/10"
         >
-          <span className="text-[22px] max-md:text-[18px]">
+          <span className="text-[22px] max-md:text-[22px]">
             <RiLogoutCircleRLine />
           </span>
-          <span className="text-sm font-medium">Logout</span>
+          <span className="text-md font-semibold">Logout</span>
         </button>
       </div>
 
-      {/* ✅ Logout Modal */}
+      {/* Logout Modal */}
       <LogoutModal
         isOpen={isLogoutOpen}
         setIsOpen={setIsLogoutOpen}
         onLogout={handleLogout}
       />
 
+      {/* Loader Overlay */}
       {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
         </div>
       )}

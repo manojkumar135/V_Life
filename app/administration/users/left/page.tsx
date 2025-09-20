@@ -155,7 +155,7 @@ export default function LeftTeam() {
           </div>
         )}
 
-        <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+        <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
           <HeaderWithActions
             title="Left Team"
             search={query}

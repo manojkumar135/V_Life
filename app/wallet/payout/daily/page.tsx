@@ -98,7 +98,7 @@ export default function WithdrawPage() {
 
   return (
     <Layout>
-      <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+      <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
@@ -125,7 +125,7 @@ export default function WithdrawPage() {
         />
 
         {/* Floating Filter Icon */}
-        <div className="fixed bottom-8 right-8 z-10">
+        <div className="fixed bottom-6 right-6 z-10">
           <button
             className="
                     relative w-12 h-12 rounded-full 

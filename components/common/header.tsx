@@ -37,7 +37,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   // };
 
   return (
-    <header className="flex items-center justify-between w-full max-md:w-screen px-4 py-2 bg-[var(--background)] text-[var(--foreground)] h-[60px] shadow-sm">
+    <header className="flex items-center justify-between w-full max-md:w-screen px-4 py-2  h-[60px] shadow-sm">
       <div className="flex items-center space-x-3">
         {/* Hamburger Icon - visible only on small screens */}
         <button

@@ -15,6 +15,7 @@ import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
+import { GridColDef } from "@mui/x-data-grid";
 
 export default function TransactionHistory() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function TransactionHistory() {
           },
         });
         const history = data.data || [];
-        console.log(data)
+        console.log(data);
         setHistoryData(history);
         setTotalItems(history.length);
       } catch (error) {
@@ -84,33 +85,36 @@ export default function TransactionHistory() {
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // ✅ Columns setup
-  const columns = [
+  const columns: GridColDef[] = [
     { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
     { field: "date", headerName: "Date", flex: 1 },
-    { field: "details", headerName: "Detail", flex: 2 },
+    { field: "details", headerName: "Detail", flex: 1.5 },
+
     {
       field: "amount",
-      headerName: "Amount",
+      headerName: "Amount (₹)",
       flex: 1,
-      renderCell: (params: any) => (
+      align: "right",
+      renderCell: (params) => (
         <span
-          className={
+          className={`pr-5 ${
             params.row.status === "credit" ? "text-green-600" : "text-red-600"
-          }
+          }`}
         >
-          ₹ {Number(params.value).toFixed(2)}
+          ₹ {Number(params.value ?? 0).toFixed(2)}
         </span>
       ),
     },
+
     {
       field: "status",
       headerName: "Status",
       flex: 1,
-      renderCell: (params: any) =>
+      renderCell: (params) =>
         params.value === "credit" ? (
-          <FaPlusCircle className="text-green-600 text-lg mt-2" />
+          <FaPlusCircle className="text-green-600 text-lg ml-4 mt-2" />
         ) : (
-          <FaMinusCircle className="text-red-600 text-lg mt-2" />
+          <FaMinusCircle className="text-red-600 text-lg ml-4 mt-2" />
         ),
     },
   ];
@@ -148,7 +152,7 @@ export default function TransactionHistory() {
         onClose={() => setShowAlert(false)}
       />
 
-      <div className="p-6 w-full max-w-[98%] mx-auto -mt-5">
+      <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
@@ -162,7 +166,7 @@ export default function TransactionHistory() {
           showAddButton={!advancePaid}
           addLabel="Make Payment"
           onAdd={handlePayAdvance}
-          showBack
+          // showBack
           onBack={onBack}
           showPagination
           currentPage={currentPage}
@@ -175,7 +179,7 @@ export default function TransactionHistory() {
         />
 
         {/* Floating Filter Icon */}
-        <div className="fixed bottom-8 right-8 z-10">
+        <div className="fixed bottom-6 right-6 z-10">
           <button
             className="relative w-12 h-12 rounded-full bg-black text-yellow-300 flex items-center justify-center shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-yellow-400 hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
             onClick={() => setShowModal(true)}

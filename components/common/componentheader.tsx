@@ -85,13 +85,13 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
 
     const debounceTimer = setTimeout(() => {
       onSearch(localSearch);
-    }, 800); // 600ms delay
+    }, 600); // 600ms delay
 
     return () => clearTimeout(debounceTimer);
   }, [localSearch, onSearch]);
 
   return (
-    <div className="flex flex-col md:flex-row w-full gap-2 mb-2">
+    <div className="flex flex-col md:flex-row w-full gap-1 mb-2 mt-3">
       {/* Row 1: Back + Title + Pagination */}
       <div className="flex justify-between items-center w-full">
         {/* Left: Back + Title */}
@@ -157,7 +157,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
               className="pl-10 pr-4 rounded-md h-8 border border-gray-500 focus:outline-none w-full text-xs "
             />
             <MdOutlineSearch
-              className="absolute left-3 top-2 text-gray-500"
+              className="absolute left-3 top-1.5 text-gray-500"
               size={20}
             />
           </div>
