@@ -9,7 +9,7 @@ import { useSearch } from "@/hooks/useSearch";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loader from "@/components/common/loader";
-import { GridColDef } from "@mui/x-data-grid";
+import { GridColDef,GridRenderCellParams  } from "@mui/x-data-grid";
 import { useVLife } from "@/store/context";
 import { IoClose } from "react-icons/io5";
 import AlertBox from "@/components/Alerts/advanceAlert";
@@ -18,6 +18,8 @@ import ShowToast from "@/components/common/Toast/toast";
 import { FiFilter } from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { handleDownload } from "@/utils/handleDownload";
+import { FaDownload } from "react-icons/fa"; 
+import { handleDownloadPDF } from "@/lib/invoiceDownload";
 
 export default function OrdersPage() {
   const { user } = useVLife();
@@ -128,27 +130,51 @@ export default function OrdersPage() {
     router.push(`/orders/orderDetailView/${id}`);
   };
 
-  const columns: GridColDef[] = [
-    { field: "order_id", headerName: "Order ID", flex: 1 },
-    { field: "payment_id", headerName: "Transaction ID", flex: 1.5 },
+ const columns: GridColDef[] = [
+  { field: "order_id", headerName: "Order ID", flex: 1 },
+  { field: "payment_id", headerName: "Transaction ID", flex: 1.5 },
+  { field: "user_id", headerName: "User ID", flex: 1 },
+  { field: "contact", headerName: "Contact", flex: 1 },
+  { field: "payment_date", headerName: "Order Date", flex: 1 },
+  {
+    field: "final_amount",
+    headerName: "Amount ( ₹ )",
+    align: "right",
+    flex: 1,
+    renderCell: (params) => (
+      <span className="pr-5">
+        ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+      </span>
+    ),
+  },
+  { field: "payment", headerName: "Status", flex: 1 },
 
-    { field: "user_id", headerName: "User ID", flex: 1 },
-    // { field: "user_name", headerName: "Name", flex: 1 },
-    { field: "contact", headerName: "Contact", flex: 1 },
-    { field: "payment_date", headerName: "Order Date", flex: 1 },
-    {
-      field: "final_amount",
-      headerName: "Amount ( ₹ )",
-      align: "right",
-      flex: 1,
-      renderCell: (params) => (
-        <span className="pr-5">
-          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
-        </span>
-      ),
-    },
-    { field: "payment", headerName: "Status", flex: 1 },
-  ];
+  // 👇 Extra column for admin only
+  ...(user?.role === "admin"
+  ? [
+      {
+        field: "download",
+        headerName: "Invoice",
+        flex: 0.6,
+        sortable: false,
+        filterable: false,
+        align: "center" as const,  // ✅ cast to GridAlignment
+        renderCell: (params:GridRenderCellParams) => (
+          <button
+            className="text-blue-600 hover:text-blue-800"
+            onClick={(e) => {
+              e.stopPropagation(); // prevent row click
+              handleDownloadPDF(params.row.order_id); // ✅ pass order_id
+            }}
+          >
+            <FaDownload size={18} />
+          </button>
+        ),
+      },
+    ]
+  : []),
+
+];
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
