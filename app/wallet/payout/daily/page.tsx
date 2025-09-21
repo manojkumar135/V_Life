@@ -13,6 +13,8 @@ import { useVLife } from "@/store/context";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
+import { GridColDef } from "@mui/x-data-grid";
+
 
 export default function WithdrawPage() {
   const { user } = useVLife();
@@ -28,7 +30,7 @@ export default function WithdrawPage() {
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(true); // open on first load
 
-  const API_URL = "/api/withdraw-operations";
+  const API_URL = "/api/dailyPayout-operations";
 
   // ✅ Check if advance is paid
   useEffect(() => {
@@ -70,13 +72,23 @@ export default function WithdrawPage() {
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // ✅ Table columns
-  const columns = [
-    { field: "withdraw_id", headerName: "Transaction ID", flex: 1 },
+  const columns:GridColDef[]  = [
+    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
     { field: "wallet_id", headerName: "Wallet ID", flex: 1.5 },
-    { field: "user_id", headerName: "Withdraw Address", flex: 2 },
+    { field: "user_id", headerName: "Withdraw Address", flex: 1.5 },
     { field: "date", headerName: "Date", flex: 1.5 },
-    { field: "withdraw_amount", headerName: "Amount", flex: 1 },
-    { field: "withdraw_status", headerName: "Status", flex: 1 },
+    {
+      field: "amount",
+      headerName: "Amount ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    { field: "status", headerName: "Status", flex: 1 },
   ];
 
   // ✅ Pagination hook
@@ -109,7 +121,7 @@ export default function WithdrawPage() {
           title="Daily Payouts"
           search={query}
           setSearch={setQuery}
-          showAddButton={user?.role === "admin"}
+          showAddButton={user?.role === "jk"}
           showBack
           onBack={onBack}
           addLabel="Add Payout"

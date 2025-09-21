@@ -71,43 +71,45 @@ export default function OrdersPage() {
 
   // Fetch orders from API
   const fetchOrders = useCallback(
-    async (search: string, orderId?: string, id?: string) => {
-      try {
-        setLoading(true);
+  async (search: string, orderId?: string, id?: string) => {
+    try {
+      setLoading(true);
 
-        const params: any = {
-          search: search || "",
-          role: user?.role, // ✅ send role
-        };
+      const params: any = {
+        search: search || "",
+        role: user?.role,
+        ...(user?.user_id && { user_id: user.user_id }), // ✅ include user_id if available
+        ...(dateFilter?.type === "on" && { date: dateFilter.date }), // ✅ single date filter
+        ...(dateFilter?.type === "range" && {
+          from: dateFilter.from,
+          to: dateFilter.to,
+        }), // ✅ date range filter
+      };
 
-        // ✅ only include user_id if user exists
-        if (user?.user_id) {
-          params.user_id = user.user_id;
-        }
+      // ✅ optionally include order_id / id
+      if (orderId) params.order_id = orderId;
+      if (id) params.id = id;
 
-        // ✅ optionally include order_id and id if passed
-        if (orderId) params.order_id = orderId;
-        if (id) params.id = id;
+      const { data } = await axios.get(API_URL, { params });
+      const orders = data.data || [];
 
-        const { data } = await axios.get(API_URL, { params });
-        const orders = data.data || [];
+      setOrdersData(orders);
+      setTotalItems(orders.length);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      ShowToast.error("Failed to load orders");
+    } finally {
+      setLoading(false);
+    }
+  },
+  [user?.role, user?.user_id, dateFilter]
+);
 
-        setOrdersData(orders);
-        setTotalItems(orders.length);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        ShowToast.error("Failed to load orders");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [user?.role, user?.user_id]
-  );
 
   useEffect(() => {
     if (!user?.user_id) return;
     fetchOrders(debouncedQuery);
-  }, [debouncedQuery, user?.user_id]);
+  }, [debouncedQuery, user?.user_id,dateFilter]);
 
   // Delete order
   const handleDelete = async (id: string) => {

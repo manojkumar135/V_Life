@@ -171,7 +171,7 @@ export default function Table<T extends Row>({
     <div
       className={`flex flex-col w-[92vw]  md:w-full min-h-124 max-md:min-h-150 max-lg:min-h-250 2xl:min-h-[85vh] ${className}`}
     >
-      <div className=" bg-white shadow-md rounded-lg min-h-[82vh] max-md:min-h-162 max-lg:min-h-285 ">
+      <div className=" bg-white shadow-md rounded-lg min-h-[79vh] max-md:min-h-150 max-lg:min-h-250 ">
         <DataGrid
           rows={paginatedRows}
           columns={enhancedColumns}

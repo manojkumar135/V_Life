@@ -15,6 +15,7 @@ import { useVLife } from "@/store/context";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
+import { GridColDef } from "@mui/x-data-grid";
 
 export default function WithdrawPage() {
   const { user } = useVLife();
@@ -30,7 +31,7 @@ export default function WithdrawPage() {
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(true); // open modal on page load
 
-  const API_URL = "/api/withdraw-operations";
+  const API_URL = "/api/weeklyPayout-operations";
 
   // ✅ Check if advance is paid
   useEffect(() => {
@@ -90,36 +91,46 @@ export default function WithdrawPage() {
   };
 
   // ✅ Table columns
-  const columns = [
-    { field: "withdraw_id", headerName: "Transaction ID", flex: 1 },
+  const columns: GridColDef[] = [
+    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
     { field: "wallet_id", headerName: "Wallet ID", flex: 1.5 },
-    { field: "user_id", headerName: "Withdraw Address", flex: 2 },
+    { field: "user_id", headerName: "Withdraw Address", flex: 1.5 },
     { field: "date", headerName: "Date", flex: 1.5 },
-    { field: "withdraw_amount", headerName: "Amount", flex: 1 },
-    { field: "withdraw_status", headerName: "Status", flex: 1 },
     {
-      field: "actions",
-      headerName: "Actions",
+      field: "amount",
+      headerName: "Amount ( ₹ )",
+      align: "right",
       flex: 1,
-      sortable: false,
-      disableColumnMenu: true,
-      renderCell: (params: any) => (
-        <div className="flex gap-2 items-center">
-          <button
-            className="text-green-600 cursor-pointer ml-2"
-            onClick={() => handleEdit(params.row._id)}
-          >
-            <GoPencil size={18} />
-          </button>
-          <button
-            className="text-red-600 cursor-pointer ml-2"
-            onClick={() => handleDelete(params.row._id)}
-          >
-            <FaTrash size={16} />
-          </button>
-        </div>
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
       ),
     },
+    { field: "status", headerName: "Status", flex: 1 },
+    // {
+    //   field: "actions",
+    //   headerName: "Actions",
+    //   flex: 1,
+    //   sortable: false,
+    //   disableColumnMenu: true,
+    //   renderCell: (params: any) => (
+    //     <div className="flex gap-2 items-center">
+    //       <button
+    //         className="text-green-600 cursor-pointer ml-2"
+    //         onClick={() => handleEdit(params.row._id)}
+    //       >
+    //         <GoPencil size={18} />
+    //       </button>
+    //       <button
+    //         className="text-red-600 cursor-pointer ml-2"
+    //         onClick={() => handleDelete(params.row._id)}
+    //       >
+    //         <FaTrash size={16} />
+    //       </button>
+    //     </div>
+    //   ),
+    // },
   ];
 
   // ✅ Pagination hook
@@ -136,7 +147,7 @@ export default function WithdrawPage() {
   };
 
   const onBack = () => {
-    router.push("/wallet");
+    router.push("/wallet/payout");
   };
 
   return (
@@ -152,7 +163,7 @@ export default function WithdrawPage() {
           title="Weekly Payouts"
           search={query}
           setSearch={setQuery}
-          showAddButton={user?.role === "admin"}
+          showAddButton={user?.role === "jk"}
           showBack
           onBack={onBack}
           addLabel="Add Payout"

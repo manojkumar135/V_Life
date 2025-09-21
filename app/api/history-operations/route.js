@@ -189,8 +189,6 @@ export async function GET(request) {
 }
 
 
-
-
 // PUT - Replace a history record
 export async function PUT(request) {
   try {

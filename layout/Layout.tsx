@@ -36,7 +36,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <SideNav isOpen={showSidebar} setIsOpen={setShowSidebar} />
           <div className="flex flex-col flex-1">
             <Header onMenuClick={() => setShowSidebar(true)} />
-            <main className="flex-1  p-0 bg-white scrollbar-hide max-md:w-screen">
+            <main className="flex-1 overflow-y-auto p-0 bg-white scrollbar-hide max-md:w-screen">
               {children}
             </main>
           </div>

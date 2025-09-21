@@ -75,12 +75,18 @@ export async function GET(request: Request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id") || searchParams.get("order_id");
-    const search = searchParams.get("search");
-    const user_id = searchParams.get("user_id");
-    const role = searchParams.get("role"); // 🔹 role from query
 
-    // 🔹 If ID or order_id is provided → fetch single order
+    const id = searchParams.get("id") || searchParams.get("order_id");
+    const user_id = searchParams.get("user_id");
+    const search = searchParams.get("search");
+    const role = searchParams.get("role");
+    const date = searchParams.get("date");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+
+    // -------------------
+    // Lookup by ID or order_id
+    // -------------------
     if (id) {
       let order;
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -91,79 +97,151 @@ export async function GET(request: Request) {
 
       if (!order) {
         return NextResponse.json(
-          { success: false, message: "Order not found" },
+          { success: false, message: "Order not found", data: [] },
           { status: 404 }
         );
       }
 
-      return NextResponse.json({ success: true, data: order }, { status: 200 });
+      return NextResponse.json({ success: true, data: [order] }, { status: 200 });
     }
 
-    // ✅ Role-based filtering
-    let query: Record<string, any> = {};
-    if (role === "user") {
-      if (!user_id) {
+    // -------------------
+    // Role-based query
+    // -------------------
+    let baseQuery: Record<string, any> = {};
+    if (role) {
+      if (role === "user") {
+        if (!user_id) {
+          return NextResponse.json(
+            { success: false, message: "user_id is required for role=user", data: [] },
+            { status: 400 }
+          );
+        }
+        baseQuery.user_id = user_id;
+      } else if (role === "admin") {
+        baseQuery = {};
+      } else {
         return NextResponse.json(
-          { success: false, message: "user_id is required for role=user" },
+          { success: false, message: "Invalid role", data: [] },
           { status: 400 }
         );
       }
-      query.user_id = user_id; // only this user’s orders
-    } else if (role === "admin") {
-      query = {}; // all orders
-    } else {
-      return NextResponse.json(
-        { success: false, message: "Invalid role. Must be 'user' or 'admin'" },
-        { status: 400 }
-      );
     }
 
-    // ✅ Apply search if provided
+    // -------------------
+    // Date parsing helper
+    // -------------------
+    function parseDate(input: string | null) {
+      if (!input) return null;
+      input = input.trim();
+
+      // dd-mm-yyyy or dd/mm/yyyy
+      let match = input.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
+      if (match) {
+        const [_, day, month, year] = match;
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
+
+      // yyyy-mm-dd or yyyy/mm/dd
+      match = input.match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/);
+      if (match) {
+        const [_, year, month, day] = match;
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
+
+      // fallback
+      const d = new Date(input);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    // -------------------
+    // Build filter conditions
+    // -------------------
+    const conditions: any[] = [];
+
+    // Search filter
     if (search) {
       const searchTerms = search
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
 
-      query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp("^" + term, "i");
-        const conditions: any[] = [
-          { order_id: regex },
-          { user_id: regex },
-          { user_name: regex },
-          { contact: regex },
-          { mail: regex },
-          { product_id: regex },
-          { payment_date: regex },
-          { order_status: regex },
-          { payment_id: regex },
-          { shipping_address: regex },
-        ];
+      if (searchTerms.length) {
+        const searchConditions = searchTerms.flatMap((term) => {
+          const regex = new RegExp("^" + term, "i");
+          const conds: any[] = [
+            { order_id: regex },
+            { user_id: regex },
+            { user_name: regex },
+            { contact: regex },
+            { mail: regex },
+            { product_id: regex },
+            { payment_id: regex },
+            { payment_date: regex },
+            { shipping_address: regex },
+            { order_status: regex },
+          ];
+          if (!isNaN(Number(term))) {
+            const num = Number(term);
+            conds.push({ $expr: { $eq: [{ $floor: "$amount" }, num] } });
+          }
+          return conds;
+        });
 
-        // ✅ Numeric search
-        if (!isNaN(Number(term))) {
-          const num = Number(term);
-          conditions.push({
-            $expr: { $eq: [{ $floor: "$amount" }, num] },
-          });
-        }
-
-        return conditions;
-      });
+        conditions.push({ $or: searchConditions });
+      }
     }
 
-    const orders = await Order.find(query).sort({ created_at: -1 });
+    // Single date filter (assume payment_date stored as "dd-mm-yyyy" string like history)
+    if (date && !from && !to) {
+      const parsedDate = parseDate(date);
+      if (parsedDate) {
+        const day = ("0" + parsedDate.getDate()).slice(-2);
+        const month = ("0" + (parsedDate.getMonth() + 1)).slice(-2);
+        const year = parsedDate.getFullYear();
+        const formatted = `${day}-${month}-${year}`; // dd-mm-yyyy
+        conditions.push({ payment_date: formatted });
+      }
+    }
+
+    // Date range filter
+    if (from || to) {
+      const startDate = parseDate(from);
+      const endDate = parseDate(to);
+
+      if (startDate && endDate) {
+        const startDay = ("0" + startDate.getDate()).slice(-2);
+        const startMonth = ("0" + (startDate.getMonth() + 1)).slice(-2);
+        const startYear = startDate.getFullYear();
+
+        const endDay = ("0" + endDate.getDate()).slice(-2);
+        const endMonth = ("0" + (endDate.getMonth() + 1)).slice(-2);
+        const endYear = endDate.getFullYear();
+
+        const startFormatted = `${startDay}-${startMonth}-${startYear}`;
+        const endFormatted = `${endDay}-${endMonth}-${endYear}`;
+
+        conditions.push({ payment_date: { $gte: startFormatted, $lte: endFormatted } });
+      }
+    }
+
+    // -------------------
+    // Combine baseQuery with conditions
+    // -------------------
+    const finalQuery =
+      conditions.length > 0 ? { $and: [baseQuery, ...conditions] } : baseQuery;
+
+    const orders = await Order.find(finalQuery).sort({ payment_date: -1 });
 
     return NextResponse.json({ success: true, data: orders }, { status: 200 });
   } catch (error: any) {
-    console.error("GET orders error:", error);
+    console.error("GET order error:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Server error" },
+      { success: false, message: error.message || "Server error", data: [] },
       { status: 500 }
     );
   }
 }
-
 
 // ----------------- PUT -----------------
 export async function PUT(request: Request) {
