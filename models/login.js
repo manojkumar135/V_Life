@@ -11,6 +11,7 @@ const OrderItemSchema = new mongoose.Schema(
     unit_price: { type: Number, required: true },
     price: { type: Number, required: true }, // total = quantity * unit_price
     description: { type: String },
+    bv: { type: String },
     image: { type: String },
     created_at: { type: Date, default: Date.now },
     created_by: { type: String },

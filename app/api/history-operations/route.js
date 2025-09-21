@@ -121,6 +121,7 @@ export async function GET(request) {
             { user_name: regex },
             { status: regex },
             { details: regex },
+            {date:regex}
           ];
           if (!isNaN(Number(term))) {
             const num = Number(term);

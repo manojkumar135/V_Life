@@ -118,8 +118,8 @@ export async function PATCH(request) {
         product: item.product_id || String(item.id || ''), // Use product_id for product field
         name: item.name,
         quantity: item.quantity,
-        unit_price: item.price, // Map price to unit_price
-        price: item.price * item.quantity, // Calculate total price
+        unit_price: item.unit_price, // Map price to unit_price
+        price: item.price , // Calculate total price
         description: item.description || '',
         category: item.category,
         image: item.image,
