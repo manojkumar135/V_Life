@@ -9,7 +9,7 @@ import { useSearch } from "@/hooks/useSearch";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Loader from "@/components/common/loader";
-import { GridColDef,GridRenderCellParams  } from "@mui/x-data-grid";
+import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { useVLife } from "@/store/context";
 import { IoClose } from "react-icons/io5";
 import AlertBox from "@/components/Alerts/advanceAlert";
@@ -18,7 +18,7 @@ import ShowToast from "@/components/common/Toast/toast";
 import { FiFilter } from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { handleDownload } from "@/utils/handleDownload";
-import { FaDownload } from "react-icons/fa"; 
+import { FaDownload } from "react-icons/fa";
 import { handleDownloadPDF } from "@/lib/invoiceDownload";
 
 export default function OrdersPage() {
@@ -73,45 +73,44 @@ export default function OrdersPage() {
 
   // Fetch orders from API
   const fetchOrders = useCallback(
-  async (search: string, orderId?: string, id?: string) => {
-    try {
-      setLoading(true);
+    async (search: string, orderId?: string, id?: string) => {
+      try {
+        setLoading(true);
 
-      const params: any = {
-        search: search || "",
-        role: user?.role,
-        ...(user?.user_id && { user_id: user.user_id }), // ✅ include user_id if available
-        ...(dateFilter?.type === "on" && { date: dateFilter.date }), // ✅ single date filter
-        ...(dateFilter?.type === "range" && {
-          from: dateFilter.from,
-          to: dateFilter.to,
-        }), // ✅ date range filter
-      };
+        const params: any = {
+          search: search || "",
+          role: user?.role,
+          ...(user?.user_id && { user_id: user.user_id }), // ✅ include user_id if available
+          ...(dateFilter?.type === "on" && { date: dateFilter.date }), // ✅ single date filter
+          ...(dateFilter?.type === "range" && {
+            from: dateFilter.from,
+            to: dateFilter.to,
+          }), // ✅ date range filter
+        };
 
-      // ✅ optionally include order_id / id
-      if (orderId) params.order_id = orderId;
-      if (id) params.id = id;
+        // ✅ optionally include order_id / id
+        if (orderId) params.order_id = orderId;
+        if (id) params.id = id;
 
-      const { data } = await axios.get(API_URL, { params });
-      const orders = data.data || [];
+        const { data } = await axios.get(API_URL, { params });
+        const orders = data.data || [];
 
-      setOrdersData(orders);
-      setTotalItems(orders.length);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-      ShowToast.error("Failed to load orders");
-    } finally {
-      setLoading(false);
-    }
-  },
-  [user?.role, user?.user_id, dateFilter]
-);
-
+        setOrdersData(orders);
+        setTotalItems(orders.length);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        ShowToast.error("Failed to load orders");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user?.role, user?.user_id, dateFilter]
+  );
 
   useEffect(() => {
     if (!user?.user_id) return;
     fetchOrders(debouncedQuery);
-  }, [debouncedQuery, user?.user_id,dateFilter]);
+  }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // Delete order
   const handleDelete = async (id: string) => {
@@ -130,51 +129,51 @@ export default function OrdersPage() {
     router.push(`/orders/orderDetailView/${id}`);
   };
 
- const columns: GridColDef[] = [
-  { field: "order_id", headerName: "Order ID", flex: 1 },
-  { field: "payment_id", headerName: "Transaction ID", flex: 1.5 },
-  { field: "user_id", headerName: "User ID", flex: 1 },
-  { field: "contact", headerName: "Contact", flex: 1 },
-  { field: "payment_date", headerName: "Order Date", flex: 1 },
-  {
-    field: "final_amount",
-    headerName: "Amount ( ₹ )",
-    align: "right",
-    flex: 1,
-    renderCell: (params) => (
-      <span className="pr-5">
-        ₹ {Number(params.value)?.toFixed(2) || "0.00"}
-      </span>
-    ),
-  },
-  { field: "payment", headerName: "Status", flex: 1 },
+  const columns: GridColDef[] = [
+    { field: "order_id", headerName: "Order ID", flex: 1 },
+    { field: "payment_id", headerName: "Transaction ID", flex: 1.5 },
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "contact", headerName: "Contact", flex: 1 },
+    { field: "payment_date", headerName: "Order Date", flex: 1 },
+    {
+      field: "final_amount",
+      headerName: "Amount ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    { field: "payment", headerName: "Status", flex: 1 },
 
-  // 👇 Extra column for admin only
-  ...(user?.role === "admin"
-  ? [
-      {
-        field: "download",
-        headerName: "Invoice",
-        flex: 0.6,
-        sortable: false,
-        filterable: false,
-        align: "center" as const,  // ✅ cast to GridAlignment
-        renderCell: (params:GridRenderCellParams) => (
-          <button
-            className="text-blue-600 hover:text-blue-800"
-            onClick={(e) => {
-              e.stopPropagation(); // prevent row click
-              handleDownloadPDF(params.row.order_id); // ✅ pass order_id
-            }}
-          >
-            <FaDownload size={18} />
-          </button>
-        ),
-      },
-    ]
-  : []),
-
-];
+    // 👇 Extra column for admin only
+    ...(user?.role === "admin"
+      ? [
+          {
+            field: "download",
+            headerName: "Invoice",
+            flex: 1,
+            sortable: false,
+            filterable: false,
+            // align: "center" as const,
+            renderCell: (params: GridRenderCellParams) => (
+              <button
+                title="Download Invoice"
+                className="text-blue-600 hover:text-blue-800 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation(); // prevent row click
+                  handleDownloadPDF(params.row.order_id, setLoading);
+                }}
+              >
+                <FaDownload size={15} />
+              </button>
+            ),
+          },
+        ]
+      : []),
+  ];
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
@@ -232,7 +231,7 @@ export default function OrdersPage() {
         )}
 
         {/* Floating Filter Icon */}
-        <div className="fixed bottom-6 right-6 z-10">
+        <div title="Filter" className="fixed  bottom-5 right-6 z-10">
           <button
             className="relative w-12 h-12 rounded-full bg-black text-yellow-300 flex items-center justify-center shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-yellow-400 hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
             onClick={() => setShowModal(true)}

@@ -195,9 +195,12 @@ export default function TransactionHistory() {
         />
 
         {/* Floating Filter Icon */}
-        <div className="fixed bottom-6 right-6 z-10">
+        <div title="Filter" className="fixed  bottom-5 right-6 z-10">
           <button
-            className="relative w-12 h-12 rounded-full bg-black text-yellow-300 flex items-center justify-center shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-yellow-400 hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
+            className="relative w-12 h-12 rounded-full bg-black text-yellow-300 flex items-center justify-center
+             shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-yellow-400 
+             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] 
+             active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
             onClick={() => setShowModal(true)}
           >
             <FiFilter size={20} />

@@ -137,7 +137,9 @@ export default function WithdrawPage() {
         />
 
         {/* Floating Filter Icon */}
-        <div className="fixed bottom-6 right-6 z-10">
+        <div 
+        title="Filter"
+        className="fixed  bottom-5 right-6 z-10">
           <button
             className="
                     relative w-12 h-12 rounded-full 

@@ -45,7 +45,7 @@ export default function PaymentModal({
           throw new Error("Invalid Razorpay order response");
         }
         const options: any = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          key: process.env.RAZORPAY_KEY_ID,
           amount: order.amount, // comes in paise from backend
           currency: order.currency,
           name: "V Life Global",

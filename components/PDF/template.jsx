@@ -6,26 +6,36 @@ import {
   Document,
   StyleSheet,
   Image,
+  Font,
 } from "@react-pdf/renderer";
+
+Font.register({
+  family: "Roboto",
+  fonts: [
+    { src: "/fonts/Roboto/Roboto-Regular.ttf", fontWeight: "normal" },
+    { src: "/fonts/Roboto/Roboto-Bold.ttf", fontWeight: "bold" },
+  ],
+});
 
 const styles = StyleSheet.create({
   page: {
     padding: 30,
-    fontSize: 12,
+    fontSize: 10,
     color: "#111",
     backgroundColor: "#fff",
+    fontFamily: "Roboto",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    borderBottom: "2 solid #facc15", // yellow-500
+    borderBottom: "2 solid gray", // yellow-500
     paddingBottom: 10,
     marginBottom: 20,
   },
   title: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#facc15", // yellow-500
+    color: "#black", // yellow-500
   },
   logo: {
     width: 60,
@@ -43,22 +53,28 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   table: {
-    display: "table",
-    width: "auto",
-    borderStyle: "solid",
-    borderColor: "#d1d5db", // gray-300
+    display: 'table',
+    width: 'auto',
+    borderStyle: 'solid',
     borderWidth: 1,
+    borderColor: '#2E2E2E',
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
     marginBottom: 20,
+    marginTop: 20,
+    borderRadius: 1,
+
   },
   row: {
     flexDirection: "row",
   },
   col: {
-    borderStyle: "solid",
-    borderColor: "#d1d5db",
+    borderStyle: 'solid',
     borderWidth: 1,
-    padding: 6,
-    fontSize: 10,
+    borderColor: '#2E2E2E',
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    padding: 5,
   },
   colHeader: {
     backgroundColor: "#facc15", // yellow
@@ -82,6 +98,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     width: "40%",
     fontSize: 10,
+    marginBottom: 4,
+  },
+  deduction: {
+    color: "red",
+    fontSize: 10,
   },
   footer: {
     position: "absolute",
@@ -104,12 +125,16 @@ export default function InvoiceTemplate({ order }) {
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>INVOICE</Text>
-            <Text style={styles.light}>Order ID: {order.order_id}</Text>
-            <Text style={styles.light}>Date: {order.payment_date}</Text>
+            <Text style={[styles.light, { fontSize: 9 }]}>Order ID: {order.order_id}</Text>
+            <Text style={[styles.light, { fontSize: 9 }]}>Date: {order.payment_date}</Text>
           </View>
-          {order.items[0]?.image && (
-            <Image style={styles.logo} src={order.items[0].image} />
-          )}
+
+          <Image
+            style={styles.logo}
+            src={
+              "https://res.cloudinary.com/dtb4vozhy/image/upload/v1758524457/ChatGPT_Image_Sep_22_2025_12_30_38_PM_fujdkc.png"
+            }
+          />
         </View>
 
         {/* Bill To */}
@@ -125,7 +150,7 @@ export default function InvoiceTemplate({ order }) {
         <View style={styles.table}>
           {/* Header row */}
           <View style={styles.row}>
-            {["#", "Item", "Qty", "Unit Price", "Total"].map((h, i) => (
+            {["S.No", "Item", "Qty", "Unit Price", "Total"].map((h, i) => (
               <Text
                 key={i}
                 style={[
@@ -145,14 +170,18 @@ export default function InvoiceTemplate({ order }) {
           {/* Items */}
           {order.items.map((item, idx) => (
             <View key={idx} style={styles.row}>
-              <Text style={[styles.col, styles.col1]}>{idx + 1}</Text>
-              <Text style={[styles.col, styles.col2]}>{item.name}</Text>
-              <Text style={[styles.col, styles.col3]}>{item.quantity}</Text>
-              <Text style={[styles.col, styles.col4]}>
-                ₹ {item.unit_price.toFixed(2)}
+              <Text style={[styles.col, styles.col1, { textAlign: "center" }]}>
+                {idx + 1}
               </Text>
-              <Text style={[styles.col, styles.col5]}>
-                ₹ {item.price.toFixed(2)}
+              <Text style={[styles.col, styles.col2]}>{item.name}</Text>
+              <Text style={[styles.col, styles.col3, { textAlign: "center" }]}>
+                {item.quantity}
+              </Text>
+              <Text style={[styles.col, styles.col4, { textAlign: "right" }]}>
+                {`\u20B9 ${item.unit_price.toFixed(2)}`}
+              </Text>
+              <Text style={[styles.col, styles.col5, { textAlign: "right" }]}>
+                {`\u20B9 ${item.price.toFixed(2)}`}
               </Text>
             </View>
           ))}
@@ -162,12 +191,22 @@ export default function InvoiceTemplate({ order }) {
         <View style={styles.totalBlock}>
           <View style={styles.totalRow}>
             <Text>Subtotal:</Text>
-            <Text>₹ {order.amount.toFixed(2)}</Text>
+            <Text>{`\u20B9 ${order.amount.toFixed(2)}`}</Text>
           </View>
+
+          {order.is_first_order && (
+            <View style={styles.totalRow}>
+              <Text>Advance Deducted:</Text>
+              <Text style={styles.deduction}>
+                {`- \u20B9 ${order.advance_deducted.toFixed(2)}`}
+              </Text>
+            </View>
+          )}
+
           <View style={styles.totalRow}>
-            <Text>Total Amount:</Text>
+            <Text style={{ fontWeight: "bold" }}>Total Amount:</Text>
             <Text style={{ fontWeight: "bold" }}>
-              ₹ {order.final_amount.toFixed(2)}
+              {`\u20B9 ${order.final_amount.toFixed(2)}`}
             </Text>
           </View>
         </View>

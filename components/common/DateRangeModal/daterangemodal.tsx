@@ -84,7 +84,7 @@ const DateFilterModal: React.FC<DateFilterModalProps> = ({
               placeholderText="DD-MM-YYYY"
               dateFormat="dd-MM-yyyy"
               maxDate={today}
-              className="border rounded px-2 py-1 text-black w-[100px] md:w-[120px] cursor-pointer text-center"
+              className="border rounded px-2 py-1 text-black w-[120px] cursor-pointer text-center"
               onFocus={() => setFilterType("on")}
             />
           </div>
@@ -109,7 +109,7 @@ const DateFilterModal: React.FC<DateFilterModalProps> = ({
                 placeholderText="DD-MM-YYYY"
                 dateFormat="dd-MM-yyyy"
                 maxDate={today}
-                className="border rounded px-2 py-1 text-black w-[100px] md:w-[120px] cursor-pointer text-center"
+                className="border rounded px-2 py-1 text-black w-[120px] cursor-pointer text-center"
                 onFocus={() => setFilterType("range")}
               />
             </div>
@@ -123,7 +123,7 @@ const DateFilterModal: React.FC<DateFilterModalProps> = ({
                 dateFormat="dd-MM-yyyy"
                 minDate={from || undefined}
                 maxDate={today}
-                className="border rounded px-2 py-1 text-black w-[100px] md:w-[120px] cursor-pointer text-center"
+                className="border rounded px-2 py-1 text-black w-[120px] cursor-pointer text-center"
                 onFocus={() => setFilterType("range")}
               />
             </div>
