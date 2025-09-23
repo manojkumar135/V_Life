@@ -3,16 +3,22 @@ import mongoose from "mongoose";
 // Reusable OrderItemSchema
 const OrderItemSchema = new mongoose.Schema(
   {
-    id: { type: String, required: true },
-    product: { type: String, required: true }, // product code/id
-    category: { type: String, required: true },
-    name: { type: String, required: true }, // product name
-    quantity: { type: Number, required: true },
-    unit_price: { type: Number, required: true },
-    price: { type: Number, required: true }, // total = quantity * unit_price
+    product_id: { type: String, required: true },   // product code/id (PRxxxx)
+    name: { type: String, required: true },         // product name
+    category: { type: String, required: true },     // product category
+
+    quantity: { type: Number, required: true },     // units ordered
+
+    mrp: { type: Number, required: true },          // original price
+    dealer_price: { type: Number, required: true }, // dealer price
+    unit_price: { type: Number, required: true },   // billed price per unit
+    price: { type: Number, required: true },        // total = unit_price * qty
+
+    bv: { type: Number, required: true },           // business volume
     description: { type: String },
-    bv: { type: String },
     image: { type: String },
+    id: { type: String },                           // frontend item id (if needed)
+
     created_at: { type: Date, default: Date.now },
     created_by: { type: String },
     last_modified_by: { type: String },
@@ -20,6 +26,8 @@ const OrderItemSchema = new mongoose.Schema(
   },
   { _id: false }
 );
+
+
 
 const LoginSchema = new mongoose.Schema(
   {

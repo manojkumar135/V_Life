@@ -10,175 +10,26 @@ import ProductCard from "@/components/common/productcard";
 import OrderSummary from "@/components/common/OrderSummary/ordersummary";
 import axios from "axios";
 import { useVLife } from "@/store/context";
-import { formatDate } from "@/components/common/formatDate";
-
-// Product categories and products
-const categories = [
-  {
-    id: 1,
-    name: "Electronics",
-    products: [
-      {
-        id: 101,
-        name: "Wireless Headphones",
-        price: 89.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Premium noise-cancelling wireless headphones",
-        category: "Electronics",
-      },
-      {
-        id: 102,
-        name: "Smart Watch",
-        price: 199.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Feature-rich smartwatch with health monitoring",
-        category: "Electronics",
-      },
-      {
-        id: 103,
-        name: "Bluetooth Speaker",
-        price: 59.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Portable speaker with 12-hour battery life",
-        category: "Electronics",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Clothing",
-    products: [
-      {
-        id: 201,
-        name: "Cotton T-Shirt",
-        price: 24.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "100% cotton comfortable t-shirt",
-        category: "Clothing",
-      },
-      {
-        id: 202,
-        name: "Denim Jeans",
-        price: 59.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Classic denim jeans for everyday wear",
-        category: "Clothing",
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "Kitchen",
-    products: [
-      {
-        id: 301,
-        name: "Coffee Maker",
-        price: 79.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Programmable coffee maker with timer",
-        category: "Kitchen",
-      },
-      {
-        id: 302,
-        name: "Non-Stick Cookware Set",
-        price: 129.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "10-piece non-stick cookware set",
-        category: "Kitchen",
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: "Beauty",
-    products: [
-      {
-        id: 401,
-        name: "Moisturizing Cream",
-        price: 29.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Hydrating facial moisturizer for all skin types",
-        category: "Beauty",
-      },
-      {
-        id: 402,
-        name: "Electric Toothbrush",
-        price: 49.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Rechargeable electric toothbrush with multiple modes",
-        category: "Beauty",
-      },
-    ],
-  },
-  {
-    id: 5,
-    name: "Sports",
-    products: [
-      {
-        id: 501,
-        name: "Yoga Mat",
-        price: 39.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Non-slip yoga mat for exercise and meditation",
-        category: "Sports",
-      },
-      {
-        id: 502,
-        name: "Water Bottle",
-        price: 19.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description:
-          "Insulated water bottle that keeps drinks cold for 24 hours",
-        category: "Sports",
-      },
-    ],
-  },
-  {
-    id: 6,
-    name: "Books",
-    products: [
-      {
-        id: 601,
-        name: "Notebook Set",
-        price: 24.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Set of 3 premium quality notebooks",
-        category: "Books",
-      },
-      {
-        id: 602,
-        name: "Ballpoint Pen Set",
-        price: 14.99,
-        image:
-          "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-        description: "Smooth-writing ballpoint pens in assorted colors",
-        category: "Books",
-      },
-    ],
-  },
-];
+import SubmitButton from "@/components/common/submitbutton";
+import { IoMdAdd } from "react-icons/io";
 
 interface CartItem {
-  id: number;
-  name: string;
-  unit_price: number; // per-item price
-  price: number; // total price = unit_price * quantity
-  quantity: number;
-  image: string;
-  description: string;
+  product_id: string;
+  id: number | string;
   category: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  price: number;
+  description?: string;
+  image?: string;
+  mrp: number;
+  dealer_price: number;
+  bv: number;
+  created_at?: Date;
+  created_by?: string;
+  last_modified_by?: string;
+  last_modified_at?: Date;
 }
 
 interface OrderFormData {
@@ -189,30 +40,34 @@ interface OrderFormData {
   notes: string;
 }
 
+interface Product {
+  _id: string;
+  product_id: string;
+  name: string;
+  description: string;
+  category: string;
+  price: number;
+  dealer_price: number;
+  mrp: number;
+  bv: number;
+  image?: string;
+  stock: number;
+}
+
+interface Category {
+  name: string;
+  products: Product[];
+}
+
 export default function AddOrderPage() {
   const { user, updateUserCart } = useVLife();
   const router = useRouter();
 
-  // console.log(user,"addorder")
-
-  // --- FIX: Always restore correct unit_price and price ---
-  const normalizeCart = (items: any[]): CartItem[] =>
-    (items || []).map((i: any) => {
-      const quantity = Number(i.quantity) || 1;
-      const unit_price = Number(i.unit_price) || 0; // ✅ trust backend unit_price
-      return {
-        ...i,
-        id: Number(i.id),
-        unit_price,
-        quantity,
-        price: unit_price * quantity, // ✅ always recalc line total
-      };
-    });
-
-  const [cart, setCart] = useState<CartItem[]>(normalizeCart(user.items ?? []));
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>("");
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [address, setAddress] = useState("");
   const [showCart, setShowCart] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(categories[0].name);
   const [isFirstOrder, setIsFirstOrder] = useState(false);
 
   const [formData, setFormData] = useState<OrderFormData>({
@@ -223,7 +78,54 @@ export default function AddOrderPage() {
     notes: "",
   });
 
-  // Sync form data with user info
+  // Normalize cart from user items
+  const normalizeCart = (items: any[]): CartItem[] =>
+    (items || []).map((i: any) => {
+      const quantity = Number(i.quantity) || 1;
+      const unit_price = Number(i.unit_price) || 0;
+      return {
+        ...i,
+        id: i.id || i.product_id,
+        unit_price,
+        quantity,
+        price: unit_price * quantity,
+      };
+    });
+
+  // Fetch products and create categories dynamically
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get("/api/product-operations");
+        if (res.data.success && Array.isArray(res.data.data)) {
+          const products: Product[] = res.data.data;
+
+          // Create category map
+          const categoryMap: Record<string, Product[]> = {};
+          products.forEach((prod) => {
+            const cat = prod.category || "Uncategorized";
+            if (!categoryMap[cat]) categoryMap[cat] = [];
+            categoryMap[cat].push(prod);
+          });
+
+          // Convert to array of categories
+          const categoriesArray: Category[] = Object.entries(categoryMap).map(
+            ([name, products]) => ({ name, products })
+          );
+
+          setCategories(categoriesArray);
+          if (categoriesArray.length > 0)
+            setActiveCategory(categoriesArray[0].name);
+        }
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+        ShowToast.error("Failed to load products");
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  // Sync formData with user
   useEffect(() => {
     if (user) {
       setFormData((prev) => ({
@@ -232,33 +134,31 @@ export default function AddOrderPage() {
         customerEmail: user.mail || "",
         contact: user.contact || "",
         shippingAddress: address || "",
-        notes: "",
       }));
     }
   }, [user, address]);
 
-  // Fetch first order status
+  // Check if first order
   useEffect(() => {
     const checkFirstOrder = async () => {
       try {
         const res = await axios.get(
-           `/api/order-operations?role=${user.role}&user_id=${user.user_id}`
+          `/api/order-operations?role=${user.role}&user_id=${user.user_id}`
         );
-        // console.log(res)
         setIsFirstOrder(!res.data?.data || res.data.data.length === 0);
       } catch (error) {
         console.error("Failed to check first order:", error);
       }
     };
-    checkFirstOrder();
+    if (user?.user_id) checkFirstOrder();
   }, [user?.user_id]);
 
-  // --- FIX: Normalize cart on user.items change ---
+  // Update cart from context
   useEffect(() => {
     setCart(normalizeCart(user.items ?? []));
   }, [user.items]);
 
-  // Fetch user address
+  // Fetch address
   useEffect(() => {
     const fetchAddress = async () => {
       try {
@@ -285,26 +185,31 @@ export default function AddOrderPage() {
     }));
   };
 
-  // Add product to cart
-  const addToCart = async (product: any) => {
+  const addToCart = async (product: Product) => {
     const updatedCart = [...cart];
-    const productId = Number(product.id);
+    const productId = product.product_id;
 
-    const existingItem = updatedCart.find((item) => item.id === productId);
+    const existingItem = updatedCart.find(
+      (item) => item.product_id === productId
+    );
 
     if (existingItem) {
       existingItem.quantity += 1;
-      existingItem.price = existingItem.unit_price * existingItem.quantity; // always recalc
+      existingItem.price = existingItem.unit_price * existingItem.quantity;
     } else {
       updatedCart.push({
+        product_id: productId,
         id: productId,
         name: product.name,
-        unit_price: product.price,
-        price: product.price, // quantity=1, so price = unit_price
-        quantity: 1,
-        image: product.image,
-        description: product.description || "",
         category: product.category,
+        quantity: 1,
+        unit_price: product.mrp,
+        price: product.mrp,
+        mrp: product.mrp,
+        dealer_price: product.dealer_price,
+        bv: product.bv,
+        image: product.image,
+        description: product.description,
       });
     }
 
@@ -353,99 +258,12 @@ export default function AddOrderPage() {
   const getTotalPrice = () =>
     cart.reduce((total, item) => total + item.price, 0);
 
- const createOrder = async (finalAmount: number, razorpayResponse: any) => {
-  try {
-    const orderItems = cart.map((item) => ({
-      product_id: String(item.id),
-      product: String(item.id),
-      category: item.category,
-      name: item.name,
-      quantity: item.quantity,
-      unit_price: item.unit_price,
-      price: item.price,
-      description: item.description,
-      image: item.image,
-    }));
-
-    const payload = {
-      user_id: user.user_id,
-      user_name: formData.customerName || user.user_name,
-      contact: formData.contact || user.contact,
-      mail: formData.customerEmail || user.mail,
-      address: formData.shippingAddress || address,
-      description: formData.notes,
-      payment: "completed",
-      payment_date: formatDate(new Date()),
-      payment_time: new Date().toLocaleTimeString(),
-      payment_id: razorpayResponse.razorpay_payment_id,
-      payment_order_id: razorpayResponse.razorpay_order_id,
-      payment_signature: razorpayResponse.razorpay_signature,
-      payment_type: razorpayResponse.method || "razorpay",
-      items: orderItems,
-      order_status: "pending",
-      amount: getTotalPrice(),
-      total_amount: getTotalPrice(),
-      final_amount: finalAmount,
-      advance_deducted: isFirstOrder ? 10000 : 0,
-      is_first_order: isFirstOrder,
-    };
-
-    const response = await axios.post("/api/order-operations", payload, {
-      headers: { "Content-Type": "application/json" },
-    });
-
-    if (response.data.success) {
-      // ✅ Clear cart
-      setCart([]);
-      await updateUserCart([]);
-
-      // ✅ Create history record
-      try {
-        await axios.post("/api/history-operations", {
-          transaction_id: razorpayResponse.razorpay_payment_id,
-          wallet_id: user?.wallet_id || "",
-          user_id: user?.user_id,
-          user_name: user?.user_name,
-          account_holder_name: user?.user_name,
-          bank_name: "Razorpay",
-          account_number: "N/A",
-          ifsc_code: "N/A",
-          date: formatDate(new Date()),
-          time: new Date().toLocaleTimeString(),
-          available_balance: 0,
-          amount: finalAmount,
-          transaction_type: "Debit",
-          details: isFirstOrder
-            ? "Order Payment (₹10,000 Advance Deducted)"
-            : "Order Payment",
-          status: "Completed",
-          created_by: user?.user_id,
-        });
-      } catch (historyError: any) {
-        console.error("Error saving history:", historyError);
-        ShowToast.error("Order saved but failed to save history!");
-      }
-
-      ShowToast.success("Order created successfully!");
-      router.push("/orders");
-    } else {
-      ShowToast.error(response.data.message || "Failed to create order");
-    }
-  } catch (error: any) {
-    console.error("Error creating order:", error);
-    ShowToast.error("Failed to create order: " + error.message);
-  }
-};
-
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (cart.length === 0) {
       ShowToast.error("Please add at least one product to the order");
       return;
     }
-
     const totalAmount = getTotalPrice();
     let finalAmount = totalAmount;
 
@@ -457,33 +275,53 @@ export default function AddOrderPage() {
       finalAmount = totalAmount - 10000;
     }
 
+    // Call your createOrder API here
     // await createOrder(finalAmount);
   };
 
   const activeCategoryProducts =
-    categories.find((category) => category.name === activeCategory)?.products ||
-    [];
+    categories.find((cat) => cat.name === activeCategory)?.products || [];
 
   return (
     <Layout>
       <div className="px-4 py-2">
         {/* Header */}
-        <div className="flex items-center mb-2">
-          <IoIosArrowBack
-            size={25}
-            className="mr-3 cursor-pointer"
-            onClick={() => router.push("/orders")}
-          />
-          <h2 className="text-xl max-sm:text-[1rem] font-semibold">Products</h2>
+        <div className="flex items-center justify-between mb-2 ">
+          <div className="flex items-center">
+            <IoIosArrowBack
+              size={25}
+              className="mr-3 cursor-pointer"
+              onClick={() => router.push("/orders")}
+            />
+            <h2 className="text-xl max-sm:text-[1rem] font-semibold">
+              Products
+            </h2>
+          </div>
+
+          {/* Add Product Button */}
+          {user?.role === "user" && (
+            <SubmitButton
+              onClick={() => router.push("/products/addproduct")}
+              className="self-start bg-yellow-400 hover:bg-yellow-500 text-black font-medium py-1.5 px-2 
+             max-lg:px-1 max-md:h-full max-md:text-[0.85rem] max-lg:text-[0.9rem] rounded-md"
+            >
+              <span className="hidden max-md:inline">
+                <IoMdAdd size={18} className="font-bold scale-125" />
+              </span>
+              <span className="max-md:hidden flex items-center">
+                <IoMdAdd size={18} className="mr-2" /> Add Product
+              </span>
+            </SubmitButton>
+          )}
         </div>
 
         {/* Category Tabs */}
-        <div className="rounded-xl px-6 max-lg:px-3 py-1 bg-white mb-2">
+        <div className="rounded-xl px-6 max-lg:px-3 py-1 bg-white mb-2 xl:mt-2">
           <div className="flex space-x-4 overflow-x-auto scrollbar-hide border-b">
             {categories.map((category) => (
               <button
-                key={category.id}
-                className={`px-4 py-2 font-medium whitespace-nowrap  ${
+                key={category.name}
+                className={`px-4 py-2 font-medium whitespace-nowrap text-md max-lg:text-sm ${
                   activeCategory === category.name
                     ? "border-b-2 border-blue-600 text-blue-600"
                     : ""
@@ -511,10 +349,12 @@ export default function AddOrderPage() {
           >
             {activeCategoryProducts.map((product) => (
               <ProductCard
-                key={product.id}
+                key={product.product_id}
                 {...product}
                 onAddToCart={addToCart}
-                isInCart={!!cart.find((item) => item.id === Number(product.id))}
+                isInCart={
+                  !!cart.find((item) => item.product_id === product.product_id)
+                }
               />
             ))}
           </div>
@@ -596,7 +436,7 @@ export default function AddOrderPage() {
               setFormData={setFormData}
               handleInputChange={handleInputChange}
               isFirstOrder={isFirstOrder}
-              createOrder={createOrder}
+              createOrder={() => {}} // keep placeholder, your actual createOrder fn goes here
             />
           </div>
         </div>

@@ -4,15 +4,21 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import axios from "axios";
 
 export interface CartItem {
-  id: number;
+  id: number | string;       // frontend line item id
+  product_id: string;        // backend product id (PRxxxx)
   name: string;
-  price: number; // total price for that line (unit_price * quantity)
-  unit_price: number; // price per single unit
-  quantity: number;
-  image: string;
-  description: string;
   category: string;
+  description?: string;
+  image?: string;
+
+  quantity: number;
+  mrp: number;
+  dealer_price: number;
+  unit_price: number;
+  price: number;
+  bv: number;
 }
+
 
 export type ThemeType = "light" | "dark" | "system";
 
@@ -115,46 +121,50 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateUserCart = async (cartItems: CartItem[]) => {
-    try {
-      const transformedCartItems = cartItems.map((item) => ({
-        id: String(item.id),
-        product: String(item.id),
-        name: item.name,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        price: item.unit_price * item.quantity,
-        image: item.image,
-        description: item.description || "",
-        category: item.category,
-        created_at: new Date().toISOString(),
+  try {
+    const transformedCartItems = cartItems.map((item) => ({
+      id: String(item.id),
+      product_id: item.product_id,
+      name: item.name,
+      category: item.category,
+      description: item.description || "",
+      image: item.image,
+
+      quantity: item.quantity,
+      mrp: item.mrp,
+      dealer_price: item.dealer_price,
+      unit_price: item.unit_price,
+      price: item.unit_price * item.quantity,
+      bv: item.bv,
+
+      created_at: new Date().toISOString(),
+    }));
+
+    const updatePayload: any = { items: transformedCartItems };
+
+    if (user._id) updatePayload._id = user._id;
+    else if (user.user_id) updatePayload.user_id = user.user_id;
+    else if (user.login_id) updatePayload.login_id = user.login_id;
+    else throw new Error("No user identifier available to update cart");
+
+    const response = await axios.patch("/api/login-operations", updatePayload);
+
+    if (response.data.success) {
+      // normalize back
+      const normalized = cartItems.map((i) => ({
+        ...i,
+        id: String(i.id),
+        price: i.unit_price * i.quantity,
       }));
-
-      const updatePayload: any = { items: transformedCartItems };
-
-      if (user._id) updatePayload._id = user._id;
-      else if (user.user_id) updatePayload.user_id = user.user_id;
-      else if (user.login_id) updatePayload.login_id = user.login_id;
-      else throw new Error("No user identifier available to update cart");
-
-      const response = await axios.patch("/api/login-operations", updatePayload);
-
-      if (response.data.success) {
-        // Normalize back to numbers
-        const normalized = cartItems.map((i) => ({
-          ...i,
-          id: Number(i.id),
-          unit_price: Number(i.unit_price),
-          price: Number(i.unit_price) * Number(i.quantity),
-        }));
-        setUserState((prev) => ({ ...prev, items: normalized }));
-      } else {
-        throw new Error(response.data.message || "Failed to update cart");
-      }
-    } catch (error) {
-      console.error("Error updating cart:", error);
-      throw error;
+      setUserState((prev) => ({ ...prev, items: normalized }));
+    } else {
+      throw new Error(response.data.message || "Failed to update cart");
     }
-  };
+  } catch (error) {
+    console.error("Error updating cart:", error);
+    throw error;
+  }
+};
 
   return (
     <VLifeContext.Provider
