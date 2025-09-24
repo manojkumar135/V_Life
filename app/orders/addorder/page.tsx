@@ -12,6 +12,7 @@ import axios from "axios";
 import { useVLife } from "@/store/context";
 import SubmitButton from "@/components/common/submitbutton";
 import { IoMdAdd } from "react-icons/io";
+import Loader from "@/components/common/loader";
 
 interface CartItem {
   product_id: string;
@@ -60,8 +61,12 @@ interface Category {
 }
 
 export default function AddOrderPage() {
-  const { user, updateUserCart } = useVLife();
+  const { user, setUser, updateUserCart } = useVLife();
   const router = useRouter();
+
+  // console.log(user.category);
+
+  const [loading, setLoading] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>("");
@@ -96,6 +101,7 @@ export default function AddOrderPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
+        setLoading(true);
         const res = await axios.get("/api/product-operations");
         if (res.data.success && Array.isArray(res.data.data)) {
           const products: Product[] = res.data.data;
@@ -114,16 +120,32 @@ export default function AddOrderPage() {
           );
 
           setCategories(categoriesArray);
-          if (categoriesArray.length > 0)
-            setActiveCategory(categoriesArray[0].name);
+
+          // Determine active category
+          let initialCategory = categoriesArray[0]?.name || "";
+          if (user.category) {
+            const found = categoriesArray.find(
+              (cat) => cat.name === user.category
+            );
+            if (found) initialCategory = found.name;
+          }
+
+          setActiveCategory(initialCategory);
+
+          // Update context with initial active category if different
+          if (user.category !== initialCategory) {
+            setUser({ category: initialCategory });
+          }
         }
       } catch (error) {
         console.error("Failed to fetch products:", error);
         ShowToast.error("Failed to load products");
+      } finally {
+        setLoading(false);
       }
     };
     fetchProducts();
-  }, []);
+  }, [user]);
 
   // Sync formData with user
   useEffect(() => {
@@ -203,7 +225,7 @@ export default function AddOrderPage() {
         name: product.name,
         category: product.category,
         quantity: 1,
-        unit_price: product.mrp,
+        unit_price: product.dealer_price,
         price: product.mrp,
         mrp: product.mrp,
         dealer_price: product.dealer_price,
@@ -284,6 +306,12 @@ export default function AddOrderPage() {
 
   return (
     <Layout>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
+
       <div className="px-4 py-2">
         {/* Header */}
         <div className="flex items-center justify-between mb-2 ">
@@ -299,7 +327,7 @@ export default function AddOrderPage() {
           </div>
 
           {/* Add Product Button */}
-          {user?.role === "user" && (
+          {user?.role === "admin" && (
             <SubmitButton
               onClick={() => router.push("/products/addproduct")}
               className="self-start bg-yellow-400 hover:bg-yellow-500 text-black font-medium py-1.5 px-2 
@@ -326,7 +354,17 @@ export default function AddOrderPage() {
                     ? "border-b-2 border-blue-600 text-blue-600"
                     : ""
                 }`}
-                onClick={() => setActiveCategory(category.name)}
+                onClick={async () => {
+                  setActiveCategory(category.name);
+                  setUser({ category: category.name });
+
+                  // try {
+                  //   // persist category update to backend
+                  //   await updateUserCart(user.items ?? []);
+                  // } catch {
+                  //   ShowToast.error("Failed to update category");
+                  // }
+                }}
               >
                 {category.name}
               </button>
@@ -343,8 +381,8 @@ export default function AddOrderPage() {
           <div
             className={`grid gap-4 max-lg:gap-3 grid-cols-1 sm:grid-cols-2 ${
               showCart
-                ? "lg:grid-cols-2 xl:grid-cols-2"
-                : "lg:grid-cols-3 xl:grid-cols-3"
+                ? "lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3"
+                : "lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4"
             }`}
           >
             {activeCategoryProducts.map((product) => (
@@ -362,7 +400,7 @@ export default function AddOrderPage() {
       </div>
 
       {/* Floating Cart Icon */}
-      <div className="fixed bottom-8 right-8 z-10">
+      <div className="fixed bottom-6 right-6 z-10">
         <button
           className="
             relative w-14 h-14 rounded-full 

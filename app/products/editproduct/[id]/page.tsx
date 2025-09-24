@@ -10,6 +10,7 @@ import TextareaField from "@/components/InputFields/textareainput";
 import SubmitButton from "@/components/common/submitbutton";
 import Loader from "@/components/common/loader";
 import ShowToast from "@/components/common/Toast/toast";
+import StatusSelect from "@/components/InputFields/statusselect";
 
 import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
@@ -24,6 +25,7 @@ interface ProductFormData {
   dealerPrice: number | "";
   bv: number | "";
   category: string;
+  status: string;
   image: File | string | null;
 }
 
@@ -40,6 +42,7 @@ const ProductSchema = Yup.object().shape({
     .typeError("* BV must be a number")
     .required("* BV is required"),
   category: Yup.string().required("* Category is required"),
+  status: Yup.string().required("* Status is required"),
   image: Yup.mixed<File | string>()
     .required("* Product image is required")
     .test(
@@ -67,8 +70,14 @@ export default function EditProductPage() {
     dealerPrice: "",
     bv: "",
     category: "",
+    status: "active",
     image: null,
   });
+
+  const statusOptions = [
+    { value: "active", label: "Active" },
+    { value: "inactive", label: "Inactive" },
+  ];
 
   // Fetch product details
   useEffect(() => {
@@ -90,6 +99,7 @@ export default function EditProductPage() {
             dealerPrice: product.dealer_price || "",
             bv: product.bv || "",
             category: product.category || "",
+            status: product.status || "active",
             image: product.image || null,
           });
         } else {
@@ -150,8 +160,8 @@ export default function EditProductPage() {
           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
           .join(" "),
         image: imageUrl,
+        status: values.status,
         last_modified_by: user.user_id,
-        status: "active",
       };
 
       const res = await axios.patch(
@@ -212,6 +222,7 @@ export default function EditProductPage() {
                     name="productId"
                     value={values.productid}
                     disabled
+                    required
                   />
                   <InputField
                     label="Product Name"
@@ -220,16 +231,8 @@ export default function EditProductPage() {
                     value={values.name}
                     onChange={(e) => setFieldValue("name", e.target.value)}
                     onBlur={handleBlur}
+                    required
                     error={touched.name ? errors.name : ""}
-                  />
-                  <InputField
-                    label="Category"
-                    name="category"
-                    placeholder="Category"
-                    value={values.category}
-                    onChange={(e) => setFieldValue("category", e.target.value)}
-                    onBlur={handleBlur}
-                    error={touched.category ? errors.category : ""}
                   />
                   <InputField
                     label="MRP"
@@ -239,12 +242,14 @@ export default function EditProductPage() {
                     onChange={(e) => setFieldValue("mrp", e.target.value)}
                     onBlur={handleBlur}
                     error={touched.mrp ? errors.mrp : ""}
+                    required
                   />
                   <InputField
                     label="Dealer Price"
                     name="dealerPrice"
                     placeholder="0"
                     value={values.dealerPrice}
+                    required
                     onChange={(e) =>
                       setFieldValue("dealerPrice", e.target.value)
                     }
@@ -252,18 +257,33 @@ export default function EditProductPage() {
                     error={touched.dealerPrice ? errors.dealerPrice : ""}
                   />
                   <InputField
-                    label="BV"
+                    label="Business Volume (BV)"
                     name="bv"
                     placeholder="0"
+                    required
                     value={values.bv}
                     onChange={(e) => setFieldValue("bv", e.target.value)}
                     onBlur={handleBlur}
                     error={touched.bv ? errors.bv : ""}
                   />
+
+                  {/* React-Select for Status */}
+                  <StatusSelect
+                    label="Status"
+                    value={values.status}
+                    onChange={(val) => setFieldValue("status", val)}
+                    // onBlur={() => setFieldTouched("status", true)}
+                    error={errors.status}
+                    touched={touched.status}
+                    options={statusOptions}
+                    required
+                  />
+
                   <FileInput
                     label="Upload Image"
                     name="image"
                     value={values.image}
+                    required
                     onChange={(e) =>
                       setFieldValue("image", e.currentTarget.files?.[0] || null)
                     }
@@ -285,7 +305,7 @@ export default function EditProductPage() {
                   />
                 </div>
 
-                <div className="flex justify-end mt-4">
+                <div className="flex justify-end mt-0">
                   <SubmitButton type="submit">
                     {loading ? "Updating..." : "Update"}
                   </SubmitButton>

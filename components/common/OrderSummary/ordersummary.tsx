@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import InputField from "@/components/InputFields/inputtype1";
 import TextareaField from "@/components/InputFields/textareainput";
 import SubmitButton from "@/components/common/submitbutton";
@@ -9,30 +9,24 @@ import ShowToast from "@/components/common/Toast/toast";
 import axios from "axios";
 import { useVLife } from "@/store/context";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
-import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-import {
-  IoRemove,
-  IoAdd,
-  IoTrashOutline,
-  IoClose,
-  IoQrCodeOutline,
-  IoWalletOutline,
-  IoCardOutline,
-} from "react-icons/io5";
+import { IoRemove, IoAdd, IoTrashOutline } from "react-icons/io5";
 
 // Define CartItem interface
 interface CartItem {
-  id: number;
-  product_id: string;
+  product_id: string | number; // ✅ always use this as primary identifier
+  id?: string | number; // optional (for UI keys)
   name: string;
+  category: string;
+  quantity: number;
   unit_price: number;
   price: number;
-  quantity: number;
-  image: string;
-  description: string;
-  category: string;
+  description?: string;
+  image?: string;
+  mrp?: number;
+  dealer_price?: number;
+  bv?: number;
 }
 
 export default function OrderFormCartSection({
@@ -49,17 +43,15 @@ export default function OrderFormCartSection({
 }: any) {
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const [paymentMethod, setPaymentMethod] = useState<"qr" | "upi" | "card">(
     "qr"
   );
 
-  // console.log(cart, "order summary");
-  // console.log("isFirstOrder in OrderFormCartSection:", isFirstOrder);
   const router = useRouter();
-
   const [address, setAddress] = useState("");
   const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
-  // console.log(hasPaidAdvance)
 
   const { user } = useVLife();
   const user_id = user?.user_id || "";
@@ -82,8 +74,7 @@ export default function OrderFormCartSection({
     const checkAdvancePayment = async () => {
       try {
         const paid = await hasAdvancePaid(user_id, 10000);
-        // console.log("Advance payment status:", paid);
-        setHasPaidAdvance(paid); // true or false
+        setHasPaidAdvance(paid);
       } catch (error) {
         console.error("Error checking advance payment:", error);
         setHasPaidAdvance(false);
@@ -113,9 +104,9 @@ export default function OrderFormCartSection({
 
   const handlePlaceOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
+      setLoading(true);
 
     try {
-      // ✅ Validate customer info if on that tab
       if (activeTab === "customer") {
         if (
           !formData.customerName ||
@@ -127,9 +118,7 @@ export default function OrderFormCartSection({
           return;
         }
         if (formData.shippingAddress.length < 15) {
-          ShowToast.error(
-            "Shipping address must be Valid Address"
-          );
+          ShowToast.error("Shipping address must be Valid Address");
           return;
         }
       } else if (activeTab === "cart" && cart.length === 0) {
@@ -139,13 +128,11 @@ export default function OrderFormCartSection({
 
       const totalAmount = getTotalPrice();
 
-      // ✅ First order validation
       if (isFirstOrder && totalAmount < 10000) {
         ShowToast.error("First order must be at least ₹10,000");
         return;
       }
 
-      // 🔹 Check advance payment state
       if (!hasPaidAdvance) {
         ShowToast.error(
           "You must pay an advance of ₹10,000 before placing an order"
@@ -153,43 +140,20 @@ export default function OrderFormCartSection({
         return;
       }
 
-      // ✅ User is allowed to proceed
       setShowPayment(true);
     } catch (error) {
+      setLoading(false);
+
       console.error("Error in handlePlaceOrder:", error);
       ShowToast.error("Something went wrong. Please try again later.");
+    } finally {
+      setLoading(false);
     }
   };
 
   const finalAmount = isFirstOrder
     ? Math.max(0, getTotalPrice() - 10000)
     : getTotalPrice();
-
-  // const handlePaymentSubmit = () => {
-  //   handleSubmit();
-
-  //   // Validate payment details based on method
-  //   if (paymentMethod === "upi" && !paymentDetails.upiId) {
-  //     ShowToast.warning("Please enter your UPI ID");
-  //     return;
-  //   }
-
-  //   if (
-  //     paymentMethod === "card" &&
-  //     (!paymentDetails.cardNumber ||
-  //       !paymentDetails.expiryDate ||
-  //       !paymentDetails.cvv)
-  //   ) {
-  //     ShowToast.error("Please fill in all card details");
-  //     return;
-  //   }
-
-  //   // Process payment logic here
-  //   console.log("Processing payment with method:", paymentMethod);
-  //   console.log("Payment details:", paymentDetails);
-  // };
-
-  // console.log(cart, "order summary");
 
   const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -199,27 +163,43 @@ export default function OrderFormCartSection({
     }));
   };
 
-  // Fix: Create proper handler functions to ensure correct item identification
-  const handleIncreaseQuantity = (itemId: number) => {
+  // ✅ Safe helper functions
+  const handleIncreaseQuantity = (itemId: string | number | undefined) => {
+    if (!itemId) return;
     const item = cart.find(
-      (item: CartItem) => Number(item.id) === Number(itemId)
+      (item: CartItem) => String(item.product_id) === String(itemId)
     );
-    if (item) updateQuantity(Number(itemId), item.quantity + 1);
+    if (item && item.quantity < 99) {
+      updateQuantity(String(item.product_id), item.quantity + 1);
+    }
   };
 
-  const handleDecreaseQuantity = (itemId: number) => {
+  const handleDecreaseQuantity = (itemId: string | number | undefined) => {
+    if (!itemId) return;
     const item = cart.find(
-      (item: CartItem) => Number(item.id) === Number(itemId)
+      (item: CartItem) => String(item.product_id) === String(itemId)
     );
-    if (item) updateQuantity(Number(itemId), item.quantity - 1);
+    if (item && item.quantity > 1) {
+      updateQuantity(String(item.product_id), item.quantity - 1);
+    }
   };
 
-  const handleRemoveItem = (itemId: number) => {
-    removeFromCart(Number(itemId));
+  const handleRemoveItem = (itemId: string | number | undefined) => {
+    if (!itemId) return;
+    removeFromCart(String(itemId));
   };
 
-  // console.log("isFirstOrder:", isFirstOrder);
-  // console.log("hasPaidAdvance:", hasPaidAdvance);
+  const handleQuantityChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    itemId: string | number
+  ) => {
+    let value = e.target.value.replace(/\D/g, ""); // remove non-numeric
+    let num = Number(value);
+    if (isNaN(num)) return;
+    if (num < 1) num = 1;
+    if (num > 99) num = 99;
+    updateQuantity(String(itemId), num);
+  };
 
   const isCustomerInfoMissing =
     !formData.customerName ||
@@ -231,9 +211,6 @@ export default function OrderFormCartSection({
     cart.length === 0 ||
     (isFirstOrder && getTotalPrice() < 10000) ||
     !hasPaidAdvance;
-
-  // console.log( (isCustomerInfoMissing),isDisabled)
-  // console.log(isFirstOrder,"ordersummary")
 
   return (
     <div className="relative">
@@ -275,7 +252,7 @@ export default function OrderFormCartSection({
               </p>
             ) : (
               <>
-                {/* Header Row (hidden on small screens) */}
+                {/* Header Row */}
                 <div className="grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 max-lg:hidden">
                   <div className="col-span-6">Product</div>
                   <div className="col-span-2 text-center">Quantity</div>
@@ -286,12 +263,11 @@ export default function OrderFormCartSection({
                 <div className="space-y-4 max-h-70 max-lg:max-h-95 max-lg:min-h-[600px] overflow-y-auto pr-2">
                   {cart.map((item: CartItem) => (
                     <div
-                      key={item.id || item.product_id}
+                      key={String(item.product_id)}
                       className="bg-white w-full rounded-xl p-3 transition-shadow border-b max-lg:border-dashed xl:border-0 max-lg:shadow-lg"
                     >
-                      {/* Desktop / XL layout */}
+                      {/* Desktop layout */}
                       <div className="hidden xl:flex items-center justify-between">
-                        {/* Product Section */}
                         <div className="flex items-center w-1/2">
                           <img
                             src={item.image}
@@ -303,7 +279,7 @@ export default function OrderFormCartSection({
                               {item.name}
                             </p>
                             <p
-                              className="text-gray-600 text-xs mt-1 truncate max-w-[190px] cursor-pointer"
+                              className="text-gray-600 text-xs mt-1 truncate max-w-[190px]"
                               title={item.description}
                             >
                               {item.description}
@@ -314,49 +290,55 @@ export default function OrderFormCartSection({
                           </div>
                         </div>
 
-                        {/* Controls + Price + Delete */}
                         <div className="flex items-center justify-between w-1/2 gap-2">
-                          {/* Quantity */}
                           <div className="flex items-center rounded-full px-2 py-1 w-fit">
                             <button
                               type="button"
-                              onClick={() => handleDecreaseQuantity(item.id)}
-                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200"
+                              onClick={() =>
+                                handleDecreaseQuantity(item.product_id)
+                              }
+                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200 cursor-pointer"
                             >
                               <IoRemove size={16} />
                             </button>
-                            <span className="mx-2 w-6 h-6 text-center font-semibold text-gray-800 border-2 border-gray-600 rounded">
-                              {item.quantity}
-                            </span>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              min={1}
+                              max={99}
+                              onChange={(e) =>
+                                handleQuantityChange(e, item.product_id)
+                              }
+                              className="mx-2 w-8 text-center font-semibold text-gray-800 border-2
+                               border-gray-600 rounded no-spinner"
+                            />
                             <button
                               type="button"
-                              onClick={() => handleIncreaseQuantity(item.id)}
-                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200"
+                              onClick={() =>
+                                handleIncreaseQuantity(item.product_id)
+                              }
+                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200 cursor-pointer"
                             >
                               <IoAdd size={16} />
                             </button>
                           </div>
 
-                          {/* Price */}
                           <div className="font-bold text-gray-800 text-right">
                             ₹ {item.price.toFixed(2)}
                           </div>
 
-                          {/* Delete */}
                           <button
                             type="button"
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="p-2 text-red-500 hover:bg-red-100 rounded-full transition 
-            flex justify-center items-center"
+                            onClick={() => handleRemoveItem(item.product_id)}
+                            className="p-2 text-red-500 hover:bg-red-100 rounded-full cursor-pointer"
                           >
                             <IoTrashOutline size={20} />
                           </button>
                         </div>
                       </div>
 
-                      {/* Mobile / Tablet layout (max-lg) */}
+                      {/* Mobile layout */}
                       <div className="flex flex-col xl:hidden">
-                        {/* Row 1: Product + Delete */}
                         <div className="flex justify-between items-start">
                           <div className="flex items-center">
                             <img
@@ -369,53 +351,59 @@ export default function OrderFormCartSection({
                                 {item.name}
                               </p>
                               <p
-                                className="text-gray-600 text-xs mt-1 truncate max-w-[190px] cursor-pointer"
+                                className="text-gray-600 text-xs mt-1 truncate max-w-[190px]"
                                 title={item.description}
                               >
                                 {item.description}
                               </p>
                             </div>
                           </div>
-
-                          {/* Delete */}
                           <button
                             type="button"
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="p-2 text-red-500 hover:bg-red-100 rounded-full 
-            transition flex justify-center items-center"
+                            onClick={() => handleRemoveItem(item.product_id)}
+                            className="p-2 text-red-500 hover:bg-red-100 rounded-full cursor-pointer"
                           >
                             <IoTrashOutline size={22} />
                           </button>
                         </div>
 
-                        {/* Row 2: Unit Price + Quantity + Total */}
                         <div className="flex justify-between items-center mt-3 -mb-2">
                           <p className="text-xs text-gray-800">
                             ₹ {item.unit_price.toFixed(2)} each
                           </p>
 
-                          {/* Quantity Controls */}
                           <div className="flex items-center rounded-full px-2 py-1 w-fit">
                             <button
                               type="button"
-                              onClick={() => handleDecreaseQuantity(item.id)}
-                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200"
+                              onClick={() =>
+                                handleDecreaseQuantity(item.product_id)
+                              }
+                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200 cursor-pointer"
                             >
                               <IoRemove size={18} />
                             </button>
-                            <span className="mx-2 w-6 h-6 text-center text-[0.85rem] font-semibold text-gray-800 border-2 border-gray-600 rounded">
-                              {item.quantity}
-                            </span>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              min={1}
+                              max={99}
+                              onChange={(e) =>
+                                handleQuantityChange(e, item.product_id)
+                              }
+                              className="mx-2 w-8 text-center text-[0.85rem] font-semibold text-gray-800 
+                              border-2 border-gray-600 rounded no-spinner"
+                            />
                             <button
                               type="button"
-                              onClick={() => handleIncreaseQuantity(item.id)}
-                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200"
+                              onClick={() =>
+                                handleIncreaseQuantity(item.product_id)
+                              }
+                              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-200 cursor-pointer"
                             >
                               <IoAdd size={18} />
                             </button>
                           </div>
 
-                          {/* Total */}
                           <div className="font-bold text-gray-800">
                             ₹ {item.price.toFixed(2)}
                           </div>
@@ -425,10 +413,9 @@ export default function OrderFormCartSection({
                   ))}
                 </div>
 
-                {/* Total Section */}
-                <div className="xl:pt-4 xl:border-t self-end fixed bottom-0 left-0 right-0 max-lg:bg-white max-lg:shadow-[0_-4px_6px_rgba(0,0,0,0.1)] max-lg:z-50 max-lg:rounded-t-xl">
+                {/* Totals */}
+                <div className="xl:pt-4 xl:border-t fixed bottom-0 left-0 right-0 max-lg:bg-white max-lg:shadow-[0_-4px_6px_rgba(0,0,0,0.1)] max-lg:rounded-t-xl">
                   <div className="px-6 py-4 bg-white -mt-4">
-                    {/* Show Subtotal & Advance only for first order + advance paid */}
                     {isFirstOrder && hasPaidAdvance && (
                       <>
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
@@ -437,20 +424,16 @@ export default function OrderFormCartSection({
                             ₹ {getTotalPrice().toFixed(2)}
                           </span>
                         </div>
-
                         <div className="flex justify-between items-center text-sm text-red-500 mt-1">
                           <span>Advance Paid</span>
                           <span>- ₹ 10,000.00</span>
                         </div>
-
                         <div className="border-t border-gray-200 my-3"></div>
                       </>
                     )}
 
-                    {/* Final Amount (always visible) */}
                     <div className="flex justify-between items-center text-lg md:text-xl font-bold text-gray-900">
                       <span>Total Amount</span>
-
                       {isFirstOrder ? (
                         getTotalPrice() < 10000 ? (
                           <span className="text-red-600 text-sm md:text-base font-semibold">
@@ -474,13 +457,12 @@ export default function OrderFormCartSection({
                       type="button"
                       onClick={handleGoToCustomerInfo}
                       disabled={isDisabled}
-                      className={`w-full lg:w-1/2 mt-2 py-3 px-4 rounded-md transition-colors duration-200 font-semibold
+                      className={`w-full lg:w-1/2 mt-2 py-3 px-4 rounded-md font-semibold
       ${
         isDisabled
           ? "bg-gray-400 text-white cursor-not-allowed"
-          : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer "
-      }
-    `}
+          : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+      }`}
                     >
                       Place Order
                     </button>
@@ -491,7 +473,7 @@ export default function OrderFormCartSection({
           </>
         )}
 
-        {/* Customer Information */}
+        {/* Customer Info */}
         {activeTab === "customer" && (
           <form className="space-y-4">
             <InputField
@@ -512,7 +494,6 @@ export default function OrderFormCartSection({
               onChange={handleInputChange}
               required
             />
-
             <InputField
               label="Email"
               name="customerEmail"
@@ -522,17 +503,15 @@ export default function OrderFormCartSection({
               onChange={handleInputChange}
               required
             />
-
             <TextareaField
               label="Shipping Address"
               name="shippingAddress"
               placeholder="Full shipping address"
-              value={formData.shippingAddress || " "}
+              value={formData.shippingAddress || ""}
               onChange={handleInputChange}
               className="w-full h-15 max-md:h-24"
               required
             />
-
             <TextareaField
               label="Notes"
               name="notes"
@@ -545,14 +524,12 @@ export default function OrderFormCartSection({
             <button
               type="button"
               onClick={handlePlaceOrder}
-              // disabled={isDisabled}
-              className={`w-full mt-2 py-3 px-4 rounded-md transition-colors duration-200  font-semibold
+              className={`w-full mt-2 py-3 px-4 rounded-md font-semibold
     ${
       isDisabled || isCustomerInfoMissing
         ? "bg-gray-400 text-white cursor-not-allowed"
         : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
-    }
-  `}
+    }`}
             >
               Continue to Payment
             </button>
@@ -571,7 +548,7 @@ export default function OrderFormCartSection({
           }}
           onSuccess={async (res) => {
             console.log("✅ Payment successful:", res);
-            await createOrder(finalAmount, res); // ✅ directly create order
+            await createOrder(finalAmount, res);
             setShowPayment(false);
           }}
           onClose={() => {

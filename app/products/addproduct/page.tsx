@@ -165,6 +165,7 @@ export default function AddProductPage() {
                     label="Product Name"
                     name="name"
                     placeholder="Enter Product Name"
+                    required
                     value={values.name}
                     onChange={(e) => setFieldValue("name", e.target.value)}
                     onBlur={handleBlur}
@@ -175,6 +176,7 @@ export default function AddProductPage() {
                     name="category"
                     placeholder="Category"
                     value={values.category}
+                    required
                     onChange={(e) => setFieldValue("category", e.target.value)}
                     onBlur={handleBlur}
                     error={touched.category ? errors.category : ""}
@@ -184,6 +186,7 @@ export default function AddProductPage() {
                     label="MRP"
                     name="mrp"
                     placeholder="0"
+                    required
                     value={values.mrp}
                     onChange={(e) => setFieldValue("mrp", e.target.value)}
                     onBlur={handleBlur}
@@ -193,6 +196,7 @@ export default function AddProductPage() {
                     label="Dealer Price"
                     name="dealerPrice"
                     placeholder="0"
+                    required
                     value={values.dealerPrice}
                     onChange={(e) =>
                       setFieldValue("dealerPrice", e.target.value)
@@ -201,9 +205,10 @@ export default function AddProductPage() {
                     error={touched.dealerPrice ? errors.dealerPrice : ""}
                   />
                   <InputField
-                    label="BV"
+                    label="Business Volume (BV)"
                     name="bv"
                     placeholder="0"
+                    required
                     value={values.bv}
                     onChange={(e) => setFieldValue("bv", e.target.value)}
                     onBlur={handleBlur}
@@ -213,6 +218,7 @@ export default function AddProductPage() {
                   <FileInput
                     label="Upload Image"
                     name="image"
+                    required
                     //   className="w-[66%] max-lg:w-full"
                     value={values.image}
                     onChange={(e) =>

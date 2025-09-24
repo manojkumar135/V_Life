@@ -75,3 +75,16 @@ input[type="date"]:valid::-webkit-datetime-edit {
 input[type="date"]::placeholder {
   color: transparent;
 }
+
+
+/* Hide number input arrows for Chrome, Safari, Edge, Opera */
+.no-spinner::-webkit-outer-spin-button,
+.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Hide number input arrows for Firefox */
+.no-spinner[type="number"] {
+  -moz-appearance: textfield;
+}

@@ -33,7 +33,9 @@ export interface UserType {
   token?: string;
   items?: CartItem[];
   wallet_id?: string;
-  theme?: ThemeType; // ✅ added theme to userType
+  theme?: ThemeType; 
+    category?: string; 
+
 
   address?: string;
   pincode?: string;
@@ -65,7 +67,9 @@ const defaultUser: UserType = {
   token: "",
   items: [],
   wallet_id: "",
-  theme: "light", // ✅ default theme in user
+  theme: "light", 
+  category:"",
+
   address: "",
   pincode: "",
   intro: false,
@@ -140,13 +144,13 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
       created_at: new Date().toISOString(),
     }));
 
-    const updatePayload: any = { items: transformedCartItems };
+    const updatePayload: any = { items: transformedCartItems,category:user.category };
 
     if (user._id) updatePayload._id = user._id;
     else if (user.user_id) updatePayload.user_id = user.user_id;
     else if (user.login_id) updatePayload.login_id = user.login_id;
     else throw new Error("No user identifier available to update cart");
-
+console.log(updatePayload)
     const response = await axios.patch("/api/login-operations", updatePayload);
 
     if (response.data.success) {

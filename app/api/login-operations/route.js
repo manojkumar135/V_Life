@@ -96,7 +96,8 @@ export async function PUT(request) {
 export async function PATCH(request) {
   try {
     await connectDB();
-    const { _id, user_id, login_id, items, ...updates } = await request.json();
+    const { _id, user_id, login_id, items, category, ...updates } = await request.json();
+    console.log(category)
 
     // Check which identifier is provided
     let query = {};
@@ -107,42 +108,62 @@ export async function PATCH(request) {
     } else if (login_id) {
       query = { login_id };
     } else {
-      return NextResponse.json({ success: false, message: "User identifier is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "User identifier is required" },
+        { status: 400 }
+      );
     }
 
     // If items are provided, update the cart
     if (items !== undefined && Array.isArray(items)) {
-      // Transform items to match the OrderItemSchema requirements
-      updates.items = items.map(item => ({
-        id: item.product_id || String(item.id || ''),
-        product: item.product_id || String(item.id || ''), // Use product_id for product field
+      updates.items = items.map((item) => ({
+        id: String(item.id || item.product_id || ""), // fallback id
+        product_id: String(item.product_id),          // required
         name: item.name,
-        quantity: item.quantity,
-        unit_price: item.unit_price, // Map price to unit_price
-        price: item.price , // Calculate total price
-        description: item.description || '',
         category: item.category,
+        description: item.description || "",
         image: item.image,
-        created_at: item.created_at || new Date().toISOString()
+
+        quantity: item.quantity,
+        mrp: item.mrp,                                // required
+        dealer_price: item.dealer_price,              // required
+        unit_price: item.unit_price,                  // required
+        price: item.unit_price * item.quantity,       // total price
+        bv: item.bv,                                  // required
+
+        created_at: item.created_at || new Date(),    // default now
+        created_by: item.created_by || user_id || "", // optional audit fields
+        last_modified_by: item.last_modified_by || user_id || "",
+        last_modified_at: new Date(),
       }));
     }
 
-    const updatedLogin = await Login.findOneAndUpdate(
-      query,
-      updates,
-      { new: true, runValidators: true }
-    );
+    const updatedLogin = await Login.findOneAndUpdate(query, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (category !== undefined) {
+      updates.category = category;
+    }
 
     if (!updatedLogin) {
-      return NextResponse.json({ success: false, message: "Login not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Login not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ success: true, data: updatedLogin }, { status: 200 });
   } catch (error) {
     console.error("Error updating login:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
+
 
 // DELETE - Remove a login
 export async function DELETE(request) {

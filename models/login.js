@@ -46,6 +46,7 @@ const LoginSchema = new mongoose.Schema(
     first_name: { type: String },
     last_name: { type: String },
     referBy: { type: String },
+    category: { type: String },
     theme: {
       type: String,
       enum: ["light", "dark", "system"],
