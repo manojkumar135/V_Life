@@ -6,6 +6,7 @@ const HistorySchema = new mongoose.Schema(
     wallet_id: { type: String, }, // can be linked to Wallet schema
     user_id: { type: String, required: true },   // can be linked to User schema
     user_name: { type: String, required: true },
+    order_id: { type: String, },
     account_holder_name: { type: String, },
     bank_name: { type: String, },
     account_number: { type: String, },

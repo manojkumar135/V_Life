@@ -2,9 +2,10 @@
 
 import React, { useEffect } from "react";
 import axios from "axios";
+import Loader from "@/components/common/loader";
 
 interface PaymentModalProps {
-  amount: number; // amount in rupees (e.g. 19.99)
+  amount: number; // amount in rupees
   user?: {
     name: string;
     email: string;
@@ -35,18 +36,16 @@ export default function PaymentModal({
   useEffect(() => {
     const startPayment = async () => {
       try {
-        // Send rupee amount to backend
         const res = await axios.post("/api/payment-operations", { amount });
 
-        // backend should return the created Razorpay order object
         const order = res.data.order || res.data;
-
         if (!order || !order.amount) {
           throw new Error("Invalid Razorpay order response");
         }
+
         const options: any = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: order.amount, // comes in paise from backend
+          amount: order.amount, // in paise
           currency: order.currency,
           name: "V Life Global",
           description: "Payment Transaction",
@@ -70,7 +69,9 @@ export default function PaymentModal({
             } catch (err) {
               console.error("❌ Payment verification error", err);
             } finally {
-              onClose();
+              setTimeout(() => {
+                onClose();
+              }, 10000);
             }
           },
           prefill: {
@@ -93,5 +94,9 @@ export default function PaymentModal({
     startPayment();
   }, [amount, user, onSuccess, onClose]);
 
-  return null;
+  return (
+    <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <Loader />
+    </div>
+  );
 }

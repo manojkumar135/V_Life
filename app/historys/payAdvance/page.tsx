@@ -107,7 +107,7 @@ export default function PayAdvancePage() {
               });
 
               ShowToast.success("Advance payment successful!");
-              router.push("/historys");
+              router.push("/orders");
             } catch (error: any) {
               console.error("Error saving history:", error);
               ShowToast.error("Payment success but failed to save history!");

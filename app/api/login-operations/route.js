@@ -97,17 +97,14 @@ export async function PATCH(request) {
   try {
     await connectDB();
     const { _id, user_id, login_id, items, category, ...updates } = await request.json();
-    console.log(category)
+    // console.log("PATCH received category:", category);
 
     // Check which identifier is provided
     let query = {};
-    if (_id) {
-      query = { _id };
-    } else if (user_id) {
-      query = { user_id };
-    } else if (login_id) {
-      query = { login_id };
-    } else {
+    if (_id) query = { _id };
+    else if (user_id) query = { user_id };
+    else if (login_id) query = { login_id };
+    else {
       return NextResponse.json(
         { success: false, message: "User identifier is required" },
         { status: 400 }
@@ -117,35 +114,36 @@ export async function PATCH(request) {
     // If items are provided, update the cart
     if (items !== undefined && Array.isArray(items)) {
       updates.items = items.map((item) => ({
-        id: String(item.id || item.product_id || ""), // fallback id
-        product_id: String(item.product_id),          // required
+        id: String(item.id || item.product_id || ""),
+        product_id: String(item.product_id),
         name: item.name,
         category: item.category,
         description: item.description || "",
         image: item.image,
 
         quantity: item.quantity,
-        mrp: item.mrp,                                // required
-        dealer_price: item.dealer_price,              // required
-        unit_price: item.unit_price,                  // required
-        price: item.unit_price * item.quantity,       // total price
-        bv: item.bv,                                  // required
+        mrp: item.mrp,
+        dealer_price: item.dealer_price,
+        unit_price: item.unit_price,
+        price: item.unit_price * item.quantity,
+        bv: item.bv,
 
-        created_at: item.created_at || new Date(),    // default now
-        created_by: item.created_by || user_id || "", // optional audit fields
+        created_at: item.created_at || new Date(),
+        created_by: item.created_by || user_id || "",
         last_modified_by: item.last_modified_by || user_id || "",
         last_modified_at: new Date(),
       }));
+    }
+
+    // ✅ make sure category goes into updates BEFORE the DB call
+    if (category !== undefined) {
+      updates.category = category;
     }
 
     const updatedLogin = await Login.findOneAndUpdate(query, updates, {
       new: true,
       runValidators: true,
     });
-
-    if (category !== undefined) {
-      updates.category = category;
-    }
 
     if (!updatedLogin) {
       return NextResponse.json(
@@ -154,7 +152,10 @@ export async function PATCH(request) {
       );
     }
 
-    return NextResponse.json({ success: true, data: updatedLogin }, { status: 200 });
+    return NextResponse.json(
+      { success: true, data: updatedLogin },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error updating login:", error);
     return NextResponse.json(
@@ -163,6 +164,7 @@ export async function PATCH(request) {
     );
   }
 }
+
 
 
 // DELETE - Remove a login

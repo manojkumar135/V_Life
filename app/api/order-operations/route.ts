@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { Order } from "@/models/order";
 import mongoose from "mongoose";
+import { Order } from "@/models/order";
+import { User } from "@/models/user";
+import { History } from "@/models/history";
+
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
 // ----------------- Types -----------------
@@ -13,6 +16,9 @@ interface OrderItem {
   quantity: number;
   unit_price: number;
   price: number;
+  mrp?: number;
+  dealer_price?: number;
+  bv?: number;
   description?: string;
   image?: string;
   created_at?: Date;
@@ -40,9 +46,11 @@ interface OrderPayload {
   description?: string;
   payment_id?: string;
   payment_type?: string;
+  is_first_order?: boolean;
 }
 
 // ----------------- POST -----------------
+
 export async function POST(request: Request) {
   try {
     await connectDB();
@@ -51,17 +59,66 @@ export async function POST(request: Request) {
     // Generate unique order_id with prefix "OR"
     const order_id = await generateUniqueCustomId("OR", Order, 8, 8);
 
-    // Auto calculate amount if not passed
+    // Calculate total amount using dealer_price * quantity
     const amount =
-      body.amount ?? body.items.reduce((sum, item) => sum + item.price, 0);
+      body.amount ??
+      body.items.reduce(
+        (sum, item) =>
+          sum + (item.dealer_price || item.unit_price) * item.quantity,
+        0
+      );
 
+    // Calculate total BV from items
+    const totalBV = body.items.reduce(
+      (sum, item) => sum + (item.bv || 0) * item.quantity,
+      0
+    );
+
+    // -------------------
+    // 1️⃣ Create the Order first
+    // -------------------
     const newOrder = await Order.create({ ...body, order_id, amount });
 
+    // -------------------
+    // 2️⃣ Create History record AFTER order creation
+    // -------------------
+    const user = await User.findOne({ user_id: body.user_id });
+    if (user) {
+      await History.create({
+        transaction_id: body.payment_id,
+        wallet_id: user.wallet_id || "",
+        user_id: user.user_id,
+        user_name: user.user_name,
+        order_id: newOrder.order_id,
+        account_holder_name: user.user_name,
+        bank_name: "Razorpay",
+        account_number: "N/A",
+        ifsc_code: "N/A",
+        date: new Date().toISOString().split("T")[0], // YYYY-MM-DD
+        time: new Date().toLocaleTimeString(),
+        available_balance: user.wallet_balance || 0,
+        amount,
+        transaction_type: "Debit",
+        details: body.is_first_order
+          ? "Order Payment (₹10,000 Advance Deducted)"
+          : "Order Payment",
+        status: "Completed",
+        created_by: user.user_id,
+      });
+
+      // -------------------
+      // 3️⃣ Update user BV after history
+      // -------------------
+      user.bv = (user.bv || 0) + totalBV;
+      await user.save();
+    }
+
     return NextResponse.json(
-      { success: true, data: newOrder },
+      { success: true, data: newOrder, addedBV: totalBV },
       { status: 201 }
     );
   } catch (error: any) {
+    console.error("Order creation error:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }
@@ -102,7 +159,10 @@ export async function GET(request: Request) {
         );
       }
 
-      return NextResponse.json({ success: true, data: [order] }, { status: 200 });
+      return NextResponse.json(
+        { success: true, data: [order] },
+        { status: 200 }
+      );
     }
 
     // -------------------
@@ -113,7 +173,11 @@ export async function GET(request: Request) {
       if (role === "user") {
         if (!user_id) {
           return NextResponse.json(
-            { success: false, message: "user_id is required for role=user", data: [] },
+            {
+              success: false,
+              message: "user_id is required for role=user",
+              data: [],
+            },
             { status: 400 }
           );
         }
@@ -221,7 +285,9 @@ export async function GET(request: Request) {
         const startFormatted = `${startDay}-${startMonth}-${startYear}`;
         const endFormatted = `${endDay}-${endMonth}-${endYear}`;
 
-        conditions.push({ payment_date: { $gte: startFormatted, $lte: endFormatted } });
+        conditions.push({
+          payment_date: { $gte: startFormatted, $lte: endFormatted },
+        });
       }
     }
 

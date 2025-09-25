@@ -10,8 +10,8 @@ import axios from "axios";
 import { useVLife } from "@/store/context";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { useRouter } from "next/navigation";
-
 import { IoRemove, IoAdd, IoTrashOutline } from "react-icons/io5";
+import Loader from "@/components/common/loader"
 
 // Define CartItem interface
 interface CartItem {
@@ -214,6 +214,11 @@ export default function OrderFormCartSection({
 
   return (
     <div className="relative">
+       {loading && (
+              <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                <Loader />
+              </div>
+            )}
       <div
         className={`rounded-xl p-4 max-lg:p-3 bg-white ${
           showPayment ? "opacity-30 pointer-events-none" : ""
@@ -225,17 +230,17 @@ export default function OrderFormCartSection({
             className={`px-2 py-2 font-medium max-md:text-sm w-1/2 ${
               activeTab === "cart"
                 ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-500 hover:text-gray-700"
+                : "text-gray-500 hover:text-gray-700 cursor-pointer"
             }`}
             onClick={() => setActiveTab("cart")}
           >
             Shopping Cart
           </button>
           <button
-            className={`ml-6 px-4 py-2 font-medium max-md:text-sm w-1/2 ${
+            className={`ml-6 px-4 py-2 font-medium max-md:text-sm w-1/2  ${
               activeTab === "customer"
                 ? "border-b-2 border-blue-600 text-blue-600"
-                : "text-gray-500 hover:text-gray-700"
+                : "text-gray-500 hover:text-gray-700 cursor-pointer"
             }`}
             onClick={() => setActiveTab("customer")}
           >
@@ -260,7 +265,7 @@ export default function OrderFormCartSection({
                 </div>
 
                 {/* Cart Items */}
-                <div className="space-y-4 max-h-70 max-lg:max-h-95 max-lg:min-h-[600px] overflow-y-auto pr-2">
+                <div className="space-y-4 max-h-90 max-lg:max-h-95 max-lg:min-h-[600px] overflow-y-auto pr-2">
                   {cart.map((item: CartItem) => (
                     <div
                       key={String(item.product_id)}
@@ -553,7 +558,7 @@ export default function OrderFormCartSection({
           }}
           onClose={() => {
             setShowPayment(false);
-            router.push("/orders");
+            router.push("/orders/addorder");
           }}
         />
       )}

@@ -8,7 +8,10 @@ const OrderItemSchema = new mongoose.Schema(
     name: { type: String, required: true }, // product name
     quantity: { type: Number, required: true },
     unit_price: { type: Number, required: true },
-    price: { type: Number, required: true }, // total = quantity * unit_price
+    price: { type: Number, required: true },
+    mrp: { type: Number, required: true },
+    dealer_price: { type: Number, required: true },
+    bv: { type: Number, required: true },
     created_at: { type: Date, default: Date.now },
     description: { type: String },
     image: { type: String },
@@ -30,8 +33,8 @@ const OrderSchema = new mongoose.Schema(
     description: { type: String },
 
     payment_date: { type: String, required: true },
-    payment:{ type: String, required: true },
-    payment_time :{ type: String, required: true },
+    payment: { type: String, required: true },
+    payment_time: { type: String, required: true },
     payment_id: { type: String, required: true },
     payment_type: { type: String, required: true },
     amount: { type: Number, required: true }, // total order amount

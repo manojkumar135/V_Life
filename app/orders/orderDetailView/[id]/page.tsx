@@ -15,6 +15,7 @@ interface CartItem {
   quantity: number;
   image: string;
   description: string;
+  bv?: number; // ✅ added bv
 }
 
 interface OrderData {
@@ -52,12 +53,9 @@ export default function OrderDetailView() {
       try {
         setLoading(true);
         const res = await axios.get(`/api/order-operations?id=${orderId}`);
-        // console.log("API Response:", res.data);
 
         if (res?.data?.success) {
-          const raw = res.data.data;
-
-          // ✅ Map backend response to frontend-friendly structure
+          const raw = res.data.data[0];
           const mappedOrder: OrderData = {
             orderId: raw.order_id,
             userId: raw.user_id,
@@ -70,19 +68,20 @@ export default function OrderDetailView() {
             cart: raw.items.map((item: any) => ({
               id: item.product_id,
               name: item.name,
-              price: item.unit_price, // ⚠️ use unit_price, not total item price
+              price: item.unit_price,
               quantity: item.quantity,
               image: item.image,
               description: item.description,
+              bv: item.bv, // ✅ map bv
             })),
-            subtotal: raw.total_amount, // original total before advance
-            totalAmount: raw.final_amount ?? raw.amount, // after advance deduction
+            subtotal: raw.total_amount,
+            totalAmount: raw.final_amount ?? raw.amount,
             advanceDeducted: raw.advance_deducted,
             isFirstOrder: raw.is_first_order,
             paymentDate: raw.payment_date,
             paymentId: raw.payment_id,
-            payment:raw.payment|| "completed",
-            shippingAddress: raw.shipping_address, // ✅ map shipping address
+            payment: raw.payment || "completed",
+            shippingAddress: raw.shipping_address,
           };
 
           setOrder(mappedOrder);
@@ -127,7 +126,6 @@ export default function OrderDetailView() {
       <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-[100%]">
         {/* Header - Order Info */}
         <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row gap-3 xl:items-center xl:pr-1">
-          {/* 🔙 Back Button */}
           <button
             onClick={() => router.push("/orders")}
             className="flex items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
@@ -136,9 +134,7 @@ export default function OrderDetailView() {
             <IoIosArrowBack size={25} />
           </button>
 
-          {/* 📦 Order Info + View Address */}
           <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-            {/* 📦 Order Info */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center xl:justify-between xl:w-[80%] gap-1 sm:gap-6 ">
               <span className="text-sm font-medium text-gray-600">
                 Order ID:{" "}
@@ -160,7 +156,6 @@ export default function OrderDetailView() {
               </span>
             </div>
 
-            {/* ✅ View Address Button */}
             <SubmitButton
               onClick={() => setShowAddress(true)}
               className=" text-sm transition-colors duration-200"
@@ -180,13 +175,13 @@ export default function OrderDetailView() {
             <>
               {/* Header Row (Desktop) */}
               <div className="hidden lg:grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 xl:px-15">
-                <div className="col-span-6">Product</div>
+                <div className="col-span-5">Product</div>
                 <div className="col-span-2 text-center">Quantity</div>
+                <div className="col-span-1 text-center">BV</div>
                 <div className="col-span-2 text-right">Unit Price</div>
                 <div className="col-span-2 text-right">Total</div>
               </div>
 
-              {/* Items (scrollable list) */}
               <div className="space-y-4 lg:scrollbar-custom">
                 {order.cart.map((item) => (
                   <div
@@ -195,7 +190,7 @@ export default function OrderDetailView() {
                   >
                     {/* Desktop */}
                     <div className="hidden lg:grid grid-cols-12 items-center xl:px-5">
-                      <div className="col-span-6 flex items-center gap-4">
+                      <div className="col-span-5 flex items-center gap-4">
                         <img
                           src={item.image}
                           alt={item.name}
@@ -215,6 +210,9 @@ export default function OrderDetailView() {
                       </div>
                       <div className="col-span-2 text-center font-medium">
                         {item.quantity}
+                      </div>
+                      <div className="col-span-1 text-center font-medium">
+                        {item.bv || 0}
                       </div>
                       <div className="col-span-2 text-right text-gray-700">
                         ₹ {item.price.toFixed(2)}
@@ -249,6 +247,12 @@ export default function OrderDetailView() {
                           Qty:{" "}
                           <span className="font-medium">{item.quantity}</span>
                         </p>
+                        {item.bv && (
+                          <p className="text-gray-700">
+                            BV: <span className="font-medium">{item.bv}</span>
+                          </p>
+                        )}
+                        {/* ✅ BV */}
                         <p className="font-bold text-gray-900">
                           ₹ {(item.price * item.quantity).toFixed(2)}
                         </p>
@@ -297,17 +301,16 @@ export default function OrderDetailView() {
         </div>
       </div>
 
-      {/* ✅ Shipping Address Popup */}
+      {/* Shipping Address Popup */}
       {showAddress && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
-          onClick={() => setShowAddress(false)} // Close on backdrop click
+          onClick={() => setShowAddress(false)}
         >
           <div
             className="bg-white rounded-xl shadow-lg w-[90%] max-w-md p-6 relative"
-            onClick={(e) => e.stopPropagation()} // Prevent close when clicking inside modal
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
             <button
               onClick={() => setShowAddress(false)}
               className="absolute top-3 right-3 text-gray-500 hover:text-black text-lg font-bold"
@@ -333,7 +336,9 @@ export default function OrderDetailView() {
 
               <span className="font-bold text-black ">Email</span>
               <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.mail}</span>
+              <span className="font-normal text-black  whitespace-pre-line">
+                {order.mail}
+              </span>
 
               <span className="font-bold text-black ">Contact</span>
               <span className="font-bold text-black text-center">:</span>

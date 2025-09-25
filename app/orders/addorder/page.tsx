@@ -13,6 +13,7 @@ import { useVLife } from "@/store/context";
 import SubmitButton from "@/components/common/submitbutton";
 import { IoMdAdd } from "react-icons/io";
 import Loader from "@/components/common/loader";
+import { formatDate } from "@/components/common/formatDate";
 
 interface CartItem {
   product_id: string;
@@ -280,6 +281,67 @@ export default function AddOrderPage() {
   const getTotalPrice = () =>
     cart.reduce((total, item) => total + item.price, 0);
 
+  const createOrder = async (finalAmount: number, razorpayResponse: any) => {
+    try {
+      console.log(cart)
+      const orderItems = cart.map((item) => ({
+        product_id: String(item.id),
+        product: String(item.id),
+        category: item.category,
+        name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        price: item.price,
+        mrp: item.mrp,
+        dealer_price: item.dealer_price,
+        bv: item.bv,
+        description: item.description,
+        image: item.image,
+      }));
+
+      const payload = {
+        user_id: user.user_id,
+        user_name: formData.customerName || user.user_name,
+        contact: formData.contact || user.contact,
+        mail: formData.customerEmail || user.mail,
+        address: formData.shippingAddress || address,
+        description: formData.notes,
+        payment: "completed",
+        payment_date: formatDate(new Date()),
+        payment_time: new Date().toLocaleTimeString(),
+        payment_id: razorpayResponse.razorpay_payment_id,
+        payment_order_id: razorpayResponse.razorpay_order_id,
+        payment_signature: razorpayResponse.razorpay_signature,
+        payment_type: razorpayResponse.method || "razorpay",
+        items: orderItems,
+        order_status: "pending",
+        amount: getTotalPrice(),
+        total_amount: getTotalPrice(),
+        final_amount: finalAmount,
+        advance_deducted: isFirstOrder ? 10000 : 0,
+        is_first_order: isFirstOrder,
+      };
+
+      const response = await axios.post("/api/order-operations", payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.data.success) {
+        // ✅ Clear cart
+        setCart([]);
+        await updateUserCart([]);
+
+        ShowToast.success("Order created successfully!");
+        router.push("/orders");
+      } else {
+        ShowToast.error(response.data.message || "Failed to create order");
+      }
+    } catch (error: any) {
+      console.error("Error creating order:", error);
+      ShowToast.error("Failed to create order: " + error.message);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (cart.length === 0) {
@@ -327,7 +389,7 @@ export default function AddOrderPage() {
           </div>
 
           {/* Add Product Button */}
-          {user?.role === "admin" && (
+          {user?.role === "superadmin" && (
             <SubmitButton
               onClick={() => router.push("/products/addproduct")}
               className="self-start bg-yellow-400 hover:bg-yellow-500 text-black font-medium py-1.5 px-2 
@@ -352,18 +414,17 @@ export default function AddOrderPage() {
                 className={`px-4 py-2 font-medium whitespace-nowrap text-md max-lg:text-sm ${
                   activeCategory === category.name
                     ? "border-b-2 border-blue-600 text-blue-600"
-                    : ""
+                    : "cursor-pointer"
                 }`}
                 onClick={async () => {
                   setActiveCategory(category.name);
-                  setUser({ category: category.name });
+                  setUser({ category: category.name }); // ✅ correct usage
 
-                  // try {
-                  //   // persist category update to backend
-                  //   await updateUserCart(user.items ?? []);
-                  // } catch {
-                  //   ShowToast.error("Failed to update category");
-                  // }
+                  try {
+                    await updateUserCart(user.items ?? [], category.name); // ✅ pass category
+                  } catch {
+                    ShowToast.error("Failed to update category");
+                  }
                 }}
               >
                 {category.name}
@@ -474,7 +535,7 @@ export default function AddOrderPage() {
               setFormData={setFormData}
               handleInputChange={handleInputChange}
               isFirstOrder={isFirstOrder}
-              createOrder={() => {}} // keep placeholder, your actual createOrder fn goes here
+              createOrder={createOrder}
             />
           </div>
         </div>

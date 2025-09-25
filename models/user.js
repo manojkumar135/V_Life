@@ -14,7 +14,7 @@ const UserSchema = new mongoose.Schema(
   {
     user_id: { type: String, required: true, unique: true },
     user_name: { type: String, required: true },
-    dob: { type: String,required: true },
+    dob: { type: String, required: true },
     mail: { type: String, required: true },
     contact: { type: String, required: true },
     address: { type: String },
@@ -39,6 +39,10 @@ const UserSchema = new mongoose.Schema(
     // 🔗 Referral / Upline
     referBy: { type: String },
     referred_users: { type: [String], default: [] },
+    infinity_users: { type: [String], default: [] },
+    bv: { type: Number, default: 0 },
+    sv: { type: Number, default: 0 },
+
 
     // 🌳 Binary Team Structure
     left: { type: String },
