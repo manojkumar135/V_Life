@@ -44,9 +44,24 @@ export default function SideNav({
       match: "administration",
     },
     { href: "/wallet", icon: <FaWallet />, label: "Wallet", match: "wallet" },
-    { href: "/orders", icon: <FaBoxesPacking />, label: "Orders", match: "orders" },
-    { href: "/historys", icon: <FaHistory />, label: "History", match: "history" },
-    { href: "/settings", icon: <IoSettings />, label: "Settings", match: "settings" },
+    {
+      href: "/orders",
+      icon: <FaBoxesPacking />,
+      label: "Orders",
+      match: "orders",
+    },
+    {
+      href: "/historys",
+      icon: <FaHistory />,
+      label: "History",
+      match: "history",
+    },
+    {
+      href: "/settings",
+      icon: <IoSettings />,
+      label: "Settings",
+      match: "settings",
+    },
   ];
 
   const handleNavigation = (path: string) => {
@@ -55,8 +70,8 @@ export default function SideNav({
   };
 
   const handleLogout = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       await axios.post("/api/logout");
       clearUser();
       router.push("/auth/login");

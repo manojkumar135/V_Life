@@ -122,24 +122,14 @@ export default function LeftTeam() {
     }
   };
 
-  const allColumns = [
-  { field: "user_id", headerName: "User ID", flex: 1 },
-  { field: "user_name", headerName: "User Name", flex: 1 },
-  { field: "contact", headerName: "Contact", flex: 1 },
-  { field: "mail", headerName: "Email", flex: 2 },
-  { field: "role", headerName: "Role", flex: 1 },
-  { field: "user_status", headerName: "Status", flex: 1 },
-];
-
-// assume logged-in user role
-const currentUserRole = user?.role; // e.g. "admin"
-
-const columns =
-  currentUserRole === "admin"
-    ? allColumns
-    : allColumns.filter(
-        (col) => col.field !== "contact" && col.field !== "mail"
-      );
+  const columns = [
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_name", headerName: "User Name", flex: 1 },
+    { field: "contact", headerName: "Contact", flex: 1 },
+    { field: "mail", headerName: "Email", flex: 2 },
+    { field: "role", headerName: "Role", flex: 1 },
+    { field: "user_status", headerName: "Status", flex: 1 },
+  ];
 
   const handlePageChange = useCallback(() => {
     // optional server pagination
@@ -167,13 +157,13 @@ const columns =
 
         <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
           <HeaderWithActions
-            title="Left Team"
+            title="Infinity Team"
             search={query}
             setSearch={setQuery} // ✅ string setter
-            addLabel="+ ADD USER"
-            showAddButton
+            // addLabel="+ ADD USER"
+            // showAddButton
             showBack
-            onAdd={handleAddUser}
+            // onAdd={handleAddUser}
             onMore={handleDownloadClick} // ✅ Now Download
             showPagination
             currentPage={currentPage}

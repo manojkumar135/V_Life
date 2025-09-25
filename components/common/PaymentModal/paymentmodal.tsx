@@ -69,9 +69,7 @@ export default function PaymentModal({
             } catch (err) {
               console.error("❌ Payment verification error", err);
             } finally {
-              setTimeout(() => {
-                onClose();
-              }, 10000);
+              onClose();
             }
           },
           prefill: {

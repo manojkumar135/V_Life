@@ -122,14 +122,24 @@ export default function RightTeam() {
     }
   };
 
-  const columns = [
-    { field: "user_id", headerName: "User ID", flex: 1 },
-    { field: "user_name", headerName: "User Name", flex: 1 },
-    { field: "contact", headerName: "Contact", flex: 1 },
-    { field: "mail", headerName: "Email", flex: 2 },
-    { field: "role", headerName: "Role", flex: 1 },
-    { field: "user_status", headerName: "Status", flex: 1 },
-  ];
+   const allColumns = [
+  { field: "user_id", headerName: "User ID", flex: 1 },
+  { field: "user_name", headerName: "User Name", flex: 1 },
+  { field: "contact", headerName: "Contact", flex: 1 },
+  { field: "mail", headerName: "Email", flex: 2 },
+  { field: "role", headerName: "Role", flex: 1 },
+  { field: "user_status", headerName: "Status", flex: 1 },
+];
+
+// assume logged-in user role
+const currentUserRole = user?.role; // e.g. "admin"
+
+const columns =
+  currentUserRole === "admin"
+    ? allColumns
+    : allColumns.filter(
+        (col) => col.field !== "contact" && col.field !== "mail"
+      );
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
