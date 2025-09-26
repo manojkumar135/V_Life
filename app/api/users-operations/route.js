@@ -163,6 +163,7 @@ async function findAvailablePlacement(parentId, team) {
 // ------------------ TREE NODE CREATION ------------------
 async function createTreeNode(user, referrerId, team) {
   const { parent, side } = await findAvailablePlacement(referrerId, team);
+  // console.log(user, referrerId, team)
 
   // ✅ Case 1: Root node (no parent)
   if (!parent) {
@@ -184,6 +185,7 @@ async function createTreeNode(user, referrerId, team) {
       right: null,
       referrals: [],
       referral_count: 0,
+      refer_by: referrerId,
     });
     return newNode;
   }
@@ -206,6 +208,8 @@ async function createTreeNode(user, referrerId, team) {
     right: null,
     referrals: [],
     referral_count: 0,
+    refer_by: referrerId,
+
   });
 
   // ✅ Always attach the new node under parent (binary placement)

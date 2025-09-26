@@ -23,6 +23,7 @@ const TreeNodeSchema = new Schema(
     parent: { type: String, }, // parent user_id
     left: { type: String, default: null },    // left child user_id
     right: { type: String, default: null },   // right child user_id
+    refer_by: { type: String},
 
     // 👥 Referral Tracking
     referrals: [{ type: String }], // store referred user_ids

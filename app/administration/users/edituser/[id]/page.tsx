@@ -259,7 +259,12 @@ export default function AddEditUserForm() {
     { name: "mail", label: "Email", kind: "input", inputType: "email" },
     { name: "contact", label: "Contact", kind: "input", inputType: "text" },
     { name: "dob", label: "Date of Birth", kind: "input", inputType: "date" },
-    { name: "address", label: "D.NO & Street", kind: "input", inputType: "text" },
+    {
+      name: "address",
+      label: "D.NO & Street",
+      kind: "input",
+      inputType: "text",
+    },
     { name: "pincode", label: "Pincode", kind: "input", inputType: "text" },
     {
       name: "country",

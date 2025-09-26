@@ -163,6 +163,8 @@ export default function WithdrawPage() {
           pageSize={14}
           statusField="withdraw_status"
           onIdClick={(id) => router.push(`/wallet/withdraw/detailview/${id}`)}
+            checkboxSelection
+          onRowClick={(row) => console.log("Withdraw clicked:", row)}
         />
 
         {/* Date Filter Modal */}

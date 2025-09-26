@@ -25,7 +25,8 @@ async function buildTree(userId) {
     user_status: node.status || "inactive",
     contact: node.contact || "",
     mail: node.mail || "",
-    referBy: node.referBy || "",
+    referBy: node.refer_by || "",
+    referrals:node.referral_count|| "0",
     parent: node.parent || "",
 
     left: leftNode,

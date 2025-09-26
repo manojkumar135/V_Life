@@ -15,7 +15,7 @@ import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
-import { GridColDef } from "@mui/x-data-grid";
+import { GridColDef,GridRenderCellParams } from "@mui/x-data-grid";
 import { handleDownload } from "@/utils/handleDownload"; // ✅ import
 import { formatDate } from "@/components/common/formatDate";
 
@@ -108,38 +108,42 @@ export default function TransactionHistory() {
 
   // ✅ Columns setup
   const columns: GridColDef[] = [
-    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
-    { field: "date", headerName: "Date", flex: 1 },
-    { field: "details", headerName: "Detail", flex: 1.5 },
+  { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
 
-    {
-      field: "amount",
-      headerName: "Amount (₹)",
-      flex: 1,
-      align: "right",
-      renderCell: (params) => (
-        <span
-          className={`pr-5 ${
-            params.row.status === "credit" ? "text-green-600" : "text-red-600"
-          }`}
-        >
-          ₹ {Number(params.value ?? 0).toFixed(2)}
-        </span>
+  // 👇 Admin only
+  user?.role === "admin" && { field: "user_id", headerName: "User ID", flex: 1 },
+
+  { field: "date", headerName: "Date", flex: 1 },
+  { field: "details", headerName: "Detail", flex: 1.5 },
+
+  {
+    field: "amount",
+    headerName: "Amount (₹)",
+    flex: 1,
+    align: "right",
+    renderCell: (params: GridRenderCellParams<any, number>) => (
+      <span
+        className={`pr-5 ${
+          params.row.status === "credit" ? "text-green-600" : "text-red-600"
+        }`}
+      >
+        ₹ {Number(params.value ?? 0).toFixed(2)}
+      </span>
+    ),
+  },
+
+  {
+    field: "status",
+    headerName: "Status",
+    flex: 1,
+    renderCell: (params: GridRenderCellParams<any, string>) =>
+      params.value === "credit" ? (
+        <FaPlusCircle className="text-green-600 text-lg ml-4 mt-2" />
+      ) : (
+        <FaMinusCircle className="text-red-600 text-lg ml-4 mt-2" />
       ),
-    },
-
-    {
-      field: "status",
-      headerName: "Status",
-      flex: 1,
-      renderCell: (params) =>
-        params.value === "credit" ? (
-          <FaPlusCircle className="text-green-600 text-lg ml-4 mt-2" />
-        ) : (
-          <FaMinusCircle className="text-red-600 text-lg ml-4 mt-2" />
-        ),
-    },
-  ];
+  },
+].filter(Boolean) as GridColDef[];
 
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({

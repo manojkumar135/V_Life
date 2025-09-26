@@ -26,7 +26,7 @@ interface User {
 export default function LeftTeam() {
   const router = useRouter();
   const { user } = useVLife();
-  const team = "left";
+  const team = "direct";
 
   const { query, setQuery, debouncedQuery } = useSearch();
   const [selectedRows, setSelectedRows] = useState<User[]>([]);
@@ -36,7 +36,7 @@ export default function LeftTeam() {
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = "/api/team-operations";
+  const API_URL = "/api/directteam-operations";
   const STATUS_URL = "/api/status-operations";
 
   // ✅ modal states
@@ -52,7 +52,7 @@ export default function LeftTeam() {
   const handleDownloadClick = () => {
     handleDownload<User>({
       rows: selectedRows,
-      fileName: "left-team",
+      fileName: "direct-team",
       format: "xlsx",
       excludeHeaders: ["_id", "__v", "created_at", "last_modified_at"], // ✅ skip these
       onStart: () => setDownloading(true),
@@ -88,7 +88,7 @@ export default function LeftTeam() {
 
   // Edit user
   const handleEdit = (id: string) => {
-    router.push(`/administration/users/edituser/${id}`);
+    router.push(`/administration/users/tree/${id}`);
   };
 
   // Ask before toggling status
@@ -122,14 +122,25 @@ export default function LeftTeam() {
     }
   };
 
-  const columns = [
-    { field: "user_id", headerName: "User ID", flex: 1 },
-    { field: "user_name", headerName: "User Name", flex: 1 },
-    { field: "contact", headerName: "Contact", flex: 1 },
-    { field: "mail", headerName: "Email", flex: 2 },
-    { field: "role", headerName: "Role", flex: 1 },
-    { field: "user_status", headerName: "Status", flex: 1 },
-  ];
+  const allColumns = [
+  { field: "user_id", headerName: "User ID", flex: 1 },
+  { field: "user_name", headerName: "User Name", flex: 1 },
+  { field: "contact", headerName: "Contact", flex: 1 },
+  { field: "mail", headerName: "Email", flex: 2 },
+  { field: "role", headerName: "Role", flex: 1 },
+  { field: "user_status", headerName: "Status", flex: 1 },
+];
+
+// assume logged-in user role
+const currentUserRole = user?.role; // e.g. "admin"
+
+const columns =
+  currentUserRole === "admin"
+    ? allColumns
+    : allColumns.filter(
+        (col) => col.field !== "contact" && col.field !== "mail"
+      );
+
 
   const handlePageChange = useCallback(() => {
     // optional server pagination

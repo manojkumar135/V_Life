@@ -80,9 +80,12 @@ export default function Table<T extends Row>({
                 style={{
                   background: "transparent",
                   border: "none",
-                  cursor: "pointer",
-                  color: "#0000EE",
-                  textDecoration: "underline",
+                  color:
+                    params.field === "transaction_id" ? "black" : "#0000EE",
+                  textDecoration:
+                    params.field === "transaction_id" ? "none" : "underline",
+                  cursor:
+                    params.field === "transaction_id" ? "default" : "pointer",
                 }}
               >
                 {value ?? "-"}

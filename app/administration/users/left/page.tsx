@@ -88,7 +88,7 @@ export default function LeftTeam() {
 
   // Edit user
   const handleEdit = (id: string) => {
-    router.push(`/administration/users/edituser/${id}`);
+    router.push(`/administration/users/tree/${id}`);
   };
 
   // Ask before toggling status

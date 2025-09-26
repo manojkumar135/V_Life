@@ -89,8 +89,8 @@ export default function RightTeam() {
   }, [debouncedQuery, user?.user_id]);
 
   // Navigate to edit
-  const handleEdit = (id: string) => {
-    router.push(`/administration/users/edituser/${id}`);
+   const handleEdit = (id: string) => {
+    router.push(`/administration/users/tree/${id}`);
   };
 
   // Ask before toggling status

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaUserCircle } from "react-icons/fa";
+import { useVLife } from "@/store/context";
 
 export interface TreeNode {
   user_id: string;
@@ -13,6 +14,9 @@ export interface TreeNode {
   right?: TreeNode | null;
   leftCount?: string;
   rightCount?: string;
+  referrals?: string;
+  bv?: string;
+  sv?: string;
 }
 
 interface Props {
@@ -30,6 +34,8 @@ const BinaryTreeNode: React.FC<Props> = ({
   level = 1,
   maxLevel = 4,
 }) => {
+  console.log(node);
+  const { user } = useVLife();
   const [hovered, setHovered] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({
     top: 0,
@@ -117,17 +123,21 @@ const BinaryTreeNode: React.FC<Props> = ({
               {node.user_status}
             </span>
           </div>
-          {node.contact && (
-            <div className="flex">
-              <strong className="w-20">Contact:</strong>
-              <span className="truncate">{node.contact}</span>
-            </div>
-          )}
-          {node.mail && (
-            <div className="flex">
-              <strong className="w-20">Email:</strong>
-              <span className="truncate">{node.mail}</span>
-            </div>
+          {user?.role === "admin" && (
+            <>
+              {node.contact && (
+                <div className="flex">
+                  <strong className="w-20">Contact:</strong>
+                  <span className="truncate">{node.contact}</span>
+                </div>
+              )}
+              {node.mail && (
+                <div className="flex">
+                  <strong className="w-20">Email:</strong>
+                  <span className="truncate">{node.mail}</span>
+                </div>
+              )}
+            </>
           )}
           {node.referBy && (
             <div className="flex">
@@ -135,10 +145,22 @@ const BinaryTreeNode: React.FC<Props> = ({
               <span className="truncate">{node.referBy}</span>
             </div>
           )}
-          {node.parent && (
+          {node.referrals && (
+            <div className="flex">
+              <strong className="w-20">Referrals:</strong>
+              <span className="truncate">{node.referrals}</span>
+            </div>
+          )}
+          {/* {node.parent && (
             <div className="flex">
               <strong className="w-20">Parent:</strong>
               <span className="truncate">{node.parent}</span>
+            </div>
+          )} */}
+          {node.referBy && (
+            <div className="flex">
+              <strong className="w-20">Sponser ID:</strong>
+              <span className="truncate">{node.referBy}</span>
             </div>
           )}
 
@@ -150,6 +172,14 @@ const BinaryTreeNode: React.FC<Props> = ({
           <div className="flex">
             <strong className="w-20">Right Team:</strong>
             <span>{node.rightCount ?? 0}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">BV:</strong>
+            <span>{node.bv ?? 0}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">SV:</strong>
+            <span>{node.sv ?? 0}</span>
           </div>
         </div>
       )}
@@ -178,7 +208,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                 />
               ) : (
                 <div className="w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1">
-                  Empty
+                  EMPTY
                 </div>
               )}
             </div>
@@ -195,7 +225,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                 />
               ) : (
                 <div className="w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1">
-                  Empty
+                  EMPTY
                 </div>
               )}
             </div>

@@ -106,7 +106,7 @@ export default function SideNav({
         </div>
 
         {/* Menu Items */}
-        <div className="flex flex-col items-center gap-2 flex-grow w-full mt-10">
+        <div className="flex flex-col items-center gap-2 flex-grow w-full mt-6">
           {menuItems.map((item, index) => {
             const isActive = pathname.includes(item.match);
             return (
@@ -123,7 +123,7 @@ export default function SideNav({
                 </button>
                 {/* Tooltip */}
                 <span
-                  className="absolute left-full top-1/2 -translate-y-1/2 ml-1.5 px-2 py-1 text-xs 
+                  className="absolute left-full top-1/2 -translate-y-1/2 ml-0 px-2 py-1 text-xs 
                   font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[400ms]
                   translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50"
                 >

@@ -130,50 +130,51 @@ export default function OrdersPage() {
   };
 
   const columns: GridColDef[] = [
-    { field: "order_id", headerName: "Order ID", flex: 1 },
-    { field: "payment_id", headerName: "Transaction ID", flex: 1.5 },
-    { field: "user_id", headerName: "User ID", flex: 1 },
-    { field: "contact", headerName: "Contact", flex: 1 },
-    { field: "payment_date", headerName: "Order Date", flex: 1 },
-    {
-      field: "final_amount",
-      headerName: "Amount ( ₹ )",
-      align: "right",
-      flex: 1,
-      renderCell: (params) => (
-        <span className="pr-5">
-          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
-        </span>
-      ),
-    },
-    { field: "payment", headerName: "Status", flex: 1 },
+  { field: "order_id", headerName: "Order ID", flex: 1 },
+  { field: "payment_id", headerName: "Transaction ID", flex: 1.5 },
 
-    // 👇 Extra column for admin only
-    ...(user?.role === "admin"
-      ? [
-          {
-            field: "download",
-            headerName: "Invoice",
-            flex: 1,
-            sortable: false,
-            filterable: false,
-            // align: "center" as const,
-            renderCell: (params: GridRenderCellParams) => (
-              <button
-                title="Download Invoice"
-                className="text-blue-600 hover:text-blue-800 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation(); // prevent row click
-                  handleDownloadPDF(params.row.order_id, setLoading);
-                }}
-              >
-                <FaDownload size={15} />
-              </button>
-            ),
-          },
-        ]
-      : []),
-  ];
+  // conditional columns (filter later)
+  user?.role === "admin" && { field: "user_id", headerName: "User ID", flex: 1 },
+  user?.role === "admin" && { field: "contact", headerName: "Contact", flex: 1 },
+
+  { field: "payment_date", headerName: "Order Date", flex: 1 },
+  {
+    field: "final_amount",
+    headerName: "Amount ( ₹ )",
+    align: "right",
+    flex: 1,
+    renderCell: (params: GridRenderCellParams<any, number>) => (
+      <span className="pr-5">
+        ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+      </span>
+    ),
+  },
+  { field: "payment", headerName: "Status", flex: 1 },
+
+  ...(user?.role === "admin"
+    ? [
+        {
+          field: "download",
+          headerName: "Invoice",
+          flex: 1,
+          sortable: false,
+          filterable: false,
+          renderCell: (params: GridRenderCellParams) => (
+            <button
+              title="Download Invoice"
+              className="text-blue-600 hover:text-blue-800 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownloadPDF(params.row.order_id, setLoading);
+              }}
+            >
+              <FaDownload size={15} />
+            </button>
+          ),
+        },
+      ]
+    : []),
+].filter(Boolean) as GridColDef[]; // 👈 removes false and fixes typing
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {

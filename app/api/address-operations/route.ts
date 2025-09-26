@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
     // Add pincode if present
     if (pincode && pincode.toString().trim() !== "") {
-      formattedAddress += ` - ${pincode}`;
+      formattedAddress += ` - ${pincode} .`;
     }
 
     return NextResponse.json({

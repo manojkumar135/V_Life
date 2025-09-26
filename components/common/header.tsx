@@ -37,17 +37,14 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   // };
 
   return (
-    <header className="flex items-center justify-between w-full max-md:w-screen px-4 py-2  h-[60px] shadow-sm">
+    <header className="flex items-center justify-between w-full max-md:w-screen px-4 py-2  h-[60px]">
       <div className="flex items-center space-x-3">
         {/* Hamburger Icon - visible only on small screens */}
         <button
           onClick={onMenuClick}
           className="md:hidden p-1 rounded-md hover:bg-gray-100"
         >
-          <HiOutlineMenuAlt2
-            size={30}
-            className="text-gray-800 "
-          />
+          <HiOutlineMenuAlt2 size={30} className="text-gray-800 " />
         </button>
         <h1 className="text-[1.5rem] max-md:text-[1rem] font-semibold text-gray-800 truncate max-w-[400px] max-md:max-w-[150px]">
           Hello, {user?.user_name || "User"}

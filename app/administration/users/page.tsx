@@ -3,7 +3,7 @@
 import React from "react";
 import Layout from "@/layout/Layout";
 import { Users, UserCheck, TreePine } from "lucide-react"; // Lucide icons
-import { RiTeamFill } from "react-icons/ri";
+import { FaUsers } from "react-icons/fa";
 import { IoInfiniteSharp } from "react-icons/io5";
 
 
@@ -33,7 +33,7 @@ const Page = () => {
             onClick={() => router.push("/administration/users/left")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
-            <UserCheck size={32} />
+            <Users size={32}  className="transform scale-x-[-1]"/>
             <span className="mt-2 text-lg font-semibold">Left Team</span>
           </div>
 
@@ -48,7 +48,7 @@ const Page = () => {
 
           {/* Tree View Card */}
           <div
-            onClick={() => router.push("/administration/users/tree")}
+            onClick={() => router.push(`/administration/users/tree`)}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <TreePine size={32} />
@@ -60,7 +60,7 @@ const Page = () => {
             onClick={() => router.push("/administration/users/direct")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
-            <RiTeamFill size={32} />
+            <FaUsers size={32} />
             <span className="mt-2 text-lg font-semibold">Direct Team</span>
           </div>
 
