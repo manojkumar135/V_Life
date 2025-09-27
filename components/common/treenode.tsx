@@ -139,28 +139,29 @@ const BinaryTreeNode: React.FC<Props> = ({
               )}
             </>
           )}
-          {node.referBy && (
+          {/* {node.referBy && (
             <div className="flex">
               <strong className="w-20">Refer By:</strong>
               <span className="truncate">{node.referBy}</span>
             </div>
-          )}
+          )} */}
           {node.referrals && (
             <div className="flex">
               <strong className="w-20">Referrals:</strong>
               <span className="truncate">{node.referrals}</span>
             </div>
           )}
-          {/* {node.parent && (
-            <div className="flex">
-              <strong className="w-20">Parent:</strong>
-              <span className="truncate">{node.parent}</span>
-            </div>
-          )} */}
+          
           {node.referBy && (
             <div className="flex">
               <strong className="w-20">Sponser ID:</strong>
               <span className="truncate">{node.referBy}</span>
+            </div>
+          )}
+          {node.parent && (
+            <div className="flex">
+              <strong className="w-20">Parent:</strong>
+              <span className="truncate">{node.parent}</span>
             </div>
           )}
 
@@ -208,7 +209,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                 />
               ) : (
                 <div className="w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1">
-                  EMPTY
+                  Empty
                 </div>
               )}
             </div>
@@ -225,7 +226,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                 />
               ) : (
                 <div className="w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1">
-                  EMPTY
+                  Empty
                 </div>
               )}
             </div>

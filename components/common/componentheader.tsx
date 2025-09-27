@@ -46,7 +46,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
   showAddButton,
   addLabel = "+ ADD",
   onAdd,
-  showMoreOptions = true,
+  showMoreOptions,
   onMore,
   showBack,
   onBack,

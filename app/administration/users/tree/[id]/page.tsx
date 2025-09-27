@@ -6,12 +6,10 @@ import { useRouter, useParams } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
 import axios from "axios";
 import { useVLife } from "@/store/context";
-import { useSearch } from "@/hooks/useSearch";
 import SubmitButton from "@/components/common/submitbutton";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 
-// Node type
 interface TreeNode {
   user_id: string;
   name: string;
@@ -26,23 +24,22 @@ interface TreeNode {
 
 export default function TreeView() {
   const { user } = useVLife();
-  const { query, debouncedQuery } = useSearch();
   const router = useRouter();
-
   const params = useParams();
   const id = params.id;
 
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [loading, setLoading] = useState(false);
-  const [autoFilled, setAutoFilled] = useState(false); // track if auto-fill happened
+  const [autoFilled, setAutoFilled] = useState(false);
 
   const [currentRoot, setCurrentRoot] = useState<TreeNode | null>(null);
-  const [search, setSearch] = useState("");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  const [inputValue, setInputValue] = useState(""); // <-- local typing state
+  const [searchQuery, setSearchQuery] = useState(""); // <-- only updates when "Search" is clicked
 
   const API_URL = "/api/tree-operations";
 
-  // Map status → color
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -56,7 +53,6 @@ export default function TreeView() {
     }
   };
 
-  // Recursive search
   const findNode = useCallback(
     (node: TreeNode | null, searchText: string): TreeNode | null => {
       if (!node) return null;
@@ -75,36 +71,33 @@ export default function TreeView() {
     []
   );
 
-  // Fetch full binary tree for root user
   const fetchTree = useCallback(async () => {
     if (!user?.user_id) return;
     try {
       setLoading(true);
       const { data } = await axios.get(API_URL, {
-        params: {
-          user_id: user.user_id,
-          search: debouncedQuery,
-        },
+        params: { user_id: user.user_id },
       });
       if (data?.data) {
         setTree(data.data);
-        setCurrentRoot(data.data); // default full tree
+        setCurrentRoot(data.data);
       }
     } catch (error) {
       console.error("Error fetching tree:", error);
     } finally {
       setLoading(false);
     }
-  }, [user?.user_id, debouncedQuery]);
+  }, [user?.user_id]);
 
-  // Handle search
   const handleSearch = useCallback(
-    (searchText?: string) => {
-      if (!tree) return;
-
+    (searchText: string) => {
+      if (!tree || !user?.user_id) return;
       setLoading(true);
-      const text = searchText ?? search;
-      const found = findNode(tree, text);
+
+      // If empty → use logged-in user id
+      const effectiveSearch = searchText.trim() ? searchText : user.user_id;
+
+      const found = findNode(tree, effectiveSearch);
       if (found) {
         setCurrentRoot(found);
         setHighlightedId(found.user_id);
@@ -113,13 +106,19 @@ export default function TreeView() {
       }
       setLoading(false);
     },
-    [tree, search, findNode]
+    [tree, user?.user_id, findNode]
   );
 
-  // Auto-fill search from ID param and search
+  // Run search when `searchQuery` changes
   useEffect(() => {
-    if (!id || autoFilled) return; // skip if already auto-filled
+    if (tree && searchQuery !== undefined) {
+      handleSearch(searchQuery);
+    }
+  }, [tree, searchQuery, handleSearch]);
 
+  // Auto-fill from URL param
+  useEffect(() => {
+    if (!id || autoFilled) return;
     let mounted = true;
 
     const fetchUserId = async () => {
@@ -127,11 +126,11 @@ export default function TreeView() {
         setLoading(true);
         const res = await axios.get(`/api/users-operations?id=${id}`);
         const userData = res?.data?.data ?? res?.data;
-
         if (userData && mounted) {
           const userId = userData.user_id ?? "";
-          setSearch(userId); // auto-fill input
-          setAutoFilled(true); // mark that auto-fill happened
+          setInputValue(userId); // show in input
+          setSearchQuery(userId); // trigger search after tree loads
+          setAutoFilled(true);
         }
       } catch (e) {
         console.error("Failed to fetch user_id", e);
@@ -141,31 +140,25 @@ export default function TreeView() {
     };
 
     fetchUserId();
-
     return () => {
       mounted = false;
     };
   }, [id, autoFilled]);
 
-  // Trigger search automatically after tree loads if auto-fill exists
+  // Run search when `searchQuery` changes
   useEffect(() => {
-    if (tree && autoFilled && search) {
-      handleSearch(search);
-    }
-  }, [tree, autoFilled, search, handleSearch]);
-
-  // Fetch tree whenever user or debouncedQuery changes
-  useEffect(() => {
-    fetchTree();
-  }, [fetchTree]);
-
-  // Auto-reset tree when search is cleared
-  useEffect(() => {
-    if (!search.trim() && tree) {
+    if (tree && searchQuery) {
+      handleSearch(searchQuery);
+    } else if (tree && !searchQuery) {
       setCurrentRoot(tree);
       setHighlightedId(null);
     }
-  }, [search, tree]);
+  }, [tree, searchQuery, handleSearch]);
+
+  // Fetch tree once
+  useEffect(() => {
+    fetchTree();
+  }, [fetchTree]);
 
   return (
     <Layout>
@@ -181,22 +174,25 @@ export default function TreeView() {
             size={28}
             color="black"
             className="ml-0 mr-3 max-sm:mr-1 cursor-pointer z-20 mb-3 max-md:mb-2 lg:-mt-5"
-            // onClick={() => router.push("/administration/users")}
             onClick={() => router.back()}
           />
 
-          {/* Search Bar */}
           <div className="flex justify-center items-center max-md:justify-end gap-2 mb-2 w-full lg:-ml-5 p-2 max-md:p-1">
             <input
               type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by ID or name..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Search by  User ID..."
               className="border px-2 py-1 rounded-md w-64 max-md:w-58"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  setSearchQuery(inputValue);
+                }
+              }}
             />
             <SubmitButton
               type="button"
-              onClick={() => handleSearch()}
+              onClick={() => setSearchQuery(inputValue)}
               className="text-black px-4 !py-1.5 max-lg:!py-1 rounded-md bg-yellow-400 font-semibold"
             >
               Search
@@ -213,7 +209,7 @@ export default function TreeView() {
                 getColor={getStatusColor}
                 highlightedId={highlightedId}
                 level={1}
-                maxLevel={4} // show only 4 levels
+                maxLevel={4}
               />
             ) : (
               <p>Loading tree...</p>

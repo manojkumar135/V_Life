@@ -331,7 +331,7 @@ export default function RegisterPage() {
               }
               className={`w-full py-1 mt-1 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
     ${
-      loading || !formik.isValid || !formik.dirty
+      loading || !formik.isValid || !formik.dirty|| !formik.values.terms
         ? "bg-gray-400 text-white cursor-not-allowed"
         : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
     }`}

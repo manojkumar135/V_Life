@@ -106,7 +106,7 @@ export default function SideNav({
         </div>
 
         {/* Menu Items */}
-        <div className="flex flex-col items-center gap-2 flex-grow w-full mt-6">
+        <div className="flex flex-col items-center gap-2 flex-grow w-full mt-4">
           {menuItems.map((item, index) => {
             const isActive = pathname.includes(item.match);
             return (

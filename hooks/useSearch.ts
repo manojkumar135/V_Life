@@ -20,3 +20,5 @@ export function useSearch(initialQuery = "") {
 
   return { query, debouncedQuery, handleChange, setQuery };
 }
+
+

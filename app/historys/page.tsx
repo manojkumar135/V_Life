@@ -189,6 +189,7 @@ export default function TransactionHistory() {
           onBack={onBack}
           onMore={handleDownloadClick} // ✅ added export
           showPagination
+          showMoreOptions
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={totalItems}
