@@ -29,40 +29,40 @@ export default function SideNav({
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const menuItems = [
-    {
-      href: "/dashboard",
-      icon: <LuLayoutDashboard />,
-      label: "Dashboard",
-      match: "dashboard",
-    },
-    {
-      href:
-        user?.role === "admin" ? "/administration" : "/administration/users",
-      icon: <IoPeople />,
-      label: "Administration",
-      match: "administration",
-    },
-    { href: "/wallet", icon: <FaWallet />, label: "Wallet", match: "wallet" },
-    {
-      href: "/orders",
-      icon: <FaBoxesPacking />,
-      label: "Orders",
-      match: "orders",
-    },
-    {
-      href: "/historys",
-      icon: <FaHistory />,
-      label: "History",
-      match: "history",
-    },
-    {
-      href: "/settings",
-      icon: <IoSettings />,
-      label: "Settings",
-      match: "settings",
-    },
-  ];
+ const menuItems = [
+  {
+    href: "/dashboard",
+    icon: <LuLayoutDashboard />,
+    label: "Dashboard",
+    match: ["dashboard"],
+  },
+  {
+    href: user?.role === "admin" ? "/administration" : "/administration/users",
+    icon: <IoPeople />,
+    label: "Administration",
+    match: ["administration"],
+  },
+  { href: "/wallet", icon: <FaWallet />, label: "Wallet", match: ["wallet"] },
+  {
+    href: "/orders",
+    icon: <FaBoxesPacking />,
+    label: "Orders",
+    match: ["orders", "products"], // 👈 include both
+  },
+  {
+    href: "/historys",
+    icon: <FaHistory />,
+    label: "History",
+    match: ["history"],
+  },
+  {
+    href: "/settings",
+    icon: <IoSettings />,
+    label: "Settings",
+    match: ["settings"],
+  },
+];
+
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -108,7 +108,7 @@ export default function SideNav({
         {/* Menu Items */}
         <div className="flex flex-col items-center gap-2 flex-grow w-full mt-4">
           {menuItems.map((item, index) => {
-            const isActive = pathname.includes(item.match);
+const isActive = item.match.some((m) => pathname.includes(m));
             return (
               <div key={index} className="relative group">
                 <button
@@ -195,7 +195,7 @@ export default function SideNav({
         {/* Menu Items */}
         <div className="flex flex-col space-y-3 w-[110%]">
           {menuItems.map((item, index) => {
-            const isActive = pathname.includes(item.match);
+const isActive = item.match.some((m) => pathname.includes(m));
             return (
               <button
                 key={index}

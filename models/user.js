@@ -39,8 +39,12 @@ const UserSchema = new mongoose.Schema(
     // 🔗 Referral / Upline
     referBy: { type: String },
     referred_users: { type: [String], default: [] },
-    infinity_users: { type: [String], default: [] },
-    bv: { type: Number, default: 0 },
+    infinity_users: [
+      {
+        level: { type: Number, required: true },
+        users: [{ type: String }]
+      }
+    ], bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
 
 

@@ -235,7 +235,7 @@ export default function EditProductPage() {
                     error={touched.name ? errors.name : ""}
                   />
                   <InputField
-                    label="MRP"
+                    label="MRP (₹)"
                     name="mrp"
                     placeholder="0"
                     value={values.mrp}
@@ -245,7 +245,7 @@ export default function EditProductPage() {
                     required
                   />
                   <InputField
-                    label="Dealer Price"
+                    label="Dealer Price (₹)"
                     name="dealerPrice"
                     placeholder="0"
                     value={values.dealerPrice}

@@ -23,7 +23,7 @@ interface User {
   user_status: "active" | "inactive" | string;
 }
 
-export default function LeftTeam() {
+export default function DirectTeam() {
   const router = useRouter();
   const { user } = useVLife();
   const team = "direct";

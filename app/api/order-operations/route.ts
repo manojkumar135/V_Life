@@ -94,7 +94,12 @@ export async function POST(request: Request) {
         bank_name: "Razorpay",
         account_number: "N/A",
         ifsc_code: "N/A",
-        date: new Date().toISOString().split("T")[0], // YYYY-MM-DD
+        date: new Date()
+          .toISOString()
+          .split("T")[0]
+          .split("-")
+          .reverse()
+          .join("-"),
         time: new Date().toLocaleTimeString(),
         available_balance: user.wallet_balance || 0,
         amount,

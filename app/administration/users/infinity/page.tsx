@@ -23,10 +23,10 @@ interface User {
   user_status: "active" | "inactive" | string;
 }
 
-export default function LeftTeam() {
+export default function InfinityTeam() {
   const router = useRouter();
   const { user } = useVLife();
-  const team = "direct";
+  const team = "infinity";
 
   const { query, setQuery, debouncedQuery } = useSearch();
   const [selectedRows, setSelectedRows] = useState<User[]>([]);
@@ -36,7 +36,7 @@ export default function LeftTeam() {
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = "/api/directteam-operations";
+  const API_URL = "/api/infinityteam-operations";
   const STATUS_URL = "/api/status-operations";
 
   // ✅ modal states
@@ -52,7 +52,7 @@ export default function LeftTeam() {
   const handleDownloadClick = () => {
     handleDownload<User>({
       rows: selectedRows,
-      fileName: "direct-team",
+      fileName: "infinity-team",
       format: "xlsx",
       excludeHeaders: ["_id", "__v", "created_at", "last_modified_at"], // ✅ skip these
       onStart: () => setDownloading(true),
@@ -170,7 +170,7 @@ export default function LeftTeam() {
 
         <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
           <HeaderWithActions
-            title="Direct Team"
+            title="Infinity Team"
             search={query}
             setSearch={setQuery} // ✅ string setter
             // addLabel="+ ADD USER"

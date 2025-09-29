@@ -183,7 +183,7 @@ export default function AddProductPage() {
                   />
 
                   <InputField
-                    label="MRP"
+                    label="MRP (₹)"
                     name="mrp"
                     placeholder="0"
                     required
@@ -193,7 +193,7 @@ export default function AddProductPage() {
                     error={touched.mrp ? errors.mrp : ""}
                   />
                   <InputField
-                    label="Dealer Price"
+                    label="Dealer Price (₹)"
                     name="dealerPrice"
                     placeholder="0"
                     required
