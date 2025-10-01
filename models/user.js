@@ -44,7 +44,8 @@ const UserSchema = new mongoose.Schema(
         level: { type: Number, required: true },
         users: [{ type: String }]
       }
-    ], bv: { type: Number, default: 0 },
+    ], 
+    bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
 
 

@@ -8,12 +8,38 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
+
+    // 🔹 Check if user already has any payment history
+    const existingPayment = await History.findOne({ user_id: body.user_id });
+
+    // 🔹 If no payment exists → mark as first payment
+    if (!existingPayment) {
+      body.first_payment = true;
+
+      // 🔹 Advance = true only if first payment AND amount >= 10000
+      if (body.amount >= 10000) {
+        body.advance = true;
+      }
+    } else {
+      body.first_payment = false;
+      body.advance = false; // not first payment, so never advance
+    }
+
+    // 🔹 Always set ischecked to false at creation
+    body.ischecked = false;
+
     const newHistory = await History.create(body);
+
     return NextResponse.json({ success: true, data: newHistory }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
+
+
 
 // GET - Fetch all history records OR single history record by id / transaction_id
 
@@ -121,7 +147,7 @@ export async function GET(request) {
             { user_name: regex },
             { status: regex },
             { details: regex },
-            {date:regex}
+            { date: regex }
           ];
           if (!isNaN(Number(term))) {
             const num = Number(term);

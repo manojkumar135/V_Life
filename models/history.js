@@ -18,6 +18,11 @@ const HistorySchema = new mongoose.Schema(
     transaction_type: { type: String, required: true, enum: ["Credit", "Debit"] },
     details: { type: String },
     status: { type: String, required: true, enum: ["Pending", "Completed", "Failed"] },
+    first_payment: { type: Boolean, default: false }, 
+    advance: { type: Boolean, default: false },       
+    ischecked: { type: Boolean, default: false },
+
+
     created_at: { type: Date, default: Date.now },
     created_by: { type: String, },
     last_modified_by: { type: String },
