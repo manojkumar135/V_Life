@@ -43,30 +43,33 @@ export default function WithdrawPage() {
   }, [user?.user_id]);
 
   // ✅ Fetch withdrawals with search + date filter
-  const fetchWithdrawals = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL, {
-        params: {
-          search: query,
-          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
-          ...(dateFilter?.type === "range" && {
-            from: dateFilter.from,
-            to: dateFilter.to,
-          }),
-        },
-      });
-      const withdrawals = data.data || [];
-      setWithdrawData(withdrawals);
-      setTotalItems(withdrawals.length);
-    } catch (error) {
-      console.error("Error fetching withdrawals:", error);
-      ShowToast.error("Failed to load withdrawals");
-    } finally {
-      setLoading(false);
-    }
-  }, [query, dateFilter]);
+   const fetchWithdrawals = useCallback(async () => {
+  try {
+    setLoading(true);
 
+    const { data } = await axios.get(API_URL, {
+      params: {
+        role: user?.role,
+        ...(user?.role === "user" && { user_id: user?.user_id }),
+        search: query,
+        ...(dateFilter?.type === "on" && { date: dateFilter.date }),
+        ...(dateFilter?.type === "range" && {
+          from: dateFilter.from,
+          to: dateFilter.to,
+        }),
+      },
+    });
+
+    const withdrawals = data.data || [];
+    setWithdrawData(withdrawals);
+    setTotalItems(withdrawals.length);
+  } catch (error) {
+    console.error("Error fetching withdrawals:", error);
+    ShowToast.error("Failed to load withdrawals");
+  } finally {
+    setLoading(false);
+  }
+}, [user?.role, user?.user_id, query, dateFilter]);
   useEffect(() => {
     if (!user?.user_id) return;
     fetchWithdrawals();

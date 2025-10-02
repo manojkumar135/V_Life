@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 
 const payoutSchema = new mongoose.Schema({
-  transaction_id: { type: String, required: true, unique: true },
+  transaction_id: { type: String, required: true, },
+  payout_id:{ type: String, required: true, unique: true },
   wallet_id: { type: String },
   user_id: { type: String, required: true },
   user_name: { type: String, required: true },

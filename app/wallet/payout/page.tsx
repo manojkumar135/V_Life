@@ -6,6 +6,8 @@ import Layout from "@/layout/Layout";
 import { CalendarDays, CalendarRange } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
+import { FaGift } from "react-icons/fa6";
+
 
 const PayoutPage = () => {
   const router = useRouter();
@@ -37,7 +39,16 @@ const PayoutPage = () => {
             <CalendarRange size={32} />
             <span className="mt-2 text-lg font-semibold">Weekly Payouts</span>
           </div>
+          {/* Rewards Card */}
+          <div
+            onClick={() => router.push("/wallet/payout/rewards")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <FaGift size={32} />
+            <span className="mt-2 text-lg font-semibold">Rewards</span>
+          </div>
         </div>
+        
       </div>
     </Layout>
   );

@@ -15,8 +15,8 @@ import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
-import { GridColDef,GridRenderCellParams } from "@mui/x-data-grid";
-import { handleDownload } from "@/utils/handleDownload"; // ✅ import
+import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
+import { handleDownload } from "@/utils/handleDownload"; 
 import { formatDate } from "@/components/common/formatDate";
 
 export default function TransactionHistory() {
@@ -29,12 +29,10 @@ export default function TransactionHistory() {
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState(false); // ✅
-  const [selectedRows, setSelectedRows] = useState<any[]>([]); // ✅
-
+  const [downloading, setDownloading] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [showAlert, setShowAlert] = useState(false);
   const [advancePaid, setAdvancePaid] = useState<boolean>(false);
-
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -53,7 +51,7 @@ export default function TransactionHistory() {
         "created_by",
         "last_modified_by",
         "last_modified_at",
-      ], // remove backend-only fields
+      ],
       onStart: () => setDownloading(true),
       onFinish: () => setDownloading(false),
     });
@@ -62,88 +60,96 @@ export default function TransactionHistory() {
   // ✅ Check if advance is paid
   useEffect(() => {
     if (!user?.user_id) return;
+    let isMounted = true;
     (async () => {
       const paid = await hasAdvancePaid(user.user_id, 10000);
+      if (!isMounted) return;
       setAdvancePaid(paid);
       setShowAlert(!paid);
     })();
+    return () => {
+      isMounted = false;
+    };
   }, [user?.user_id]);
 
   // ✅ Fetch transactions with date filters
-  const fetchHistory = useCallback(
-    async (search: string) => {
-      if (!user?.user_id) return;
-      try {
-        setLoading(true);
-        const { data } = await axios.get(API_URL, {
-          params: {
-            search: search || "",
-            role: user?.role,
-            user_id: user_id,
-            ...(dateFilter?.type === "on" && { date: dateFilter.date }),
-            ...(dateFilter?.type === "range" && {
-              from: dateFilter.from,
-              to: dateFilter.to,
-            }),
-          },
-        });
-        console.log(data);
-        const history = data.data || [];
+  const fetchHistory = useCallback(async () => {
+    if (!user?.user_id) return;
+    let isMounted = true;
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL, {
+        params: {
+          search: debouncedQuery || "",
+          role: user?.role,
+          user_id,
+          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
+          ...(dateFilter?.type === "range" && {
+            from: dateFilter.from,
+            to: dateFilter.to,
+          }),
+        },
+      });
+      const history = data.data || [];
+      if (isMounted) {
         setHistoryData(history);
         setTotalItems(history.length);
-      } catch (error) {
-        console.error("Error fetching history:", error);
-        ShowToast.error("Failed to load history");
-      } finally {
-        setLoading(false);
       }
-    },
-    [user?.user_id, query, dateFilter]
-  );
+    } catch (error) {
+      if (isMounted) ShowToast.error("Failed to load history");
+      console.error("Error fetching history:", error);
+    } finally {
+      if (isMounted) setLoading(false);
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.user_id, debouncedQuery, dateFilter, user_id]);
 
   useEffect(() => {
-    if (!user?.user_id) return;
-    fetchHistory(debouncedQuery);
-  }, [debouncedQuery, user?.user_id, dateFilter]);
+    fetchHistory();
+  }, [fetchHistory]);
 
   // ✅ Columns setup
   const columns: GridColDef[] = [
-  { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
+    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
 
-  // 👇 Admin only
-  user?.role === "admin" && { field: "user_id", headerName: "User ID", flex: 1 },
+    // Admin only
+    user?.role === "admin" && { field: "user_id", headerName: "User ID", flex: 1 },
 
-  { field: "date", headerName: "Date", flex: 1 },
-  { field: "details", headerName: "Detail", flex: 1.5 },
+    { field: "date", headerName: "Date", flex: 1 },
+    { field: "details", headerName: "Detail", flex: 1.5 },
 
-  {
-    field: "amount",
-    headerName: "Amount (₹)",
-    flex: 1,
-    align: "right",
-    renderCell: (params: GridRenderCellParams<any, number>) => (
-      <span
-        className={`pr-5 ${
-          params.row.status === "credit" ? "text-green-600" : "text-red-600"
-        }`}
-      >
-        ₹ {Number(params.value ?? 0).toFixed(2)}
-      </span>
-    ),
-  },
-
-  {
-    field: "status",
-    headerName: "Status",
-    flex: 1,
-    renderCell: (params: GridRenderCellParams<any, string>) =>
-      params.value === "credit" ? (
-        <FaPlusCircle className="text-green-600 text-lg ml-4 mt-2" />
-      ) : (
-        <FaMinusCircle className="text-red-600 text-lg ml-4 mt-2" />
+    {
+      field: "amount",
+      headerName: "Amount (₹)",
+      flex: 1,
+      align: "right",
+      renderCell: (params: GridRenderCellParams<any, number>) => (
+        <span
+          className={`pr-5 ${
+            String(params.row.transaction_type ?? "").toLowerCase() === "credit"
+              ? "text-green-600"
+              : "text-red-600"
+          }`}
+        >
+          ₹ {Number(params.value ?? 0).toFixed(2)}
+        </span>
       ),
-  },
-].filter(Boolean) as GridColDef[];
+    },
+
+    {
+      field: "transaction_type",
+      headerName: "Status",
+      flex: 1,
+      renderCell: (params: GridRenderCellParams<any, string>) =>
+        String(params.value ?? "").toLowerCase() === "credit" ? (
+          <FaPlusCircle className="text-green-600 text-lg ml-4 mt-2" />
+        ) : (
+          <FaMinusCircle className="text-red-600 text-lg ml-4 mt-2" />
+        ),
+    },
+  ].filter(Boolean) as GridColDef[];
 
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({
@@ -173,7 +179,7 @@ export default function TransactionHistory() {
       />
 
       <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
-        {(loading || downloading) && ( // ✅ show loader for download too
+        {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
@@ -187,7 +193,7 @@ export default function TransactionHistory() {
           addLabel="Make Payment"
           onAdd={handlePayAdvance}
           onBack={onBack}
-          onMore={handleDownloadClick} // ✅ added export
+          onMore={handleDownloadClick}
           showPagination
           showMoreOptions
           currentPage={currentPage}
@@ -199,8 +205,7 @@ export default function TransactionHistory() {
           onPrev={prevPage}
         />
 
-        {/* Floating Filter Icon */}
-        <div title="Filter" className="fixed  bottom-5 right-6 z-10">
+        <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
             className="relative w-12 h-12 rounded-full bg-black text-yellow-300 flex items-center justify-center
              shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-yellow-400 
@@ -219,7 +224,7 @@ export default function TransactionHistory() {
           pageSize={14}
           onRowClick={(row) => console.log("Transaction clicked:", row)}
           checkboxSelection
-          setSelectedRows={setSelectedRows} // ✅ enable row selection
+          setSelectedRows={setSelectedRows}
         />
 
         <DateFilterModal

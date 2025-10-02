@@ -16,7 +16,7 @@ import { FiFilter } from "react-icons/fi";
 import { GridColDef } from "@mui/x-data-grid";
 
 
-export default function WithdrawPage() {
+export default function DailyPayoutPage() {
   const { user } = useVLife();
   const router = useRouter();
   const { query, setQuery, debouncedQuery } = useSearch();
@@ -43,28 +43,32 @@ export default function WithdrawPage() {
 
   // ✅ Fetch withdrawals
   const fetchWithdrawals = useCallback(async () => {
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL, {
-        params: {
-          search: query,
-          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
-          ...(dateFilter?.type === "range" && {
-            from: dateFilter.from,
-            to: dateFilter.to,
-          }),
-        },
-      });
-      const withdrawals = data.data || [];
-      setWithdrawData(withdrawals);
-      setTotalItems(withdrawals.length);
-    } catch (error) {
-      console.error("Error fetching withdrawals:", error);
-      ShowToast.error("Failed to load withdrawals");
-    } finally {
-      setLoading(false);
-    }
-  }, [query, dateFilter]);
+  try {
+    setLoading(true);
+
+    const { data } = await axios.get(API_URL, {
+      params: {
+        role: user?.role,
+        ...(user?.role === "user" && { user_id: user?.user_id }),
+        search: query,
+        ...(dateFilter?.type === "on" && { date: dateFilter.date }),
+        ...(dateFilter?.type === "range" && {
+          from: dateFilter.from,
+          to: dateFilter.to,
+        }),
+      },
+    });
+
+    const withdrawals = data.data || [];
+    setWithdrawData(withdrawals);
+    setTotalItems(withdrawals.length);
+  } catch (error) {
+    console.error("Error fetching withdrawals:", error);
+    ShowToast.error("Failed to load withdrawals");
+  } finally {
+    setLoading(false);
+  }
+}, [user?.role, user?.user_id, query, dateFilter]);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -112,7 +116,8 @@ export default function WithdrawPage() {
     <Layout>
       <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
         {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center
+           bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
         )}

@@ -16,7 +16,8 @@ const page = () => {
           {/* Groups Card */}
           <div
             onClick={() => router.push("/administration/groups")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center 
+            justify-center hover:shadow-md transition cursor-pointer"
           >
             <UserPlus size={32} />
             <span className="mt-2 text-lg font-semibold">Groups</span>
@@ -25,7 +26,8 @@ const page = () => {
           {/* Roles Card */}
           <div
             onClick={() => router.push("/administration/roles")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center 
+            justify-center hover:shadow-md transition cursor-pointer"
           >
             <Network size={32} />
             <span className="mt-2 text-lg font-semibold">Roles</span>
@@ -34,7 +36,8 @@ const page = () => {
           {/* Users Card */}
           <div
             onClick={() => router.push("/administration/users")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center 
+            justify-center hover:shadow-md transition cursor-pointer"
           >
             <Users size={32} />
             <span className="mt-2 text-lg font-semibold">Users</span>

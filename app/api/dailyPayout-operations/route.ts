@@ -23,13 +23,13 @@ export async function GET(request: Request) {
 
     const id = searchParams.get("id") || searchParams.get("transaction_id");
     const user_id = searchParams.get("user_id");
-    const search = searchParams.get("search");
     const role = searchParams.get("role");
+    const search = searchParams.get("search");
     const date = searchParams.get("date");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
-    // Lookup by ID or transaction_id
+    // ✅ If specific payout id is provided
     if (id) {
       let payout;
       if (mongoose.Types.ObjectId.isValid(id)) {
@@ -37,46 +37,57 @@ export async function GET(request: Request) {
       } else {
         payout = await DailyPayout.findOne({ transaction_id: id });
       }
+
       if (!payout) {
-        return NextResponse.json({ success: false, message: "Payout not found", data: [] }, { status: 404 });
+        return NextResponse.json(
+          { success: false, message: "Payout not found", data: [] },
+          { status: 404 }
+        );
       }
       return NextResponse.json({ success: true, data: [payout] }, { status: 200 });
     }
 
-    // Role-based query
+    // ✅ Role-based query
     let baseQuery: any = {};
-    if (role) {
-      if (role === "user") {
-        if (!user_id) {
-          return NextResponse.json({ success: false, message: "user_id is required for role=user", data: [] }, { status: 400 });
-        }
-        baseQuery.user_id = user_id;
-      } else if (role === "admin") {
-        baseQuery = {};
-      } else {
-        return NextResponse.json({ success: false, message: "Invalid role", data: [] }, { status: 400 });
+    if (role === "admin") {
+      baseQuery = {}; // all records
+    } else if (role === "user") {
+      if (!user_id) {
+        return NextResponse.json(
+          { success: false, message: "user_id is required when role=user", data: [] },
+          { status: 400 }
+        );
       }
+      baseQuery.user_id = user_id;
+    } else {
+      return NextResponse.json(
+        { success: false, message: "Invalid or missing role", data: [] },
+        { status: 400 }
+      );
     }
 
-    // Date parser
+    // ✅ Date parser helper
     const parseDate = (input: string | null) => {
       if (!input) return null;
       input = input.trim();
+
       let match = input.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
       if (match) {
-        const [_, day, month, year] = match;
+        const [, day, month, year] = match;
         return new Date(Number(year), Number(month) - 1, Number(day));
       }
+
       match = input.match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/);
       if (match) {
-        const [_, year, month, day] = match;
+        const [, year, month, day] = match;
         return new Date(Number(year), Number(month) - 1, Number(day));
       }
+
       const d = new Date(input);
       return isNaN(d.getTime()) ? null : d;
     };
 
-    // Build conditions
+    // ✅ Build dynamic filters
     const conditions: any[] = [];
 
     // Search filter
@@ -92,7 +103,9 @@ export async function GET(request: Request) {
             { status: regex },
             { details: regex }
           ];
-          if (!isNaN(Number(term))) conds.push({ $expr: { $eq: [{ $floor: "$amount" }, Number(term)] } });
+          if (!isNaN(Number(term))) {
+            conds.push({ $expr: { $eq: [{ $floor: "$amount" }, Number(term)] } });
+          }
           return conds;
         });
         conditions.push({ $or: searchConditions });
@@ -103,7 +116,7 @@ export async function GET(request: Request) {
     if (date && !from && !to) {
       const parsedDate = parseDate(date);
       if (parsedDate) {
-        const formatted = `${("0" + parsedDate.getDate()).slice(-2)}-${("0" + (parsedDate.getMonth()+1)).slice(-2)}-${parsedDate.getFullYear()}`;
+        const formatted = `${("0" + parsedDate.getDate()).slice(-2)}-${("0" + (parsedDate.getMonth() + 1)).slice(-2)}-${parsedDate.getFullYear()}`;
         conditions.push({ date: formatted });
       }
     }
@@ -113,19 +126,23 @@ export async function GET(request: Request) {
       const startDate = parseDate(from);
       const endDate = parseDate(to);
       if (startDate && endDate) {
-        const startFormatted = `${("0" + startDate.getDate()).slice(-2)}-${("0" + (startDate.getMonth()+1)).slice(-2)}-${startDate.getFullYear()}`;
-        const endFormatted = `${("0" + endDate.getDate()).slice(-2)}-${("0" + (endDate.getMonth()+1)).slice(-2)}-${endDate.getFullYear()}`;
+        const startFormatted = `${("0" + startDate.getDate()).slice(-2)}-${("0" + (startDate.getMonth() + 1)).slice(-2)}-${startDate.getFullYear()}`;
+        const endFormatted = `${("0" + endDate.getDate()).slice(-2)}-${("0" + (endDate.getMonth() + 1)).slice(-2)}-${endDate.getFullYear()}`;
         conditions.push({ date: { $gte: startFormatted, $lte: endFormatted } });
       }
     }
 
+    // ✅ Final query
     const finalQuery = conditions.length ? { $and: [baseQuery, ...conditions] } : baseQuery;
     const payouts = await DailyPayout.find(finalQuery).sort({ date: -1 });
-    return NextResponse.json({ success: true, data: payouts }, { status: 200 });
 
+    return NextResponse.json({ success: true, data: payouts }, { status: 200 });
   } catch (error: any) {
     console.error("GET daily payout error:", error);
-    return NextResponse.json({ success: false, message: error.message || "Server error", data: [] }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error", data: [] },
+      { status: 500 }
+    );
   }
 }
 

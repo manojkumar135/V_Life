@@ -37,7 +37,7 @@ export default function SideNav({
     match: ["dashboard"],
   },
   {
-    href: user?.role === "admin" ? "/administration" : "/administration/users",
+    href: user?.role === "superadmin" ? "/administration" : "/administration/users",
     icon: <IoPeople />,
     label: "Administration",
     match: ["administration"],

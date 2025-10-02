@@ -19,7 +19,7 @@ const Page = () => {
   return (
     <Layout>
       <div className="px-6 py-3">
-         {user?.role === "admin" && (
+         {user?.role === "superadmin" && (
         <IoIosArrowBack
           size={25}
           color="black"
