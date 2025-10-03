@@ -31,12 +31,17 @@ export async function addToInfinityTeam(
  * Recursive logic: process odd referrals → take their even children → place in Infinity team
  */
 export async function processInfinityLevels(
-  ownerId: string,   // the Infinity team owner (the base user, e.g. B)
+  ownerId: string, // the Infinity team owner (the base user, e.g. B)
   currentId: string, // the odd referral we’re checking
-  level: number      // current Infinity level
+  level: number // current Infinity level
 ) {
   const current = await User.findOne({ user_id: currentId });
-  if (!current || !current.referred_users || current.referred_users.length === 0) return;
+  if (
+    !current ||
+    !current.referred_users ||
+    current.referred_users.length === 0
+  )
+    return;
 
   // Even referrals of this odd go to owner's next level
   for (let i = 0; i < current.referred_users.length; i++) {
@@ -73,10 +78,11 @@ export async function updateInfinityTeam(userId: string) {
       // Process this odd’s even children → go to Level 2+
       await processInfinityLevels(userId, childId, 2);
     } else {
-      // Even referral → goes to sponsor’s Infinity Level 1
+      // Even referral → only add to sponsor if referBy exists
       if (user.referBy) {
         await addToInfinityTeam(user.referBy, childId, 1);
       }
+      // Else: skip adding even referral
     }
   }
 }
