@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import TreeNode from "@/models/tree";
+import { User } from "@/models/user";
 
-// 🛠 Recursive builder with counts
+// 🛠 Recursive builder with counts + User details
 async function buildTree(userId) {
   if (!userId) return null;
 
+  // Fetch from Tree structure
   const node = await TreeNode.findOne({ user_id: userId }).lean();
   if (!node) return null;
+
+  // Fetch user details
+  const user = await User.findOne({ user_id: userId }).lean();
 
   // Recursively build children
   const leftNode = node.left ? await buildTree(node.left) : null;
@@ -25,18 +30,23 @@ async function buildTree(userId) {
     user_status: node.status || "inactive",
     contact: node.contact || "",
     mail: node.mail || "",
-    referBy: node.refer_by || "",
-    referrals:node.referral_count|| "0",
     parent: node.parent || "",
 
+    // ✅ From User collection
+    bv: user?.bv || 0,
+    sv: user?.sv || 0,
+    referBy: user?.referBy || "",
+    referrals: user?.referred_users?.length || 0,
+
+    // ✅ Binary structure
     left: leftNode,
     right: rightNode,
 
+    // ✅ Counts
     leftCount: countMembers(leftNode),
     rightCount: countMembers(rightNode),
   };
 }
-
 
 // 📌 API handler
 export async function GET(req) {

@@ -92,6 +92,11 @@ export default function InfinityTeam() {
     router.push(`/administration/users/tree/${id}`);
   };
 
+
+    const onBack = () => {
+    router.push("/administration/users");
+  };
+  
   // Ask before toggling status
   const handleStatusClick = (id: string, status: string, row: any) => {
     setSelectedUser({ id, status, row });
@@ -176,6 +181,8 @@ export default function InfinityTeam() {
             // addLabel="+ ADD USER"
             // showAddButton
             showBack
+                      onBack={onBack}
+
             // onAdd={handleAddUser}
             onMore={handleDownloadClick} // ✅ Now Download
             showPagination

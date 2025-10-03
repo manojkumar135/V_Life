@@ -14,7 +14,7 @@ const UserSchema = new mongoose.Schema(
   {
     user_id: { type: String, required: true, unique: true },
     user_name: { type: String, required: true },
-    dob: { type: String, required: true },
+    dob: { type: String, required: true, default: "" },
     mail: { type: String, required: true },
     contact: { type: String, required: true },
     address: { type: String },
@@ -44,7 +44,7 @@ const UserSchema = new mongoose.Schema(
         level: { type: Number, required: true },
         users: [{ type: String }]
       }
-    ], 
+    ],
     bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
 

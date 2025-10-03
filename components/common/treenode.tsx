@@ -145,13 +145,13 @@ const BinaryTreeNode: React.FC<Props> = ({
               <span className="truncate">{node.referBy}</span>
             </div>
           )} */}
-          {node.referrals && (
+          {node.referrals != null && (
             <div className="flex">
               <strong className="w-20">Referrals:</strong>
               <span className="truncate">{node.referrals}</span>
             </div>
           )}
-          
+
           {node.referBy && (
             <div className="flex">
               <strong className="w-20">Sponser ID:</strong>

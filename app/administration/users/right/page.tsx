@@ -28,8 +28,8 @@ export default function RightTeam() {
   const team = "right";
   const router = useRouter();
   const { query, setQuery, debouncedQuery } = useSearch();
-    const [selectedRows, setSelectedRows] = useState<User[]>([]);
-  
+  const [selectedRows, setSelectedRows] = useState<User[]>([]);
+
   const [usersData, setUsersData] = useState<User[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -52,7 +52,7 @@ export default function RightTeam() {
       rows: selectedRows,
       fileName: "right-team",
       format: "xlsx",
-      excludeHeaders: ["_id", "__v", "created_at","last_modified_at"], // ✅ skip these
+      excludeHeaders: ["_id", "__v", "created_at", "last_modified_at"], // ✅ skip these
       onStart: () => setDownloading(true),
       onFinish: () => setDownloading(false),
     });
@@ -89,8 +89,12 @@ export default function RightTeam() {
   }, [debouncedQuery, user?.user_id]);
 
   // Navigate to edit
-   const handleEdit = (id: string) => {
+  const handleEdit = (id: string) => {
     router.push(`/administration/users/tree/${id}`);
+  };
+
+  const onBack = () => {
+    router.push("/administration/users");
   };
 
   // Ask before toggling status
@@ -122,24 +126,24 @@ export default function RightTeam() {
     }
   };
 
-   const allColumns = [
-  { field: "user_id", headerName: "User ID", flex: 1 },
-  { field: "user_name", headerName: "User Name", flex: 1 },
-  { field: "contact", headerName: "Contact", flex: 1 },
-  { field: "mail", headerName: "Email", flex: 2 },
-  { field: "role", headerName: "Role", flex: 1 },
-  { field: "user_status", headerName: "Status", flex: 1 },
-];
+  const allColumns = [
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_name", headerName: "User Name", flex: 1 },
+    { field: "contact", headerName: "Contact", flex: 1 },
+    { field: "mail", headerName: "Email", flex: 2 },
+    { field: "role", headerName: "Role", flex: 1 },
+    { field: "user_status", headerName: "Status", flex: 1 },
+  ];
 
-// assume logged-in user role
-const currentUserRole = user?.role; // e.g. "admin"
+  // assume logged-in user role
+  const currentUserRole = user?.role; // e.g. "admin"
 
-const columns =
-  currentUserRole === "admin"
-    ? allColumns
-    : allColumns.filter(
-        (col) => col.field !== "contact" && col.field !== "mail"
-      );
+  const columns =
+    currentUserRole === "admin"
+      ? allColumns
+      : allColumns.filter(
+          (col) => col.field !== "contact" && col.field !== "mail"
+        );
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
@@ -175,8 +179,9 @@ const columns =
           addLabel="+ ADD USER"
           showAddButton
           showBack
+          onBack={onBack}
           onAdd={handleAddUser}
-            onMore={handleDownloadClick} // ✅ Now Download
+          onMore={handleDownloadClick} // ✅ Now Download
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}

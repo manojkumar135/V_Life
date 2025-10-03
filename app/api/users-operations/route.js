@@ -135,7 +135,6 @@ const sendWelcomeEmail = async (email, userName, userId, contact) => {
 };
 
 
-
 // ------------------ TREE LOGIC ------------------
 // Find available placement in tree
 async function findAvailablePlacement(parentId, team) {
@@ -232,9 +231,81 @@ async function createTreeNode(user, referrerId, team) {
   return newNode;
 }
 
-// ------------------ USER + LOGIN CREATION ------------------
 
-async function createUserAndLogin(body) {
+
+// --- addToInfinityTeam (dedupe) ---
+async function addToInfinityTeam(userId, newReferralId, level = 1) {
+  if (!userId) return;
+  const user = await User.findOne({ user_id: userId });
+  if (!user) return;
+
+  const existingLevel = user.infinity_users.find(lvl => lvl.level === level);
+  if (existingLevel) {
+    if (!existingLevel.users.includes(newReferralId)) {
+      existingLevel.users.push(newReferralId);
+    }
+  } else {
+    user.infinity_users.push({ level, users: [newReferralId] });
+  }
+
+  await user.save();
+}
+
+// --- recursive processor (continuous levels) ---
+async function processReferralsRecursively(userId, targetUserId, level) {
+  const user = await User.findOne({ user_id: userId });
+  if (!user || !user.referred_users || user.referred_users.length === 0) return;
+
+  for (const childId of user.referred_users) {
+    await addToInfinityTeam(targetUserId, childId, level);
+    await processReferralsRecursively(childId, targetUserId, level + 1);
+  }
+}
+
+// --- update one user's infinity (uses recursion to infinite depth) ---
+export async function updateInfinityTeam(referrerId) {
+  const referrer = await User.findOne({ user_id: referrerId });
+  if (!referrer || !referrer.referred_users || referrer.referred_users.length === 0) return;
+
+  for (const childId of referrer.referred_users) {
+    await addToInfinityTeam(referrerId, childId, 1);
+    await processReferralsRecursively(childId, referrerId, 2);
+  }
+}
+
+// --- rebuild all (utility, expensive) ---
+export async function rebuildInfinity() {
+  const users = await User.find({
+    referred_users: { $exists: true, $ne: [] }
+  });
+
+  for (const u of users) {
+    u.infinity_users = []; // clear old data
+    await u.save();
+    await updateInfinityTeam(u.user_id);
+  }
+}
+
+// --- propagate updates up the ancestor chain ---
+async function propagateInfinityUpdateToAncestors(startUserId) {
+  let parent = await User.findOne({ user_id: startUserId });
+  if (!parent) return;
+
+  let ancestorId = parent.referBy;
+  while (ancestorId) {
+    const ancestor = await User.findOne({ user_id: ancestorId });
+    if (!ancestor) break;
+
+    await updateInfinityTeam(ancestor.user_id); // idempotent due to dedupe
+    ancestorId = ancestor.referBy;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/*                           USER + LOGIN CREATION                            */
+/* -------------------------------------------------------------------------- */
+
+export async function createUserAndLogin(body) {
   const {
     mail,
     contact,
@@ -252,63 +323,70 @@ async function createUserAndLogin(body) {
     team,
   } = body;
 
-  // ✅ Check duplicates
+  // ✅ validation / duplicate checks
   const existingUser = await User.findOne({ $or: [{ mail }, { contact }] });
   const existingLogin = await Login.findOne({ $or: [{ mail }, { contact }] });
-  if (existingUser || existingLogin) {
-    throw new Error("Email or Contact already exists");
-  }
+  if (existingUser || existingLogin) throw new Error("Email or Contact already exists");
 
-  // ✅ Validate referral
+  // ✅ fetch referrer (if provided)
   let referrer = null;
   if (referBy) {
     referrer = await User.findOne({ user_id: referBy });
     if (!referrer) throw new Error("Referral ID does not exist");
   }
 
-  // ✅ Generate IDs
   const user_id = await generateUniqueCustomId("US", User, 8, 8);
   const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
 
-  // ✅ Create User
-  const newUser = await User.create({ ...body, user_id });
-
-  // ✅ Update referrer’s referred_users + tree.referrals
-  if (referrer) {
-    await User.updateOne(
-      { user_id: referBy },
-      { $push: { referred_users: user_id } }
-    );
-
-  }
-
-  // ✅ Create Login (default password = contact)
-  const hashedPassword = await bcrypt.hash(contact, 10);
-  const newLogin = await Login.create({
-    login_id,
+  // ✅ create user
+  const newUser = await User.create({
+    ...body,
     user_id,
+    infinity_users: [],
+    referred_users: [] // always initialize empty
+  });
+
+  // ✅ create login
+  const hashedPassword = await bcrypt.hash(contact, 10);
+  console.log(mail,
+    contact,
+    dob,
     user_name,
     first_name,
     last_name,
-    dob,
     role,
     role_id,
     title,
-    mail,
-    contact,
     address,
     pincode,
     locality,
     referBy,
+    team)
+  const newLogin = await Login.create({
+    login_id,
+    user_id,
+    user_name,
+    first_name: first_name || "",
+    last_name: last_name || "",
+    dob: dob || body.dob || "",
+    role: role || "",
+    role_id: role_id || "",
+    title: title || "",
+    mail,
+    contact,
+    address: address || "",
+    pincode: pincode || "",
+    locality: locality || "",
+    referBy: referBy || "",
     password: hashedPassword,
     status: "Active",
   });
 
-  // ✅ Create TreeNode
+
+  // ✅ create TreeNode (helper ensures correct placement)
   if (referBy) {
     await createTreeNode(newUser, referBy, team);
   } else {
-    // root user in tree
     await TreeNode.create({
       user_id,
       name: user_name,
@@ -320,8 +398,34 @@ async function createUserAndLogin(body) {
     });
   }
 
-  // ✅ Send welcome email
+  // ✅ send welcome email
   await sendWelcomeEmail(mail, user_name, user_id, contact);
+
+
+  // ✅ update referrer -> referred_users
+  let didFullRebuild = false;
+  if (referrer) {
+    await User.updateOne({ user_id: referBy }, { $push: { referred_users: user_id } });
+
+    // re-fetch updated referrer
+    referrer = await User.findOne({ user_id: referBy });
+
+    // if referrer has no infinity_users yet, do a full rebuild (safe)
+    if (!referrer.infinity_users || referrer.infinity_users.length === 0) {
+      await rebuildInfinity();
+      didFullRebuild = true;
+    } else {
+      await updateInfinityTeam(referBy);
+    }
+
+    // propagate incremental update to ancestors (skip if full rebuild done)
+    if (!didFullRebuild) {
+      await propagateInfinityUpdateToAncestors(referBy);
+    }
+  }
+
+
+
 
   return { newUser, newLogin };
 }
@@ -332,24 +436,13 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
-
     const { newUser, newLogin } = await createUserAndLogin(body);
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "User created successfully",
-        user: newUser,
-        login: newLogin,
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({ success: true, message: "User created successfully", user: newUser, login: newLogin }, { status: 201 });
   } catch (error) {
     console.error("❌ Error creating user:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
-
 
 // GET - Fetch all users OR single user by id / user_id
 export async function GET(request) {

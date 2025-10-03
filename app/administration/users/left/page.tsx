@@ -8,7 +8,7 @@ import { useSearch } from "@/hooks/useSearch";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { useVLife } from "@/store/context";
-import StatusModal from "@/components/common/userStatusModal"; 
+import StatusModal from "@/components/common/userStatusModal";
 import Loader from "@/components/common/loader";
 import { handleDownload } from "@/utils/handleDownload";
 
@@ -91,6 +91,10 @@ export default function LeftTeam() {
     router.push(`/administration/users/tree/${id}`);
   };
 
+   const onBack = () => {
+    router.push("/administration/users");
+  };
+
   // Ask before toggling status
   const handleStatusClick = (id: string, status: string, row: any) => {
     setSelectedUser({ id, status, row });
@@ -123,23 +127,23 @@ export default function LeftTeam() {
   };
 
   const allColumns = [
-  { field: "user_id", headerName: "User ID", flex: 1 },
-  { field: "user_name", headerName: "User Name", flex: 1 },
-  { field: "contact", headerName: "Contact", flex: 1 },
-  { field: "mail", headerName: "Email", flex: 2 },
-  { field: "role", headerName: "Role", flex: 1 },
-  { field: "user_status", headerName: "Status", flex: 1 },
-];
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_name", headerName: "User Name", flex: 1 },
+    { field: "contact", headerName: "Contact", flex: 1 },
+    { field: "mail", headerName: "Email", flex: 2 },
+    { field: "role", headerName: "Role", flex: 1 },
+    { field: "user_status", headerName: "Status", flex: 1 },
+  ];
 
-// assume logged-in user role
-const currentUserRole = user?.role; // e.g. "admin"
+  // assume logged-in user role
+  const currentUserRole = user?.role; // e.g. "admin"
 
-const columns =
-  currentUserRole === "admin"
-    ? allColumns
-    : allColumns.filter(
-        (col) => col.field !== "contact" && col.field !== "mail"
-      );
+  const columns =
+    currentUserRole === "admin"
+      ? allColumns
+      : allColumns.filter(
+          (col) => col.field !== "contact" && col.field !== "mail"
+        );
 
   const handlePageChange = useCallback(() => {
     // optional server pagination
@@ -173,6 +177,7 @@ const columns =
             addLabel="+ ADD USER"
             showAddButton
             showBack
+            onBack={onBack}
             onAdd={handleAddUser}
             onMore={handleDownloadClick} // ✅ Now Download
             showPagination
