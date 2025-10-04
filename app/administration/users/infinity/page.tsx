@@ -134,8 +134,7 @@ export default function InfinityTeam() {
     { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 1.5 },
     { field: "team", headerName: "Team", flex: 1 },
-
-    { field: "role", headerName: "Role", flex: 1 },
+    { field: "level", headerName: "Level", flex: 1 },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 

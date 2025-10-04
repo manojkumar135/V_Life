@@ -34,7 +34,7 @@ const BinaryTreeNode: React.FC<Props> = ({
   level = 1,
   maxLevel = 4,
 }) => {
-  console.log(node);
+  // console.log(node);
   const { user } = useVLife();
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({
     top: 0,
@@ -46,23 +46,23 @@ const BinaryTreeNode: React.FC<Props> = ({
   const isHighlighted = highlightedId === node.user_id;
 
   const [hovered, setHovered] = useState(false);
-const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-const handleMouseEnter = () => {
-  // Cancel any existing hide timeout
-  if (hoverTimeoutRef.current) {
-    clearTimeout(hoverTimeoutRef.current);
-    hoverTimeoutRef.current = null;
-  }
-  setHovered(true);
-};
+  const handleMouseEnter = () => {
+    // Cancel any existing hide timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setHovered(true);
+  };
 
-const handleMouseLeave = () => {
-  // Delay hiding tooltip by 2 seconds
-  hoverTimeoutRef.current = setTimeout(() => {
-    setHovered(false);
-  }, 100); // 2000ms = 2 seconds
-};
+  const handleMouseLeave = () => {
+    // Delay hiding tooltip by 2 seconds
+    hoverTimeoutRef.current = setTimeout(() => {
+      setHovered(false);
+    }, 100); // 2000ms = 2 seconds
+  };
 
   useEffect(() => {
     if (hovered && nodeRef.current && tooltipRef.current) {
@@ -104,7 +104,7 @@ const handleMouseLeave = () => {
         ref={nodeRef}
         className="flex flex-col items-center relative cursor-pointer"
         onMouseEnter={handleMouseEnter}
-  onMouseLeave={handleMouseLeave}
+        onMouseLeave={handleMouseLeave}
       >
         <FaUserCircle
           className={`${getColor(node.user_status)} ${

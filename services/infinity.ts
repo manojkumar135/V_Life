@@ -67,22 +67,27 @@ export async function updateInfinityTeam(userId: string) {
   user.infinity_users = [];
   await user.save();
 
-  // Step 1: Direct referrals → odd ones go to Level 1, even ones to sponsor’s Infinity
-  for (let i = 0; i < user.referred_users.length; i++) {
-    const childId = user.referred_users[i];
-
-    if ((i + 1) % 2 === 1) {
-      // Odd referral → goes to this user’s Infinity Level 1
+  if (!user.referBy) {
+    // 🚨 No sponsor → ALL referrals go to this user’s Level 1
+    for (const childId of user.referred_users) {
       await addToInfinityTeam(userId, childId, 1);
 
-      // Process this odd’s even children → go to Level 2+
+      // still process deeper levels
       await processInfinityLevels(userId, childId, 2);
-    } else {
-      // Even referral → only add to sponsor if referBy exists
-      if (user.referBy) {
+    }
+  } else {
+    // ✅ Has sponsor → odd/even split
+    for (let i = 0; i < user.referred_users.length; i++) {
+      const childId = user.referred_users[i];
+
+      if ((i + 1) % 2 === 1) {
+        // Odd referral → goes to this user's Infinity Level 1
+        await addToInfinityTeam(userId, childId, 1);
+        await processInfinityLevels(userId, childId, 2);
+      } else {
+        // Even referral → goes to sponsor’s Infinity Level 1
         await addToInfinityTeam(user.referBy, childId, 1);
       }
-      // Else: skip adding even referral
     }
   }
 }

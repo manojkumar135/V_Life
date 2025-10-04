@@ -3,6 +3,12 @@ import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import TreeNode from "@/models/tree";
 
+// ----------------- Types -----------------
+export interface InfinityLevel {
+  level: number;
+  users: string[];
+}
+
 export interface UserType {
   user_id: string;
   user_name?: string;
@@ -15,23 +21,23 @@ export interface UserType {
   district?: string;
   locality?: string;
   user_status?: string;
-  referred_users?: string[];
+  infinity_users?: InfinityLevel[];
 }
 
-interface TreeNodeType {
+export interface TreeNodeType {
   user_id: string;
   left?: string | null;
   right?: string | null;
   parent?: string | null;
 }
 
+// ----------------- GET API -----------------
 export async function GET(req: Request) {
   try {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
     const rootId = searchParams.get("user_id");
-    const search = searchParams.get("search") || "";
 
     if (!rootId) {
       return NextResponse.json(
@@ -40,66 +46,50 @@ export async function GET(req: Request) {
       );
     }
 
-    // 1️⃣ Fetch root user
-    const rootUser = await User.findOne({ user_id: rootId }).lean<UserType>();
-    if (
-      !rootUser ||
-      !rootUser.referred_users ||
-      rootUser.referred_users.length === 0
-    ) {
+    // 1️⃣ Fetch root user with infinity_users
+    const rootUser = await User.findOne({ user_id: rootId }).lean<UserType | null>();
+    if (!rootUser?.infinity_users || rootUser.infinity_users.length === 0) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    // 2️⃣ Fetch all tree nodes to determine team
-    const allNodes: TreeNodeType[] = await TreeNode.find({}).lean<
-      TreeNodeType[]
-    >();
+    // 2️⃣ Fetch tree nodes for team mapping
+    const allNodes = await TreeNode.find({}).lean<TreeNodeType[]>();
     const nodeMap = new Map<string, TreeNodeType>();
     allNodes.forEach((node) => nodeMap.set(node.user_id, node));
 
-    // 3️⃣ Determine team (left or right) for each referred_user
-    const usersWithTeam: (UserType & { team: "left" | "right" })[] = [];
+    // 3️⃣ Process infinity levels
+    const results: (UserType & { level: number; team: string })[] = [];
 
-    for (const refId of rootUser.referred_users) {
-      const node = nodeMap.get(refId);
-      if (!node) continue;
+    for (const levelObj of rootUser.infinity_users) {
+      const { level, users } = levelObj;
 
-      let team: "left" | "right" = "left"; // default
+      for (const uid of users) {
+        const userData = await User.findOne({ user_id: uid }).lean<UserType>();
+        if (!userData) continue;
 
-      // Check if this node is left or right child of root
-      const rootNode = nodeMap.get(rootId);
-      if (rootNode?.left === refId) team = "left";
-      else if (rootNode?.right === refId) team = "right";
+        // Determine team (left/right/unknown) using tree structure
+        let team: "left" | "right" | "unknown" = "unknown";
+        const node = nodeMap.get(uid);
+        if (node?.parent) {
+          const parentNode = nodeMap.get(node.parent);
+          if (parentNode?.left === uid) team = "left";
+          if (parentNode?.right === uid) team = "right";
+        }
 
-      // Fetch referred user details
-      const userData = await User.findOne({ user_id: refId }).lean<UserType>();
-      if (userData) {
-        usersWithTeam.push({ ...userData, team });
+        results.push({
+          ...userData,
+          level,
+          team,
+        });
       }
     }
 
-    // 4️⃣ Optional search
-    let filteredUsers = usersWithTeam;
-    if (search.trim()) {
-      const searchTerms = search
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      filteredUsers = usersWithTeam.filter((user) =>
-        searchTerms.some((term) =>
-          Object.values(user)
-            .filter((v) => typeof v === "string")
-            .some((val) => val!.toLowerCase().startsWith(term.toLowerCase()))
-        )
-      );
-    }
-
     return NextResponse.json({
-      data: filteredUsers,
-      total: filteredUsers.length,
+      data: results,
+      total: results.length,
     });
   } catch (error) {
-    console.error("❌ Error in /api/directteam-operations:", error);
+    console.error("❌ Error in /api/infinityteam:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
