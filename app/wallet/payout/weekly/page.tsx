@@ -95,7 +95,7 @@ export default function WithdrawPage() {
 
   // ✅ Table columns
   const columns: GridColDef[] = [
-    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
+    { field: "payout_id", headerName: "Transaction ID", flex: 1 },
     { field: "wallet_id", headerName: "Wallet ID", flex: 1.5 },
     { field: "user_id", headerName: "Withdraw Address", flex: 1.5 },
     { field: "date", headerName: "Date", flex: 1.5 },
@@ -207,10 +207,10 @@ export default function WithdrawPage() {
           rows={withdrawData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
           pageSize={14}
-          statusField="withdraw_status"
-          onIdClick={(id) => handleEdit(id)}
+          statusField="pstatus"
+          onIdClick={(id) => router.push(`/wallet/payout/detailview/${id}`)}
           checkboxSelection
-          onRowClick={(row) => console.log("Withdraw clicked:", row)}
+          onRowClick={(row) => console.log("Payout clicked:", row)}
         />
 
         {/* Date Filter Modal */}

@@ -37,16 +37,16 @@ const PayoutPage = () => {
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <CalendarRange size={32} />
-            <span className="mt-2 text-lg font-semibold">Weekly Payouts</span>
+            <span className="mt-2 text-lg font-semibold">Fortnightly Payouts</span>
           </div>
           {/* Rewards Card */}
-          <div
+          {/* <div
             onClick={() => router.push("/wallet/payout/rewards")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaGift size={32} />
             <span className="mt-2 text-lg font-semibold">Rewards</span>
-          </div>
+          </div> */}
         </div>
         
       </div>

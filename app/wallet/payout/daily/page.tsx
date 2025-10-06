@@ -15,7 +15,6 @@ import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 import { GridColDef } from "@mui/x-data-grid";
 
-
 export default function DailyPayoutPage() {
   const { user } = useVLife();
   const router = useRouter();
@@ -43,32 +42,32 @@ export default function DailyPayoutPage() {
 
   // ✅ Fetch withdrawals
   const fetchWithdrawals = useCallback(async () => {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const { data } = await axios.get(API_URL, {
-      params: {
-        role: user?.role,
-        ...(user?.role === "user" && { user_id: user?.user_id }),
-        search: query,
-        ...(dateFilter?.type === "on" && { date: dateFilter.date }),
-        ...(dateFilter?.type === "range" && {
-          from: dateFilter.from,
-          to: dateFilter.to,
-        }),
-      },
-    });
+      const { data } = await axios.get(API_URL, {
+        params: {
+          role: user?.role,
+          ...(user?.role === "user" && { user_id: user?.user_id }),
+          search: query,
+          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
+          ...(dateFilter?.type === "range" && {
+            from: dateFilter.from,
+            to: dateFilter.to,
+          }),
+        },
+      });
 
-    const withdrawals = data.data || [];
-    setWithdrawData(withdrawals);
-    setTotalItems(withdrawals.length);
-  } catch (error) {
-    console.error("Error fetching withdrawals:", error);
-    ShowToast.error("Failed to load withdrawals");
-  } finally {
-    setLoading(false);
-  }
-}, [user?.role, user?.user_id, query, dateFilter]);
+      const withdrawals = data.data || [];
+      setWithdrawData(withdrawals);
+      setTotalItems(withdrawals.length);
+    } catch (error) {
+      console.error("Error fetching withdrawals:", error);
+      ShowToast.error("Failed to load withdrawals");
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.role, user?.user_id, query, dateFilter]);
 
   useEffect(() => {
     if (!user?.user_id) return;
@@ -76,8 +75,8 @@ export default function DailyPayoutPage() {
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // ✅ Table columns
-  const columns:GridColDef[]  = [
-    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
+  const columns: GridColDef[] = [
+    { field: "payout_id", headerName: "Transaction ID", flex: 1 },
     { field: "wallet_id", headerName: "Wallet ID", flex: 1.5 },
     { field: "user_id", headerName: "Withdraw Address", flex: 1.5 },
     { field: "date", headerName: "Date", flex: 1.5 },
@@ -116,8 +115,10 @@ export default function DailyPayoutPage() {
     <Layout>
       <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
         {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center
-           bg-black/40 backdrop-blur-sm">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center
+           bg-black/40 backdrop-blur-sm"
+          >
             <Loader />
           </div>
         )}
@@ -142,9 +143,7 @@ export default function DailyPayoutPage() {
         />
 
         {/* Floating Filter Icon */}
-        <div 
-        title="Filter"
-        className="fixed  bottom-5 right-6 z-10">
+        <div title="Filter" className="fixed  bottom-5 right-6 z-10">
           <button
             className="
                     relative w-12 h-12 rounded-full 
@@ -166,10 +165,10 @@ export default function DailyPayoutPage() {
           rows={withdrawData.slice((currentPage - 1) * 14, currentPage * 14)}
           rowIdField="_id"
           pageSize={14}
-          statusField="withdraw_status"
-          onIdClick={(id) => router.push(`/wallet/withdraw/detailview/${id}`)}
-            checkboxSelection
-          onRowClick={(row) => console.log("Withdraw clicked:", row)}
+          statusField="pstatus"
+          onIdClick={(id) => router.push(`/wallet/payout/detailview/${id}`)}
+          checkboxSelection
+          onRowClick={(row) => console.log("payout clicked:", row)}
         />
 
         {/* Date Filter Modal */}
