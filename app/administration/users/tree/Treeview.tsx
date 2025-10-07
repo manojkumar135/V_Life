@@ -10,6 +10,7 @@ import { useVLife } from "@/store/context";
 import { useSearch } from "@/hooks/useSearch";
 import SubmitButton from "@/components/common/submitbutton";
 import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader";
 
 // Node type
 interface TreeNode {
@@ -33,6 +34,7 @@ export default function TreeView() {
   const id = searchParams.get("id") || "";
 
   const [tree, setTree] = useState<TreeNode | null>(null);
+  const [loading, setLoading] = useState(false);
   const [currentRoot, setCurrentRoot] = useState<TreeNode | null>(null);
   const [search, setSearch] = useState("");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -57,6 +59,8 @@ export default function TreeView() {
   const fetchTree = useCallback(
     async (search: string) => {
       try {
+        setLoading(true);
+
         const { data } = await axios.get(API_URL, {
           params: {
             user_id: user.user_id,
@@ -69,6 +73,8 @@ export default function TreeView() {
         }
       } catch (error) {
         console.error("Error fetching tree:", error);
+      } finally {
+        setLoading(false);
       }
     },
     [user.user_id, query]
@@ -107,7 +113,10 @@ export default function TreeView() {
   }, [debouncedQuery, user?.user_id, fetchTree]);
 
   // Recursive search
-  const findNode = (node: TreeNode | null, searchText: string): TreeNode | null => {
+  const findNode = (
+    node: TreeNode | null,
+    searchText: string
+  ): TreeNode | null => {
     if (!node) return null;
 
     const lower = searchText.toLowerCase();
@@ -147,6 +156,12 @@ export default function TreeView() {
 
   return (
     <Layout>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
+
       <div className="p-4 max-md:-mt-5 flex flex-col h-full max-lg:max-w-[720px]">
         {/* Header + Search */}
         <div className="flex flex-row items-center max-md:justify-between mb-1 ">
