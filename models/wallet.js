@@ -17,6 +17,12 @@ const WalletSchema = new mongoose.Schema(
     // Aadhaar + PAN
     aadhar_number: { type: String },
     pan_number: { type: String },
+    pan_name: { type: String },
+    pan_dob: { type: String },
+    pan_verified: { type: String },
+    pan_category: { type: String },
+    aadhar_seeding: { type: String },
+
     aadhar_file: { type: String },
     pan_file: { type: String },
     is_verified: { type: String, default: "No" },

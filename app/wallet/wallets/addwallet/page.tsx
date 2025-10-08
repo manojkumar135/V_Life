@@ -9,12 +9,12 @@ import FileInput from "@/components/InputFields/fileinput";
 import SubmitButton from "@/components/common/submitbutton";
 import PasswordInput from "@/components/InputFields/passwordinput";
 import { useVLife } from "@/store/context";
-
 import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
+import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 interface WalletFormData {
   userId: string;
@@ -27,6 +27,12 @@ interface WalletFormData {
   ifscCode: string;
   aadharNumber: string;
   panNumber: string;
+  panName: string;
+  panDob: string;
+  panVerify: string;
+  panCategory: string;
+  aadharSeeding: string;
+
   aadharFile: File | null;
   panFile: File | null;
 }
@@ -35,6 +41,8 @@ export default function AddWalletForm() {
   const router = useRouter();
   const { user } = useVLife();
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [panVerified, setPanVerified] = useState(false);
 
   const initialValues: WalletFormData = {
     userId: user.role === "user" ? user.user_id : "",
@@ -47,6 +55,11 @@ export default function AddWalletForm() {
     ifscCode: "",
     aadharNumber: "",
     panNumber: "",
+    panName: "",
+    panDob: "",
+    panVerify: "",
+    panCategory: "",
+    aadharSeeding: "",
     aadharFile: null,
     panFile: null,
   };
@@ -55,7 +68,9 @@ export default function AddWalletForm() {
     userId: Yup.string().required("* User ID is required"),
     userName: Yup.string().required("* User Name is required"),
     contact: Yup.string().required("* Contact is required"),
-    accountHolderName: Yup.string().required("* Account Holder Name is required"),
+    accountHolderName: Yup.string().required(
+      "* Account Holder Name is required"
+    ),
     bankName: Yup.string().required("* Bank Name is required"),
     accountNumber: Yup.string()
       .matches(/^\d{9,18}$/, "Account number must be 9 to 18 digits")
@@ -72,6 +87,8 @@ export default function AddWalletForm() {
     panNumber: Yup.string()
       .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "* PAN must be 10 characters")
       .required("* PAN Number is required"),
+    panName: Yup.string().required("* Name as in PAN is required"),
+    panDob: Yup.date().required("* Date of Birth as in PAN is required"),
     aadharFile: Yup.mixed<File>()
       .required("* Aadhaar file is required")
       .test(
@@ -79,10 +96,9 @@ export default function AddWalletForm() {
         "* Aadhaar must be an image or PDF",
         (value) =>
           !value ||
-          (value &&
-            ["image/", "application/pdf"].some((type) =>
-              value.type.startsWith(type)
-            ))
+          ["image/", "application/pdf"].some((type) =>
+            value.type.startsWith(type)
+          )
       ),
     panFile: Yup.mixed<File>()
       .required("* PAN file is required")
@@ -91,10 +107,9 @@ export default function AddWalletForm() {
         "* PAN must be an image or PDF",
         (value) =>
           !value ||
-          (value &&
-            ["image/", "application/pdf"].some((type) =>
-              value.type.startsWith(type)
-            ))
+          ["image/", "application/pdf"].some((type) =>
+            value.type.startsWith(type)
+          )
       ),
   });
 
@@ -102,11 +117,9 @@ export default function AddWalletForm() {
     try {
       const fileForm = new FormData();
       fileForm.append("file", file);
-
       const res = await axios.post("/api/getFileUrl", fileForm, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
       if (res.data.success) return res.data.fileUrl;
       ShowToast.error(res.data.message || "File upload failed");
       return null;
@@ -127,16 +140,82 @@ export default function AddWalletForm() {
         const userData = res.data.data;
         setFieldValue("userName", userData.user_name);
         setFieldValue("contact", userData.contact || "");
-        // setFieldValue("accountHolderName", userData.user_name);
       } else {
         ShowToast.error("User not found");
         setFieldValue("userName", "");
         setFieldValue("contact", "");
-        // setFieldValue("accountHolderName", "");
       }
     } catch (error) {
       console.error(error);
       ShowToast.error("Failed to fetch user");
+    }
+  };
+
+  const verifyPanDetails = async (
+    panNumber: string,
+    panName: string,
+    panDob: string,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
+    try {
+      setVerifying(true);
+      setLoading(true);
+
+      if (!panNumber || !panName || !panDob) {
+        ShowToast.error("Please fill all PAN details before verifying");
+        return;
+      }
+
+      const res = await axios.post("/api/pancheck-operations", {
+        pan_number: panNumber,
+        pan_name: panName,
+        pan_dob: panDob,
+      });
+
+      const panData = res.data?.data?.data;
+
+      if (res.data.success && panData) {
+        if (panData.status === "valid") {
+          // ✅ PAN Verified successfully
+          setPanVerified(true);
+          ShowToast.success("PAN verified successfully!");
+
+          // Update Formik fields
+          setFieldValue("panVerify", true);
+          setFieldValue("panCategory", panData.category || "");
+          setFieldValue(
+            "aadharSeeding",
+            panData.aadhaar_seeding_status === "y" ? true : false
+          );
+        } else {
+          // ❌ Invalid PAN
+          setPanVerified(false);
+          ShowToast.error("Invalid PAN details. Please check and try again.");
+
+          setFieldValue("panVerify", false);
+          setFieldValue("panCategory", "");
+          setFieldValue("aadharSeeding", false);
+        }
+      } else {
+        // ❌ API returned unexpected result
+        setPanVerified(false);
+        ShowToast.error(res.data.message || "PAN verification failed");
+
+        setFieldValue("panVerify", false);
+        setFieldValue("panCategory", "");
+        setFieldValue("aadharSeeding", false);
+      }
+    } catch (err) {
+      console.error("PAN verification error:", err);
+      setPanVerified(false);
+      ShowToast.error("Failed to verify PAN details. Please try again later.");
+
+      setFieldValue("panVerify", false);
+      setFieldValue("panCategory", "");
+      setFieldValue("aadharSeeding", false);
+    } finally {
+      setVerifying(false);
+      setLoading(false);
     }
   };
 
@@ -147,8 +226,13 @@ export default function AddWalletForm() {
     try {
       setLoading(true);
 
+      if (!values.panVerify) {
+        ShowToast.error("Please verify your PAN before submitting the form.");
+        setLoading(false);
+        return;
+      }
+
       if (user.role === "admin") {
-        // Check if user exists and has no wallet
         const walletCheck = await axios.get(
           `/api/wallets-operations?user_id=${values.userId}`
         );
@@ -181,6 +265,11 @@ export default function AddWalletForm() {
         ifsc_code: values.ifscCode,
         aadhar_number: values.aadharNumber,
         pan_number: values.panNumber,
+        pan_name: values.panName,
+        pan_dob: values.panDob,
+        pan_verified: values.panVerify,
+        pan_category: values.panCategory,
+        aadhar_seeding: values.aadharSeeding,
         aadhar_file: aadharFileUrl,
         pan_file: panFileUrl,
         created_by: user.user_id,
@@ -188,7 +277,6 @@ export default function AddWalletForm() {
       };
 
       const res = await axios.post("/api/wallets-operations", payload);
-
       if (res.data.success) {
         ShowToast.success("Wallet added successfully!");
         router.push("/wallet/wallets");
@@ -235,192 +323,268 @@ export default function AddWalletForm() {
             validationSchema={WalletSchema}
             onSubmit={handleSubmit}
           >
-            {({ values, setFieldValue, errors, touched, handleBlur }) => (
-              <Form className="grid grid-cols-1 gap-6">
-                {/* User Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <InputField
-                    label="User ID"
-                    name="userId"
-                    placeholder="Enter User ID"
-                    value={values.userId}
-                    readOnly={user.role === "user"}
-                    onChange={async (e) => {
-                      const value = e.target.value;
-                      setFieldValue("userId", value);
+            {({ values, setFieldValue, errors, touched, handleBlur }) => {
+              // console.log("Formik Values:", values);
 
-                      if (user.role === "admin" && value.length === 10) {
-                        try {
-                          // Step 1: check if wallet already exists
-                          const res = await axios.get(
-                            `/api/wallets-operations?user_id=${value}`
-                          );
-                          console.log(res);
-
-                          if (
-                            res.data?.success &&
-                            Array.isArray(res.data.data) &&
-                            res.data.data.length > 0
-                          ) {
-                            // Wallet already exists
-                            ShowToast.error(
-                              "This User ID already has a wallet"
+              return (
+                <Form className="grid grid-cols-1 gap-6">
+                  {/* User Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                    <InputField
+                      label="User ID"
+                      name="userId"
+                      placeholder="Enter User ID"
+                      required
+                      value={values.userId}
+                      readOnly={user.role === "user"}
+                      onChange={async (e) => {
+                        const value = e.target.value;
+                        setFieldValue("userId", value);
+                        if (user.role === "admin" && value.length === 10) {
+                          try {
+                            const res = await axios.get(
+                              `/api/wallets-operations?user_id=${value}`
                             );
-
-                            // Reset form fields so admin cannot proceed
-                            setFieldValue("userId", "");
-                            setFieldValue("userName", "");
-                            setFieldValue("contact", "");
-
-                            return; // 🚨 Stop here (don’t fetch user details)
+                            if (
+                              res.data?.success &&
+                              Array.isArray(res.data.data) &&
+                              res.data.data.length > 0
+                            ) {
+                              ShowToast.error(
+                                "This User ID already has a wallet"
+                              );
+                              setFieldValue("userId", "");
+                              setFieldValue("userName", "");
+                              setFieldValue("contact", "");
+                              return;
+                            }
+                            await fetchUserById(value, setFieldValue);
+                          } catch (err) {
+                            console.error(err);
+                            ShowToast.error("Error while checking wallet/user");
                           }
-
-                          // Step 2: fetch user details only if no wallet exists
-                          await fetchUserById(value, setFieldValue);
-                        } catch (err) {
-                          console.error(err);
-                          ShowToast.error("Error while checking wallet/user");
                         }
+                      }}
+                      onBlur={handleBlur}
+                      error={touched.userId ? errors.userId : ""}
+                    />
+                    <InputField
+                      label="User Name"
+                      name="userName"
+                      placeholder="User Name"
+                      value={values.userName}
+                      readOnly
+                      required
+                    />
+                    <InputField
+                      label="Contact"
+                      name="contact"
+                      placeholder="Contact"
+                      value={values.contact}
+                      readOnly
+                      required
+                    />
+                  </div>
+
+                  {/* Account Fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-0">
+                    <InputField
+                      label="Account Holder Name"
+                      name="accountHolderName"
+                      required
+                      value={values.accountHolderName}
+                      onChange={(e) =>
+                        setFieldValue("accountHolderName", e.target.value)
                       }
-                    }}
-                    onBlur={handleBlur}
-                    error={touched.userId ? errors.userId : ""}
-                  />
-                  <InputField
-                    label="User Name"
-                    name="userName"
-                    placeholder="User Name"
-                    value={values.userName}
-                    readOnly={true}
-                  />
-                  <InputField
-                    label="Contact"
-                    name="contact"
-                    placeholder="Contact"
-                    value={values.contact}
-                    readOnly={true}
-                  />
-                </div>
+                      onBlur={handleBlur}
+                      error={
+                        touched.accountHolderName
+                          ? errors.accountHolderName
+                          : ""
+                      }
+                    />
+                    <InputField
+                      label="Bank Name"
+                      name="bankName"
+                      value={values.bankName}
+                      required
+                      onChange={(e) =>
+                        setFieldValue("bankName", e.target.value)
+                      }
+                      onBlur={handleBlur}
+                      error={touched.bankName ? errors.bankName : ""}
+                    />
+                    <InputField
+                      label="Account Number"
+                      name="accountNumber"
+                      value={values.accountNumber}
+                      required
+                      onChange={(e) =>
+                        setFieldValue("accountNumber", e.target.value)
+                      }
+                      onBlur={handleBlur}
+                      error={touched.accountNumber ? errors.accountNumber : ""}
+                    />
+                    <PasswordInput
+                      label="Confirm Account Number"
+                      name="confirmAccountNumber"
+                      value={values.confirmAccountNumber}
+                      onChange={(e) =>
+                        setFieldValue("confirmAccountNumber", e.target.value)
+                      }
+                      required
+                      onBlur={handleBlur}
+                      error={
+                        touched.confirmAccountNumber
+                          ? errors.confirmAccountNumber
+                          : ""
+                      }
+                    />
+                    <InputField
+                      label="IFSC Code"
+                      name="ifscCode"
+                      value={values.ifscCode}
+                      required
+                      onChange={(e) =>
+                        setFieldValue("ifscCode", e.target.value)
+                      }
+                      onBlur={handleBlur}
+                      error={touched.ifscCode ? errors.ifscCode : ""}
+                    />
+                  </div>
 
-                {/* Account Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mt-4">
-                  <InputField
-                    label="Account Holder Name"
-                    name="accountHolderName"
-                    placeholder="User Name"
-                    value={values.accountHolderName}
-                    onChange={(e) =>
-                      setFieldValue("accountHolderName", e.target.value)
-                    }
-                    onBlur={handleBlur}
-                    error={
-                      touched.accountHolderName ? errors.accountHolderName : ""
-                    }
-                  />
-                  <InputField
-                    label="Bank Name"
-                    name="bankName"
-                    placeholder="State Bank ……"
-                    value={values.bankName}
-                    onChange={(e) => setFieldValue("bankName", e.target.value)}
-                    onBlur={handleBlur}
-                    error={touched.bankName ? errors.bankName : ""}
-                  />
-                  <InputField
-                    label="Account Number"
-                    name="accountNumber"
-                    placeholder="1234XXXXXX"
-                    value={values.accountNumber}
-                    onChange={(e) =>
-                      setFieldValue("accountNumber", e.target.value)
-                    }
-                    onBlur={handleBlur}
-                    error={touched.accountNumber ? errors.accountNumber : ""}
-                  />
-                  <PasswordInput
-                    label="Confirm Account Number"
-                    name="confirmAccountNumber"
-                    value={values.confirmAccountNumber}
-                    onChange={(e) =>
-                      setFieldValue("confirmAccountNumber", e.target.value)
-                    }
-                    onBlur={handleBlur}
-                    error={
-                      touched.confirmAccountNumber
-                        ? errors.confirmAccountNumber
-                        : ""
-                    }
-                  />
-                  <InputField
-                    label="IFSC Code"
-                    name="ifscCode"
-                    placeholder="SBH0000123"
-                    value={values.ifscCode}
-                    onChange={(e) => setFieldValue("ifscCode", e.target.value)}
-                    onBlur={handleBlur}
-                    error={touched.ifscCode ? errors.ifscCode : ""}
-                  />
-                </div>
+                  {/* PAN Details Heading */}
+                  <div className="flex items-center gap-2">
+                    <p className="text-xl max-md:text-[1rem] font-semibold">
+                      PAN Details
+                    </p>
 
-                {/* Aadhaar & PAN */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                  <InputField
-                    label="Aadhar Number"
-                    name="aadharNumber"
-                    value={values.aadharNumber}
-                    onChange={(e) =>
-                      setFieldValue("aadharNumber", e.target.value)
-                    }
-                    onBlur={handleBlur}
-                    error={touched.aadharNumber ? errors.aadharNumber : ""}
-                  />
-                  <FileInput
-                    label="Upload Aadhar"
-                    name="aadharFile"
-                    value={values.aadharFile}
-                    onChange={(e) =>
-                      setFieldValue(
-                        "aadharFile",
-                        e.currentTarget.files?.[0] || null
-                      )
-                    }
-                    onBlur={handleBlur}
-                    error={touched.aadharFile ? errors.aadharFile : ""}
-                  />
-                </div>
+                    {panVerified && (
+                      <RiVerifiedBadgeFill className="text-green-600 text-2xl" />
+                    )}
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2 lg:-mt-3">
-                  <InputField
-                    label="PAN Number"
-                    name="panNumber"
-                    value={values.panNumber}
-                    onChange={(e) => setFieldValue("panNumber", e.target.value)}
-                    onBlur={handleBlur}
-                    error={touched.panNumber ? errors.panNumber : ""}
-                  />
-                  <FileInput
-                    label="Upload PAN"
-                    name="panFile"
-                    value={values.panFile}
-                    onChange={(e) =>
-                      setFieldValue(
-                        "panFile",
-                        e.currentTarget.files?.[0] || null
-                      )
-                    }
-                    onBlur={handleBlur}
-                    error={touched.panFile ? errors.panFile : ""}
-                  />
-                </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mt-2 lg:-mt-3">
+                    <InputField
+                      label="PAN Number"
+                      name="panNumber"
+                      required
+                      value={values.panNumber}
+                      onChange={(e) =>
+                        setFieldValue("panNumber", e.target.value)
+                      }
+                      onBlur={handleBlur}
+                      error={touched.panNumber ? errors.panNumber : ""}
+                    />
+                    <InputField
+                      label="Name as in PAN"
+                      name="panName"
+                      required
+                      value={values.panName}
+                      onChange={(e) => setFieldValue("panName", e.target.value)}
+                      onBlur={handleBlur}
+                      error={touched.panName ? errors.panName : ""}
+                    />
+                    <InputField
+                      label="Date of Birth as in PAN"
+                      type="date"
+                      name="panDob"
+                      className="uppercase"
+                      required
+                      value={values.panDob}
+                      onChange={(e) => setFieldValue("panDob", e.target.value)}
+                      onBlur={handleBlur}
+                      error={touched.panDob ? errors.panDob : ""}
+                    />
+                    <FileInput
+                      label="Upload PAN"
+                      name="panFile"
+                      required
+                      value={values.panFile}
+                      onChange={(e) =>
+                        setFieldValue(
+                          "panFile",
+                          e.currentTarget.files?.[0] || null
+                        )
+                      }
+                      onBlur={handleBlur}
+                      error={touched.panFile ? errors.panFile : ""}
+                    />
+                    <div className="max-md:hidden "></div>
 
-                {/* Submit */}
-                <div className="flex justify-end mt-4">
-                  <SubmitButton type="submit">
-                    {loading ? "Submitting..." : "Submit"}
-                  </SubmitButton>
-                </div>
-              </Form>
-            )}
+                    {/* Verify PAN Button */}
+                    <div className="flex items-center gap-2 mt-0 ml-auto">
+                      <button
+                        type="button"
+                        disabled={verifying}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm  transition-colors cursor-pointer ${
+                          verifying
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-yellow-400 hover:bg-yellow-300 text-black font-semibold"
+                        }`}
+                        onClick={async () => {
+                          if (
+                            !values.panNumber ||
+                            !values.panName ||
+                            !values.panDob ||
+                            !values.panFile
+                          ) {
+                            ShowToast.error(
+                              "Please fill all PAN details and upload PAN file before verifying"
+                            );
+                            return;
+                          }
+                          await verifyPanDetails(
+                            values.panNumber,
+                            values.panName,
+                            values.panDob,
+                            setFieldValue
+                          );
+                        }}
+                      >
+                        {verifying ? "Verifying..." : "Verify PAN"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Aadhaar */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
+                    <InputField
+                      label="Aadhar Number"
+                      name="aadharNumber"
+                      required
+                      value={values.aadharNumber}
+                      onChange={(e) =>
+                        setFieldValue("aadharNumber", e.target.value)
+                      }
+                      onBlur={handleBlur}
+                      error={touched.aadharNumber ? errors.aadharNumber : ""}
+                    />
+                    <FileInput
+                      label="Upload Aadhar"
+                      name="aadharFile"
+                      required
+                      value={values.aadharFile}
+                      onChange={(e) =>
+                        setFieldValue(
+                          "aadharFile",
+                          e.currentTarget.files?.[0] || null
+                        )
+                      }
+                      onBlur={handleBlur}
+                      error={touched.aadharFile ? errors.aadharFile : ""}
+                    />
+                  </div>
+
+                  {/* Submit */}
+                  <div className="flex justify-end mt-6">
+                    <SubmitButton type="submit">
+                      {loading ? "Submitting..." : "Submit"}
+                    </SubmitButton>
+                  </div>
+                </Form>
+              );
+            }}
           </Formik>
         </div>
       </div>

@@ -83,11 +83,7 @@ const LoginSchema = new mongoose.Schema(
     device_info: { type: String },
     login_time: { type: Date, default: Date.now },
     logout_time: { type: Date },
-    status: {
-      type: String,
-      enum: ["Active", "Logged Out", "Failed"],
-      default: "active",
-    },
+    status: { type: String, },
     created_at: { type: Date, default: Date.now },
     created_by: { type: String },
     last_modified_by: { type: String },

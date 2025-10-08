@@ -12,6 +12,7 @@ import * as Yup from "yup";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
+import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 interface WalletFormData {
   walletId: string;
@@ -24,6 +25,11 @@ interface WalletFormData {
   ifscCode: string;
   aadharNumber: string;
   panNumber: string;
+  panName: string;
+  panDob: string;
+  panVerify: boolean;
+  panCategory: string;
+  aadharSeeding: boolean;
   aadharFile: File | string | null;
   panFile: File | string | null;
 }
@@ -43,6 +49,8 @@ const WalletSchema = Yup.object().shape({
   panNumber: Yup.string()
     .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "PAN must be 10 characters")
     .required("PAN Number is required"),
+  panName: Yup.string().required("Name as in PAN is required"),
+  panDob: Yup.date().required("Date of Birth as in PAN is required"),
   aadharFile: Yup.mixed<File | string>()
     .required("Aadhaar file is required")
     .test(
@@ -50,10 +58,10 @@ const WalletSchema = Yup.object().shape({
       "Aadhaar must be an image or PDF",
       (value) =>
         !value ||
-        (typeof value === "string" ||
-          ["image/", "application/pdf"].some((type) =>
-            (value as File).type.startsWith(type)
-          ))
+        typeof value === "string" ||
+        ["image/", "application/pdf"].some((type) =>
+          (value as File).type.startsWith(type)
+        )
     ),
   panFile: Yup.mixed<File | string>()
     .required("PAN file is required")
@@ -62,10 +70,10 @@ const WalletSchema = Yup.object().shape({
       "PAN must be an image or PDF",
       (value) =>
         !value ||
-        (typeof value === "string" ||
-          ["image/", "application/pdf"].some((type) =>
-            (value as File).type.startsWith(type)
-          ))
+        typeof value === "string" ||
+        ["image/", "application/pdf"].some((type) =>
+          (value as File).type.startsWith(type)
+        )
     ),
 });
 
@@ -75,6 +83,8 @@ export default function EditWalletPage() {
   const walletId = params?.id as string;
 
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [panVerified, setPanVerified] = useState(false);
   const [initialValues, setInitialValues] = useState<WalletFormData>({
     walletId: "",
     userId: "",
@@ -86,6 +96,11 @@ export default function EditWalletPage() {
     ifscCode: "",
     aadharNumber: "",
     panNumber: "",
+    panName: "",
+    panDob: "",
+    panVerify: false,
+    panCategory: "",
+    aadharSeeding: false,
     aadharFile: null,
     panFile: null,
   });
@@ -113,9 +128,15 @@ export default function EditWalletPage() {
             ifscCode: wallet.ifsc_code || "",
             aadharNumber: wallet.aadhar_number || "",
             panNumber: wallet.pan_number || "",
+            panName: wallet.pan_name || "",
+            panDob: wallet.pan_dob || "",
+            panVerify: wallet.pan_verified || false,
+            panCategory: wallet.pan_category || "",
+            aadharSeeding: wallet.aadhar_seeding || false,
             aadharFile: wallet.aadhar_file || null,
             panFile: wallet.pan_file || null,
           });
+          setPanVerified(wallet.pan_verified || false);
         } else {
           ShowToast.error("Wallet not found");
         }
@@ -147,6 +168,74 @@ export default function EditWalletPage() {
     }
   };
 
+  const verifyPanDetails = async (
+    panNumber: string,
+    panName: string,
+    panDob: string,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
+    try {
+      setVerifying(true);
+      setLoading(true);
+
+      if (!panNumber || !panName || !panDob) {
+        ShowToast.error("Please fill all PAN details before verifying");
+        return;
+      }
+
+      const res = await axios.post("/api/pancheck-operations", {
+        pan_number: panNumber,
+        pan_name: panName,
+        pan_dob: panDob,
+      });
+
+      const panData = res.data?.data?.data;
+
+      if (res.data.success && panData) {
+        if (panData.status === "valid") {
+          // ✅ PAN Verified successfully
+          setPanVerified(true);
+          ShowToast.success("PAN verified successfully!");
+
+          // Update Formik fields
+          setFieldValue("panVerify", true);
+          setFieldValue("panCategory", panData.category || "");
+          setFieldValue(
+            "aadharSeeding",
+            panData.aadhaar_seeding_status === "y" ? true : false
+          );
+        } else {
+          // ❌ Invalid PAN
+          setPanVerified(false);
+          ShowToast.error("Invalid PAN details. Please check and try again.");
+
+          setFieldValue("panVerify", false);
+          setFieldValue("panCategory", "");
+          setFieldValue("aadharSeeding", false);
+        }
+      } else {
+        // ❌ API returned unexpected result
+        setPanVerified(false);
+        ShowToast.error(res.data.message || "PAN verification failed");
+
+        setFieldValue("panVerify", false);
+        setFieldValue("panCategory", "");
+        setFieldValue("aadharSeeding", false);
+      }
+    } catch (err) {
+      console.error("PAN verification error:", err);
+      setPanVerified(false);
+      ShowToast.error("Failed to verify PAN details. Please try again later.");
+
+      setFieldValue("panVerify", false);
+      setFieldValue("panCategory", "");
+      setFieldValue("aadharSeeding", false);
+    } finally {
+      setVerifying(false);
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (
     values: WalletFormData,
     actions: FormikHelpers<WalletFormData>
@@ -173,6 +262,11 @@ export default function EditWalletPage() {
         ifsc_code: values.ifscCode,
         aadhar_number: values.aadharNumber,
         pan_number: values.panNumber,
+        pan_name: values.panName,
+        pan_dob: values.panDob,
+        pan_verified: values.panVerify,
+        pan_category: values.panCategory,
+        aadhar_seeding: values.aadharSeeding,
         aadhar_file: aadharFileUrl,
         pan_file: panFileUrl,
         last_modified_by: "admin",
@@ -191,12 +285,10 @@ export default function EditWalletPage() {
       }
     } catch (error: any) {
       console.error("Update wallet error:", error);
-
-      if (error.response?.data?.message) {
-        ShowToast.error(error.response.data.message);
-      } else {
-        ShowToast.error("Something went wrong while updating wallet.");
-      }
+      ShowToast.error(
+        error.response?.data?.message ||
+          "Something went wrong while updating wallet."
+      );
     } finally {
       setLoading(false);
       actions.setSubmitting(false);
@@ -210,7 +302,7 @@ export default function EditWalletPage() {
           <Loader />
         </div>
       )}
-      <div className="p-4">
+      <div className="p-4 max-md:p-2">
         <div className="flex items-center mb-4">
           <IoIosArrowBack
             size={25}
@@ -230,17 +322,33 @@ export default function EditWalletPage() {
             onSubmit={handleSubmit}
           >
             {({ values, setFieldValue, errors, touched, handleBlur }) => (
-              <Form className="grid grid-cols-1 gap-6">
+              <Form className="grid grid-cols-1 gap-4">
                 {/* Readonly fields */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <InputField label="Wallet ID" name="walletId" value={values.walletId} disabled />
-                  <InputField label="User ID" name="userId" value={values.userId} disabled />
-                  <InputField label="User Name" name="userName" value={values.userName} disabled />
-                  <InputField label="Contact" name="contact" value={values.contact} disabled />
-                </div>
-
-                {/* Editable fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1  md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 -mt-3">
+                  <InputField
+                    label="Wallet ID"
+                    name="walletId"
+                    value={values.walletId}
+                    disabled
+                  />
+                  <InputField
+                    label="User ID"
+                    name="userId"
+                    value={values.userId}
+                    disabled
+                  />
+                  <InputField
+                    label="User Name"
+                    name="userName"
+                    value={values.userName}
+                    disabled
+                  />
+                  <InputField
+                    label="Contact"
+                    name="contact"
+                    value={values.contact}
+                    disabled
+                  />
                   <InputField
                     label="Account Holder Name"
                     name="accountHolderName"
@@ -281,11 +389,90 @@ export default function EditWalletPage() {
                   />
                 </div>
 
-                {/* Aadhaar & PAN */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-0">
+                {/* PAN Section */}
+                <div className="mt-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xl max-md:text-[1rem] font-semibold">
+                      PAN Details
+                    </p>
+                    {panVerified && (
+                      <RiVerifiedBadgeFill className="text-green-600 text-2xl" />
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mt-2">
+                    <InputField
+                      label="PAN Number"
+                      name="panNumber"
+                      value={values.panNumber}
+                      onChange={(e) =>
+                        setFieldValue("panNumber", e.target.value)
+                      }
+                      onBlur={handleBlur}
+                      error={touched.panNumber ? errors.panNumber : ""}
+                    />
+                    <InputField
+                      label="Name as in PAN"
+                      name="panName"
+                      value={values.panName}
+                      onChange={(e) => setFieldValue("panName", e.target.value)}
+                      onBlur={handleBlur}
+                      error={touched.panName ? errors.panName : ""}
+                    />
+                    <InputField
+                      label="Date of Birth as in PAN"
+                      type="date"
+                      name="panDob"
+                      value={values.panDob}
+                      className="uppercase"
+                      onChange={(e) => setFieldValue("panDob", e.target.value)}
+                      onBlur={handleBlur}
+                      error={touched.panDob ? errors.panDob : ""}
+                    />
+                    <FileInput
+                      label="Upload PAN"
+                      name="panFile"
+                      value={values.panFile}
+                      onChange={(e) =>
+                        setFieldValue(
+                          "panFile",
+                          e.currentTarget.files?.[0] || values.panFile
+                        )
+                      }
+                      onBlur={handleBlur}
+                      error={touched.panFile ? errors.panFile : ""}
+                    />
+                    <div className="max-md:hidden "></div>
+
+                    <div className="flex items-center gap-2 mt-2 ml-auto">
+                      <button
+                        type="button"
+                        disabled={verifying}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer ${
+                          verifying
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-yellow-400 hover:bg-yellow-300 text-black"
+                        }`}
+                        onClick={() =>
+                          verifyPanDetails(
+                            values.panNumber,
+                            values.panName,
+                            values.panDob,
+                            setFieldValue
+                          )
+                        }
+                      >
+                        {verifying ? "Verifying..." : "Verify PAN"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aadhaar */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
                   <InputField
                     label="Aadhar Number"
                     name="aadharNumber"
+                    required
                     value={values.aadharNumber}
                     onChange={(e) =>
                       setFieldValue("aadharNumber", e.target.value)
@@ -296,6 +483,7 @@ export default function EditWalletPage() {
                   <FileInput
                     label="Upload Aadhar"
                     name="aadharFile"
+                    required
                     value={values.aadharFile}
                     onChange={(e) =>
                       setFieldValue(
@@ -308,32 +496,9 @@ export default function EditWalletPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-0 lg:-mt-3">
-                  <InputField
-                    label="PAN Number"
-                    name="panNumber"
-                    value={values.panNumber}
-                    onChange={(e) => setFieldValue("panNumber", e.target.value)}
-                    onBlur={handleBlur}
-                    error={touched.panNumber ? errors.panNumber : ""}
-                  />
-                  <FileInput
-                    label="Upload PAN"
-                    name="panFile"
-                    value={values.panFile}
-                    onChange={(e) =>
-                      setFieldValue("panFile", e.currentTarget.files?.[0] || null)
-                    }
-                    onBlur={handleBlur}
-                    error={touched.panFile ? errors.panFile : ""}
-                  />
-                </div>
-
                 {/* Submit */}
-                <div className="flex justify-end">
-                  <SubmitButton type="submit">
-                    {loading ? "Updating..." : "Update"}
-                  </SubmitButton>
+                <div className="flex justify-end mt-6">
+                  <SubmitButton type="submit">UPDATE</SubmitButton>
                 </div>
               </Form>
             )}
