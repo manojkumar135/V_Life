@@ -1,84 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useFormik } from "formik";
+import * as Yup from "yup";
+import Select from "react-select";
+import axios from "axios";
 import { FiMail } from "react-icons/fi";
 import { FaUser, FaPhone, FaUsers } from "react-icons/fa";
 import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
-import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
-import { useFormik } from "formik";
-import * as Yup from "yup";
-import Select from "react-select";
-import { useRouter } from "next/navigation";
-import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import customSelectStyles from "@/components/common/CustomSelectStyles";
 import TermsModal from "@/components/TermsModal/terms";
+import customSelectStyles from "@/components/common/CustomSelectStyles";
+
+export const dynamic = "force-dynamic";
 
 const teams = [
   { value: "left", label: "Left" },
   { value: "right", label: "Right" },
 ];
 
-export default function RegisterPage() {
+function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   const router = useRouter();
   const params = useSearchParams();
-
-  useEffect(() => {
-    const referBy = params.get("referBy");
-    const position = params.get("position");
-    const parent = params.get("parent");
-
-    if (referBy) formik.setFieldValue("referBy", referBy);
-    if (position) formik.setFieldValue("team", position);
-    if (parent) formik.setFieldValue("parent", parent);
-  }, [params]);
-
-
-
-  const validationSchema = Yup.object({
-    user_name: Yup.string()
-      .required("* Full Name is required")
-      .min(2, "* Name must be at least 2 characters"),
-    mail: Yup.string()
-      .email("* Invalid email format")
-      .required("* Email is required"),
-    contact: Yup.string()
-      .required("* Contact is required")
-      .matches(/^[0-9]{10}$/, "* Contact must be a 10-digit number"),
-    dob: Yup.date()
-      .required("* Date of Birth is required")
-      .max(new Date(), "* Date of Birth cannot be in the future")
-      .test("age", "* You must be at least 18 years old", function (value) {
-        if (!value) return false;
-        const today = new Date();
-        const birthDate = new Date(value);
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        const dayDiff = today.getDate() - birthDate.getDate();
-
-        if (
-          age > 18 ||
-          (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
-        ) {
-          return true;
-        }
-        return false;
-      }),
-    referBy: Yup.string().required("* Referral ID is required"),
-    team: Yup.string().required("* Team is required"),
-    // terms: Yup.boolean().oneOf(
-    //   [true],
-    //   "You cannot proceed without accepting the Terms and Conditions."
-    // ),
-  });
 
   const formik = useFormik({
     initialValues: {
@@ -93,12 +44,38 @@ export default function RegisterPage() {
       parent: "",
       terms: false,
     },
-    validationSchema,
+    validationSchema: Yup.object({
+      user_name: Yup.string()
+        .required("* Full Name is required")
+        .min(2, "* Name must be at least 2 characters"),
+      mail: Yup.string()
+        .email("* Invalid email format")
+        .required("* Email is required"),
+      contact: Yup.string()
+        .required("* Contact is required")
+        .matches(/^[0-9]{10}$/, "* Contact must be a 10-digit number"),
+      dob: Yup.date()
+        .required("* Date of Birth is required")
+        .max(new Date(), "* Date of Birth cannot be in the future")
+        .test("age", "* You must be at least 18 years old", function (value) {
+          if (!value) return false;
+          const today = new Date();
+          const birthDate = new Date(value);
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const monthDiff = today.getMonth() - birthDate.getMonth();
+          const dayDiff = today.getDate() - birthDate.getDate();
+          return (
+            age > 18 ||
+            (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
+          );
+        }),
+      referBy: Yup.string().required("* Referral ID is required"),
+      team: Yup.string().required("* Team is required"),
+    }),
     onSubmit: async (values) => {
       setLoading(true);
       try {
         const res = await axios.post("/api/users-operations", values);
-
         if (res.data.success) {
           ShowToast.success("Registration successful!");
           router.push("/auth/login");
@@ -115,11 +92,17 @@ export default function RegisterPage() {
     },
   });
 
-  const handleNavigateToLogin = () => {
-    router.push("/auth/login");
-  };
+  useEffect(() => {
+    const referBy = params.get("referBy");
+    const position = params.get("position");
+    const parent = params.get("parent");
 
-  // console.log(formik.values)
+    if (referBy) formik.setFieldValue("referBy", referBy);
+    if (position) formik.setFieldValue("team", position);
+    if (parent) formik.setFieldValue("parent", parent);
+  }, [params]);
+
+  const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
     <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
@@ -135,7 +118,7 @@ export default function RegisterPage() {
           className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 max-md:py-4 px-8 bg-[#fffff0]
          rounded-3xl shadow-lg border-gray-200 border xl:h-[90%] max-md:h-[80%]"
         >
-          <p className="text-[1.5rem] max-md:text-[1.5rem] max-lg:text-[1.2rem] font-bold text-black xl:mb-3 mb-5">
+          <p className="text-[1.5rem] font-bold text-black xl:mb-3 mb-5">
             SIGN UP
           </p>
 
@@ -164,9 +147,7 @@ export default function RegisterPage() {
             {/* DOB */}
             <div className="flex flex-col">
               <div className="relative">
-                {/* Calendar icon */}
                 <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none" />
-
                 <input
                   type="date"
                   id="dob"
@@ -176,20 +157,8 @@ export default function RegisterPage() {
                   onBlur={formik.handleBlur}
                   min="1900-01-01"
                   max={new Date().toISOString().split("T")[0]}
-                  required
-                  className="peer w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 
-                 focus:outline-none focus:ring-2 focus:ring-gray-200
-                 [appearance:none] 
-                 [&::-webkit-calendar-picker-indicator]:absolute 
-                 [&::-webkit-calendar-picker-indicator]:inset-0 
-                 [&::-webkit-calendar-picker-indicator]:w-full 
-                 [&::-webkit-calendar-picker-indicator]:h-full 
-                 [&::-webkit-calendar-picker-indicator]:cursor-pointer 
-                 [&::-webkit-calendar-picker-indicator]:opacity-0 
-                 [&::-webkit-calendar-picker-indicator]:pointer-events-auto"
+                  className="peer w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
                 />
-
-                {/* Show "Date of Birth" when empty */}
                 {!formik.values.dob && (
                   <label
                     htmlFor="dob"
@@ -199,8 +168,6 @@ export default function RegisterPage() {
                   </label>
                 )}
               </div>
-
-              {/* Error message */}
               <span className="text-red-500 text-xs mt-1 h-4 block">
                 {formik.touched.dob && formik.errors.dob
                   ? formik.errors.dob
@@ -285,7 +252,7 @@ export default function RegisterPage() {
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
                   placeholder="Select Position"
-                  className="w-full "
+                  className="w-full"
                 />
               </div>
               <span className="text-red-500 text-xs mt-1 h-4 block">
@@ -295,33 +262,15 @@ export default function RegisterPage() {
               </span>
             </div>
 
-            {/* Terms and Conditions */}
+            {/* Terms */}
             <div className="flex items-center space-x-2 mt-0 max-md:mt-5">
               <input
                 type="checkbox"
                 name="terms"
                 checked={formik.values.terms}
                 onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                className="
-  h-4 w-4
-  border border-gray-400 rounded
-  bg-white
-  appearance-none
-  checked:bg-yellow-500
-  checked:border-yellow-500
-  relative
-  checked:before:content-['✔']
-  checked:before:absolute
-  checked:before:top-[1px]      /* ✅ move up */
-  checked:before:left-1/2
-  checked:before:-translate-x-1/2
-  checked:before:text-[0.75rem] /* smaller tick */
-  checked:before:leading-none
-  checked:before:text-black
-"
+                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none checked:bg-yellow-500 checked:border-yellow-500 relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:leading-none checked:before:text-black"
               />
-
               <label htmlFor="terms" className="text-sm text-gray-700">
                 I agree to the{" "}
                 <span
@@ -332,34 +281,26 @@ export default function RegisterPage() {
                 </span>
               </label>
             </div>
-            {/* <span className="text-red-500 text-xs mt-1 h-4 block">
-              {formik.touched.terms && formik.errors.terms
-                ? formik.errors.terms
-                : "\u00A0"}
-            </span> */}
 
             {/* Register Button */}
             <button
               type="submit"
               disabled={
-                loading ||
-                !formik.isValid ||
-                !formik.dirty ||
-                !formik.values.terms
+                loading || !formik.isValid || !formik.dirty || !formik.values.terms
               }
-              className={`w-full py-1 mt-1 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
-    ${
-      loading || !formik.isValid || !formik.dirty || !formik.values.terms
-        ? "bg-gray-400 text-white cursor-not-allowed"
-        : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
-    }`}
+              className={`w-full py-1 mt-1 font-semibold rounded-md transition-colors text-[1.2rem] 
+                ${
+                  loading || !formik.isValid || !formik.dirty || !formik.values.terms
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+                }`}
             >
               Register
             </button>
 
-            {/* Login prompt */}
-            <div className="text-center text-sm text-black mt-1 max-md:!mt-2 leading-tight">
-              Already have an account ?{" "}
+            {/* Login */}
+            <div className="text-center text-sm text-black mt-1">
+              Already have an account?{" "}
               <span
                 onClick={handleNavigateToLogin}
                 className="inline-flex items-center text-blue-600 font-medium cursor-pointer"
@@ -383,5 +324,13 @@ export default function RegisterPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen text-lg font-semibold">Loading registration form...</div>}>
+      <RegisterContent />
+    </Suspense>
   );
 }

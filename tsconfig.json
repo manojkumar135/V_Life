@@ -22,6 +22,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/common/sidenav", "app/api/getFileUrl/route.ts", "models/tree.js"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/common/sidenav", "app/api/getFileUrl/route.ts", "models/tree.js","global.d.ts"],
   "exclude": ["node_modules"]
 }
