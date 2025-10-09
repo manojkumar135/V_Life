@@ -5,6 +5,8 @@ import { FiMail } from "react-icons/fi";
 import { FaUser, FaPhone, FaUsers } from "react-icons/fa";
 import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 import { useFormik } from "formik";
 import * as Yup from "yup";
@@ -27,6 +29,19 @@ export default function RegisterPage() {
   const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   const router = useRouter();
+  const params = useSearchParams();
+
+  useEffect(() => {
+    const referBy = params.get("referBy");
+    const position = params.get("position");
+    const parent = params.get("parent");
+
+    if (referBy) formik.setFieldValue("referBy", referBy);
+    if (position) formik.setFieldValue("team", position);
+    if (parent) formik.setFieldValue("parent", parent);
+  }, [params]);
+
+
 
   const validationSchema = Yup.object({
     user_name: Yup.string()
@@ -75,6 +90,7 @@ export default function RegisterPage() {
       referBy: "",
       role: "user",
       team: "",
+      parent: "",
       terms: false,
     },
     validationSchema,
@@ -102,6 +118,8 @@ export default function RegisterPage() {
   const handleNavigateToLogin = () => {
     router.push("/auth/login");
   };
+
+  // console.log(formik.values)
 
   return (
     <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
@@ -331,7 +349,7 @@ export default function RegisterPage() {
               }
               className={`w-full py-1 mt-1 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
     ${
-      loading || !formik.isValid || !formik.dirty|| !formik.values.terms
+      loading || !formik.isValid || !formik.dirty || !formik.values.terms
         ? "bg-gray-400 text-white cursor-not-allowed"
         : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
     }`}

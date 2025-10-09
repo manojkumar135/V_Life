@@ -6,7 +6,7 @@ import SideNav from "@/components/common/sidenav";
 import Header from "@/components/common/header";
 import Loader from "@/components/common/loader";
 import { Toaster } from "sonner";
-import "@/components/common/Toast/toastStyles.css";
+// import "@/components/common/Toast/toastStyles.css";
 // import { VLifeContextProvider } from "@/store/context";
 import RefreshHandler from "@/components/RefreshHandler";
 

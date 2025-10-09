@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaUserCircle } from "react-icons/fa";
 import { useVLife } from "@/store/context";
+import { useRouter } from "next/navigation"; // ⬅️ Add at top
 
 export interface TreeNode {
   user_id: string;
@@ -36,6 +37,12 @@ const BinaryTreeNode: React.FC<Props> = ({
 }) => {
   // console.log(node);
   const { user } = useVLife();
+  const router = useRouter();
+
+ const handleEmptyClick = (side: "left" | "right") => {
+  router.push(`/auth/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`);
+};
+
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({
     top: 0,
     left: 0,
@@ -226,8 +233,14 @@ const BinaryTreeNode: React.FC<Props> = ({
                   maxLevel={maxLevel}
                 />
               ) : (
-                <div className="w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1">
+                <div
+                  onClick={() => handleEmptyClick("left")}
+                  className="relative group w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1 cursor-pointer hover:bg-gray-100 transition"
+                >
                   Empty
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    Add 
+                  </span>
                 </div>
               )}
             </div>
@@ -243,8 +256,14 @@ const BinaryTreeNode: React.FC<Props> = ({
                   maxLevel={maxLevel}
                 />
               ) : (
-                <div className="w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1">
+                <div
+                  onClick={() => handleEmptyClick("right")}
+                  className="relative group w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1 cursor-pointer hover:bg-gray-100 transition"
+                >
                   Empty
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    Add
+                  </span>
                 </div>
               )}
             </div>

@@ -162,28 +162,36 @@ async function findAvailablePlacement(
 
 async function createTreeNode(
   user: any,
-  referrerId?: string,
+  parentId?: string, // explicit parent
+  referrerId?: string, // fallback for automatic placement
   team: "left" | "right" = "right"
 ) {
-  const { parent, side } = await findAvailablePlacement(referrerId || "", team);
+  let parentNode: any = null;
+  let side: "left" | "right" = team;
 
-  if (!parent) {
-    return TreeNode.create({
-      user_id: user.user_id,
-      name: user.user_name,
-      status: user.user_status || "active",
-      contact: user.contact || "",
-      mail: user.mail || "",
-      address: user.address || "",
-      parent: null,
-      left: null,
-      right: null,
-      referrals: [],
-      referral_count: 0,
-      refer_by: referrerId,
-    });
+  if (parentId) {
+    // Use the explicit parent
+    parentNode = await TreeNode.findOne({ user_id: parentId });
+    if (!parentNode) throw new Error("Specified parent not found in tree");
+
+    if (parentNode[team]) {
+      throw new Error(
+        `Parent already has a user on the ${team} side. Choose another side.`
+      );
+    }
+  } else if (referrerId) {
+    // No explicit parent → find placement under referBy
+    const placement = await findAvailablePlacement(referrerId, team);
+    parentNode = placement.parent;
+    side = placement.side;
+  } else {
+    // No parent and no referBy → auto placement
+    const placement = await findAvailablePlacement("", team);
+    parentNode = placement.parent;
+    side = placement.side;
   }
 
+  // Create tree node
   const newNode = await TreeNode.create({
     user_id: user.user_id,
     name: user.user_name,
@@ -191,24 +199,19 @@ async function createTreeNode(
     contact: user.contact || "",
     mail: user.mail || "",
     address: user.address || "",
-    parent: parent.user_id,
+    parent: parentNode ? parentNode.user_id : null,
     left: null,
     right: null,
     referrals: [],
     referral_count: 0,
-    refer_by: referrerId,
+    refer_by: referrerId || null,
   });
 
-  // ✅ TS knows `side` is "left" | "right"
-  await TreeNode.updateOne(
-    { user_id: parent.user_id },
-    { $set: { [side]: user.user_id } }
-  );
-
-  if (referrerId) {
+  // Update parent's team side
+  if (parentNode) {
     await TreeNode.updateOne(
-      { user_id: referrerId },
-      { $push: { referrals: user.user_id }, $inc: { referral_count: 1 } }
+      { user_id: parentNode.user_id },
+      { $set: { [side]: user.user_id } }
     );
   }
 
@@ -232,6 +235,7 @@ export async function createUserAndLogin(body: any) {
     locality,
     referBy,
     team,
+    parent, // explicit parent
   } = body;
 
   const existingUser = await User.findOne({ $or: [{ mail }, { contact }] });
@@ -271,19 +275,8 @@ export async function createUserAndLogin(body: any) {
     status: "Active",
   });
 
-  if (referBy) {
-    await createTreeNode(newUser, referBy, team as "left" | "right");
-  } else {
-    await TreeNode.create({
-      user_id,
-      name: user_name,
-      parent: null,
-      left: null,
-      right: null,
-      referrals: [],
-      referral_count: 0,
-    });
-  }
+  // Tree logic: prefer explicit parent, else referBy
+  await createTreeNode(newUser, parent, referBy, team as "left" | "right");
 
   await sendWelcomeEmail(mail, user_name, user_id, contact);
 

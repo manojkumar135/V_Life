@@ -47,7 +47,9 @@ export async function GET(req: Request) {
     }
 
     // 1️⃣ Fetch root user with infinity_users
-    const rootUser = await User.findOne({ user_id: rootId }).lean<UserType | null>();
+    const rootUser = await User.findOne({
+      user_id: rootId,
+    }).lean<UserType | null>();
     if (!rootUser?.infinity_users || rootUser.infinity_users.length === 0) {
       return NextResponse.json({ data: [], total: 0 });
     }
@@ -59,11 +61,15 @@ export async function GET(req: Request) {
 
     // 3️⃣ Process infinity levels
     const results: (UserType & { level: number; team: string })[] = [];
+    const seenUserIds = new Set<string>();
 
     for (const levelObj of rootUser.infinity_users) {
       const { level, users } = levelObj;
 
       for (const uid of users) {
+        if (seenUserIds.has(uid)) continue; // skip duplicates
+        seenUserIds.add(uid);
+
         const userData = await User.findOne({ user_id: uid }).lean<UserType>();
         if (!userData) continue;
 

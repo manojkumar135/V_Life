@@ -29,7 +29,7 @@ export function authMiddleware(req: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
 
   // 1️⃣ User has tokens → prevent access to login/register pages
-  if ((accessToken || refreshToken) && pathname.startsWith("/auth")) {
+  if ((accessToken || refreshToken) && pathname.startsWith("/auth/login")) {
     url.pathname = "/dashboard"; // 👈 default redirect for logged-in users
     return NextResponse.redirect(url);
   }
