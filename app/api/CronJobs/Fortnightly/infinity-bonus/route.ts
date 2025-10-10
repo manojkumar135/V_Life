@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
-import { runMatchingBonus } from "./logic";
+import { runInfinityBonus } from "./logic";
 
 // ✅ API endpoint for manual or cron trigger
 export async function GET() {
   try {
-    await runMatchingBonus();
-    return NextResponse.json({ success: true, message: "Matching bonus executed" });
+    await runInfinityBonus();
+    return NextResponse.json({ success: true, message: "Infinity bonus executed" });
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
   }
 }
-
-
