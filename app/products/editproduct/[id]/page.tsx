@@ -216,7 +216,7 @@ export default function EditProductPage() {
           >
             {({ values, setFieldValue, errors, touched, handleBlur }) => (
               <Form className="grid grid-cols-1 gap-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   <InputField
                     label="Product ID"
                     name="productId"

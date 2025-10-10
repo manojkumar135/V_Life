@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import TreeNode from "@/models/tree";
+import { History } from "@/models/history";
 
 // ----------------- Types -----------------
 export interface InfinityLevel {
@@ -72,6 +73,16 @@ export async function GET(req: Request) {
 
         const userData = await User.findOne({ user_id: uid }).lean<UserType>();
         if (!userData) continue;
+
+        // ✅ Check if user has paid advance (amount >= 10000 and status Completed)
+        const advanceHistory = await History.findOne({
+          user_id: uid,
+          advance: true,
+          amount: { $gte: 10000 },
+          status: "Completed",
+        });
+
+        if (!advanceHistory) continue; // skip if user hasn't paid advance
 
         // Determine team (left/right/unknown) using tree structure
         let team: "left" | "right" | "unknown" = "unknown";

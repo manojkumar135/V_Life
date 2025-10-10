@@ -5,6 +5,7 @@ import { DailyPayout } from "@/models/payout";
 import TreeNode from "@/models/tree";
 import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 
 function formatDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, "0");
@@ -192,6 +193,14 @@ export async function runMatchingBonus() {
       // console.log("Match eligible:", match);
 
       if (match) {
+        // ✅ Check if user is active
+        const node = await TreeNode.findOne({ user_id: u.user_id });
+        if (!node || node.user_status !== "active") continue;
+
+        // ✅ Check if user has paid advance ≥ 10000
+        const advancePaid = await hasAdvancePaid(u.user_id, 10000);
+        if (!advancePaid) continue;
+
         const now = new Date();
         const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
 

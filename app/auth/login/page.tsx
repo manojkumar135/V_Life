@@ -97,7 +97,7 @@ export default function LoginPage() {
     <>
       {/* <Toaster position="top-right" richColors closeButton /> */}
 
-      <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
+      <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0] -pt-20">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  backdrop-blur-sm">
             <Loader />

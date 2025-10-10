@@ -11,7 +11,7 @@ import { useVLife } from "@/store/context";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { useRouter } from "next/navigation";
 import { IoRemove, IoAdd, IoTrashOutline } from "react-icons/io5";
-import Loader from "@/components/common/loader"
+import Loader from "@/components/common/loader";
 
 // Define CartItem interface
 interface CartItem {
@@ -104,7 +104,7 @@ export default function OrderFormCartSection({
 
   const handlePlaceOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
-      setLoading(true);
+    setLoading(true);
 
     try {
       if (activeTab === "customer") {
@@ -214,11 +214,11 @@ export default function OrderFormCartSection({
 
   return (
     <div className="relative">
-       {loading && (
-              <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                <Loader />
-              </div>
-            )}
+      {loading && (
+        <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
       <div
         className={`rounded-xl p-4 max-lg:p-3 bg-white ${
           showPayment ? "opacity-30 pointer-events-none" : ""
@@ -480,7 +480,7 @@ export default function OrderFormCartSection({
 
         {/* Customer Info */}
         {activeTab === "customer" && (
-          <form className="space-y-4">
+          <form className="space-y-4 max-lg:px-3">
             <InputField
               label="Customer Name"
               name="customerName"

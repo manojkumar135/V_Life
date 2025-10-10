@@ -4,6 +4,8 @@ import React from "react";
 import Layout from "@/layout/Layout";
 import { Wallet, Banknote, Shuffle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { FaGift } from "react-icons/fa6";
+
 
 const page = () => {
   const router = useRouter();
@@ -28,6 +30,14 @@ const page = () => {
           >
             <Banknote size={32} />
             <span className="mt-2 text-lg font-semibold">Payout</span>
+          </div>
+          {/* Rewards Card */}
+          <div
+            onClick={() => router.push("/wallet/payout/rewards")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <FaGift size={32} />
+            <span className="mt-2 text-lg font-semibold">Rewards</span>
           </div>
 
           {/* Convert Card */}

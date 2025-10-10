@@ -29,40 +29,42 @@ export default function SideNav({
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
- const menuItems = [
-  {
-    href: "/dashboard",
-    icon: <LuLayoutDashboard />,
-    label: "Dashboard",
-    match: ["dashboard"],
-  },
-  {
-    href: user?.role === "superadmin" ? "/administration" : "/administration/users",
-    icon: <IoPeople />,
-    label: "Administration",
-    match: ["administration"],
-  },
-  { href: "/wallet", icon: <FaWallet />, label: "Wallet", match: ["wallet"] },
-  {
-    href: "/orders",
-    icon: <FaBoxesPacking />,
-    label: "Orders",
-    match: ["orders", "products"], // 👈 include both
-  },
-  {
-    href: "/historys",
-    icon: <FaHistory />,
-    label: "History",
-    match: ["history"],
-  },
-  {
-    href: "/settings",
-    icon: <IoSettings />,
-    label: "Settings",
-    match: ["settings"],
-  },
-];
-
+  const menuItems = [
+    {
+      href: "/dashboard",
+      icon: <LuLayoutDashboard />,
+      label: "Dashboard",
+      match: ["dashboard"],
+    },
+    {
+      href:
+        user?.role === "superadmin"
+          ? "/administration"
+          : "/administration/users",
+      icon: <IoPeople />,
+      label: "Administration",
+      match: ["administration"],
+    },
+    { href: "/wallet", icon: <FaWallet />, label: "Wallet", match: ["wallet"] },
+    {
+      href: "/orders",
+      icon: <FaBoxesPacking />,
+      label: "Orders",
+      match: ["orders", "products"], // 👈 include both
+    },
+    {
+      href: "/historys",
+      icon: <FaHistory />,
+      label: "History",
+      match: ["history"],
+    },
+    {
+      href: "/settings",
+      icon: <IoSettings />,
+      label: "Settings",
+      match: ["settings"],
+    },
+  ];
 
   const handleNavigation = (path: string) => {
     router.push(path);
@@ -94,13 +96,12 @@ export default function SideNav({
       >
         {/* Logo */}
         <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">
-          <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden flex items-center justify-center">
+          <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden relative">
             <Image
-              src={Images.LogoImage}
+              src={Images.Maverick}
               alt="logo"
-              width={48}
-              height={48}
-              className="object-contain"
+              fill
+              className="object-cover rounded-full"
             />
           </div>
         </div>
@@ -108,7 +109,7 @@ export default function SideNav({
         {/* Menu Items */}
         <div className="flex flex-col items-center gap-2 flex-grow w-full mt-4">
           {menuItems.map((item, index) => {
-const isActive = item.match.some((m) => pathname.includes(m));
+            const isActive = item.match.some((m) => pathname.includes(m));
             return (
               <div key={index} className="relative group">
                 <button
@@ -184,7 +185,7 @@ const isActive = item.match.some((m) => pathname.includes(m));
         {/* Logo */}
         <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center">
           <Image
-            src={Images.LogoImage}
+            src={Images.Maverick}
             alt="logo"
             width={64}
             height={64}
@@ -195,7 +196,7 @@ const isActive = item.match.some((m) => pathname.includes(m));
         {/* Menu Items */}
         <div className="flex flex-col space-y-3 w-[110%]">
           {menuItems.map((item, index) => {
-const isActive = item.match.some((m) => pathname.includes(m));
+            const isActive = item.match.some((m) => pathname.includes(m));
             return (
               <button
                 key={index}
