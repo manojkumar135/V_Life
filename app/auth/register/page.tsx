@@ -80,6 +80,7 @@ function RegisterContent() {
       setLoading(true);
       try {
         const res = await axios.post("/api/users-operations", values);
+        console.log(res);
         if (res.data.success) {
           ShowToast.success("Registration successful!");
           router.push("/auth/login");
@@ -148,40 +149,45 @@ function RegisterContent() {
               </span>
             </div>
 
-          {/* DOB with DatePicker */}
-<div className="flex flex-col w-full">
-  <div className="relative w-full">
-    <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
-    <DatePicker
-      selected={formik.values.dob ? new Date(formik.values.dob) : null}
-      onChange={(date: Date | null) => {
-        formik.setFieldValue(
-          "dob",
-          date ? date.toISOString().split("T")[0] : ""
-        );
-      }}
-      onBlur={() => {
-        formik.setFieldTouched("dob", true);
-        if (!formik.values.dob) {
-          formik.setFieldError("dob", "* Date of Birth is required");
-        }
-      }}
-      dateFormat="dd-MM-yyyy"
-      placeholderText="Date of Birth"
-      maxDate={new Date()}
-      className={`w-full pl-10 pr-4 py-1 rounded-md border ${
-        formik.touched.dob && formik.errors.dob
-          ? "border-red-500"
-          : "border-gray-400"
-      } focus:outline-none focus:ring-2 focus:ring-gray-200`}
-    />
-  </div>
-  <span className="text-red-500 text-xs mt-1 h-4 block">
-    {formik.touched.dob && formik.errors.dob
-      ? formik.errors.dob
-      : "\u00A0"}
-  </span>
-</div>
+            {/* DOB with DatePicker */}
+            <div className="flex flex-col w-full">
+              <div className="relative w-full">
+                <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
+                <DatePicker
+                  selected={
+                    formik.values.dob ? new Date(formik.values.dob) : null
+                  }
+                  onChange={(date: Date | null) => {
+                    formik.setFieldValue(
+                      "dob",
+                      date ? date.toISOString().split("T")[0] : ""
+                    );
+                  }}
+                  onBlur={() => {
+                    formik.setFieldTouched("dob", true);
+                    if (!formik.values.dob) {
+                      formik.setFieldError(
+                        "dob",
+                        "* Date of Birth is required"
+                      );
+                    }
+                  }}
+                  dateFormat="dd-MM-yyyy"
+                  placeholderText="Date of Birth"
+                  maxDate={new Date()}
+                  className={`w-full pl-10 pr-4 py-1 rounded-md border ${
+                    formik.touched.dob && formik.errors.dob
+                      ? "border-red-500"
+                      : "border-gray-400"
+                  } focus:outline-none focus:ring-2 focus:ring-gray-200`}
+                />
+              </div>
+              <span className="text-red-500 text-xs mt-1 h-4 block">
+                {formik.touched.dob && formik.errors.dob
+                  ? formik.errors.dob
+                  : "\u00A0"}
+              </span>
+            </div>
 
             {/* Email */}
             <div className="flex flex-col">
@@ -253,9 +259,14 @@ function RegisterContent() {
                 <Select
                   options={teams}
                   name="team"
-                  value={teams.find((t) => t.value === formik.values.team)}
+                  value={
+                    teams.find((t) => t.value === formik.values.team) || null
+                  }
                   onChange={(selectedOption: any) =>
-                    formik.setFieldValue("team", selectedOption?.value || "")
+                    formik.setFieldValue(
+                      "team",
+                      selectedOption ? selectedOption.value : ""
+                    )
                   }
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
@@ -277,7 +288,8 @@ function RegisterContent() {
                 name="terms"
                 checked={formik.values.terms}
                 onChange={formik.handleChange}
-                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none checked:bg-yellow-500 checked:border-yellow-500 relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:leading-none checked:before:text-black"
+                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer
+                 checked:bg-yellow-500 checked:border-yellow-500 relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:leading-none checked:before:text-black"
               />
               <label htmlFor="terms" className="text-sm text-gray-700">
                 I agree to the{" "}
@@ -294,11 +306,17 @@ function RegisterContent() {
             <button
               type="submit"
               disabled={
-                loading || !formik.isValid || !formik.dirty || !formik.values.terms
+                loading ||
+                !formik.isValid ||
+                !formik.dirty ||
+                !formik.values.terms
               }
               className={`w-full py-1 mt-1 font-semibold rounded-md transition-colors text-[1.2rem] 
                 ${
-                  loading || !formik.isValid || !formik.dirty || !formik.values.terms
+                  loading ||
+                  !formik.isValid ||
+                  !formik.dirty ||
+                  !formik.values.terms
                     ? "bg-gray-400 text-white cursor-not-allowed"
                     : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
                 }`}
@@ -337,7 +355,13 @@ function RegisterContent() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen text-lg font-semibold">Loading registration form...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen text-lg font-semibold">
+          Loading registration form...
+        </div>
+      }
+    >
       <RegisterContent />
     </Suspense>
   );

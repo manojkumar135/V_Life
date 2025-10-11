@@ -215,6 +215,17 @@ async function createTreeNode(
     );
   }
 
+  // ✅ Update referrals and referral_count in TreeNode for referrerId
+  if (referrerId) {
+    await TreeNode.updateOne(
+      { user_id: referrerId },
+      {
+        $push: { referrals: user.user_id },
+        $inc: { referral_count: 1 },
+      }
+    );
+  }
+
   return newNode;
 }
 
@@ -278,8 +289,12 @@ export async function createUserAndLogin(body: any) {
   // Tree logic: prefer explicit parent, else referBy
   await createTreeNode(newUser, parent, referBy, team as "left" | "right");
 
-  await sendWelcomeEmail(mail, user_name, user_id, contact);
-
+  try {
+    await sendWelcomeEmail(mail, user_name, user_id, contact);
+  } catch (err) {
+    console.error("Email send failed:", err);
+    // Optionally, continue without failing registration
+  }
   if (referBy) {
     await User.updateOne(
       { user_id: referBy },

@@ -47,7 +47,17 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <HiOutlineMenuAlt2 size={30} className="text-gray-800 " />
         </button>
         <h1 className="text-[1.5rem] max-md:text-[1rem] font-semibold text-gray-800 truncate max-w-[400px] max-md:max-w-[150px]">
-          Hello, {user?.user_name || "User"}
+          Hello,{" "}
+          <span>
+            {user?.user_name
+              ? user.user_name
+                  .split(" ")
+                  .map(
+                    (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+                  )
+                  .join(" ")
+              : "User"}
+          </span>
         </h1>
       </div>
 

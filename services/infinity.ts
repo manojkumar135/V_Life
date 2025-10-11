@@ -1,20 +1,18 @@
 import { User } from "@/models/user";
 
 /**
- * ➕ Add referral to a user's Infinity team at a given level
- * and update the referral’s `infinity` sponsor field.
+ * Add referral to a user's Infinity team at a given level
+ * Also updates the referral's `infinity` field to point to the owner.
  */
 export async function addToInfinityTeam(
   userId: string,
   newReferralId: string,
   level = 1
 ) {
-  if (!userId || !newReferralId) return;
-
+  if (!userId) return;
   const user = await User.findOne({ user_id: userId });
   if (!user) return;
 
-  // Find if this level already exists in the Infinity structure
   const existingLevel = user.infinity_users.find(
     (lvl: { level: number; users: string[] }) => lvl.level === level
   );
@@ -32,20 +30,16 @@ export async function addToInfinityTeam(
   // 🧠 Update the added referral’s own Infinity sponsor field
   const referral = await User.findOne({ user_id: newReferralId });
   if (referral) {
-    referral.infinity = userId; // means newReferralId is under userId's Infinity
+    referral.infinity = userId; // B's infinity is A
     await referral.save();
   }
-
-  // 🔁 Also ensure the new referral's own Infinity team stays updated
-  await updateInfinityTeam(newReferralId);
 }
 
 /**
- * ♻️ Recursive logic:
- * For each odd referral → take its even children → place in owner's next Infinity level.
+ * Recursive logic: process odd referrals → take their even children → place in Infinity team
  */
 export async function processInfinityLevels(
-  ownerId: string, // the Infinity team owner (the base user)
+  ownerId: string, // the Infinity team owner (the base user, e.g. B)
   currentId: string, // the odd referral we’re checking
   level: number // current Infinity level
 ) {
@@ -57,45 +51,40 @@ export async function processInfinityLevels(
   )
     return;
 
-  // Even referrals of this odd referral go to owner's next level
+  // Even referrals of this odd go to owner's next level
   for (let i = 0; i < current.referred_users.length; i++) {
     const childId = current.referred_users[i];
 
     if ((i + 1) % 2 === 0) {
       await addToInfinityTeam(ownerId, childId, level);
 
-      // Recursively process even's even children → deeper levels
+      // Recursive: even’s even referrals → deeper level
       await processInfinityLevels(ownerId, childId, level + 1);
     }
   }
 }
 
 /**
- * 🏗️ Build / Update Infinity Team for a given user
- * Ensures all infinity relationships and levels are reconstructed properly.
+ * Build Infinity Team for a given user
  */
 export async function updateInfinityTeam(userId: string) {
   const user = await User.findOne({ user_id: userId });
-  if (!user) return;
+  if (!user || !user.referred_users || user.referred_users.length === 0) return;
 
   // Reset infinity structure
   user.infinity_users = [];
   await user.save();
 
-  // No referrals → nothing to process
-  if (!user.referred_users || user.referred_users.length === 0) return;
-
-  // 🚨 No sponsor (root user)
   if (!user.referBy) {
-    // All referrals go directly to this user's Level 1
+    // 🚨 No sponsor → ALL referrals go to this user’s Level 1
     for (const childId of user.referred_users) {
       await addToInfinityTeam(userId, childId, 1);
 
-      // Recursively process deeper levels
+      // still process deeper levels
       await processInfinityLevels(userId, childId, 2);
     }
   } else {
-    // ✅ Has sponsor → odd/even split logic
+    // ✅ Has sponsor → odd/even split
     for (let i = 0; i < user.referred_users.length; i++) {
       const childId = user.referred_users[i];
 
@@ -109,17 +98,13 @@ export async function updateInfinityTeam(userId: string) {
       }
     }
   }
-
-  // 🪜 After building user’s Infinity, propagate updates upward
-  await propagateInfinityUpdateToAncestors(userId);
 }
 
 /**
- * 🔄 Rebuild Infinity for all users (maintenance / full sync)
+ * Rebuild Infinity for all users
  */
 export async function rebuildInfinity() {
   const users = await User.find({ referred_users: { $exists: true, $ne: [] } });
-
   for (const u of users) {
     u.infinity_users = [];
     await u.save();
@@ -128,8 +113,7 @@ export async function rebuildInfinity() {
 }
 
 /**
- * ⤴️ Update all ancestor Infinity teams recursively
- * e.g. if B’s Infinity changes → update A (sponsor) → and A’s sponsor → and so on.
+ * Update all ancestor Infinity teams recursively
  */
 export async function propagateInfinityUpdateToAncestors(startUserId: string) {
   let current = await User.findOne({ user_id: startUserId });
