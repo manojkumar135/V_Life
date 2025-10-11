@@ -167,7 +167,7 @@ function RegisterContent() {
         }
       }}
       dateFormat="dd-MM-yyyy"
-      placeholderText="DD-MM-YYYY"
+      placeholderText="Date of Birth"
       maxDate={new Date()}
       className={`w-full pl-10 pr-4 py-1 rounded-md border ${
         formik.touched.dob && formik.errors.dob
