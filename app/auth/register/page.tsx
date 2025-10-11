@@ -12,6 +12,9 @@ import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import TermsModal from "@/components/TermsModal/terms";
@@ -27,6 +30,7 @@ const teams = [
 function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   const router = useRouter();
   const params = useSearchParams();
@@ -144,36 +148,40 @@ function RegisterContent() {
               </span>
             </div>
 
-            {/* DOB */}
-            <div className="flex flex-col">
-              <div className="relative">
-                <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none" />
-                <input
-                  type="date"
-                  id="dob"
-                  name="dob"
-                  value={formik.values.dob}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  min="1900-01-01"
-                  max={new Date().toISOString().split("T")[0]}
-                  className="peer w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-                {!formik.values.dob && (
-                  <label
-                    htmlFor="dob"
-                    className="absolute left-10 top-1/2 -translate-y-1/2 text-gray-400 text-md pointer-events-none"
-                  >
-                    Date of Birth
-                  </label>
-                )}
-              </div>
-              <span className="text-red-500 text-xs mt-1 h-4 block">
-                {formik.touched.dob && formik.errors.dob
-                  ? formik.errors.dob
-                  : "\u00A0"}
-              </span>
-            </div>
+          {/* DOB with DatePicker */}
+<div className="flex flex-col w-full">
+  <div className="relative w-full">
+    <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
+    <DatePicker
+      selected={formik.values.dob ? new Date(formik.values.dob) : null}
+      onChange={(date: Date | null) => {
+        formik.setFieldValue(
+          "dob",
+          date ? date.toISOString().split("T")[0] : ""
+        );
+      }}
+      onBlur={() => {
+        formik.setFieldTouched("dob", true);
+        if (!formik.values.dob) {
+          formik.setFieldError("dob", "* Date of Birth is required");
+        }
+      }}
+      dateFormat="dd-MM-yyyy"
+      placeholderText="DD-MM-YYYY"
+      maxDate={new Date()}
+      className={`w-full pl-10 pr-4 py-1 rounded-md border ${
+        formik.touched.dob && formik.errors.dob
+          ? "border-red-500"
+          : "border-gray-400"
+      } focus:outline-none focus:ring-2 focus:ring-gray-200`}
+    />
+  </div>
+  <span className="text-red-500 text-xs mt-1 h-4 block">
+    {formik.touched.dob && formik.errors.dob
+      ? formik.errors.dob
+      : "\u00A0"}
+  </span>
+</div>
 
             {/* Email */}
             <div className="flex flex-col">

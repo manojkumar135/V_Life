@@ -63,7 +63,7 @@ body {
 
 /* Hide Chrome/Edge/Safari's native DD-MM-YYYY hint when empty */
 input[type="date"]::-webkit-datetime-edit {
-  color: transparent;
+  color: transparent !important; ;
 }
 
 /* Show black text after a date is selected */
@@ -73,7 +73,7 @@ input[type="date"]:valid::-webkit-datetime-edit {
 
 /* Firefox fallback */
 input[type="date"]::placeholder {
-  color: transparent;
+  color: transparent !important;
 }
 
 
@@ -87,4 +87,13 @@ input[type="date"]::placeholder {
 /* Hide number input arrows for Firefox */
 .no-spinner[type="number"] {
   -moz-appearance: textfield;
+}
+
+.react-datepicker-wrapper,
+.react-datepicker__input-container {
+  width: 100% !important;
+  display: block;
+}
+.react-datepicker__input-container input {
+  width: 100% !important;
 }
