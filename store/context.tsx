@@ -40,6 +40,7 @@ export interface UserType {
   wallet_id?: string;
   theme?: ThemeType;
   category?: string;
+  score?: number;
 
   address?: string;
   pincode?: string;
@@ -73,6 +74,7 @@ const defaultUser: UserType = {
   wallet_id: "",
   theme: "light",
   category: "",
+  score:1000,
 
   address: "",
   pincode: "",

@@ -33,7 +33,7 @@ const page = () => {
           </div>
           {/* Rewards Card */}
           <div
-            onClick={() => router.push("/wallet/payout/rewards")}
+            onClick={() => router.push("/wallet/rewards")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaGift size={32} />
