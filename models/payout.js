@@ -27,7 +27,8 @@ const payoutSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now },
   created_by: { type: String },
   last_modified_by: { type: String },
-  last_modified_at: { type: Date }
+  last_modified_at: { type: Date },
+  is_checked: { type: Boolean, default: false }
 });
 
 // ✅ Fix OverwriteModelError in Next.js dev mode

@@ -1,6 +1,6 @@
 import { connectDB } from "@/lib/mongodb";
 import { DailyPayout, WeeklyPayout } from "@/models/payout";
-import TreeNode from "@/models/tree";
+import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { History } from "@/models/history";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
@@ -18,13 +18,17 @@ function parseDDMMYYYY(dateStr: string): Date {
   return new Date(yyyy, mm - 1, dd);
 }
 
-// ✅ Get Matching Bonus payouts from last 15 days
+// ✅ Get Matching Bonus payouts from last 15 days, is_checked: false
 async function getLast15DaysMatchingPayouts() {
   const now = new Date();
   const start = new Date(now);
   start.setDate(start.getDate() - 15);
 
-  const payouts = await DailyPayout.find({ name: "Matching Bonus", status: "Completed" });
+  const payouts = await DailyPayout.find({
+    name: "Matching Bonus",
+    // status: "Completed",
+    is_checked: false // Only consider unchecked payouts
+  });
   const filtered = payouts.filter((p) => {
     const payoutDate = parseDDMMYYYY(p.date);
     return payoutDate >= start && payoutDate <= now;
@@ -34,34 +38,17 @@ async function getLast15DaysMatchingPayouts() {
   return filtered;
 }
 
-// ✅ Build tree map
-async function getTreeNodesMap() {
-  const nodes = await TreeNode.find({});
-  return new Map(nodes.map((n) => [n.user_id, n]));
-}
-
-// ✅ Recursive Infinity Team fetch
-function getInfinityTeam(allNodesMap: Map<string, any>, rootUserId: string): string[] {
-  const result: string[] = [];
-  const queue: string[] = [];
-  const rootNode = allNodesMap.get(rootUserId);
-  if (!rootNode) return [];
-
-  if (rootNode.left) queue.push(rootNode.left);
-  if (rootNode.right) queue.push(rootNode.right);
-
-  while (queue.length > 0) {
-    const currentId = queue.shift()!;
-    result.push(currentId);
-
-    const currentNode = allNodesMap.get(currentId);
-    if (!currentNode) continue;
-
-    if (currentNode.left) queue.push(currentNode.left);
-    if (currentNode.right) queue.push(currentNode.right);
-  }
-
-  return result;
+// ✅ Find sponsor by infinity_users if user.infinity is not set
+async function findSponsorByInfinityUsers(userId: string): Promise<any | null> {
+  const sponsors = await User.find({
+    infinity_users: {
+      $elemMatch: {
+        users: userId
+      }
+    },
+    user_status: "active"
+  });
+  return sponsors.length > 0 ? sponsors[0] : null;
 }
 
 // ✅ Run Infinity Bonus Logic
@@ -76,49 +63,47 @@ export async function runInfinityBonus() {
       return;
     }
 
-    const allNodesMap = await getTreeNodesMap();
-
-    // Build payout map by user_id
-    const userPayoutMap = new Map<string, any[]>();
-    for (const payout of last15DaysPayouts) {
-      if (!userPayoutMap.has(payout.user_id)) userPayoutMap.set(payout.user_id, []);
-      userPayoutMap.get(payout.user_id)!.push(payout);
-    }
-
     let totalCreated = 0;
 
-    for (const [user_id, node] of allNodesMap.entries()) {
-      if (node.user_status !== "active") continue;
+    for (const payout of last15DaysPayouts) {
+      // Find the user who received the matching bonus
+      const user = await User.findOne({ user_id: payout.user_id });
+      if (!user) continue;
 
-      const infinityTeam = getInfinityTeam(allNodesMap, user_id);
-      if (!infinityTeam.length) continue;
+      let sponsor: any = null;
 
-      const teamPayouts: any[] = [];
-      for (const memberId of infinityTeam) {
-        const payouts = userPayoutMap.get(memberId);
-        if (payouts) teamPayouts.push(...payouts);
+      // 1️⃣ Try user.infinity
+      if (user.infinity) {
+        sponsor = await User.findOne({ user_id: user.infinity, user_status: "active" });
       }
 
-      if (!teamPayouts.length) continue;
+      // 2️⃣ If not found, search in infinity_users
+      if (!sponsor) {
+        sponsor = await findSponsorByInfinityUsers(user.user_id);
+      }
 
-      // 50% of total matching bonuses from team
-      const totalBonus = teamPayouts.reduce((sum, p) => sum + p.amount * 0.5, 0);
-      if (totalBonus <= 0) continue;
-
-      const now = new Date();
-      const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
-      const wallet = await Wallet.findOne({ user_id });
-
-      if (!wallet) {
-        console.log(`⚠️ No wallet found for ${user_id}, skipping Infinity Bonus.`);
+      if (!sponsor) {
+        console.log(`⚠️ No sponsor found for ${user.user_id}, skipping Infinity Bonus.`);
         continue;
       }
 
-      const payout = await WeeklyPayout.create({
+      // Find sponsor's wallet
+      const wallet = await Wallet.findOne({ user_id: sponsor.user_id });
+      if (!wallet) {
+        console.log(`⚠️ No wallet found for ${sponsor.user_id}, skipping Infinity Bonus.`);
+        continue;
+      }
+
+      // Release 50% of matching bonus to sponsor
+      const now = new Date();
+      const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
+      const bonusAmount = payout.amount * 0.5;
+
+      const infinityPayout = await WeeklyPayout.create({
         transaction_id: `IB${Date.now()}`,
         payout_id,
-        user_id,
-        user_name: node.name,
+        user_id: sponsor.user_id,
+        user_name: sponsor.user_name,
         wallet_id: wallet.wallet_id,
         name: "Infinity Bonus",
         title: "Infinity Bonus",
@@ -129,36 +114,36 @@ export async function runInfinityBonus() {
         date: formatDate(now),
         time: now.toTimeString().slice(0, 5),
         available_balance: wallet?.balance || 0,
-        amount: totalBonus,
+        amount: bonusAmount,
         transaction_type: "Credit",
         status: "Completed",
-        details: "15-Day Infinity Bonus",
-        team_users: teamPayouts.map((p) => ({
-          user_id: p.user_id,
-          amount: p.amount,
-          transaction_id: p.transaction_id,
-        })),
+        details: `Infinity Bonus from ${user.user_id}`,
+        team_users: [{
+          user_id: payout.user_id,
+          amount: payout.amount,
+          transaction_id: payout.transaction_id,
+        }],
         created_by: "system",
         last_modified_by: "system",
         last_modified_at: now,
       });
 
       await History.create({
-        transaction_id: payout.transaction_id,
-        wallet_id: payout.wallet_id,
-        user_id: payout.user_id,
-        user_name: payout.user_name,
-        account_holder_name: payout.account_holder_name,
-        bank_name: payout.bank_name,
-        account_number: payout.account_number,
-        ifsc_code: payout.ifsc_code,
-        date: payout.date,
-        time: payout.time,
-        available_balance: payout.available_balance,
-        amount: payout.amount,
-        transaction_type: payout.transaction_type,
-        details: payout.details,
-        status: payout.status,
+        transaction_id: infinityPayout.transaction_id,
+        wallet_id: infinityPayout.wallet_id,
+        user_id: infinityPayout.user_id,
+        user_name: infinityPayout.user_name,
+        account_holder_name: infinityPayout.account_holder_name,
+        bank_name: infinityPayout.bank_name,
+        account_number: infinityPayout.account_number,
+        ifsc_code: infinityPayout.ifsc_code,
+        date: infinityPayout.date,
+        time: infinityPayout.time,
+        available_balance: infinityPayout.available_balance,
+        amount: infinityPayout.amount,
+        transaction_type: infinityPayout.transaction_type,
+        details: infinityPayout.details,
+        status: infinityPayout.status,
         first_payment: false,
         advance: false,
         ischecked: false,
@@ -167,8 +152,14 @@ export async function runInfinityBonus() {
         last_modified_at: now,
       });
 
+      // ✅ Mark payout as checked
+      await DailyPayout.updateOne(
+        { _id: payout._id },
+        { $set: { is_checked: true } }
+      );
+
       totalCreated++;
-      console.log(`✅ Infinity Bonus released for ${user_id} - ₹${totalBonus}`);
+      console.log(`✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (from ${user.user_id})`);
     }
 
     console.log(`\n✅ [Infinity Bonus] Execution completed. Total payouts created: ${totalCreated}`);
