@@ -6,14 +6,13 @@ import { Wallet, Banknote, Shuffle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FaGift } from "react-icons/fa6";
 
-
 const page = () => {
   const router = useRouter();
 
   return (
     <Layout>
       <div className="px-6 py-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
           {/* Wallets Card */}
           <div
             onClick={() => router.push("/wallet/wallets")}

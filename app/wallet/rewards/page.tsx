@@ -70,7 +70,7 @@ export default function RewardsPage() {
       )}
       <div className="p-2 px-6 space-y-1 lg:h-full">
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 w-full mb-2">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 w-full mb-2 2xl:mb-4">
           {/* Title + Score */}
           <div className="flex items-center w-full max-lg:mb-2 ">
             <p className="text-2xl max-md:text-2xl font-bold text-black mr-2">
@@ -111,7 +111,7 @@ export default function RewardsPage() {
               No rewards available.
             </p>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
               {rewards.map((reward) => {
                 const tickets = Math.floor(
                   (user?.score || 0) / reward.pointsRequired
