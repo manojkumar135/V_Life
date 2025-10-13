@@ -79,6 +79,7 @@ export default function AddRewardPage() {
           description: values.description,
           points_required: values.pointsRequired,
           image: imageUrl,
+          status: "active",
           created_by: user?.user_id || "admin",
         };
 
@@ -144,6 +145,7 @@ export default function AddRewardPage() {
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 required
+                min={10}
                 error={
                   formik.touched.pointsRequired
                     ? formik.errors.pointsRequired

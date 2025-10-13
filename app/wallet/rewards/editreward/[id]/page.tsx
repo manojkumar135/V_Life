@@ -13,6 +13,7 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
+import SelectField from "@/components/InputFields/selectinput";
 
 // ✅ Validation Schema
 const validationSchema = Yup.object({
@@ -31,7 +32,16 @@ const validationSchema = Yup.object({
         !value ||
         (value instanceof File && value.type.startsWith("image/"))
     ),
+  status: Yup.string()
+    .oneOf(["active", "inactive"])
+    .required("* Status is required"),
 });
+
+// ✅ Status Options
+const statusOptions = [
+  { label: "Active", value: "active" },
+  { label: "Inactive", value: "inactive" },
+];
 
 export default function EditRewardPage() {
   const router = useRouter();
@@ -63,6 +73,7 @@ export default function EditRewardPage() {
       description: "",
       pointsRequired: 0,
       image: null as File | string | null,
+      status: "active",
       updated_by: user?.user_id || "admin",
     },
     validationSchema,
@@ -88,6 +99,8 @@ export default function EditRewardPage() {
           description: values.description,
           points_required: values.pointsRequired,
           image: imageUrl,
+          status: values.status,
+
           updated_by: user?.user_id || "admin",
         };
 
@@ -126,6 +139,7 @@ export default function EditRewardPage() {
             description: reward.description || "",
             pointsRequired: reward.points_required || 0,
             image: reward.image || "",
+            status: reward.status || "active",
             updated_by: user?.user_id || "admin",
           });
         } else {
@@ -184,6 +198,7 @@ export default function EditRewardPage() {
                 value={formik.values.pointsRequired}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
+                min={10}
                 required
                 error={
                   formik.touched.pointsRequired
@@ -207,6 +222,28 @@ export default function EditRewardPage() {
                 onBlur={formik.handleBlur}
                 error={formik.touched.image ? formik.errors.image : ""}
               />
+
+              <div className="-mt-3">
+                {/* ✅ Status Field */}
+                <SelectField
+                  label="Status"
+                  name="status"
+                  value={formik.values.status}
+                  onChange={(e: any) =>
+                    formik.setFieldValue(
+                      "status",
+                      e.target?.value || e?.value || ""
+                    )
+                  }
+                  onBlur={formik.handleBlur}
+                  options={statusOptions}
+                  error={
+                    formik.touched.status ? formik.errors.status : undefined
+                  }
+                  controlPaddingLeft="0px"
+                  className=""
+                />
+              </div>
 
               {/* ✅ Show Preview if existing or newly selected */}
               {/* {formik.values.image && (
