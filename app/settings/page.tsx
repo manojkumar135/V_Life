@@ -425,6 +425,8 @@ const Page = () => {
                   }
                   required
                   disabled={loading || postOfficeData.length === 0}
+                                  controlPaddingLeft="0px"
+
                 />
               </div>
             </section>

@@ -68,34 +68,40 @@ export default function RewardsPage() {
           <Loader />
         </div>
       )}
-      <div className="p-3 px-6 space-y-4 h-full">
+      <div className="p-2 px-6 space-y-1 lg:h-full">
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-          <div>
-            <p className="text-2xl font-bold text-black"> Rewards</p>
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 w-full mb-2">
+          {/* Title + Score */}
+          <div className="flex items-center w-full max-lg:mb-2 ">
+            <p className="text-2xl max-md:text-2xl font-bold text-black mr-2">
+              Rewards{" "}
+            </p>
+
             {user?.score && (
-              <p className="text-sm font-medium text-gray-700 text-right">
-                Your Score:{" "}
-                <span className="text-yellow-400 font-bold">{user.score}</span>
+              <p className="text-sm max-md:text-xs font-medium text-gray-700 mt-2">
+                ( Your Score:{" "}
+                <span className="text-yellow-400 font-bold">{user.score}</span>{" "}
+                )
               </p>
             )}
           </div>
 
           {/* Admin Action Buttons */}
-          {user?.role === "admin" && (
-            <div className="flex gap-3">
-              <Link href="/wallet/rewards/addreward">
-                <SubmitButton className="px-4 py-2 bg-yellow-400 text-black font-semibold rounded-md hover:bg-yellow-500 transition-all duration-200">
+          <div className="flex flex-row gap-3 w-full sm:w-auto">
+            {user?.role === "admin" && (
+              <Link href="/wallet/rewards/addreward" className="w-full sm:w-39">
+                <SubmitButton className="w-full px-4 py-2 bg-yellow-400 text-black font-semibold rounded-md hover:bg-yellow-500 transition-all duration-200">
                   + Add Reward
                 </SubmitButton>
               </Link>
-              <Link href="/wallet/rewards/Bookings">
-                <SubmitButton className="px-4 py-2  font-semibold rounded-md transition-all duration-200">
-                  Bookings
-                </SubmitButton>
-              </Link>
-            </div>
-          )}
+            )}
+
+            <Link href="/wallet/rewards/Bookings" className="w-full sm:w-39">
+              <SubmitButton className="w-full px-4 py-2 font-semibold rounded-md transition-all duration-200 bg-blue-500">
+                Bookings
+              </SubmitButton>
+            </Link>
+          </div>
         </div>
 
         {/* Rewards List */}
@@ -105,77 +111,78 @@ export default function RewardsPage() {
               No rewards available.
             </p>
           ) : (
-            rewards.map((reward) => {
-              const tickets = Math.floor(
-                (user?.score || 0) / reward.pointsRequired
-              );
-              return (
-                <div
-                  key={reward.reward_id}
-                  className="border border-gray-200 rounded-xl shadow-md bg-white hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col lg:flex-row w-full my-2 h-[150px] max-md:h-auto"
-                >
-                  {/* Image Section */}
-                  <div className="relative w-full lg:w-[300px] h-[150px] max-md:h-[160px]">
-                    <Image
-                      src={reward.image || "/default.jpg"}
-                      alt={reward.title}
-                      fill
-                      className="rounded-t-xl lg:rounded-l-xl lg:rounded-tr-none object-cover"
-                    />
-                  </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {rewards.map((reward) => {
+                const tickets = Math.floor(
+                  (user?.score || 0) / reward.pointsRequired
+                );
+                return (
+                  <div
+                    key={reward.reward_id}
+                    className="border border-gray-200 rounded-xl shadow-md bg-white hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col w-full max-w-sm mx-auto"
+                  >
+                    {/* Image Section */}
+                    <div className="relative w-full h-36 sm:h-40 md:h-44">
+                      <Image
+                        src={reward.image || "/default.jpg"}
+                        alt={reward.title}
+                        fill
+                        className="object-cover w-full h-full rounded-xl px-1 py-1 shadow-md"
+                      />
+                    </div>
 
-                  {/* Info Section */}
-                  <div className="px-4 py-2 flex flex-col flex-grow">
-                    <div className="flex-1">
-                      <p className="text-xl font-bold text-black">
+                    {/* Info Section */}
+                    <div className="px-4 py-3 flex flex-col gap-2">
+                      <p className="text-lg font-bold text-black mt-2">
                         {reward.title}
                       </p>
-                      <p className="text-gray-600 mt-1 line-clamp-2">
+                      <p className="text-gray-600 text-sm line-clamp-3">
                         {reward.description}
                       </p>
-                      <p className="mt-2 font-semibold text-black">
+                      <p className="mt-1 font-semibold text-black text-sm sm:text-base">
                         Required:{" "}
-                        <span className="text-yellow-400">
-                          {reward.pointsRequired}
+                        <span className="text-yellow-500">
+                          {reward.points_required}
                         </span>{" "}
                         points
                       </p>
-                      {user?.role !== "admin" && (
-                        <p className="text-sm text-gray-500">
-                          You can buy{" "}
-                          <span className="text-yellow-400 font-semibold">
-                            {tickets}
-                          </span>{" "}
-                          ticket(s)
-                        </p>
-                      )}
-                    </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex justify-end items-end -mt-4">
-                      {user?.role === "admin" && (
-                        <Link href={`/wallet/rewards/editreward/${reward._id}`}>
-                          <button
-                            type="button"
-                            className="flex items-center justify-center p-2 rounded-md  transition-all duration-200"
-                            title="Edit Reward"
+                      <p className="text-gray-500 text-sm">
+                        You can buy{" "}
+                        <span className="text-yellow-400 font-semibold">
+                          {tickets}
+                        </span>{" "}
+                        ticket(s)
+                      </p>
+
+                      {/* Action Buttons */}
+                      <div className="flex justify-end items-center mt-2 gap-2">
+                        {user?.role === "admin" && (
+                          <Link
+                            href={`/wallet/rewards/editreward/${reward._id}`}
                           >
-                            <FaEdit size={24} />
-                          </button>
-                        </Link>
-                      )}
+                            <button
+                              type="button"
+                              className="flex items-center justify-center mt-2 px-1 py-1 rounded-md  transition-all duration-200"
+                              title="Edit Reward"
+                            >
+                              <FaEdit size={20} className="" />
+                            </button>
+                          </Link>
+                        )}
 
-                      <SubmitButton
-                        onClick={() => handleRedeem(reward)}
-                        className="px-5 py-2"
-                      >
-                        Redeem
-                      </SubmitButton>
+                        <SubmitButton
+                          className="px-4 py-1 bg-yellow-400 text-black font-semibold rounded-md hover:bg-yellow-500 transition-all duration-200"
+                          onClick={() => handleRedeem(reward)}
+                        >
+                          Redeem
+                        </SubmitButton>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
         </div>
       </div>

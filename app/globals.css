@@ -62,9 +62,9 @@ body {
 }
 
 /* Hide Chrome/Edge/Safari's native DD-MM-YYYY hint when empty */
-input[type="date"]::-webkit-datetime-edit {
+/* input[type="date"]::-webkit-datetime-edit {
   color: transparent !important; ;
-}
+} */
 
 /* Show black text after a date is selected */
 input[type="date"]:valid::-webkit-datetime-edit {

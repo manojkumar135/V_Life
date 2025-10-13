@@ -416,6 +416,8 @@ export default function AddEditUserForm() {
                     }
                     required
                     disabled={!!f.disabled}
+                                    controlPaddingLeft="0px"
+
                   />
                 );
               }

@@ -308,6 +308,8 @@ function AddUserFormContent() {
               }
               // required
               disabled={loading || postOfficeData.length === 0}
+                controlPaddingLeft="0px"
+
             />
           </div>
 
