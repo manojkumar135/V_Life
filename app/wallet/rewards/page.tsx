@@ -149,7 +149,7 @@ export default function RewardsPage() {
 
   return (
     <Layout>
-      <div className="p-2 px-6 space-y-1 lg:h-full max-md:h-150">
+      <div className="p-2 px-6 space-y-1 lg:h-full max-md:min-h-[160vh]">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
