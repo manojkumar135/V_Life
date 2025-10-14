@@ -14,6 +14,7 @@ import { useVLife } from "@/store/context";
 import { FiFilter } from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import ShowToast from "@/components/common/Toast/toast";
+import { handleDownload } from "@/utils/handleDownload";
 
 export default function BookingsPage() {
   const { user } = useVLife();
@@ -26,22 +27,36 @@ export default function BookingsPage() {
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
+  const [downloading, setDownloading] = useState(false);
 
   const API_URL = "/api/booking-operations";
+
+  // 🔹 Download bookings
+  const handleDownloadClick = () => {
+    handleDownload({
+      rows: selectedRows,
+      fileName: "bookings",
+      format: "xlsx",
+      excludeHeaders: ["_id", "__v", "created_at", "last_modified_at"],
+      onStart: () => setDownloading(true),
+      onFinish: () => setDownloading(false),
+    });
+  };
 
   const onBack = () => {
     router.push("/wallet/rewards");
   };
 
-  // Fetch bookings from API
+  // 🔹 Fetch bookings from API
   const fetchBookings = useCallback(
     async (search: string) => {
       try {
         setLoading(true);
+
         const params: any = {
           search: search || "",
           role: user?.role,
-          ...(user?.user_id && { user_id: user.user_id }),
+          ...(user?.role !== "admin" && { user_id: user?.user_id }),
           ...(dateFilter?.type === "on" && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
             from: dateFilter.from,
@@ -50,9 +65,14 @@ export default function BookingsPage() {
         };
 
         const { data } = await axios.get(API_URL, { params });
-        const bookings = data.data || [];
-        setBookingsData(bookings);
-        setTotalItems(bookings.length);
+
+        if (data?.success) {
+          const bookings = data.data || [];
+          setBookingsData(bookings);
+          setTotalItems(bookings.length);
+        } else {
+          ShowToast.error("Failed to load bookings");
+        }
       } catch (err) {
         console.error("Error fetching bookings:", err);
         ShowToast.error("Failed to load bookings");
@@ -64,11 +84,11 @@ export default function BookingsPage() {
   );
 
   useEffect(() => {
-    if (!user?.user_id) return;
+    if (!user) return;
     fetchBookings(debouncedQuery);
-  }, [debouncedQuery, user?.user_id, dateFilter]);
+  }, [debouncedQuery, user, dateFilter]);
 
-  // Delete booking
+  // 🔹 Delete booking
   const handleDelete = async (id: string) => {
     try {
       await axios.delete(`${API_URL}?booking_id=${id}`);
@@ -81,11 +101,12 @@ export default function BookingsPage() {
     }
   };
 
-  // Edit booking
+  // 🔹 Navigate to booking detail
   const handleEdit = (id: string) => {
     router.push(`/wallet/rewards/BookingDetail/${id}`);
   };
 
+  // 🔹 Columns
   const columns: GridColDef[] = [
     { field: "booking_id", headerName: "Booking ID", flex: 1 },
     user?.role === "admin" && {
@@ -103,14 +124,13 @@ export default function BookingsPage() {
       headerName: "Contact",
       flex: 1,
     },
-
     { field: "total_score_used", headerName: "Total Score Used", flex: 1 },
     { field: "remaining_score", headerName: "Remaining Score", flex: 1 },
     { field: "date", headerName: "Booking Date", flex: 1 },
-
     { field: "status", headerName: "Status", flex: 1 },
   ].filter(Boolean) as GridColDef[];
 
+  // 🔹 Pagination
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {},
     [query]
@@ -143,23 +163,24 @@ export default function BookingsPage() {
         {/* Floating Filter Icon */}
         <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
-            className="relative w-12 h-12 rounded-full bg-black text-yellow-300 flex items-center justify-center shadow-lg border border-yellow-400 hover:shadow-xl active:translate-y-[2px] transition-all duration-200 cursor-pointer"
+            className="relative w-12 h-12 rounded-full bg-black text-yellow-400 flex items-center justify-center shadow-lg border border-yellow-400 hover:bg-gradient-to-br hover:from-yellow-400 hover:to-yellow-600 hover:text-black active:translate-y-[2px] transition-all duration-200 cursor-pointer"
             onClick={() => setShowModal(true)}
           >
-            <FiFilter size={20} />
+            <FiFilter size={22} />
           </button>
         </div>
 
+        {/* Header */}
         <HeaderWithActions
           title="Bookings"
           search={query}
           setSearch={setQuery}
-          // addLabel="+ ADD BOOKING"
-          // showAddButton={true}
           onAdd={handleAddBooking}
           showPagination
           showBack
           onBack={onBack}
+          onMore={handleDownloadClick}
+          showMoreOptions
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={totalItems}
@@ -169,6 +190,7 @@ export default function BookingsPage() {
           onPrev={prevPage}
         />
 
+        {/* Table */}
         <Table
           columns={columns}
           rows={bookingsData.slice((currentPage - 1) * 14, currentPage * 14)}
@@ -182,6 +204,7 @@ export default function BookingsPage() {
           setSelectedRows={setSelectedRows}
         />
 
+        {/* Date Filter Modal */}
         <DateFilterModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}

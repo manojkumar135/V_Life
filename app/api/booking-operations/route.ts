@@ -42,6 +42,7 @@ export async function GET(request: Request) {
     const user_id = searchParams.get("user_id");
     const status = searchParams.get("status");
     const search = searchParams.get("search");
+    const role = searchParams.get("role"); // 👈 role param
 
     // 🔹 Single booking fetch
     if (id || booking_id) {
@@ -68,7 +69,9 @@ export async function GET(request: Request) {
 
     // 🔹 Build filter query
     const query: any = {};
-    if (user_id) query.user_id = user_id;
+
+    // Only filter by user if NOT admin
+    if (role !== "admin" && user_id) query.user_id = user_id;
     if (status) query.status = status;
 
     if (search) {
@@ -80,9 +83,17 @@ export async function GET(request: Request) {
       ];
     }
 
-    const bookings = await Booking.find(query)
-      .populate("rewards.reward_id")
-      .sort({ booked_at: -1 });
+    // 🔹 Admin gets all bookings
+    let bookings;
+    if (role === "admin") {
+      bookings = await Booking.find({})
+        .populate("rewards.reward_id")
+        .sort({ booked_at: -1 });
+    } else {
+      bookings = await Booking.find(query)
+        .populate("rewards.reward_id")
+        .sort({ booked_at: -1 });
+    }
 
     return NextResponse.json({ success: true, data: bookings }, { status: 200 });
   } catch (error: any) {
@@ -93,6 +104,7 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 // ✅ PUT — Full update (replace fields)
 export async function PUT(request: Request) {
