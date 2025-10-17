@@ -48,6 +48,7 @@ const UserSchema = new mongoose.Schema(
     ],
     bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
+    rank: { type: String,required: true, default: "none" },
 
 
     // 🌳 Binary Team Structure

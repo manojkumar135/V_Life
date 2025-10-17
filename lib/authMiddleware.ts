@@ -30,7 +30,7 @@ export function authMiddleware(req: NextRequest) {
 
   // 1️⃣ User has tokens → prevent access to login/register pages
   if ((accessToken || refreshToken) && pathname.startsWith("/auth/login")) {
-    url.pathname = "/dashboard"; // 👈 default redirect for logged-in users
+    url.pathname = "/dashboards"; // 👈 default redirect for logged-in users
     return NextResponse.redirect(url);
   }
 

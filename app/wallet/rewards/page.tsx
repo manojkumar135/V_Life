@@ -200,7 +200,7 @@ export default function RewardsPage() {
               No rewards available.
             </p>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4">
               {rewards.map((reward) => {
                 const isActive = reward.status === "active";
                 if (!isActive && user?.role !== "admin") return null;
@@ -215,17 +215,17 @@ export default function RewardsPage() {
                 return (
                   <div
                     key={reward.reward_id}
-                    className={`border border-gray-200 rounded-xl shadow-md bg-white hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col w-full max-w-sm mx-auto ${
+                    className={`border border-gray-200 rounded-xl shadow-md bg-white hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col w-full  max-w-sm mx-auto ${
                       !isActive ? "" : ""
                     }`}
                   >
                     {/* Image */}
-                    <div className="relative w-full h-36 sm:h-40 md:h-46">
+                    <div className="relative w-full  h-36 sm:h-40 md:h-46 ">
                       <Image
                         src={reward.image || "/default.jpg"}
                         alt={reward.title}
                         fill
-                        className="object-cover w-full h-full rounded-xl px-1 py-1 shadow-md"
+                        className="object-cover w-full  h-full rounded-xl px-1 py-1 shadow-md border border-gray-300"
                       />
                       {!isActive && user?.role === "admin" && (
                         <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">

@@ -65,7 +65,7 @@ export default function LoginPage() {
           // }
 
           ShowToast.success("Login successful!");
-          router.push("/dashboard");
+          router.push("/dashboards");
         } else {
           ShowToast.error(res.data.message || "Login failed");
         }

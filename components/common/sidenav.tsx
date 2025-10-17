@@ -31,7 +31,7 @@ export default function SideNav({
 
   const menuItems = [
     {
-      href: "/dashboard",
+      href: "/dashboards",
       icon: <LuLayoutDashboard />,
       label: "Dashboard",
       match: ["dashboard"],
