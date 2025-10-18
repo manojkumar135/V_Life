@@ -46,7 +46,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen px-4 py-6 text-black mb-10">
+      <div className="min-h-full px-4 py-6 text-black">
         <AlertBox
           visible={showAlert}
           title="Action Required!"
@@ -61,13 +61,13 @@ const DashboardPage: React.FC = () => {
           buttonAction={() => router.push("/historys/payAdvance")}
           onClose={() => setShowAlert(false)}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 -mt-5">
           {/* --- LEFT COLUMN --- */}
           <div className="space-y-6">
             {/* Profile Card */}
             <div className="bg-white rounded-2xl shadow-md p-6 border-[1.5px] border-gray-300">
               <div className="flex flex-col md:flex-row justify-center  lg:flex-col items-center text-center">
-                <div className="w-24 h-24 md:w-28 md:h-28 border-2 border-gray-600 rounded-full flex items-center justify-center bg-white shadow-lg md:mr-8 lg:mr-0">
+                <div className="w-24 h-24 mb-4 md:w-28 md:h-28 border-2 border-gray-600 rounded-full flex items-center justify-center bg-white shadow-lg md:mr-12 lg:mr-0">
                   <img
                     src={
                       user.profile ||
@@ -77,32 +77,59 @@ const DashboardPage: React.FC = () => {
                     className="w-full h-full object-cover rounded-full border-1 border-gray-300 shadow-md"
                   />
                 </div>
-                <div className="mt-4 space-y-1 text-sm">
-                  <p>
-                    <span className="font-semibold">USER ID:</span>{" "}
-                    {user?.user_id || "N/A"}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Name:</span>{" "}
-                    {user?.user_name || "N/A"}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Signup Date:</span> 21 Aug
-                    2025
-                  </p>
-                  <p>
-                    <span className="font-semibold">Activated Date:</span> --
-                  </p>
-                  <p>
-                    <span className="font-semibold">Last Purchase Date:</span>{" "}
-                  </p>
+                <div className="space-y-1 text-sm xl:-ml-3">
+                  <div className="flex items-center ">
+                    <span className="font-semibold w-25 text-left">
+                      USER ID
+                    </span>
+                    <span className="w-3 mx-1 text-center">:</span>
+                    <span>{user?.user_id || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold w-25 text-left ">Name</span>
+                    <span className="w-3 mx-1 text-center">:</span>
+                    <span>{user?.user_name || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold w-25 text-left ">
+                      Signup Date
+                    </span>
+                    <span className="w-3 mx-1 text-center">:</span>
+                    <span>21 Aug 2025</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold w-25 text-left ">
+                      Activated Date
+                    </span>
+                    <span className="w-3 mx-1 text-center">:</span>
+                    <span>--</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold w-25 text-left ">
+                      Last Order Date
+                    </span>
+                    <span className="w-3 mx-1 text-center">:</span>
+                    <span>--</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Product Card */}
-            <div className="bg-white rounded-2xl  shadow-md border border-gray-400 overflow-hidden h-58">
-              <img src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760703131/vitamin-c-day-regime_oczd3osurv4zkp0f_yhqhh4.avif" alt="Product" className="w-full object-cover" />
+            <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-45 max-lg:h-50 h-50">
+              {/* For screens up to lg */}
+              <img
+                src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760765861/ionizer_with_kitchen_t3da7q.jpg"
+                alt="Product small"
+                className="w-full object-contain block lg:hidden"
+              />
+
+              {/* For screens lg and above */}
+              <img
+                src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760763474/ionizers_khpjpn.jpg"
+                alt="Product large"
+                className="w-full object-cover hidden lg:block"
+              />
             </div>
           </div>
 
@@ -115,7 +142,7 @@ const DashboardPage: React.FC = () => {
                   <img
                     src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760703374/first-rank-badge-3d-icon-png-download-6878280_vqspgk.webp"
                     alt="Rank Badge"
-                    className="mx-auto w-24 h-24 rounded-full mb-4"
+                    className="mx-auto w-24 h-24 rounded-full mb-2"
                   />
                   <p className="mt-2 text-center text-sm font-semibold items-end">
                     NO STAR
@@ -125,28 +152,25 @@ const DashboardPage: React.FC = () => {
 
               <InfoCard title="KYC Status">
                 <div className="text-sm space-y-1">
-                  <StatusItem label="Bank" status="Rejected" />
-                  <StatusItem label="PAN" status="Rejected" />
-                  <StatusItem label="Address" status="Rejected" />
-                  <StatusItem label="ID Proof" status="Rejected" />
+                  <StatusItem label="Bank" status="N/A" />
+                  <StatusItem label="PAN" status="N/A" />
+                  <StatusItem label="Address" status="N/A" />
+                  <StatusItem label="ID Proof" status="N/A" />
                 </div>
               </InfoCard>
 
-              <InfoCard title="Victous Links">
-                <LinkButton text="JOIN COMMUNITY 1" />
-                <LinkButton text="JOIN COMMUNITY 2" />
+              <InfoCard title="Maverick Links">
+                <LinkButton text="JOIN ORGANISATION 1" />
+                <LinkButton text="JOIN ORGANISATION 2" />
                 <LinkButton text="SHOPPING LINK" />
               </InfoCard>
             </div>
 
             {/* My Business Summary */}
             <div className="bg-gray-100 rounded-2xl shadow-md border border-gray-100">
-             <div className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black text-center py-2 rounded-t-2xl font-semibold shadow-md [text-shadow:1px_1px_2px_rgba(0,0,0,0.2)]">
-  MY BUSINESS SUMMARY
-</div>
-
-
-
+              <div className="bg-[radial-gradient(circle_at_top,_#222731,_#a2a7b3)] text-white max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md 0">
+                MY BUSINESS SUMMARY
+              </div>
 
               {/* Dashboard Boxes */}
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
@@ -159,7 +183,7 @@ const DashboardPage: React.FC = () => {
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Purchase Countdown"
-                  value="Purchase Required"
+                  value="1"
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
@@ -186,7 +210,7 @@ const DashboardPage: React.FC = () => {
                   title="PW Community 2 PV"
                   value="0.00"
                 />
-                <DashBox
+                {/* <DashBox
                   icon={<FaShoppingBag />}
                   title="Direct Customer PV"
                   value="0.00"
@@ -195,7 +219,7 @@ const DashboardPage: React.FC = () => {
                   icon={<FaWallet />}
                   title="Shopping Wallet"
                   value="0.00"
-                />
+                /> */}
               </div>
             </div>
           </div>
@@ -216,8 +240,8 @@ const InfoCard = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden">
-    <div className="bg-yellow-400 text-gray-800 text-sm text-center font-semibold py-2">
+  <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden ">
+    <div className="bg-[radial-gradient(circle_at_top,_#353a44,_#7e8594)] text-white text-sm text-center font-semibold py-2">
       {title}
     </div>
     <div className="p-4 text-gray-700">{children}</div>
@@ -232,7 +256,7 @@ const StatusItem = ({ label, status }: { label: string; status: string }) => (
 );
 
 const LinkButton = ({ text }: { text: string }) => (
-  <button className="w-full flex items-center justify-between text-sm bg-yellow-400 hover:bg-yellow-400 text-white px-3 py-2 rounded-md mt-2">
+  <button className="w-full flex items-center justify-between max-md:text-xs text-xs border border-gray-500 text-black px-3 py-2 rounded-md mt-2 cursor-pointer">
     {text} <FaLink />
   </button>
 );
@@ -246,7 +270,7 @@ const DashBox = ({
   title: string;
   value: string;
 }) => (
-  <div className=" text-black bg-white rounded-xl p-4 text-center flex flex-col items-center justify-center shadow-[0_4px_10px_rgba(255, 218, 68, 0.2)] border-[1.5px] border-gray-500 hover:scale-[1.01] transition-transform duration-150">
+  <div className=" text-black bg-white rounded-xl p-3 text-center flex flex-col items-center justify-center shadow-[0_4px_10px_rgba(255, 218, 68, 0.2)] border-[1.5px] border-gray-500 hover:scale-[1.01] transition-transform duration-150">
     <div className="text-2xl mb-2 text-yellow-400">{icon}</div>
     <p className="text-xs font-medium">{title}</p>
     <p className="text-lg font-bold mt-1">{value}</p>
