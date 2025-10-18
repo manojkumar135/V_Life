@@ -95,7 +95,7 @@ export default function SideNav({
        rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative"
       >
         {/* Logo */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-4 z-10">
+        <div className="absolute left-1/2 -translate-x-1/2 top-4 max-lg:top-6  z-10 ">
           <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden relative">
             <Image
               src={Images.Maverick}
@@ -107,7 +107,7 @@ export default function SideNav({
         </div>
 
         {/* Menu Items */}
-        <div className="flex flex-col items-center gap-2 flex-grow w-full mt-4">
+        <div className="flex flex-col items-center gap-2 flex-grow w-full mt-4 max-lg:mt-8">
           {menuItems.map((item, index) => {
             const isActive = item.match.some((m) => pathname.includes(m));
             return (
@@ -136,8 +136,8 @@ export default function SideNav({
         </div>
 
         {/* Logout (Desktop) */}
-        <div className="w-full flex justify-center">
-          <div className="relative group">
+        <div className="w-full flex justify-center ">
+          <div className="relative group ">
             <button
               onClick={() => setIsLogoutOpen(true)}
               className="p-3 rounded-xl w-12 h-12 flex items-center justify-center text-white hover:bg-black/90

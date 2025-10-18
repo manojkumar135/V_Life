@@ -116,7 +116,7 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Product Card */}
-            <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-45 max-lg:h-50 h-50">
+            <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-50">
               {/* For screens up to lg */}
               <img
                 src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760765861/ionizer_with_kitchen_t3da7q.jpg"
