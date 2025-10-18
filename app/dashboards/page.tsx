@@ -140,9 +140,9 @@ const DashboardPage: React.FC = () => {
               <InfoCard title="Achieved Rank">
                 <div className="mx-auto">
                   <img
-                    src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760703374/first-rank-badge-3d-icon-png-download-6878280_vqspgk.webp"
+                    src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760782170/ChatGPT_Image_Oct_18_2025_03_38_44_PM_lxgtnf.png"
                     alt="Rank Badge"
-                    className="mx-auto w-24 h-24 rounded-full mb-2"
+                    className="mx-auto w-36 h-24 rounded-full mb-2"
                   />
                   <p className="mt-2 text-center text-sm font-semibold items-end">
                     NO STAR
