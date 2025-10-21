@@ -140,11 +140,11 @@ const DashboardPage: React.FC = () => {
               <InfoCard title="Achieved Rank">
                 <div className="mx-auto">
                   <img
-                    src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760782170/ChatGPT_Image_Oct_18_2025_03_38_44_PM_lxgtnf.png"
+                    src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760976188/ChatGPT_Image_Oct_20_2025_09_17_46_PM_x1ckns.png"
                     alt="Rank Badge"
-                    className="mx-auto w-36 h-24 rounded-full mb-2"
+                    className="h-26 -mt-2 mx-auto"
                   />
-                  <p className="mt-2 text-center text-sm font-semibold items-end">
+                  <p className=" text-center text-sm font-semibold items-end">
                     NO STAR
                   </p>
                 </div>
@@ -240,11 +240,11 @@ const InfoCard = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden ">
+  <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden h-46 ">
     <div className="bg-[radial-gradient(circle_at_top,_#353a44,_#7e8594)] text-white text-sm text-center font-semibold py-2">
       {title}
     </div>
-    <div className="p-4 text-gray-700">{children}</div>
+    <div className="py-2 px-4 text-gray-700">{children}</div>
   </div>
 );
 
