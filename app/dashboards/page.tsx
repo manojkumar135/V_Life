@@ -168,7 +168,8 @@ const DashboardPage: React.FC = () => {
 
             {/* My Business Summary */}
             <div className="bg-gray-100 rounded-2xl shadow-md border border-gray-100">
-              <div className="bg-[radial-gradient(circle_at_top,_#222731,_#a2a7b3)] text-white max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md 0">
+              <div className="bg-[radial-gradient(circle_at_top,_#222731,_#a2a7b3)] text-white
+               max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans">
                 MY BUSINESS SUMMARY
               </div>
 
@@ -241,7 +242,8 @@ const InfoCard = ({
   children: React.ReactNode;
 }) => (
   <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden h-46 ">
-    <div className="bg-[radial-gradient(circle_at_top,_#353a44,_#7e8594)] text-white text-sm text-center font-semibold py-2">
+    <div className="bg-[radial-gradient(circle_at_top,_#353a44,_#7e8594)] text-white
+     text-md text-center font-semibold py-2 font-sans">
       {title}
     </div>
     <div className="py-2 px-4 text-gray-700">{children}</div>
