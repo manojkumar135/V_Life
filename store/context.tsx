@@ -31,6 +31,8 @@ export interface UserType {
   login_id: string;
   user_id: string;
   user_name: string;
+  dob: string;
+  rank: string;
   role: string;
   mail: string;
   contact: string;
@@ -48,6 +50,7 @@ export interface UserType {
   isDeleted?: boolean;
   login_time?: string;
   created_at?: string;
+  activated_date?: string;
   locality?: string;
   profile?: string;
   _id?: string;
@@ -65,6 +68,8 @@ const defaultUser: UserType = {
   login_id: "",
   user_id: "",
   user_name: "",
+  dob:"",
+  rank: "",
   role: "",
   mail: "",
   contact: "",
@@ -82,6 +87,7 @@ const defaultUser: UserType = {
   isDeleted: false,
   login_time: "",
   created_at: "",
+  activated_date: "",
   locality: "",
   profile: "",
   _id: "",

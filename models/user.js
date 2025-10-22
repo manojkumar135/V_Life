@@ -1,6 +1,6 @@
-import { group } from "console";
+// import { group } from "console";
 import mongoose from "mongoose";
-import { title } from "process";
+// import { title } from "process";
 
 const BonusHistorySchema = new mongoose.Schema({
   type: { type: String, enum: ["matching", "leadership", "referral"], required: true },
@@ -34,11 +34,12 @@ const UserSchema = new mongoose.Schema(
     group_id: { type: String },
     title: { type: String },
     profile: { type: String }, // URL or file path
-    user_status: { type: String, default: "active" },
+    status_notes: { type: String },
+    user_status: { type: String, default: "inactive" },
 
     // 🔗 Referral / Upline
     referBy: { type: String },
-    infinity:{ type: String },
+    infinity: { type: String },
     referred_users: { type: [String], default: [] },
     infinity_users: [
       {
@@ -48,7 +49,9 @@ const UserSchema = new mongoose.Schema(
     ],
     bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
-    rank: { type: String,required: true, default: "none" },
+    rank: { type: String, required: true, default: "none" },
+    club: { type: String, default: "none" },
+    activated_date: { type: String },
 
 
     // 🌳 Binary Team Structure

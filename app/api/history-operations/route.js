@@ -1,9 +1,123 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { History } from "@/models/history";
+import { User } from "@/models/user";
+import { Login } from "@/models/login";
+import TreeNode from "@/models/tree";
+import { Rank } from "@/models/rank";
 import mongoose from "mongoose";
 
-// POST - Create new history record
+
+const date = new Date();
+
+// 🔹 Update or insert rank details in Rank collection + User table
+async function updateUserRank(userId, rankLevel, qualifiedUsers) {
+  const rankKey = `${rankLevel}_star`;
+
+  await Rank.findOneAndUpdate(
+    { user_id: userId },
+    {
+      $set: {
+        [`ranks.${rankKey}`]: {
+          qualified_users: qualifiedUsers,
+          achieved_at: new Date(),
+        },
+      },
+    },
+    { upsert: true, new: true }
+  );
+
+  await User.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
+}
+
+// 🔹 Check rank conditions and upgrade if eligible
+async function checkAndUpgradeRank(user) {
+  const currentRank = parseInt(user.rank === "none" ? "0" : user.rank);
+
+  // 🛑 Stop processing if already at max rank (5-star)
+  if (currentRank >= 5) {
+    console.log(`${user.user_id} is already at 5-star rank.`);
+    return;
+  }
+
+  // 🔹 Fetch all direct users referred by this user
+  const directs = await User.find({ referBy: user.user_id });
+
+  // 🔹 Find directs who have paid advance
+  const paidDirects = [];
+  for (const direct of directs) {
+    const paid = await History.findOne({ user_id: direct.user_id, advance: true });
+    if (paid) {
+      paidDirects.push({
+        user: direct,
+        payment_id: paid._id,
+      });
+    }
+  }
+
+  const totalPaid = paidDirects.length;
+
+  // 🟡 For 1-star: one left + one right, both advance-paid
+  if (currentRank < 1) {
+    const leftUser = paidDirects.find((d) => d.user.user_id === user.left);
+    const rightUser = paidDirects.find((d) => d.user.user_id === user.right);
+
+    if (leftUser && rightUser) {
+      await updateUserRank(user.user_id, 1, [
+        {
+          user_id: leftUser.user.user_id,
+          team: "left",
+          payment_id: leftUser.payment_id,
+        },
+        {
+          user_id: rightUser.user.user_id,
+          team: "right",
+          payment_id: rightUser.payment_id,
+        },
+      ]);
+      console.log(`${user.user_id} achieved 1-star rank ✅`);
+      return;
+    }
+  }
+
+  // 🟢 For 2-star to 5-star: every 2 more advance-paid directs (any team)
+  if (currentRank >= 1 && currentRank < 5) {
+    const nextRank = currentRank + 1;
+    const requiredPaid = nextRank * 2; // total advance-paid needed to reach next rank
+
+    if (totalPaid >= requiredPaid) {
+      const qualifiedUsers = paidDirects
+        .slice(requiredPaid - 2, requiredPaid)
+        .map((d) => ({
+          user_id: d.user.user_id,
+          team: "any",
+          payment_id: d.payment_id,
+        }));
+
+      await updateUserRank(user.user_id, nextRank, qualifiedUsers);
+      console.log(`${user.user_id} achieved ${nextRank}-star rank ✅`);
+      return;
+    }
+  }
+
+  // 📝 If user is 5-star or not yet eligible, just keep future records in Rank doc
+  if (currentRank >= 5) {
+    const extraUsers = paidDirects.map((d) => ({
+      user_id: d.user.user_id,
+      team: "any",
+      payment_id: d.payment_id,
+    }));
+
+    await Rank.findOneAndUpdate(
+      { user_id: user.user_id },
+      { $set: { "ranks.extra": { qualified_users: extraUsers } } },
+      { upsert: true }
+    );
+
+    console.log(`${user.user_id} already 5-star, extra directs recorded.`);
+  }
+}
+
 export async function POST(request) {
   try {
     await connectDB();
@@ -12,30 +126,60 @@ export async function POST(request) {
     // 🔹 Check if user already has any payment history
     const existingPayment = await History.findOne({ user_id: body.user_id });
 
-    // 🔹 If no payment exists → mark as first payment
-    if (!existingPayment) {
+    // 🔹 Determine if this is an advance payment
+    if (!existingPayment && body.amount >= 10000) {
       body.first_payment = true;
-
-      // 🔹 Advance = true only if first payment AND amount >= 10000
-      if (body.amount >= 10000) {
-        body.advance = true;
-      }
+      body.advance = true;
     } else {
-      body.first_payment = false;
-      body.advance = false; // not first payment, so never advance
+      body.first_payment = !!existingPayment;
+      body.advance = false;
     }
 
-    // 🔹 Always set ischecked to false at creation
+    // 🔹 Always set ischecked to false
     body.ischecked = false;
 
+    // 🔹 Create payment record
     const newHistory = await History.create(body);
+
+    // 🔹 If advance payment, check rank for referrer
+    if (body.advance) {
+      const user = await User.findOne({ user_id: body.user_id });
+
+      if (user) {
+        const updateData = {
+          user_status: "active",
+          status: "active",
+          status_notes: "Activated automatically after advance payment",
+          activated_date: `${String(date.getDate()).padStart(2, '0')}-${String(
+            date.getMonth() + 1
+          ).padStart(2, '0')}-${date.getFullYear()}`,
+
+          last_modified_at: new Date(),
+        };
+
+        // 1️⃣ Update User collection
+        await User.findOneAndUpdate({ user_id: body.user_id }, { $set: updateData });
+
+        // 2️⃣ Update Login collection
+        await Login.updateMany({ user_id: body.user_id }, { $set: updateData });
+
+        // 3️⃣ Update TreeNode collection
+        await TreeNode.findOneAndUpdate({ user_id: body.user_id }, { $set: updateData });
+      }
+
+
+      if (user?.referBy) {
+        const referrer = await User.findOne({ user_id: user.referBy });
+        if (referrer) await checkAndUpgradeRank(referrer);
+      }
+    }
+
+
 
     return NextResponse.json({ success: true, data: newHistory }, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    console.error("Error:", error);
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 

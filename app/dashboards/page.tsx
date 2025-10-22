@@ -67,14 +67,18 @@ const DashboardPage: React.FC = () => {
             {/* Profile Card */}
             <div className="bg-white rounded-2xl shadow-md p-6 border-[1.5px] border-gray-300">
               <div className="flex flex-col md:flex-row justify-center  lg:flex-col items-center text-center">
-                <div className="w-24 h-24 mb-4 md:w-28 md:h-28 border-2 border-gray-600 rounded-full flex items-center justify-center bg-white shadow-lg md:mr-12 lg:mr-0">
+                <div className="w-24 h-24 mb-4 md:w-28 md:h-28 border-0 border-gray-600 rounded-full flex items-center justify-center bg-white shadow-lg md:mr-12 lg:mr-0">
                   <img
                     src={
                       user.profile ||
                       "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760695970/gray-user-profile-icon-png-fP8Q1P_ggaoim.png"
                     }
                     alt="Profile"
-                    className="w-full h-full object-cover rounded-full border-1 border-gray-300 shadow-md"
+                    className={`w-full h-full object-cover rounded-full border-3 shadow-md p-[2px] ${
+                      user?.status?.toLowerCase() === "active"
+                        ? "border-green-600"
+                        : "border-red-600"
+                    }`}
                   />
                 </div>
                 <div className="space-y-1 text-sm xl:-ml-3">
@@ -88,24 +92,59 @@ const DashboardPage: React.FC = () => {
                   <div className="flex items-center">
                     <span className="font-semibold w-25 text-left ">Name</span>
                     <span className="w-3 mx-1 text-center">:</span>
-                    <span>{user?.user_name || "N/A"}</span>
+                    <span>
+                      {user?.user_name
+                        ? user.user_name.charAt(0).toUpperCase() +
+                          user.user_name.slice(1)
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center ">
+                    <span className="font-semibold w-25 text-left">Status</span>
+                    <span className="w-3 mx-1 text-center">:</span>
+                    <span
+                      className={`font-semibold capitalize ${
+                        user?.status?.toLowerCase() === "active"
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {user?.status || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold w-25 text-left ">
+                      Date of Birth
+                    </span>
+                    <span className="w-3 mx-1 text-center">:</span>
+                    <span>
+                      {user?.dob
+                        ? user.dob.split("-").reverse().join("-")
+                        : "N/A"}
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <span className="font-semibold w-25 text-left ">
                       Signup Date
                     </span>
                     <span className="w-3 mx-1 text-center">:</span>
-                    <span>21 Aug 2025</span>
+                    <span>
+                      {user?.created_at
+                        ? new Date(user.created_at)
+                            .toLocaleDateString("en-GB")
+                            .replace(/\//g, "-")
+                        : "N/A"}
+                    </span>
                   </div>
                   <div className="flex items-center">
                     <span className="font-semibold w-25 text-left ">
                       Activated Date
                     </span>
                     <span className="w-3 mx-1 text-center">:</span>
-                    <span>--</span>
+                    <span>{user?.activated_date || "N/A"}</span>
                   </div>
                   <div className="flex items-center">
-                    <span className="font-semibold w-25 text-left ">
+                    <span className="font-semibold w-27 text-left ">
                       Last Order Date
                     </span>
                     <span className="w-3 mx-1 text-center">:</span>
@@ -116,7 +155,7 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Product Card */}
-            <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-50">
+            <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-44">
               {/* For screens up to lg */}
               <img
                 src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760765861/ionizer_with_kitchen_t3da7q.jpg"
@@ -144,8 +183,10 @@ const DashboardPage: React.FC = () => {
                     alt="Rank Badge"
                     className="h-26 -mt-2 mx-auto"
                   />
-                  <p className=" text-center text-sm font-semibold items-end">
-                    NO STAR
+                  <p className="text-center text-sm font-semibold items-end">
+                    {user?.rank && user.rank !== "0" && user.rank !== "none"
+                      ? `${user.rank} STAR`
+                      : "NO STAR"}
                   </p>
                 </div>
               </InfoCard>
@@ -168,13 +209,15 @@ const DashboardPage: React.FC = () => {
 
             {/* My Business Summary */}
             <div className="bg-gray-100 rounded-2xl shadow-md border border-gray-100">
-              <div className="bg-[radial-gradient(circle_at_top,_#222731,_#a2a7b3)] text-white
-               max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans">
+              <div
+                className="bg-[radial-gradient(circle_at_top,_#222731,_#a2a7b3)] text-white
+               max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans"
+              >
                 MY BUSINESS SUMMARY
               </div>
 
               {/* Dashboard Boxes */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-5 p-5">
                 <DashBox
                   icon={<FaRupeeSign />}
                   title="Total Payout"
@@ -242,8 +285,10 @@ const InfoCard = ({
   children: React.ReactNode;
 }) => (
   <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden h-46 ">
-    <div className="bg-[radial-gradient(circle_at_top,_#353a44,_#7e8594)] text-white
-     text-md text-center font-semibold py-2 font-sans">
+    <div
+      className="bg-[radial-gradient(circle_at_top,_#353a44,_#7e8594)] text-white
+     text-md text-center font-semibold py-2 font-sans"
+    >
       {title}
     </div>
     <div className="py-2 px-4 text-gray-700">{children}</div>

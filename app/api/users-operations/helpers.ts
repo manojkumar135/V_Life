@@ -195,7 +195,7 @@ async function createTreeNode(
   const newNode = await TreeNode.create({
     user_id: user.user_id,
     name: user.user_name,
-    status: user.user_status || "active",
+    status: user.user_status || "inactive",
     contact: user.contact || "",
     mail: user.mail || "",
     address: user.address || "",
@@ -283,7 +283,7 @@ export async function createUserAndLogin(body: any) {
     locality: locality || "",
     referBy: referBy || "",
     password: hashedPassword,
-    status: "Active",
+    status: "inactive",
   });
 
   // Tree logic: prefer explicit parent, else referBy

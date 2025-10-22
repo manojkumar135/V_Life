@@ -93,7 +93,7 @@ function AddUserFormContent() {
           locality: values.locality,
           created_by: "",
           role: "user",
-          user_status: "active",
+          user_status: "inactive",
           referBy: user.user_id,
           team: team || "right",
         });

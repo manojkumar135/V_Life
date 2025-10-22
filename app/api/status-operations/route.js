@@ -4,11 +4,15 @@ import { User } from "@/models/user";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 
+const date = new Date();
+
 export async function PUT(req) {
   try {
     await connectDB();
 
-    const { id, status } = await req.json();
+    // 🧾 Parse request body
+    const { id, status, status_notes } = await req.json();
+
     if (!id || !status) {
       return NextResponse.json(
         { success: false, message: "Missing id or status" },
@@ -16,13 +20,28 @@ export async function PUT(req) {
       );
     }
 
-    // toggle status
+    // ✅ Determine new status (toggle if needed)
     const newStatus = status === "active" ? "inactive" : "active";
 
-    // 1️⃣ Update User
+    // ✅ Create proper status notes
+    const notes =
+      status_notes ||
+      (newStatus === "active"
+        ? "Activated by Admin"
+        : "Deactivated by Admin");
+
+    // 1️⃣ Update User document
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      { user_status: newStatus, last_modified_at: new Date() },
+      {
+        user_status: newStatus,
+        status_notes: notes, // ✅ store admin note
+        activated_date: `${String(date.getDate()).padStart(2, '0')}-${String(
+          date.getMonth() + 1
+        ).padStart(2, '0')}-${date.getFullYear()}`,
+
+        last_modified_at: new Date(),
+      },
       { new: true }
     );
 
@@ -33,24 +52,36 @@ export async function PUT(req) {
       );
     }
 
-    // 2️⃣ Update Login (match by user_id)
+    // 2️⃣ Sync with Login collection (by user_id)
     await Login.updateMany(
       { user_id: updatedUser.user_id },
       {
-        status: newStatus ,
+        status: newStatus,
+        status_notes: notes, // ✅ store admin note
+        activated_date: `${String(date.getDate()).padStart(2, '0')}-${String(
+          date.getMonth() + 1
+        ).padStart(2, '0')}-${date.getFullYear()}`,
         last_modified_at: new Date(),
       }
     );
 
-    // 3️⃣ Update TreeNode (match by user_id)
+    // 3️⃣ Sync with TreeNode collection (by user_id)
     await TreeNode.findOneAndUpdate(
       { user_id: updatedUser.user_id },
-      { status: newStatus, updatedAt: new Date() }
+      {
+        status: newStatus,
+        status_notes: notes, // ✅ store admin note
+        activated_date: `${String(date.getDate()).padStart(2, '0')}-${String(
+          date.getMonth() + 1
+        ).padStart(2, '0')}-${date.getFullYear()}`,
+        updatedAt: new Date(),
+      }
     );
 
+    // ✅ Success response
     return NextResponse.json({
       success: true,
-      message: `Status updated to ${newStatus}`,
+      message: `User ${updatedUser.user_name} status updated to ${newStatus}`,
       data: updatedUser,
     });
   } catch (error) {

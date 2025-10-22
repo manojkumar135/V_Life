@@ -21,6 +21,7 @@ interface User {
   mail?: string;
   role?: string;
   user_status: "active" | "inactive" | string;
+  status_notes?: string; // <--- added
 }
 
 export default function LeftTeam() {
@@ -91,7 +92,7 @@ export default function LeftTeam() {
     router.push(`/administration/users/tree/${id}`);
   };
 
-   const onBack = () => {
+  const onBack = () => {
     router.push("/administration/users");
   };
 
@@ -108,12 +109,24 @@ export default function LeftTeam() {
       setLoading(true);
 
       const { id, status } = selectedUser;
-      const res = await axios.put(STATUS_URL, { id, status });
+      // const statusNotes =
+      //   status === "active" ? `Deactivated by Admin` : `Activated by Admin`;
+      const res = await axios.put(STATUS_URL, {
+        id,
+        status,
+        // status_notes: statusNotes,
+      });
       if (res.data.success) {
         // ✅ Update UI
         setUsersData((prev: User[]) =>
           prev.map((u) =>
-            u._id === id ? { ...u, user_status: res.data.data.user_status } : u
+            u._id === id
+              ? {
+                  ...u,
+                  user_status: res.data.data.user_status,
+                  status_notes: res.data.data.status_notes,
+                }
+              : u
           )
         );
       }
@@ -131,7 +144,7 @@ export default function LeftTeam() {
     { field: "user_name", headerName: "User Name", flex: 1 },
     { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 2 },
-    { field: "role", headerName: "Title", flex: 1 },
+    { field: "rank", headerName: "Rank", flex: 1 },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 

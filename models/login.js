@@ -35,6 +35,8 @@ const LoginSchema = new mongoose.Schema(
     user_id: { type: String, required: true }, // link to User schema
     user_name: { type: String, required: true },
     dob: { type: String, required: true },
+    rank: { type: String, default: "none" },
+
     role: { type: String },
     role_id: { type: String },
     title: { type: String },
@@ -84,6 +86,9 @@ const LoginSchema = new mongoose.Schema(
     login_time: { type: Date, default: Date.now },
     logout_time: { type: Date },
     status: { type: String, },
+    status_notes: { type: String, },
+    activated_date: { type: String },
+
     created_at: { type: Date, default: Date.now },
     created_by: { type: String },
     last_modified_by: { type: String },
