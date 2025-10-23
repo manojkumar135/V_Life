@@ -15,8 +15,8 @@ import Loader from "@/components/common/loader";
 
 // Define CartItem interface
 interface CartItem {
-  product_id: string | number; // ✅ always use this as primary identifier
-  id?: string | number; // optional (for UI keys)
+  product_id: string | number;
+  id?: string | number;
   name: string;
   category: string;
   quantity: number;
@@ -44,15 +44,12 @@ export default function OrderFormCartSection({
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const [paymentMethod, setPaymentMethod] = useState<"qr" | "upi" | "card">(
-    "qr"
-  );
+  const [paymentMethod, setPaymentMethod] = useState<"qr" | "upi" | "card">("qr");
+  const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
+  const [advanceDetails, setAdvanceDetails] = useState({ amount: 0, remaining: 0 });
 
   const router = useRouter();
   const [address, setAddress] = useState("");
-  const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
-
   const { user } = useVLife();
   const user_id = user?.user_id || "";
   const [paymentDetails, setPaymentDetails] = useState({
@@ -73,11 +70,20 @@ export default function OrderFormCartSection({
   useEffect(() => {
     const checkAdvancePayment = async () => {
       try {
-        const paid = await hasAdvancePaid(user_id, 10000);
-        setHasPaidAdvance(paid);
+        const result = await hasAdvancePaid(user_id, 10000);
+        setHasPaidAdvance(result.hasPermission);
+        if (result.hasAdvance) {
+          setAdvanceDetails({
+            amount: 10000,
+            remaining: Math.max(0, getTotalPrice() - 10000),
+          });
+        } else {
+          setAdvanceDetails({ amount: 0, remaining: getTotalPrice() });
+        }
       } catch (error) {
         console.error("Error checking advance payment:", error);
         setHasPaidAdvance(false);
+        setAdvanceDetails({ amount: 0, remaining: getTotalPrice() });
       }
     };
 
@@ -100,7 +106,7 @@ export default function OrderFormCartSection({
       checkAdvancePayment();
       fetchAddress();
     }
-  }, [user_id]);
+  }, [user_id, cart]);
 
   const handlePlaceOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -142,8 +148,6 @@ export default function OrderFormCartSection({
 
       setShowPayment(true);
     } catch (error) {
-      setLoading(false);
-
       console.error("Error in handlePlaceOrder:", error);
       ShowToast.error("Something went wrong. Please try again later.");
     } finally {
@@ -152,7 +156,7 @@ export default function OrderFormCartSection({
   };
 
   const finalAmount = isFirstOrder
-    ? Math.max(0, getTotalPrice() - 10000)
+    ? advanceDetails.remaining
     : getTotalPrice();
 
   const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,7 +167,6 @@ export default function OrderFormCartSection({
     }));
   };
 
-  // ✅ Safe helper functions
   const handleIncreaseQuantity = (itemId: string | number | undefined) => {
     if (!itemId) return;
     const item = cart.find(
@@ -193,7 +196,7 @@ export default function OrderFormCartSection({
     e: React.ChangeEvent<HTMLInputElement>,
     itemId: string | number
   ) => {
-    let value = e.target.value.replace(/\D/g, ""); // remove non-numeric
+    let value = e.target.value.replace(/\D/g, "");
     let num = Number(value);
     if (isNaN(num)) return;
     if (num < 1) num = 1;
@@ -219,6 +222,7 @@ export default function OrderFormCartSection({
           <Loader />
         </div>
       )}
+
       <div
         className={`rounded-xl p-4 max-lg:p-3 bg-white ${
           showPayment ? "opacity-30 pointer-events-none" : ""
@@ -421,7 +425,7 @@ export default function OrderFormCartSection({
                 {/* Totals */}
                 <div className="xl:pt-4 xl:border-t fixed bottom-0 left-0 right-0 max-lg:bg-white max-lg:shadow-[0_-4px_6px_rgba(0,0,0,0.1)] max-lg:rounded-t-xl">
                   <div className="px-6 py-4 bg-white -mt-4">
-                    {isFirstOrder && hasPaidAdvance && (
+                    {isFirstOrder && hasPaidAdvance && advanceDetails.amount > 0 && (
                       <>
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
                           <span>Subtotal</span>
@@ -431,7 +435,7 @@ export default function OrderFormCartSection({
                         </div>
                         <div className="flex justify-between items-center text-sm text-red-500 mt-1">
                           <span>Advance Paid</span>
-                          <span>- ₹ 10,000.00</span>
+                          <span>- ₹ {advanceDetails.amount.toFixed(2)}</span>
                         </div>
                         <div className="border-t border-gray-200 my-3"></div>
                       </>

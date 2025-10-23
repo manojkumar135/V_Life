@@ -199,7 +199,7 @@ export async function runMatchingBonus() {
 
         // ✅ Check if user has paid advance ≥ 10000
         const advancePaid = await hasAdvancePaid(u.user_id, 10000);
-        if (!advancePaid) continue;
+        if (!advancePaid.hasPermission) continue;
 
         const now = new Date();
         const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);

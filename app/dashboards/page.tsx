@@ -29,8 +29,9 @@ const DashboardPage: React.FC = () => {
     const checkAdvancePayment = async () => {
       try {
         const paid = await hasAdvancePaid(user_id, 10000);
+        // console.log(paid)
 
-        if (!paid) {
+        if (!paid.hasPermission) {
           setShowAlert(true);
         }
       } catch (err) {

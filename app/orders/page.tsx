@@ -61,7 +61,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const checkAdvancePayment = async () => {
       const paid = await hasAdvancePaid(user_id, 10000);
-      setHasPaidAdvance(paid);
+      setHasPaidAdvance(paid.hasPermission);
 
       if (!paid) {
         setShowAlert(true);

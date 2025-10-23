@@ -46,7 +46,7 @@ const DashboardPage: React.FC = () => {
     const checkAdvancePayment = async () => {
       try {
         const paid = await hasAdvancePaid(user_id, 10000);
-        if (!paid) setShowAlert(true);
+        if (!paid.hasPermission) setShowAlert(true);
       } catch (err) {
         console.error("Error checking payment history:", err);
         setShowAlert(true);

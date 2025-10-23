@@ -38,7 +38,7 @@ export default function WithdrawPage() {
     if (!user?.user_id) return;
     (async () => {
       const paid = await hasAdvancePaid(user.user_id, 10000);
-      setAdvancePaid(paid);
+      setAdvancePaid(paid.hasPermission);
     })();
   }, [user?.user_id]);
 

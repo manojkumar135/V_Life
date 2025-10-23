@@ -64,8 +64,8 @@ export default function TransactionHistory() {
     (async () => {
       const paid = await hasAdvancePaid(user.user_id, 10000);
       if (!isMounted) return;
-      setAdvancePaid(paid);
-      setShowAlert(!paid);
+      setAdvancePaid(paid.hasPermission);
+      setShowAlert(!paid.hasPermission);
     })();
     return () => {
       isMounted = false;
