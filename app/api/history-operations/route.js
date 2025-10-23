@@ -126,23 +126,21 @@ export async function POST(request) {
     // 🔹 Check if user already has any payment history
     const existingPayment = await History.findOne({ user_id: body.user_id });
 
-    // 🔹 Determine if this is an advance payment
-    if (!existingPayment && body.amount >= 10000) {
-      body.first_payment = true;
-      body.advance = true;
-    } else {
-      body.first_payment = !!existingPayment;
-      body.advance = false;
-    }
+    const isAdvancePayment =
+      !existingPayment &&
+      (body.advance === true || body.source === "advance") &&
+      body.amount >= 10000;
 
-    // 🔹 Always set ischecked to false
+    body.first_payment = !existingPayment;
+    body.advance = isAdvancePayment;
     body.ischecked = false;
+
 
     // 🔹 Create payment record
     const newHistory = await History.create(body);
 
     // 🔹 If advance payment, check rank for referrer
-    if (body.advance) {
+    if (isAdvancePayment) {
       const user = await User.findOne({ user_id: body.user_id });
 
       if (user) {

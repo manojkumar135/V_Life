@@ -14,6 +14,8 @@ import SubmitButton from "@/components/common/submitbutton";
 import { IoMdAdd } from "react-icons/io";
 import Loader from "@/components/common/loader";
 import { formatDate } from "@/components/common/formatDate";
+import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+
 
 interface CartItem {
   product_id: string;
@@ -75,6 +77,12 @@ export default function AddOrderPage() {
   const [address, setAddress] = useState("");
   const [showCart, setShowCart] = useState(false);
   const [isFirstOrder, setIsFirstOrder] = useState(false);
+  const [advancePaid, setAdvancePaid] = useState(false);
+const [advanceDetails, setAdvanceDetails] = useState({
+    amount: 0,
+    remaining: 0,
+  });
+
 
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
@@ -175,6 +183,33 @@ export default function AddOrderPage() {
     };
     if (user?.user_id) checkFirstOrder();
   }, [user?.user_id]);
+
+  // Check advance payment
+  useEffect(() => {
+    const checkAdvancePayment = async () => {
+      try {
+        const result = await hasAdvancePaid(user.user_id, 10000);
+        setAdvancePaid(result.hasAdvance);
+        if (result.hasAdvance) {
+          setAdvanceDetails({
+            amount: 10000,
+            remaining: Math.max(0, getTotalPrice() - 10000),
+          });
+        } else {
+          setAdvanceDetails({ amount: 0, remaining: getTotalPrice() });
+        }
+      } catch (error) {
+        console.error("Error checking advance payment:", error);
+        setAdvancePaid(false);
+        setAdvanceDetails({ amount: 0, remaining: getTotalPrice() });
+      }
+    };
+
+    if (user.user_id) checkAdvancePayment();
+  }, [user.user_id, cart]);
+
+
+
 
   // Update cart from context
   useEffect(() => {
@@ -318,7 +353,7 @@ export default function AddOrderPage() {
         amount: getTotalPrice(),
         total_amount: getTotalPrice(),
         final_amount: finalAmount,
-        advance_deducted: isFirstOrder ? 10000 : 0,
+        advance_deducted: isFirstOrder && advancePaid ? 10000 : 0,
         is_first_order: isFirstOrder,
       };
 

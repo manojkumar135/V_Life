@@ -254,7 +254,13 @@ export default function OrdersPage() {
           search={query}
           setSearch={setQuery}
           addLabel="+ ADD ORDER"
-          showAddButton={(user?.role === "user" && user?.status === "active") ? hasPaidAdvance : false}
+          showAddButton={
+            user?.role === "admin"
+              ? true
+              : user?.role === "user" && user?.status === "active"
+              ? hasPaidAdvance
+              : false
+          }
           onAdd={handleAddOrder}
           onMore={handleDownloadClick}
           showPagination

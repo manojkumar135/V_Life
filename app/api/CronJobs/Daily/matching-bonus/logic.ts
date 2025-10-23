@@ -211,6 +211,20 @@ export async function runMatchingBonus() {
         const wallet = await Wallet.findOne({ user_id: u.user_id });
         const walletId = wallet ? wallet.wallet_id : null;
 
+        let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+        if (!wallet || !wallet.pan_verified) {
+          payoutStatus = "OnHold";
+        } else {
+          payoutStatus = "Pending"; // All checks passed but not completed until manual approval if needed
+        }
+
+// ✅ Calculate split amounts
+const totalAmount = 5000;
+const withdrawAmount = totalAmount * 0.8; // 80%
+const rewardAmount = totalAmount * 0.1;   // 10%
+const tdsAmount = totalAmount * 0.05;     // 5%
+const adminCharge = totalAmount * 0.05;   // 5%
+
         // ✅ Create Daily Payout
         const payout = await DailyPayout.create({
           transaction_id: `MB${Date.now()}`,
@@ -227,9 +241,14 @@ export async function runMatchingBonus() {
           date: formattedDate,
           time: now.toTimeString().slice(0, 5),
           available_balance: wallet?.balance || 0,
-          amount: 5000,
+          amount: totalAmount,
+          totalamount: totalAmount,
+          withdraw_amount: withdrawAmount,
+          reward_amount: rewardAmount,
+          tds_amount: tdsAmount,
+          admin_charge: adminCharge,
           transaction_type: "Credit",
-          status: "Completed",
+          status: payoutStatus,
           details: "Daily Matching Bonus",
           left_users: u.left_histories.map((h) => ({
             user_id: h.user_id,

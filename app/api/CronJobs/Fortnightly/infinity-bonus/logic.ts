@@ -27,14 +27,16 @@ async function getLast15DaysMatchingPayouts() {
   const payouts = await DailyPayout.find({
     name: "Matching Bonus",
     // status: "Completed",
-    is_checked: false // Only consider unchecked payouts
+    is_checked: false, // Only consider unchecked payouts
   });
   const filtered = payouts.filter((p) => {
     const payoutDate = parseDDMMYYYY(p.date);
     return payoutDate >= start && payoutDate <= now;
   });
 
-  console.log(`[Infinity Bonus] Found ${filtered.length} Matching Bonus payouts in last 15 days`);
+  console.log(
+    `[Infinity Bonus] Found ${filtered.length} Matching Bonus payouts in last 15 days`
+  );
   return filtered;
 }
 
@@ -43,10 +45,10 @@ async function findSponsorByInfinityUsers(userId: string): Promise<any | null> {
   const sponsors = await User.find({
     infinity_users: {
       $elemMatch: {
-        users: userId
-      }
+        users: userId,
+      },
     },
-    user_status: "active"
+    user_status: "active",
   });
   return sponsors.length > 0 ? sponsors[0] : null;
 }
@@ -59,7 +61,9 @@ export async function runInfinityBonus() {
 
     const last15DaysPayouts = await getLast15DaysMatchingPayouts();
     if (!last15DaysPayouts.length) {
-      console.log("⚠️ [Infinity Bonus] No Matching Bonus payouts found in last 15 days.");
+      console.log(
+        "⚠️ [Infinity Bonus] No Matching Bonus payouts found in last 15 days."
+      );
       return;
     }
 
@@ -74,7 +78,10 @@ export async function runInfinityBonus() {
 
       // 1️⃣ Try user.infinity
       if (user.infinity) {
-        sponsor = await User.findOne({ user_id: user.infinity, user_status: "active" });
+        sponsor = await User.findOne({
+          user_id: user.infinity,
+          user_status: "active",
+        });
       }
 
       // 2️⃣ If not found, search in infinity_users
@@ -83,21 +90,59 @@ export async function runInfinityBonus() {
       }
 
       if (!sponsor) {
-        console.log(`⚠️ No sponsor found for ${user.user_id}, skipping Infinity Bonus.`);
+        console.log(
+          `⚠️ No sponsor found for ${user.user_id}, skipping Infinity Bonus.`
+        );
         continue;
       }
 
+      // ✅ Check sponsor rank
+      const rank = sponsor.rank; // rank can be "1" | "2" | "3" | "4" | "5" or empty/none
+      if (!rank || rank === "none") {
+        console.log(
+          `⚠️ Sponsor ${sponsor.user_id} has no rank, skipping Infinity Bonus.`
+        );
+        continue;
+      }
+
+      // Determine bonus percentage based on rank
+      const rankPercentages: Record<string, number> = {
+        "1": 0.25,
+        "2": 0.35,
+        "3": 0.4,
+        "4": 0.45,
+        "5": 0.5,
+      };
+      const bonusPercentage = rankPercentages[rank] || 0;
+
       // Find sponsor's wallet
       const wallet = await Wallet.findOne({ user_id: sponsor.user_id });
+
+      // Determine payout status
+      let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+      if (!wallet || !wallet.pan_verified) {
+        payoutStatus = "OnHold"; // wallet missing or PAN not verified
+      } else {
+        payoutStatus = "Pending"; // all checks passed
+      }
+
       if (!wallet) {
-        console.log(`⚠️ No wallet found for ${sponsor.user_id}, skipping Infinity Bonus.`);
+        console.log(
+          `⚠️ No wallet found for ${sponsor.user_id}, skipping Infinity Bonus.`
+        );
         continue;
       }
 
       // Release 50% of matching bonus to sponsor
       const now = new Date();
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
-      const bonusAmount = payout.amount * 0.5;
+      const bonusAmount = payout.amount * bonusPercentage;
+
+      // ✅ Split Bonus Amount
+      const withdrawAmount = bonusAmount * 0.8; // 80%
+      const rewardAmount = bonusAmount * 0.1; // 10%
+      const tdsAmount = bonusAmount * 0.05; // 5%
+      const adminCharge = bonusAmount * 0.05; // 5%
 
       const infinityPayout = await WeeklyPayout.create({
         transaction_id: `IB${Date.now()}`,
@@ -115,14 +160,24 @@ export async function runInfinityBonus() {
         time: now.toTimeString().slice(0, 5),
         available_balance: wallet?.balance || 0,
         amount: bonusAmount,
+        total: bonusAmount,
         transaction_type: "Credit",
-        status: "Completed",
+        status: payoutStatus,
         details: `Infinity Bonus from ${user.user_id}`,
-        team_users: [{
-          user_id: payout.user_id,
-          amount: payout.amount,
-          transaction_id: payout.transaction_id,
-        }],
+
+        // ✅ Split fields
+        withdraw_amount: withdrawAmount,
+        reward_amount: rewardAmount,
+        tds_amount: tdsAmount,
+        admin_charge: adminCharge,
+
+        team_users: [
+          {
+            user_id: payout.user_id,
+            amount: payout.amount,
+            transaction_id: payout.transaction_id,
+          },
+        ],
         created_by: "system",
         last_modified_by: "system",
         last_modified_at: now,
@@ -159,10 +214,14 @@ export async function runInfinityBonus() {
       );
 
       totalCreated++;
-      console.log(`✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (from ${user.user_id})`);
+      console.log(
+        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (from ${user.user_id})`
+      );
     }
 
-    console.log(`\n✅ [Infinity Bonus] Execution completed. Total payouts created: ${totalCreated}`);
+    console.log(
+      `\n✅ [Infinity Bonus] Execution completed. Total payouts created: ${totalCreated}`
+    );
   } catch (err) {
     console.error("❌ [Infinity Bonus] Error:", err);
     throw err;

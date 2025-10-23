@@ -100,6 +100,8 @@ export default function PayAdvancePage() {
                 time: new Date().toLocaleTimeString(), // store human-readable
                 available_balance: 0,
                 amount: ADVANCE_AMOUNT,
+                advance: true,
+                source: "advance",
                 transaction_type: "Debit",
                 details: "Advance Payment for Account Activation",
                 status: "Completed",

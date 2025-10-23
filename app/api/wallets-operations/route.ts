@@ -4,6 +4,7 @@ import { Wallet } from "@/models/wallet";
 import { Login } from "@/models/login";
 import mongoose from "mongoose";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+import { releaseOnHoldPayouts } from "@/app/api/wallets-operations/walletHelpers";
 
 // Format field for error messages
 function formatField(str: string) {
@@ -72,7 +73,10 @@ export async function GET(request: Request) {
     const wallets = await Wallet.find(query).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: wallets });
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -134,9 +138,19 @@ export async function POST(request: Request) {
       await login.save();
     }
 
-    return NextResponse.json({ success: true, data: newWallet }, { status: 201 });
+    if (newWallet.pan_verified || pan_number) {
+      await releaseOnHoldPayouts(user_id);
+    }
+
+    return NextResponse.json(
+      { success: true, data: newWallet },
+      { status: 201 }
+    );
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -146,7 +160,8 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     await connectDB();
-    const { id, wallet_id, aadhar_number, pan_number, ...updates } = await request.json();
+    const { id, wallet_id, aadhar_number, pan_number, ...updates } =
+      await request.json();
     const updateId = id || wallet_id;
     if (!updateId)
       return NextResponse.json(
@@ -213,9 +228,17 @@ export async function PUT(request: Request) {
       await login.save();
     }
 
+    // ✅ Release OnHold payouts if PAN is now verified
+    if (wallet.pan_verified || pan_number) {
+      await releaseOnHoldPayouts(wallet.user_id);
+    }
+
     return NextResponse.json({ success: true, data: wallet });
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -226,7 +249,8 @@ export async function PATCH(request: Request) {
   try {
     await connectDB();
     const { searchParams } = new URL(request.url);
-    const walletIdFromQuery = searchParams.get("wallet_id") || searchParams.get("id");
+    const walletIdFromQuery =
+      searchParams.get("wallet_id") || searchParams.get("id");
 
     const body = await request.json();
     const { id, wallet_id, aadhar_number, pan_number, ...updates } = body;
@@ -297,9 +321,17 @@ export async function PATCH(request: Request) {
       await login.save();
     }
 
+    // ✅ Release OnHold payouts if PAN is now verified
+    if (wallet.pan_verified || pan_number) {
+      await releaseOnHoldPayouts(wallet.user_id);
+    }
+
     return NextResponse.json({ success: true, data: wallet });
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -334,6 +366,9 @@ export async function DELETE(request: Request) {
       message: "Wallet deleted successfully",
     });
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
