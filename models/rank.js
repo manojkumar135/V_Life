@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const QualifiedUserSchema = new mongoose.Schema(
   {
     user_id: { type: String, required: true, ref: "User" },
+    user_name: { type: String, required: true },
     team: { type: String, enum: ["left", "right", "any"], default: "any" },
     payment_id: { type: String },
   },
@@ -12,6 +13,7 @@ const QualifiedUserSchema = new mongoose.Schema(
 const RankSchema = new mongoose.Schema(
   {
     user_id: { type: String, required: true, unique: true, ref: "User" },
+    user_name: { type: String, required: true },
 
     ranks: {
       "1_star": {

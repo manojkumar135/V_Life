@@ -301,6 +301,40 @@ export async function createUserAndLogin(body: any) {
       { $push: { referred_users: user_id } }
     );
 
+    try {
+      const refNode = await TreeNode.findOne({ user_id: referBy }).lean();
+      let sideToUpdate: "left" | "right" = "right";
+
+      if (team === "left" || (refNode && (refNode as any).left === user_id)) {
+        sideToUpdate = "left";
+      } else if (
+        team === "right" ||
+        (refNode && (refNode as any).right === user_id)
+      ) {
+        sideToUpdate = "right";
+      }
+
+      if (sideToUpdate === "left") {
+        await User.findOneAndUpdate(
+          { user_id: referBy },
+          {
+            $addToSet: { direct_left_users: user_id },
+            $inc: { direct_left_count: 1 },
+          }
+        );
+      } else {
+        await User.findOneAndUpdate(
+          { user_id: referBy },
+          {
+            $addToSet: { direct_right_users: user_id },
+            $inc: { direct_right_count: 1 },
+          }
+        );
+      }
+    } catch (err) {
+      console.error("Failed to update direct_left/right on referrer:", err);
+    }
+
     const referrer = await User.findOne({ user_id: referBy });
     if (!referrer?.infinity_users?.length) {
       await rebuildInfinity();

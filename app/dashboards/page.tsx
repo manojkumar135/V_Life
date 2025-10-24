@@ -44,6 +44,7 @@ const DashboardPage: React.FC = () => {
       checkAdvancePayment();
     }
   }, [user_id]);
+  console.log(user.rank);
 
   return (
     <Layout>
@@ -156,7 +157,7 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* Product Card */}
-            <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-44">
+            <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-44 2xl:h-120">
               {/* For screens up to lg */}
               <img
                 src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760765861/ionizer_with_kitchen_t3da7q.jpg"
@@ -218,7 +219,7 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Dashboard Boxes */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-5 p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-3 gap-5 p-5">
                 <DashBox
                   icon={<FaRupeeSign />}
                   title="Total Payout"

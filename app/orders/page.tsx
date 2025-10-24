@@ -63,7 +63,7 @@ export default function OrdersPage() {
       const paid = await hasAdvancePaid(user_id, 10000);
       setHasPaidAdvance(paid.hasPermission);
 
-      if (!paid) {
+      if (!paid.hasPermission) {
         setShowAlert(true);
       }
     };

@@ -56,7 +56,13 @@ const UserSchema = new mongoose.Schema(
 
     // 🌳 Binary Team Structure
     left: { type: String },
-    right: { type: String }, // user_id of right downline
+    right: { type: String }, 
+    left_users: { type: [String], default: [] },
+    right_users: { type: [String], default: [] },
+    direct_left_users: { type: [String], default: [] },
+    direct_right_users: { type: [String], default: [] },
+    direct_left_count: { type: Number, default: 0 },
+    direct_right_count: { type: Number, default: 0 },
     left_team_volume: { type: Number, default: 0 }, // total business on left
     right_team_volume: { type: Number, default: 0 },
     carry_forward_left: { type: Number, default: 0 },

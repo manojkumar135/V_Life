@@ -10,7 +10,60 @@ import mongoose from "mongoose";
 
 const date = new Date();
 
-// 🔹 Update or insert rank details in Rank collection + User table
+// ✅ Helper: Resolve user_id from TreeNode reference (ObjectId or string)
+async function resolveChildUserId(nodeRef) {
+  if (!nodeRef) return null;
+  try {
+    if (typeof nodeRef === "string" && mongoose.Types.ObjectId.isValid(nodeRef)) {
+      const childNode = await TreeNode.findById(nodeRef).lean();
+      return childNode?.user_id || String(nodeRef);
+    }
+    if (typeof nodeRef === "string") {
+      const tn = await TreeNode.findOne({ user_id: nodeRef }).lean();
+      return tn ? nodeRef : String(nodeRef);
+    }
+    return String(nodeRef);
+  } catch {
+    return String(nodeRef);
+  }
+}
+
+// ✅ Helper: Detect whether targetUserId is in left/right team of rootUserId
+async function getUserTeam(rootUserId, targetUserId) {
+  if (!rootUserId || !targetUserId) return "any";
+
+  const allNodes = await TreeNode.find({}).lean();
+  const nodeMap = new Map(allNodes.map(n => [n.user_id, n]));
+
+  const rootNode = nodeMap.get(rootUserId);
+  if (!rootNode) return "any";
+
+  // Direct left/right match
+  if (rootNode.left === targetUserId) return "left";
+  if (rootNode.right === targetUserId) return "right";
+
+  // BFS traversal
+  const queue = [
+    { nodeId: rootNode.left, team: "left" },
+    { nodeId: rootNode.right, team: "right" },
+  ];
+
+  while (queue.length) {
+    const { nodeId, team } = queue.shift();
+    if (!nodeId) continue;
+    if (nodeId === targetUserId) return team;
+
+    const child = nodeMap.get(nodeId);
+    if (child) {
+      queue.push({ nodeId: child.left, team });
+      queue.push({ nodeId: child.right, team });
+    }
+  }
+
+  return "any";
+}
+
+// ✅ Helper: Update or insert rank details
 async function updateUserRank(userId, rankLevel, qualifiedUsers) {
   const rankKey = `${rankLevel}_star`;
 
@@ -18,6 +71,7 @@ async function updateUserRank(userId, rankLevel, qualifiedUsers) {
     { user_id: userId },
     {
       $set: {
+        user_name: qualifiedUsers.length ? qualifiedUsers[0]?.referrer_name || undefined : undefined,
         [`ranks.${rankKey}`]: {
           qualified_users: qualifiedUsers,
           achieved_at: new Date(),
@@ -28,69 +82,111 @@ async function updateUserRank(userId, rankLevel, qualifiedUsers) {
   );
 
   await User.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
+  await Login.updateOne(
+    { user_id: userId },
+    { $set: { rank: String(rankLevel) } }
+  );
 }
 
-// 🔹 Check rank conditions and upgrade if eligible
+// ✅ Rank Upgrade Logic
 async function checkAndUpgradeRank(user) {
-  const currentRank = parseInt(user.rank === "none" ? "0" : user.rank);
+  console.log(`Checking rank for user: ${user.user_id}`);
+  const currentRank = parseInt(user.rank === "none" ? "0" : user.rank, 10);
 
-  // 🛑 Stop processing if already at max rank (5-star)
   if (currentRank >= 5) {
     console.log(`${user.user_id} is already at 5-star rank.`);
     return;
   }
 
-  // 🔹 Fetch all direct users referred by this user
-  const directs = await User.find({ referBy: user.user_id });
+  const directs = await User.find({ referBy: user.user_id }).lean();
+  const treeNode = await TreeNode.findOne({ user_id: user.user_id }).lean();
+  const leftUserId = await resolveChildUserId(treeNode?.left);
+  const rightUserId = await resolveChildUserId(treeNode?.right);
 
-  // 🔹 Find directs who have paid advance
   const paidDirects = [];
   for (const direct of directs) {
-    const paid = await History.findOne({ user_id: direct.user_id, advance: true });
+    const paid = await History.findOne({ user_id: direct.user_id, advance: true }).lean();
     if (paid) {
-      paidDirects.push({
-        user: direct,
-        payment_id: paid._id,
-      });
+      const team = await getUserTeam(user.user_id, direct.user_id);
+      paidDirects.push({ user: direct, payment_id: paid._id, team });
     }
   }
 
   const totalPaid = paidDirects.length;
+  const leftUser = paidDirects.find(d => d.team === "left");
+  const rightUser = paidDirects.find(d => d.team === "right");
 
-  // 🟡 For 1-star: one left + one right, both advance-paid
+  let rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
+  if (!rankRecord) {
+    await Rank.create({ user_id: user.user_id, user_name: user.user_name || "", ranks: {} });
+    rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
+  }
+
+  // Partial qualification record
   if (currentRank < 1) {
-    const leftUser = paidDirects.find((d) => d.user.user_id === user.left);
-    const rightUser = paidDirects.find((d) => d.user.user_id === user.right);
+    const existingQualified = rankRecord?.ranks?.["1_star"]?.qualified_users || [];
+    const toAdd = [];
 
-    if (leftUser && rightUser) {
-      await updateUserRank(user.user_id, 1, [
-        {
-          user_id: leftUser.user.user_id,
-          team: "left",
-          payment_id: leftUser.payment_id,
-        },
-        {
-          user_id: rightUser.user.user_id,
-          team: "right",
-          payment_id: rightUser.payment_id,
-        },
-      ]);
-      console.log(`${user.user_id} achieved 1-star rank ✅`);
-      return;
+    if (leftUser && !existingQualified.some(u => u.team === "left")) {
+      toAdd.push({
+        user_id: leftUser.user.user_id,
+        user_name: leftUser.user.user_name || "",
+        team: "left",
+        payment_id: leftUser.payment_id,
+      });
+    }
+    if (rightUser && !existingQualified.some(u => u.team === "right")) {
+      toAdd.push({
+        user_id: rightUser.user.user_id,
+        user_name: rightUser.user.user_name || "",
+        team: "right",
+        payment_id: rightUser.payment_id,
+      });
+    }
+
+    if (toAdd.length) {
+      const merged = [...existingQualified, ...toAdd];
+      await Rank.findOneAndUpdate(
+        { user_id: user.user_id },
+        { $set: { "ranks.1_star.qualified_users": merged } },
+        { upsert: true }
+      );
+      console.log(`Partial 1-star progress for ${user.user_id}:`, merged);
+      rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
     }
   }
 
-  // 🟢 For 2-star to 5-star: every 2 more advance-paid directs (any team)
+  // Full 1-star
+  if (currentRank < 1 && leftUser && rightUser) {
+    await updateUserRank(user.user_id, 1, [
+      {
+        user_id: leftUser.user.user_id,
+        user_name: leftUser.user.user_name || "",
+        team: "left",
+        payment_id: leftUser.payment_id,
+      },
+      {
+        user_id: rightUser.user.user_id,
+        user_name: rightUser.user.user_name || "",
+        team: "right",
+        payment_id: rightUser.payment_id,
+      },
+    ]);
+    console.log(`${user.user_id} achieved 1-star rank ✅`);
+    return;
+  }
+
+  // 2-star to 5-star logic
   if (currentRank >= 1 && currentRank < 5) {
     const nextRank = currentRank + 1;
-    const requiredPaid = nextRank * 2; // total advance-paid needed to reach next rank
-
+    const requiredPaid = nextRank * 2;
     if (totalPaid >= requiredPaid) {
       const qualifiedUsers = paidDirects
         .slice(requiredPaid - 2, requiredPaid)
-        .map((d) => ({
+        .map(d => ({
           user_id: d.user.user_id,
-          team: "any",
+          user_name: d.user.user_name || "",
+          team: d.team,
           payment_id: d.payment_id,
         }));
 
@@ -100,46 +196,41 @@ async function checkAndUpgradeRank(user) {
     }
   }
 
-  // 📝 If user is 5-star or not yet eligible, just keep future records in Rank doc
+  // Already 5-star
   if (currentRank >= 5) {
-    const extraUsers = paidDirects.map((d) => ({
+    const extraUsers = paidDirects.map(d => ({
       user_id: d.user.user_id,
-      team: "any",
+      user_name: d.user.user_name || "",
+      team: d.team,
       payment_id: d.payment_id,
     }));
-
     await Rank.findOneAndUpdate(
       { user_id: user.user_id },
       { $set: { "ranks.extra": { qualified_users: extraUsers } } },
       { upsert: true }
     );
-
-    console.log(`${user.user_id} already 5-star, extra directs recorded.`);
   }
 }
 
+// ✅ POST - Create payment record
 export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
 
-    // 🔹 Check if user already has any payment history
     const existingPayment = await History.findOne({ user_id: body.user_id });
-
     const isAdvancePayment =
       !existingPayment &&
       (body.advance === true || body.source === "advance") &&
-      body.amount >= 10000;
+      Number(body.amount) >= 10000;
 
     body.first_payment = !existingPayment;
     body.advance = isAdvancePayment;
     body.ischecked = false;
 
-
-    // 🔹 Create payment record
     const newHistory = await History.create(body);
 
-    // 🔹 If advance payment, check rank for referrer
+    // After advance payment
     if (isAdvancePayment) {
       const user = await User.findOne({ user_id: body.user_id });
 
@@ -148,23 +239,16 @@ export async function POST(request) {
           user_status: "active",
           status: "active",
           status_notes: "Activated automatically after advance payment",
-          activated_date: `${String(date.getDate()).padStart(2, '0')}-${String(
-            date.getMonth() + 1
-          ).padStart(2, '0')}-${date.getFullYear()}`,
-
+          activated_date: `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`,
           last_modified_at: new Date(),
         };
 
-        // 1️⃣ Update User collection
-        await User.findOneAndUpdate({ user_id: body.user_id }, { $set: updateData });
-
-        // 2️⃣ Update Login collection
-        await Login.updateMany({ user_id: body.user_id }, { $set: updateData });
-
-        // 3️⃣ Update TreeNode collection
-        await TreeNode.findOneAndUpdate({ user_id: body.user_id }, { $set: updateData });
+        await Promise.all([
+          User.updateOne({ user_id: body.user_id }, { $set: updateData }),
+          Login.updateMany({ user_id: body.user_id }, { $set: updateData }),
+          TreeNode.updateOne({ user_id: body.user_id }, { $set: updateData }),
+        ]);
       }
-
 
       if (user?.referBy) {
         const referrer = await User.findOne({ user_id: user.referBy });
@@ -172,15 +256,12 @@ export async function POST(request) {
       }
     }
 
-
-
     return NextResponse.json({ success: true, data: newHistory }, { status: 201 });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error creating history:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
-
 
 
 // GET - Fetch all history records OR single history record by id / transaction_id
