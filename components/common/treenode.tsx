@@ -7,6 +7,7 @@ export interface TreeNode {
   user_id: string;
   name: string;
   user_status: string;
+  rank?: string;
   contact?: string;
   mail?: string;
   referBy?: string;
@@ -150,6 +151,12 @@ const BinaryTreeNode: React.FC<Props> = ({
           </div>
           {user?.role === "admin" && (
             <>
+            {node.rank && (
+                <div className="flex">
+                  <strong className="w-20">Rank:</strong>
+                  <span className="truncate font-semibold capitalize">{node.rank}</span>
+                </div>
+              )}
               {node.contact && (
                 <div className="flex">
                   <strong className="w-20">Contact:</strong>

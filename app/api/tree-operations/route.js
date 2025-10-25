@@ -28,6 +28,7 @@ async function buildTree(userId) {
     user_id: node.user_id,
     name: node.name,
     user_status: node.status || "inactive",
+    rank: user?.rank || "none",
     contact: node.contact || "",
     mail: node.mail || "",
     parent: node.parent || "",

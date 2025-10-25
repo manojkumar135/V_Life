@@ -86,6 +86,7 @@ async function updateUserRank(userId, rankLevel, qualifiedUsers) {
     { user_id: userId },
     { $set: { rank: String(rankLevel) } }
   );
+  await TreeNode.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
 }
 
 // ✅ Rank Upgrade Logic

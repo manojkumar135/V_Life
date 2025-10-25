@@ -149,6 +149,7 @@ export default function TreeView() {
   // Auto-reset tree when search is cleared
   useEffect(() => {
     if (!search.trim() && tree) {
+      // console.log("Resetting tree view", tree);
       setCurrentRoot(tree);
       setHighlightedId(null);
     }

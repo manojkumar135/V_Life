@@ -18,6 +18,15 @@ import {
 } from "react-icons/fa";
 import { MdOutlineCheckCircle } from "react-icons/md";
 
+const rankImages: Record<string, string> = {
+  no: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761374765/Untitled_design_2_buhazb.png",
+  1: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367318/ChatGPT_Image_Oct_25_2025_09_53_33_AM_b6tic2.png",
+  2: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367492/ChatGPT_Image_Oct_20_2025_09_19_12_PM_lykzu7.png",
+  3: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367549/ChatGPT_Image_Oct_20_2025_09_21_04_PM_fpgj0v.png",
+  4: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367566/ChatGPT_Image_Oct_20_2025_09_26_35_PM_bbl4go.png",
+  5: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367581/ChatGPT_Image_Oct_20_2025_09_30_19_PM_ixcuyj.png",
+};
+
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
   const user_id = user?.user_id || "";
@@ -44,7 +53,7 @@ const DashboardPage: React.FC = () => {
       checkAdvancePayment();
     }
   }, [user_id]);
-  console.log(user.rank);
+  // console.log(user.rank);
 
   return (
     <Layout>
@@ -180,15 +189,32 @@ const DashboardPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <InfoCard title="Achieved Rank">
                 <div className="mx-auto">
+                  {/* --- Dynamic Rank Image --- */}
                   <img
-                    src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760976188/ChatGPT_Image_Oct_20_2025_09_17_46_PM_x1ckns.png"
+                    src={
+                      rankImages[
+                        user?.rank && user.rank !== "none" && user.rank !== "0"
+                          ? user.rank
+                          : "no"
+                      ]
+                    }
                     alt="Rank Badge"
                     className="h-26 -mt-2 mx-auto"
                   />
-                  <p className="text-center text-sm font-semibold items-end">
-                    {user?.rank && user.rank !== "0" && user.rank !== "none"
-                      ? `${user.rank} STAR`
-                      : "NO STAR"}
+                  <p className="text-black text-center text-sm font-semibold items-end">
+                    {user?.rank && user.rank !== "0" && user.rank !== "none" ? (
+                      <>
+                        <span className="text-black text-lg font-bold">
+                          {user.rank}
+                        </span>{" "}
+                        STAR
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-black text-lg font-bold">NO</span>{" "}
+                        STAR
+                      </>
+                    )}
                   </p>
                 </div>
               </InfoCard>
@@ -232,28 +258,28 @@ const DashboardPage: React.FC = () => {
                   value="1"
                 />
                 <DashBox
-                  icon={<FaShoppingBag />}
-                  title="Lifestyle Bonus"
+                  icon={<FaWallet />}
+                  title="Reward Value"
                   value="0.00"
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
-                  title="Carry Forward Community 1 PV"
+                  title="Matching Bonus"
                   value="0.00"
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
-                  title="Carry Forward Community 2 PV"
+                  title="Infinity Bonus"
                   value="0.00"
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
-                  title="PW Community 1 PV"
+                  title="Direct Team Sales"
                   value="0.00"
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
-                  title="PW Community 2 PV"
+                  title="Infinity Team Sales"
                   value="0.00"
                 />
                 {/* <DashBox

@@ -23,8 +23,8 @@ import customSelectStyles from "@/components/common/CustomSelectStyles";
 export const dynamic = "force-dynamic";
 
 const teams = [
-  { value: "left", label: "Left" },
-  { value: "right", label: "Right" },
+  { value: "left", label: "Organization 1" },
+  { value: "right", label: "Organization 2" },
 ];
 
 function RegisterContent() {
