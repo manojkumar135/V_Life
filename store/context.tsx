@@ -46,6 +46,8 @@ export interface UserType {
 
   address?: string;
   pincode?: string;
+  aadhar?: string;
+  pan?: string;
   intro?: boolean;
   isDeleted?: boolean;
   login_time?: string;
@@ -83,6 +85,8 @@ const defaultUser: UserType = {
 
   address: "",
   pincode: "",
+  aadhar: "",
+  pan:"",
   intro: false,
   isDeleted: false,
   login_time: "",

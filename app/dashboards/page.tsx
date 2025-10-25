@@ -5,6 +5,8 @@ import Layout from "@/layout/Layout";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { TiTick } from "react-icons/ti";
+
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
@@ -221,10 +223,10 @@ const DashboardPage: React.FC = () => {
 
               <InfoCard title="KYC Status">
                 <div className="text-sm space-y-1">
-                  <StatusItem label="Bank" status="N/A" />
-                  <StatusItem label="PAN" status="N/A" />
-                  <StatusItem label="Address" status="N/A" />
-                  <StatusItem label="ID Proof" status="N/A" />
+                  <StatusItem label="Bank" value={user?.wallet_id} />
+                  <StatusItem label="PAN" value={user?.pan} />
+                  <StatusItem label="ID Proof" value={user?.aadhar} />
+                  <StatusItem label="Address" value={user?.pincode} />
                 </div>
               </InfoCard>
 
@@ -323,12 +325,22 @@ const InfoCard = ({
   </div>
 );
 
-const StatusItem = ({ label, status }: { label: string; status: string }) => (
-  <div className="flex justify-between border-b border-gray-100 pb-1">
-    <span>{label}</span>
-    <span className="text-red-500 font-semibold">{status}</span>
-  </div>
-);
+const StatusItem = ({ label, value }: { label: string; value?: string }) => {
+  const hasValue = Boolean(value);
+
+  return (
+    <div className="flex justify-between border-b border-gray-100 pb-1">
+      <span>{label}</span>
+      {hasValue ? (
+        <span className="text-green-500 font-semibold">
+          <TiTick size={25} className="w-6 h-6"/>
+        </span>
+      ) : (
+        <span className="text-red-500 font-semibold">N/A</span>
+      )}
+    </div>
+  );
+};
 
 const LinkButton = ({ text }: { text: string }) => (
   <button className="w-full flex items-center justify-between max-md:text-xs text-xs border border-gray-500 text-black px-3 py-2 rounded-md mt-2 cursor-pointer">

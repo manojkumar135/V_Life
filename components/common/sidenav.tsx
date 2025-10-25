@@ -76,13 +76,21 @@ export default function SideNav({
       setLoading(true);
       await axios.post("/api/logout");
       clearUser();
-      router.push("/auth/login");
+
+      // ⏳ Add a 2-second delay before redirecting
+      setTimeout(() => {
+        router.push("/auth/login");
+        setLoading(false);
+      }, 2500);
     } catch (err) {
       console.error("Logout failed:", err);
       clearUser();
-      router.push("/auth/login");
-    } finally {
-      setLoading(false);
+
+      // Still delay navigation for 2s even if it fails
+      setTimeout(() => {
+        router.push("/auth/login");
+        setLoading(false);
+      }, 2000);
     }
   };
 
