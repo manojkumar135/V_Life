@@ -79,20 +79,64 @@ export default function DailyPayoutPage() {
     { field: "payout_id", headerName: "Transaction ID", flex: 1 },
     { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
     { field: "user_id", headerName: "User ID", flex: 1 },
-     ...(user?.role === "admin"
-    ? [
-        {
-          field: "rank",
-          headerName: "Rank",
-          flex: 1,
-        },
-      ]
-    : []),
-    { field: "date", headerName: "Date", flex: 1.5 },
-  
+    ...(user?.role === "admin"
+      ? [
+          {
+            field: "rank",
+            headerName: "Rank",
+            flex: 1,
+          },
+        ]
+      : []),
+    { field: "date", headerName: "Date", flex: 1 },
+
     {
       field: "amount",
       headerName: "Amount ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    {
+      field: "withdraw_amount",
+      headerName: "Withdraw ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    {
+      field: "reward_amount",
+      headerName: "Reward ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    {
+      field: "admin_charge",
+      headerName: "Admin ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    {
+      field: "tds_amount",
+      headerName: "TDS ( ₹ )",
       align: "right",
       flex: 1,
       renderCell: (params) => (

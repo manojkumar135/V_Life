@@ -24,7 +24,7 @@ const payoutSchema = new mongoose.Schema({
   withdraw_amount: { type: Number, default: 0 },
   reward_amount: { type: Number, default: 0 },
   tds_amount: { type: Number, default: 0 },
-  admin_charge: { type: Number, default: 0 },
+  admin_charge: { type: Number, default: 0 }, 
   transaction_type: { type: String, required: true, enum: ["Credit", "Debit"], default: "Credit" },
   details: { type: String },
   status: { type: String, required: true, enum: ["Pending", "Completed", "Failed"], default: "Completed" },

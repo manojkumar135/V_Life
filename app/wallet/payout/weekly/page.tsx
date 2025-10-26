@@ -108,9 +108,53 @@ export default function WithdrawPage() {
       ]
     : []),
     { field: "date", headerName: "Date", flex: 1.5 },
-    {
+     {
       field: "amount",
       headerName: "Amount ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    {
+      field: "withdraw_amount",
+      headerName: "Withdraw ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    {
+      field: "reward_amount",
+      headerName: "Reward ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    {
+      field: "admin_charge",
+      headerName: "Admin ( ₹ )",
+      align: "right",
+      flex: 1,
+      renderCell: (params) => (
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
+      ),
+    },
+    {
+      field: "tds_amount",
+      headerName: "TDS ( ₹ )",
       align: "right",
       flex: 1,
       renderCell: (params) => (

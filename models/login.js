@@ -76,6 +76,8 @@ const LoginSchema = new mongoose.Schema(
     sponsor: { type: String },
     logo: { type: String },
     profile: { type: String },
+    score: { type: Number, default: 0 },
+
 
     // 🛒 Store cart/order items directly with login
     items: [OrderItemSchema],

@@ -81,7 +81,7 @@ const defaultUser: UserType = {
   wallet_id: "",
   theme: "light",
   category: "",
-  score:1000,
+  score:0,
 
   address: "",
   pincode: "",

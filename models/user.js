@@ -51,6 +51,7 @@ const UserSchema = new mongoose.Schema(
     ],
     bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
+    score: { type: Number, default: 0 },
     rank: { type: String, required: true, default: "none" },
     club: { type: String, default: "none" },
     activated_date: { type: String },

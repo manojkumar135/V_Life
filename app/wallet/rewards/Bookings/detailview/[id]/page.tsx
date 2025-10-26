@@ -147,7 +147,7 @@ export default function BookingDetailView() {
           </div>
 
           {/* Status Row */}
-          <div className="flex items-center gap-2 ml-auto mr-3 max-md:-mt-4">
+          <div className="flex items-center gap-2 ml-auto mr-3 max-lg:-mt-4">
             <span className="text-md max-md:text-sm font-semibold">
               Status:
             </span>
@@ -160,7 +160,7 @@ export default function BookingDetailView() {
                 }
                 options={statusOptions}
                 controlPaddingLeft="0px"
-                className="w-36 h-6"
+                className="w-36 h-6 max-lg:h-4"
               />
             ) : (
               <span className="text-sm font-semibold text-gray-600">
