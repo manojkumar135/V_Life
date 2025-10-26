@@ -7,6 +7,8 @@ const payoutSchema = new mongoose.Schema({
   wallet_id: { type: String },
   user_id: { type: String, required: true },
   user_name: { type: String, required: true },
+  rank: { type: String },
+
 
   name: { type: String, default: "Matching Bonus" },
   title: { type: String, default: "Matching Bonus" },

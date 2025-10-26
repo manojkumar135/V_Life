@@ -218,12 +218,12 @@ export async function runMatchingBonus() {
           payoutStatus = "Pending"; // All checks passed but not completed until manual approval if needed
         }
 
-// ✅ Calculate split amounts
-const totalAmount = 5000;
-const withdrawAmount = totalAmount * 0.8; // 80%
-const rewardAmount = totalAmount * 0.1;   // 10%
-const tdsAmount = totalAmount * 0.05;     // 5%
-const adminCharge = totalAmount * 0.05;   // 5%
+        // ✅ Calculate split amounts
+        const totalAmount = 5000;
+        const withdrawAmount = totalAmount * 0.8; // 80%
+        const rewardAmount = totalAmount * 0.1; // 10%
+        const tdsAmount = totalAmount * 0.05; // 5%
+        const adminCharge = totalAmount * 0.05; // 5%
 
         // ✅ Create Daily Payout
         const payout = await DailyPayout.create({
@@ -231,6 +231,7 @@ const adminCharge = totalAmount * 0.05;   // 5%
           payout_id,
           user_id: u.user_id,
           user_name: u.name,
+          rank: wallet?.rank,
           wallet_id: walletId,
           name: "Matching Bonus",
           title: "Matching Bonus",

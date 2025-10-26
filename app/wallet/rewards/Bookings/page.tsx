@@ -124,8 +124,13 @@ export default function BookingsPage() {
       headerName: "Contact",
       flex: 1,
     },
-    { field: "total_score_used", headerName: "Total Score Used", flex: 1 },
-    { field: "remaining_score", headerName: "Remaining Score", flex: 1 },
+    user?.role === "admin" && {
+      field: "rank",
+      headerName: "Rank",
+      flex: 1,
+    },
+    { field: "total_score_used", headerName: "Score Used", flex: 1 },
+    { field: "remaining_score", headerName: "Remain", flex: 1 },
     { field: "date", headerName: "Booking Date", flex: 1 },
     { field: "status", headerName: "Status", flex: 1 },
   ].filter(Boolean) as GridColDef[];

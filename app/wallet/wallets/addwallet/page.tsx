@@ -258,6 +258,7 @@ export default function AddWalletForm() {
       const payload = {
         user_id: values.userId,
         user_name: values.userName,
+        rank:user?.rank || "none",
         contact: values.contact,
         account_holder_name: values.accountHolderName,
         bank_name: values.bankName,

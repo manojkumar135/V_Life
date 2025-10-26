@@ -8,6 +8,8 @@ const TreeNodeSchema = new Schema(
     user_id: { type: String, required: true, unique: true, index: true },
     name: { type: String, required: true },
     dob: { type: String, },
+    gender: { type: String },
+
     status: { type: String, default: "inactive" }, // active, inactive, suspended
     status_notes: { type: String, },
     activated_date: { type: String },
@@ -28,6 +30,7 @@ const TreeNodeSchema = new Schema(
     left: { type: String, default: null },    // left child user_id
     right: { type: String, default: null },   // right child user_id
     refer_by: { type: String },
+    infinity: { type: String },
 
     // 👥 Referral Tracking
     referrals: [{ type: String }], // store referred user_ids

@@ -15,6 +15,8 @@ const UserSchema = new mongoose.Schema(
     user_id: { type: String, required: true, unique: true },
     user_name: { type: String, required: true },
     dob: { type: String, required: true, default: "" },
+    gender: { type: String },
+
     mail: { type: String, required: true },
     contact: { type: String, required: true },
     address: { type: String },
@@ -56,7 +58,7 @@ const UserSchema = new mongoose.Schema(
 
     // 🌳 Binary Team Structure
     left: { type: String },
-    right: { type: String }, 
+    right: { type: String },
     left_users: { type: [String], default: [] },
     right_users: { type: [String], default: [] },
     direct_left_users: { type: [String], default: [] },

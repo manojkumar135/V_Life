@@ -149,6 +149,7 @@ export async function runInfinityBonus() {
         payout_id,
         user_id: sponsor.user_id,
         user_name: sponsor.user_name,
+        rank: wallet?.rank,
         wallet_id: wallet.wallet_id,
         name: "Infinity Bonus",
         title: "Infinity Bonus",

@@ -117,6 +117,7 @@ export default function RewardsPage() {
       user_name: user.user_name,
       user_email: user.mail || "", // if you store email
       user_contact: user.contact || "", // if you store contact
+      rank: user.rank,
       user_role: user.role,
       rewards: rewardsArray,
       total_score_used,

@@ -7,6 +7,11 @@ const WalletSchema = new mongoose.Schema(
     user_name: { type: String, required: true },
     contact: { type: String },
     mail: { type: String },
+    rank: { type: String },
+    gender: { type: String },
+    user_status: { type: String },
+    status_notes: { type: String },
+    activated_date: { type: String },
 
 
     account_holder_name: { type: String, required: true },

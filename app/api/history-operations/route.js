@@ -5,6 +5,7 @@ import { User } from "@/models/user";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { Rank } from "@/models/rank";
+import { Wallet } from "@/models/wallet";
 import mongoose from "mongoose";
 
 
@@ -87,6 +88,9 @@ async function updateUserRank(userId, rankLevel, qualifiedUsers) {
     { $set: { rank: String(rankLevel) } }
   );
   await TreeNode.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
+  await Wallet.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
+
+
 }
 
 // ✅ Rank Upgrade Logic
@@ -248,6 +252,8 @@ export async function POST(request) {
           User.updateOne({ user_id: body.user_id }, { $set: updateData }),
           Login.updateMany({ user_id: body.user_id }, { $set: updateData }),
           TreeNode.updateOne({ user_id: body.user_id }, { $set: updateData }),
+          Wallet.updateOne({ user_id: body.user_id }, { $set: updateData }),
+
         ]);
       }
 

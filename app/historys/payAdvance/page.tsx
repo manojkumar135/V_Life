@@ -92,6 +92,7 @@ export default function PayAdvancePage() {
                 wallet_id: user?.wallet_id || "",
                 user_id: user?.user_id,
                 user_name: user?.user_name,
+                rank: user?.rank,
                 account_holder_name: user?.user_name,
                 bank_name: "Razorpay",
                 account_number: "N/A",

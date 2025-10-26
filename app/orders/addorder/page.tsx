@@ -336,6 +336,9 @@ const [advanceDetails, setAdvanceDetails] = useState({
 
       const payload = {
         user_id: user.user_id,
+        rank: user.rank || "none",
+        // referBy: user.referBy,
+        // infinity: user.infinity,
         user_name: formData.customerName || user.user_name,
         contact: formData.contact || user.contact,
         mail: formData.customerEmail || user.mail,

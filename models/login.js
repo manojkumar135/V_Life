@@ -34,6 +34,7 @@ const LoginSchema = new mongoose.Schema(
     login_id: { type: String, required: true, unique: true },
     user_id: { type: String, required: true }, // link to User schema
     user_name: { type: String, required: true },
+    gender: { type: String },
     dob: { type: String, required: true },
     rank: { type: String, default: "none" },
 
@@ -48,6 +49,7 @@ const LoginSchema = new mongoose.Schema(
     first_name: { type: String },
     last_name: { type: String },
     referBy: { type: String },
+    infinity: { type: String },
     category: { type: String },
     theme: {
       type: String,

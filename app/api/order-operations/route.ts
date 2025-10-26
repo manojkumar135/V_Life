@@ -89,6 +89,7 @@ export async function POST(request: Request) {
         wallet_id: user.wallet_id || "",
         user_id: user.user_id,
         user_name: user.user_name,
+        rank: user.rank,
         order_id: newOrder.order_id,
         account_holder_name: user.user_name,
         bank_name: "Razorpay",

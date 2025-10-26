@@ -29,6 +29,12 @@ const OrderSchema = new mongoose.Schema(
     user_name: { type: String, },
     contact: { type: String, },
     mail: { type: String, },
+    rank: { type: String },
+    gender: { type: String },
+
+    referBy: { type: String, },
+    infinity: { type: String, },
+
     address: { type: String, },
     description: { type: String },
 

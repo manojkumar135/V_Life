@@ -77,9 +77,19 @@ export default function DailyPayoutPage() {
   // ✅ Table columns
   const columns: GridColDef[] = [
     { field: "payout_id", headerName: "Transaction ID", flex: 1 },
-    { field: "wallet_id", headerName: "Wallet ID", flex: 1.5 },
-    { field: "user_id", headerName: "Withdraw Address", flex: 1.5 },
+    { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
+    { field: "user_id", headerName: "User ID", flex: 1 },
+     ...(user?.role === "admin"
+    ? [
+        {
+          field: "rank",
+          headerName: "Rank",
+          flex: 1,
+        },
+      ]
+    : []),
     { field: "date", headerName: "Date", flex: 1.5 },
+  
     {
       field: "amount",
       headerName: "Amount ( ₹ )",

@@ -83,9 +83,13 @@ export default function WalletsPage() {
   const columns = [
     { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
     ...(user?.role === "admin"
-      ? [{ field: "user_id", headerName: "User ID", flex: 1 }]
+      ? [{ field: "user_id", headerName: "User ID", flex: 1 },
+        { field: "user_name", headerName: "User Name", flex: 1.2 },
+                // { field: "rank", headerName: "Rank", flex: 0.5 }
+
+      ]
       : []),
-    { field: "bank_name", headerName: "Bank Name", flex: 2 },
+    { field: "bank_name", headerName: "Bank Name", flex: 1.6 },
     { field: "account_number", headerName: "Account Number", flex: 1.5 },
     { field: "ifsc_code", headerName: "IFSC Code", flex: 1.5 },
     { field: "wallet_status", headerName: "Status", flex: 1 },

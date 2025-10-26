@@ -1,4 +1,5 @@
 import { User } from "@/models/user";
+import { Login } from "@/models/login"; // ...added
 
 /**
  * Add referral to a user's Infinity team at a given level
@@ -32,6 +33,11 @@ export async function addToInfinityTeam(
   if (referral) {
     referral.infinity = userId; // B's infinity is A
     await referral.save();
+
+    await Login.updateOne(
+      { user_id: newReferralId },
+      { $set: { infinity: userId } }
+    );
   }
 }
 

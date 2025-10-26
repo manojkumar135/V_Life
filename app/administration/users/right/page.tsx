@@ -131,7 +131,7 @@ export default function RightTeam() {
     { field: "user_name", headerName: "User Name", flex: 1 },
     { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 2 },
-    { field: "role", headerName: "Title", flex: 1 },
+    { field: "rank", headerName: "Rank", flex: 1 },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 
