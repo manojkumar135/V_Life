@@ -19,6 +19,8 @@ const BookingSchema = new mongoose.Schema({
   user_contact: { type: String, required: true },
   user_role: { type: String, required: true }, // user or admin
   rank: { type: String }, 
+  address: { type: String,},
+  description: { type: String },
   rewards: {
     type: [RewardItemSchema],
     required: true,

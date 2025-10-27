@@ -22,7 +22,9 @@ interface SelectFieldProps {
   required?: boolean;
   error?: string;
   placeholder?: string;
-  controlPaddingLeft?: string; // new prop
+  controlPaddingLeft?: string;
+  controlHeight?: string;
+  controlMarginTop?: string;
 }
 
 const SelectField: React.FC<SelectFieldProps> = ({
@@ -39,7 +41,9 @@ const SelectField: React.FC<SelectFieldProps> = ({
   required = false,
   error,
   placeholder = "Select an option",
-  controlPaddingLeft, // receive prop
+  controlPaddingLeft,
+  controlHeight,
+  controlMarginTop,
 }) => {
   // Merge CustomSelectStyles with dynamic padding
   const selectStyles = {
@@ -47,6 +51,8 @@ const SelectField: React.FC<SelectFieldProps> = ({
     control: (provided: any, state: any) => ({
       ...CustomSelectStyles.control(provided, state),
       paddingLeft: controlPaddingLeft || "1.8rem", // use prop if provided
+      height: controlHeight || "2.25rem",
+      marginTop: controlMarginTop || "0px",
     }),
   };
 

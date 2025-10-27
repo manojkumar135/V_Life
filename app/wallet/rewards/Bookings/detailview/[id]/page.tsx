@@ -38,6 +38,8 @@ interface BookingData {
   date: string;
   time: string;
   booked_at: string;
+  address: string;
+  description: string;
 }
 
 export default function BookingDetailView() {
@@ -49,6 +51,7 @@ export default function BookingDetailView() {
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
+  const [showUserDetails, setShowUserDetails] = useState(false);
 
   // Fetch booking data
   useEffect(() => {
@@ -119,54 +122,67 @@ export default function BookingDetailView() {
 
       <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-[100%]">
         {/* Header */}
-        <div className="flex-none border-b  pb-2 mb-2 flex flex-col sm:flex-row xl:justify-between items-start sm:items-center gap-3">
-          <div className="flex flex-row max-lg:flex-col lg:flex-row items-start lg:items-center gap-4 w-full">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center border-b pb-3 mb-3 gap-4">
+          {/* Left Section */}
+          <div className="flex flex-col xl:flex-row xl:items-center gap-3 w-full xl:w-auto">
+            {/* Back Button */}
             <button
               onClick={() => router.push("/wallet/rewards/Bookings")}
-              className="flex items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
+              className="text-black hover:text-black transition-colors cursor-pointer"
             >
               <IoIosArrowBack size={25} />
             </button>
 
-            <div className="flex max-lg:flex-col flex-row justify-between xl:items-center  gap-4 w-full xl:w-[80%] max-lg:pl-3">
-              <span className="text-sm font-medium text-gray-600">
+            {/* Booking Info */}
+            <div className="flex flex-col xl:flex-row xl:items-center gap-x-8 gap-y-1 text-sm font-medium text-gray-600 max-lg:ml-5">
+              <span>
                 Booking ID:{" "}
                 <span className="text-black font-semibold">
                   {booking.booking_id}
                 </span>
               </span>
-              <span className="text-sm font-medium text-gray-600">
+              <span>
                 Date:{" "}
                 <span className="text-black font-semibold">{booking.date}</span>
               </span>
-              <span className="text-sm font-medium text-gray-600">
+              <span>
                 Time:{" "}
                 <span className="text-black font-semibold">{booking.time}</span>
               </span>
             </div>
           </div>
 
-          {/* Status Row */}
-          <div className="flex items-center gap-2 ml-auto mr-3 max-lg:-mt-4">
-            <span className="text-md max-md:text-sm font-semibold">
-              Status:
-            </span>
-            {user?.role === "admin" ? (
-              <SelectField
-                name="status"
-                value={status}
-                onChange={(e: any) =>
-                  handleStatusChange(e.target?.value || e?.value)
-                }
-                options={statusOptions}
-                controlPaddingLeft="0px"
-                className="w-36 h-6 max-lg:h-4"
-              />
-            ) : (
-              <span className="text-sm font-semibold text-gray-600">
-                {booking.status}
-              </span>
-            )}
+          {/* Right Section */}
+          <div className="flex justify-between items-start gap-4 h-6 max-lg:ml-5 max-md:w-[90%] max-lg:w-[95%]">
+            {/* Status */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold">Status:</span>
+              {user?.role === "admin" ? (
+                <SelectField
+                  name="status"
+                  value={status}
+                  onChange={(e: any) =>
+                    handleStatusChange(e.target?.value || e?.value)
+                  }
+                  options={statusOptions}
+                  controlPaddingLeft="0px"
+                  controlHeight="2rem"
+                  className="w-36"
+                />
+              ) : (
+                <span className="text-sm font-semibold text-gray-600">
+                  {booking.status}
+                </span>
+              )}
+            </div>
+
+            {/* User Details Button */}
+            <SubmitButton
+              onClick={() => setShowUserDetails(true)}
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold text-sm px-3 max-lg:px-2 py-1 rounded-md transition-colors -mt-1 "
+            >
+              User Info
+            </SubmitButton>
           </div>
         </div>
 
@@ -249,6 +265,74 @@ export default function BookingDetailView() {
           </div>
         </div>
       </div>
+
+      {/* 👇 User Details Modal */}
+      {showUserDetails && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
+          onClick={() => setShowUserDetails(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-lg w-[90%] max-w-md p-6 relative "
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowUserDetails(false)}
+              className="absolute top-3 right-5 text-gray-500 hover:text-red cursor-pointer text-lg font-bold"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+
+            <p className="text-lg font-semibold mb-4">User Details</p>
+
+            <div className="grid  grid-cols-[120px_10px_1fr] max-md:grid-cols-[85px_10px_1fr] gap-y-2 text-sm text-gray-700">
+              {/* Booking ID */}
+              <span className="font-semibold text-black">Booking ID</span>
+              <span className="text-center font-semibold text-black">:</span>
+              <span className="text-black">{booking.booking_id || "N/A"}</span>
+
+              {/* User ID */}
+              <span className="font-semibold text-black">User ID</span>
+              <span className="text-center font-semibold text-black">:</span>
+              <span className="text-black">{booking.user_id || "N/A"}</span>
+
+              {/* User Name */}
+              <span className="font-semibold text-black">User Name</span>
+              <span className="text-center font-semibold text-black">:</span>
+              <span className="text-black">{booking.user_name || "N/A"}</span>
+
+              {/* Email */}
+              <span className="font-semibold text-black">Email</span>
+              <span className="text-center font-semibold text-black">:</span>
+              <span className="text-black whitespace-pre-line">
+                {booking.user_email || "N/A"}
+              </span>
+
+              {/* Contact */}
+              <span className="font-semibold text-black">Contact</span>
+              <span className="text-center font-semibold text-black">:</span>
+              <span className="text-black">
+                {booking.user_contact || "N/A"}
+              </span>
+
+              {/* Address */}
+              <span className="font-semibold text-black">Address</span>
+              <span className="text-center font-semibold text-black">:</span>
+              <span className="text-black whitespace-pre-line">
+                {booking.address || "No address available"}
+              </span>
+
+              {/* Description */}
+              <span className="font-semibold text-black">Description</span>
+              <span className="text-center font-semibold text-black">:</span>
+              <span className="text-black whitespace-pre-line">
+                {booking.description || "N/A"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

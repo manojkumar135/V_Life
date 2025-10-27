@@ -9,13 +9,11 @@ import SubmitButton from "@/components/common/submitbutton";
 import { useVLife } from "@/store/context";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
-import { FaEdit, FaGift } from "react-icons/fa";
-import { TfiGift } from "react-icons/tfi";
+import { FaEdit } from "react-icons/fa";
 import { LiaGiftsSolid } from "react-icons/lia";
-
-import { useRouter } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
 import { IoRemove, IoAdd } from "react-icons/io5";
+import { useRouter } from "next/navigation";
 
 export default function RewardsPage() {
   const { user, setUser } = useVLife();
@@ -24,10 +22,11 @@ export default function RewardsPage() {
   const [selected, setSelected] = useState<{ [key: string]: number }>({});
   const [scoreLeft, setScoreLeft] = useState(user?.score || 0);
   const [showModal, setShowModal] = useState(false);
+  const [address, setAddress] = useState<string>("");
 
   const router = useRouter();
 
-  // Fetch rewards
+  // ✅ Fetch rewards
   useEffect(() => {
     const fetchRewards = async () => {
       try {
@@ -43,7 +42,27 @@ export default function RewardsPage() {
     fetchRewards();
   }, []);
 
-  // Update scoreLeft when selection changes
+  // ✅ Fetch address automatically
+  useEffect(() => {
+    const fetchAddress = async () => {
+      try {
+        const res = await axios.post("/api/address-operations", {
+          user_id: user?.user_id,
+        });
+        if (res.data.success && res.data.address) {
+          setAddress(res.data.address);
+        } else {
+          setAddress("No address available");
+        }
+      } catch (err) {
+        console.error("Address fetch error:", err);
+        setAddress("No address available");
+      }
+    };
+    if (user?.user_id) fetchAddress();
+  }, [user?.user_id]);
+
+  // ✅ Update scoreLeft when selection changes
   useEffect(() => {
     let used = 0;
     Object.entries(selected).forEach(([id, qty]) => {
@@ -53,7 +72,7 @@ export default function RewardsPage() {
     setScoreLeft((user?.score || 0) - used);
   }, [selected, rewards, user?.score]);
 
-  // Select or deselect
+  // ✅ Select/Deselect
   const handleSelect = (reward: any) => {
     if (selected[reward.reward_id]) {
       const newSelected = { ...selected };
@@ -64,7 +83,7 @@ export default function RewardsPage() {
     }
   };
 
-  // Quantity change
+  // ✅ Quantity controls
   const handleIncreaseQuantity = (id: string, max: number) => {
     setSelected((prev) => ({
       ...prev,
@@ -84,14 +103,18 @@ export default function RewardsPage() {
     }));
   };
 
-  // Book rewards
+  // ✅ Booking handler
   const handleBookNow = async () => {
     if (Object.keys(selected).length === 0) {
       ShowToast.error("Select at least one reward to book.");
       return;
     }
 
-    // Prepare rewards array for booking
+    if (!address || address === "No address available") {
+      ShowToast.error("Please provide a valid address before booking.");
+      return;
+    }
+
     const rewardsArray = Object.entries(selected)
       .map(([id, qty]) => {
         const reward = rewards.find((r) => r.reward_id === id);
@@ -104,9 +127,8 @@ export default function RewardsPage() {
           score_used: reward.points_required * qty,
         };
       })
-      .filter(Boolean); // remove nulls
+      .filter(Boolean);
 
-    // Calculate total_score_used
     const total_score_used = rewardsArray.reduce(
       (sum, r) => sum + r!.score_used,
       0
@@ -115,14 +137,16 @@ export default function RewardsPage() {
     const bookingPayload = {
       user_id: user.user_id,
       user_name: user.user_name,
-      user_email: user.mail || "", // if you store email
-      user_contact: user.contact || "", // if you store contact
+      user_email: user.mail || "",
+      user_contact: user.contact || "",
       rank: user.rank,
       user_role: user.role,
       rewards: rewardsArray,
       total_score_used,
       remaining_score: (user.score || 0) - total_score_used,
       status: "pending",
+      description: "",
+      address: address,
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString(),
     };
@@ -130,10 +154,8 @@ export default function RewardsPage() {
     try {
       setLoading(true);
       const res = await axios.post("/api/booking-operations", bookingPayload);
-
       if (res.data.success) {
         ShowToast.success("Booking created successfully!");
-        // Update user score
         setUser({ ...user, score: (user.score || 0) - total_score_used });
         setSelected({});
         router.push("/wallet/rewards/Bookings");
@@ -158,7 +180,7 @@ export default function RewardsPage() {
         )}
 
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 w-full max-md:mb-4 mb-2 2xl:mb-4 ">
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 w-full max-md:mb-4 mb-2">
           <div className="flex flex-wrap items-center w-full gap-2 max-lg:mb-2">
             <IoIosArrowBack
               size={25}
@@ -194,7 +216,7 @@ export default function RewardsPage() {
           </div>
         </div>
 
-        {/* Rewards */}
+        {/* Rewards List */}
         <div className="flex flex-col w-full">
           {rewards.length === 0 ? (
             <p className="text-gray-500 text-center py-10">
@@ -216,17 +238,14 @@ export default function RewardsPage() {
                 return (
                   <div
                     key={reward.reward_id}
-                    className={`border border-gray-200 rounded-xl shadow-md bg-white hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col w-full  max-w-sm mx-auto ${
-                      !isActive ? "" : ""
-                    }`}
+                    className="border border-gray-200 rounded-xl shadow-md bg-white hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col w-full max-w-sm mx-auto"
                   >
-                    {/* Image */}
-                    <div className="relative w-full  h-36 sm:h-40 md:h-46 ">
+                    <div className="relative w-full h-36 sm:h-40 md:h-46 ">
                       <Image
                         src={reward.image || "/default.jpg"}
                         alt={reward.title}
                         fill
-                        className="object-cover w-full  h-full rounded-xl px-1 py-1 shadow-md border border-gray-300"
+                        className="object-cover w-full h-full rounded-xl px-1 py-1 shadow-md border border-gray-300"
                       />
                       {!isActive && user?.role === "admin" && (
                         <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">
@@ -235,7 +254,6 @@ export default function RewardsPage() {
                       )}
                     </div>
 
-                    {/* Info */}
                     <div className="px-4 py-3 flex flex-col gap-2">
                       <p className="text-lg font-bold text-black mt-2">
                         {reward.title}
@@ -251,7 +269,6 @@ export default function RewardsPage() {
                         points
                       </p>
 
-                      {/* Bottom Controls */}
                       <div className="flex items-center justify-between mt-2 gap-2">
                         {isSelected ? (
                           <div className="flex items-center rounded-full px-2 py-1 w-fit border border-gray-300">
@@ -320,11 +337,11 @@ export default function RewardsPage() {
                                 !isActive || scoreLeft < reward.points_required
                               }
                               className={`px-3 py-1.5 font-semibold rounded-md transition-all duration-200
-    ${
-      !isActive || scoreLeft < reward.points_required
-        ? "bg-gray-400 text-white cursor-none"
-        : "bg-yellow-400 text-black hover:bg-yellow-500 cursor-pointer"
-    }`}
+                                ${
+                                  !isActive || scoreLeft < reward.points_required
+                                    ? "bg-gray-400 text-white cursor-not-allowed"
+                                    : "bg-yellow-400 text-black hover:bg-yellow-500 cursor-pointer"
+                                }`}
                             >
                               Redeem
                             </button>
@@ -362,7 +379,6 @@ export default function RewardsPage() {
             </div>
 
             <style jsx>{`
-              /* Shimmering gold flicker effect */
               @keyframes goldShine {
                 0%,
                 100% {
@@ -374,12 +390,9 @@ export default function RewardsPage() {
                     drop-shadow(0 0 20px #fff3b0) drop-shadow(0 0 30px #ffd700);
                 }
               }
-
               .animate-goldShine {
                 animation: goldShine 2.5s ease-in-out infinite;
               }
-
-              /* Soft glowing background */
               @keyframes pulseGlow {
                 0% {
                   box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
@@ -391,7 +404,6 @@ export default function RewardsPage() {
                   box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
                 }
               }
-
               .animate-pulseGlow {
                 animation: pulseGlow 3s ease-in-out infinite;
               }
@@ -400,10 +412,10 @@ export default function RewardsPage() {
         )}
       </div>
 
+      {/* ✅ Reward Summary Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-4 max-sm:p-2 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-lg w-full max-w-md sm:max-w-lg md:max-w-md p-4 sm:p-6 relative max-md:mx-2 max-lg:-mt-10">
-            {/* Close Button */}
+          <div className="bg-white rounded-2xl shadow-lg w-full max-w-md sm:max-w-lg md:max-w-md p-4 sm:p-6 relative">
             <button
               onClick={() => setShowModal(false)}
               className="absolute top-3 right-3 text-gray-500 hover:text-red-700 text-2xl sm:text-xl cursor-pointer font-semibold"
@@ -415,14 +427,13 @@ export default function RewardsPage() {
               Reward Summary
             </h2>
 
-            {/* Selected Rewards List */}
-            <div className="max-h-[200px] sm:max-h-[250px] overflow-y-auto border-t border-b py-2 sm:py-3">
+            <div className="max-h-[200px] overflow-y-auto border-t border-b py-2">
               {Object.entries(selected).map(([id, qty]) => {
                 const reward = rewards.find((r) => r.reward_id === id);
                 return (
                   <div
                     key={id}
-                    className="flex justify-between items-center border-b last:border-none py-1 sm:py-2"
+                    className="flex justify-between items-center border-b last:border-none py-1"
                   >
                     <div>
                       <p className="font-semibold text-gray-800 text-sm sm:text-base">
@@ -440,8 +451,23 @@ export default function RewardsPage() {
               })}
             </div>
 
-            {/* Total Section */}
-            <div className="flex justify-between items-center mt-3 sm:mt-4 text-sm sm:text-base">
+            {/* ✅ Address Field */}
+            <div className="mt-3">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Shipping Address
+              </label>
+              <textarea
+                rows={2}
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                placeholder="Enter delivery address"
+                required
+              />
+            </div>
+
+            {/* Total */}
+            <div className="flex justify-between items-center mt-3 text-sm sm:text-base">
               <p className="font-semibold text-gray-700">Total Points Used:</p>
               <p className="font-bold text-green-700">
                 {Object.entries(selected).reduce((acc, [id, qty]) => {
@@ -452,8 +478,8 @@ export default function RewardsPage() {
               </p>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-row justify-end gap-2 sm:gap-3 mt-6 sm:mt-6">
+            {/* ✅ Action Buttons */}
+            <div className="flex flex-row justify-end gap-2 mt-6">
               <button
                 onClick={() => setShowModal(false)}
                 className="w-1/2 sm:w-auto px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all duration-200 cursor-pointer"
@@ -465,7 +491,12 @@ export default function RewardsPage() {
                   setShowModal(false);
                   handleBookNow();
                 }}
-                className="w-1/2 sm:w-auto px-5 py-2 rounded-md bg-yellow-400 text-black font-semibold hover:bg-yellow-300 transition-all duration-200 cursor-pointer"
+                disabled={!address || address === "No address available"}
+                className={`w-1/2 sm:w-auto px-5 py-2 rounded-md font-semibold transition-all duration-200 ${
+                  !address || address === "No address available"
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-yellow-400 text-black hover:bg-yellow-300 cursor-pointer"
+                }`}
               >
                 Book Now
               </button>
