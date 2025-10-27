@@ -145,7 +145,7 @@ export async function runInfinityBonus() {
       const adminCharge = bonusAmount * 0.05; // 5%
 
       const infinityPayout = await WeeklyPayout.create({
-        transaction_id: `IB${Date.now()}`,
+        transaction_id: "",
         payout_id,
         user_id: sponsor.user_id,
         user_name: sponsor.user_name,

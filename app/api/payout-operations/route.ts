@@ -64,3 +64,50 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    await connectDB();
+    const body = await request.json();
+
+    const { id, payout_id, transaction_id, ...updates } = body;
+
+    if (!id && !payout_id && !transaction_id) {
+      return NextResponse.json(
+        { success: false, message: "Missing identifier (id, payout_id, or transaction_id)" },
+        { status: 400 }
+      );
+    }
+
+    const query: any = {};
+    if (id && mongoose.Types.ObjectId.isValid(id)) query._id = id;
+    if (payout_id) query.payout_id = payout_id;
+
+    // ✅ Try updating in Daily first
+    let updated = await DailyPayout.findOneAndUpdate(query, { $set: updates }, { new: true });
+
+    // ✅ If not found, try Weekly
+    if (!updated) {
+      updated = await WeeklyPayout.findOneAndUpdate(query, { $set: updates }, { new: true });
+    }
+
+    if (!updated) {
+      return NextResponse.json(
+        { success: false, message: "Payout not found for update" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: true, message: "Payout updated successfully", data: updated },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error("PATCH payout error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error" },
+      { status: 500 }
+    );
+  }
+}
+

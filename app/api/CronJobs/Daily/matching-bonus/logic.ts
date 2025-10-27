@@ -227,7 +227,7 @@ export async function runMatchingBonus() {
 
         // ✅ Create Daily Payout
         const payout = await DailyPayout.create({
-          transaction_id: `MB${Date.now()}`,
+          transaction_id: "",
           payout_id,
           user_id: u.user_id,
           user_name: u.name,
