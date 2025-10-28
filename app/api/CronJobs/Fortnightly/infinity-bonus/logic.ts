@@ -208,6 +208,12 @@ export async function runInfinityBonus() {
         last_modified_at: now,
       });
 
+      // ✅ Add reward to sponsor's score
+      await User.findOneAndUpdate(
+        { user_id: sponsor.user_id },
+        { $inc: { score: rewardAmount } }
+      );
+
       // ✅ Mark payout as checked
       await DailyPayout.updateOne(
         { _id: payout._id },

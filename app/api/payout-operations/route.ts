@@ -70,9 +70,9 @@ export async function PATCH(request: Request) {
     await connectDB();
     const body = await request.json();
 
-    const { id, payout_id, transaction_id, ...updates } = body;
+    const { id, payout_id, ...updates } = body;
 
-    if (!id && !payout_id && !transaction_id) {
+    if (!id && !payout_id) {
       return NextResponse.json(
         { success: false, message: "Missing identifier (id, payout_id, or transaction_id)" },
         { status: 400 }

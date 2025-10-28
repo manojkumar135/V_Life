@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { History } from "@/models/history";
 import { DailyPayout } from "@/models/payout";
 import TreeNode from "@/models/tree";
+import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
@@ -291,6 +292,11 @@ export async function runMatchingBonus() {
             last_modified_by: "system",
             last_modified_at: now,
           });
+
+           await User.findOneAndUpdate(
+          { user_id: u.user_id },
+          { $inc: { score: rewardAmount } }
+        );
         }
 
         // ✅ Mark histories as checked
