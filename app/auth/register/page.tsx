@@ -127,7 +127,10 @@ function RegisterContent() {
             SIGN UP
           </p>
 
-          <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
+          <form
+            onSubmit={formik.handleSubmit}
+            className="w-full space-y-2 overflow-y-hidden"
+          >
             {/* Name */}
             <div className="flex flex-col">
               <div className="relative">
@@ -175,11 +178,96 @@ function RegisterContent() {
                   dateFormat="dd-MM-yyyy"
                   placeholderText="Date of Birth"
                   maxDate={new Date()}
+                  showYearDropdown
+                  showMonthDropdown
+                  scrollableYearDropdown
+                  yearDropdownItemNumber={100}
+                  // ensure popper z-index and allow custom calendar styling
+                  popperClassName="react-datepicker-popper"
+                  calendarClassName="custom-datepicker-calendar"
                   className={`w-full pl-10 pr-4 py-1 rounded-md border ${
                     formik.touched.dob && formik.errors.dob
                       ? "border-red-500"
                       : "border-gray-400"
                   } focus:outline-none focus:ring-2 focus:ring-gray-200`}
+                  renderCustomHeader={({
+                    date,
+                    changeYear,
+                    changeMonth,
+                    decreaseMonth,
+                    increaseMonth,
+                    prevMonthButtonDisabled,
+                    nextMonthButtonDisabled,
+                  }) => {
+                    const currentYear = new Date().getFullYear();
+                    const startYear = currentYear - 100;
+                    const years = Array.from(
+                      { length: 101 },
+                      (_, i) => startYear + i
+                    );
+
+                    return (
+                      <div className="flex items-center gap-2 px-2 py-1 bg-white overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={decreaseMonth}
+                          disabled={prevMonthButtonDisabled}
+                          className="px-1 rounded hover:bg-gray-100 disabled:opacity-40 !text-xl font-semibold"
+                        >
+                          ‹
+                        </button>
+
+                        {/* use short month names + constrain width */}
+                        <select
+                          value={date.getMonth()}
+                          onChange={(e) => changeMonth(Number(e.target.value))}
+                          className="px-3 py-1 border border-gray-300 rounded-md bg-white text-sm max-w-[100px] truncate "
+                          style={{
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {Array.from({ length: 12 }).map((_, m) => (
+                            <option key={m} value={m}>
+                              {new Date(0, m).toLocaleString("default", {
+                                month: "long",
+                              })}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* limit year width so it doesn't overflow layout */}
+                        <select
+                          value={date.getFullYear()}
+                          onChange={(e) => changeYear(Number(e.target.value))}
+                          className="px-3 py-1 border-2 border-gray-800 rounded-md bg-white text-sm max-w-[100px] truncate max-h-[150px]"
+                          style={{
+                            whiteSpace: "nowrap",
+                            textOverflow: "ellipsis",
+                            overflow: "hidden",
+                            maxHeight: "100px !important",
+                          }}
+
+                        >
+                          {years.map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={increaseMonth}
+                          disabled={nextMonthButtonDisabled}
+                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-40 !text-xl font-semibold"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    );
+                  }}
                 />
               </div>
               <span className="text-red-500 text-xs mt-1 h-4 block">
@@ -270,7 +358,7 @@ function RegisterContent() {
                   }
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
-                  placeholder="Select Position"
+                  placeholder="Select Organization"
                   className="w-full"
                 />
               </div>

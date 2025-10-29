@@ -1,49 +1,26 @@
 "use client";
 
-import { useState,useEffect } from "react";
-import { FaMoon, FaSun } from "react-icons/fa";
+import { useState, useEffect, useRef } from "react";
 import { HiUserCircle } from "react-icons/hi";
 import { MdNotificationsNone } from "react-icons/md";
 import { HiOutlineMenuAlt2 } from "react-icons/hi";
 import { useVLife } from "@/store/context";
-import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { user } = useVLife();
-
-  // console.log(user,theme,"from header")
-
-  // Apply theme globally
-  // useEffect(() => {
-  //   const root = document.documentElement;
-  //   root.classList.remove("light", "dark");
-  //   if (theme === "dark") root.classList.add("dark");
-  //   else root.classList.add("light");
-  // }, [theme]);
-
-  // const toggleTheme = async () => {
-  //   const newTheme = theme === "dark" ? "light" : "dark";
-  //   setTheme(newTheme);
-
-  //   // ✅ Update user theme in backend
-  //   try {
-  //     await axios.patch("/api/theme-operations", {
-  //       user_id: user.user_id,
-  //       theme: newTheme,
-  //     });
-  //   } catch (error) {
-  //     console.error("Failed to update theme:", error);
-  //   }
-  // };
-
-   const [showPopup, setShowPopup] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
   const [alerts, setAlerts] = useState([
     { id: 1, message: "Payment received successfully!" },
     { id: 2, message: "Your profile was updated." },
     { id: 3, message: "New referral joined your team." },
   ]);
 
+  const popupRef = useRef<HTMLDivElement>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipTimer, setTooltipTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // ✅ Copy user ID
   const handleCopy = async () => {
     if (!user?.user_id) return;
     try {
@@ -54,7 +31,30 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
     }
   };
 
+  // ✅ Toggle notification popup
   const togglePopup = () => setShowPopup((prev) => !prev);
+
+  // ✅ Close popup on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        setShowPopup(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // ✅ Tooltip delay logic
+  const handleMouseEnter = () => {
+    const timer = setTimeout(() => setShowTooltip(true), 700); // 700ms delay
+    setTooltipTimer(timer);
+  };
+
+  const handleMouseLeave = () => {
+    if (tooltipTimer) clearTimeout(tooltipTimer);
+    setShowTooltip(false);
+  };
 
   return (
     <header className="flex items-center justify-between w-full px-4 py-2 h-[60px] pt-3">
@@ -85,7 +85,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
       {/* RIGHT: Notification + Avatar */}
       <div className="flex items-center space-x-4 max-md:space-x-2 relative">
         {/* 🔔 Notification Button */}
-        <div className="relative">
+        <div className="relative" ref={popupRef}>
           <button
             className="p-1 rounded-full bg-gray-100 cursor-pointer relative"
             onClick={togglePopup}
@@ -124,8 +124,12 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           )}
         </div>
 
-        {/* 👤 User Avatar */}
-        <div className="relative group">
+        {/* 👤 User Avatar with delayed tooltip */}
+        <div
+          className="relative flex items-center justify-center"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
           <button
             onClick={handleCopy}
             className="px-1 rounded-full hover:bg-gray-100 flex items-center justify-center cursor-pointer"
@@ -141,8 +145,14 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             )}
           </button>
 
-          {/* Tooltip */}
-          <div className="absolute top-10 -translate-x-1/2 hidden group-hover:flex flex-col items-center bg-gray-800 text-white text-xs rounded-md px-2 py-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Tooltip with fade animation + delay */}
+          <div
+            className={`absolute top-10 -translate-x-1/2 flex flex-col items-center bg-gray-800 text-white text-xs rounded-md px-2 py-1 whitespace-nowrap transition-all duration-300 ${
+              showTooltip
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 pointer-events-none -translate-y-1"
+            }`}
+          >
             <span className="uppercase">{user?.role || "N/A"}</span>
             <span>{user?.user_id || "N/A"}</span>
           </div>

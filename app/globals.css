@@ -76,7 +76,6 @@ input[type="date"]::placeholder {
   color: transparent !important;
 }
 
-
 /* Hide number input arrows for Chrome, Safari, Edge, Opera */
 .no-spinner::-webkit-outer-spin-button,
 .no-spinner::-webkit-inner-spin-button {
@@ -96,4 +95,101 @@ input[type="date"]::placeholder {
 }
 .react-datepicker__input-container input {
   width: 100% !important;
+}
+
+.custom-datepicker select {
+  background-color: #f3f4f6; /* light gray */
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #111827;
+  font-size: 0.9rem;
+}
+
+.custom-datepicker select:hover {
+  background-color: #e5e7eb;
+}
+
+.custom-datepicker select:focus {
+  outline: none;
+  border-color: #2563eb; /* blue-600 */
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+}
+
+/* style the built-in react-datepicker selects */
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  /* tailwind-like styles (or use your own) */
+  padding: 0.375rem 0.75rem; /* px-3 py-1 */
+  border: 1px solid #d1d5db; /* border-gray-300 */
+  border-radius: 0.375rem; /* rounded-md */
+  background: #ffffff;
+  font-size: 0.875rem; /* text-sm */
+  color: #111827; /* text-gray-900 */
+}
+
+/* dropdown container spacing */
+.react-datepicker__month-dropdown-container,
+.react-datepicker__year-dropdown {
+  padding: 0.25rem;
+}
+
+/* optional: hover / focus */
+.react-datepicker__month-select:focus,
+.react-datepicker__year-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.2); /* subtle ring */
+}
+
+.react-datepicker__year-dropdown {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.react-datepicker__month-dropdown {
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+
+/* ✅ FIX: keep year/month dropdowns scrollable and inside calendar */
+.react-datepicker__month-dropdown-container,
+.react-datepicker__year-dropdown-container {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* limit height + make scrollable */
+.react-datepicker__year-dropdown,
+.react-datepicker__month-dropdown {
+  position: absolute !important;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  max-height: 150px !important;
+  overflow-y: auto !important;
+  z-index: 1000;
+}
+
+/* smooth scrollbars */
+.react-datepicker__year-dropdown::-webkit-scrollbar,
+.react-datepicker__month-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+.react-datepicker__year-dropdown::-webkit-scrollbar-thumb,
+.react-datepicker__month-dropdown::-webkit-scrollbar-thumb {
+  background-color: #c0c0c0;
+  border-radius: 3px;
+}
+.react-datepicker__year-dropdown::-webkit-scrollbar-thumb:hover,
+.react-datepicker__month-dropdown::-webkit-scrollbar-thumb:hover {
+  background-color: #888;
+}
+
+/* ensure popper (calendar) always above modals, etc. */
+.react-datepicker-popper {
+  z-index: 9999 !important;
 }

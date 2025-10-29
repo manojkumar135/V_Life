@@ -49,9 +49,13 @@ const UserSchema = new mongoose.Schema(
         users: [{ type: String }]
       }
     ],
+    self_bv: { type: Number, default: 0 },
+    direct_bv: { type: Number, default: 0 },
+    infinity_bv: { type: Number, default: 0 },
     bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
     score: { type: Number, default: 0 },
+    reward: { type: Number, default: 0 },
     rank: { type: String, required: true, default: "none" },
     club: { type: String, default: "none" },
     activated_date: { type: String },
