@@ -146,6 +146,27 @@ export default function TreeView() {
     }
   };
 
+  // inside TreeView component
+
+const handleUserClick = async (userId: string) => {
+  try {
+    setLoading(true);
+    const { data } = await axios.get(API_URL, {
+      params: { user_id: userId },
+    });
+    if (data?.data) {
+      setCurrentRoot(data.data);
+      setHighlightedId(userId);
+    }
+  } catch (error) {
+    console.error("Error fetching subtree:", error);
+    ShowToast.error("Failed to load user tree");
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   // Auto-reset tree when search is cleared
   useEffect(() => {
     if (!search.trim() && tree) {
@@ -202,6 +223,7 @@ export default function TreeView() {
                 highlightedId={highlightedId}
                 level={1}
                 maxLevel={4}
+                onUserClick={handleUserClick}
               />
             ) : (
               <p>Loading tree...</p>

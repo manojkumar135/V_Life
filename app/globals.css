@@ -7,16 +7,16 @@
 }
 
 /* Explicit light theme */
-[data-theme="light"] {
+/* [data-theme="light"] {
   --background: #ffffff;
   --foreground: #171717;
-}
+} */
 
 /* Explicit dark theme */
-[data-theme="dark"] {
+/* [data-theme="dark"] {
   --background: #0a0a0a;
   --foreground: #ededed;
-}
+} */
 
 /* Tailwind inline theme vars */
 /* @theme inline {
@@ -192,4 +192,13 @@ input[type="date"]::placeholder {
 /* ensure popper (calendar) always above modals, etc. */
 .react-datepicker-popper {
   z-index: 9999 !important;
+}
+
+/* Makes Ant Design DatePicker dropdown match input style */
+.custom-datepicker-dropdown .ant-picker-panel {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.custom-datepicker-dropdown .ant-picker-header {
+  background-color: #fff;
 }

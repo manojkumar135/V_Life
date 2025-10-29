@@ -27,6 +27,7 @@ interface Props {
   highlightedId?: string | null;
   level?: number; // depth tracker
   maxLevel?: number; // limit depth
+  onUserClick?: (userId: string) => void;
 }
 
 const BinaryTreeNode: React.FC<Props> = ({
@@ -35,14 +36,17 @@ const BinaryTreeNode: React.FC<Props> = ({
   highlightedId,
   level = 1,
   maxLevel = 4,
+  onUserClick,
 }) => {
   // console.log(node);
   const { user } = useVLife();
   const router = useRouter();
 
- const handleEmptyClick = (side: "left" | "right") => {
-  router.push(`/auth/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`);
-};
+  const handleEmptyClick = (side: "left" | "right") => {
+    router.push(
+      `/auth/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`
+    );
+  };
 
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({
     top: 0,
@@ -121,7 +125,10 @@ const BinaryTreeNode: React.FC<Props> = ({
           size={35}
         />
         <span className="text-xs text-center mt-1 capitalize">{node.name}</span>
-        <span className="text-xs text-center mt-1 font-semibold">
+        <span
+          className="text-xs text-center mt-1 font-semibold"
+          onClick={() => onUserClick?.(node.user_id)}
+        >
           {node.user_id}
         </span>
       </div>
@@ -151,10 +158,12 @@ const BinaryTreeNode: React.FC<Props> = ({
           </div>
           {user?.role === "admin" && (
             <>
-            {node.rank && (
+              {node.rank && (
                 <div className="flex">
                   <strong className="w-20">Rank:</strong>
-                  <span className="truncate font-semibold capitalize">{node.rank}</span>
+                  <span className="truncate font-semibold capitalize">
+                    {node.rank}
+                  </span>
                 </div>
               )}
               {node.contact && (
@@ -238,6 +247,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   highlightedId={highlightedId}
                   level={level + 1}
                   maxLevel={maxLevel}
+                  onUserClick={onUserClick}
                 />
               ) : (
                 <div
@@ -246,7 +256,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                 >
                   Empty
                   <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    Add 
+                    Add
                   </span>
                 </div>
               )}
@@ -261,6 +271,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   highlightedId={highlightedId}
                   level={level + 1}
                   maxLevel={maxLevel}
+                  onUserClick={onUserClick}
                 />
               ) : (
                 <div

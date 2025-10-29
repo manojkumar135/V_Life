@@ -12,13 +12,12 @@ import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import TermsModal from "@/components/TermsModal/terms";
 import customSelectStyles from "@/components/common/CustomSelectStyles";
+import type { DatePickerProps } from "antd";
+import { DatePicker, Space } from "antd";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +30,9 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
   const [focused, setFocused] = useState(false);
+  const onChange: DatePickerProps["onChange"] = (date, dateString) => {
+    console.log(date, dateString);
+  };
 
   const router = useRouter();
   const params = useSearchParams();
@@ -153,123 +155,33 @@ function RegisterContent() {
             </div>
 
             {/* DOB with DatePicker */}
-            <div className="flex flex-col w-full">
-              <div className="relative w-full">
+            <div className="flex flex-col">
+              <div className="relative">
                 <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
+
                 <DatePicker
-                  selected={
-                    formik.values.dob ? new Date(formik.values.dob) : null
-                  }
-                  onChange={(date: Date | null) => {
-                    formik.setFieldValue(
-                      "dob",
-                      date ? date.toISOString().split("T")[0] : ""
-                    );
+                  placeholder="Date of Birth"
+                  onChange={(date) => {
+                    formik.setFieldValue("dob", date ? date.toDate() : "");
                   }}
-                  onBlur={() => {
-                    formik.setFieldTouched("dob", true);
-                    if (!formik.values.dob) {
-                      formik.setFieldError(
-                        "dob",
-                        "* Date of Birth is required"
-                      );
-                    }
+                  onBlur={() => formik.setFieldTouched("dob", true)}
+                  format="DD-MM-YYYY"
+                  inputReadOnly
+                  classNames={{
+                    popup: { root: "custom-datepicker-dropdown" },
                   }}
-                  dateFormat="dd-MM-yyyy"
-                  placeholderText="Date of Birth"
-                  maxDate={new Date()}
-                  showYearDropdown
-                  showMonthDropdown
-                  scrollableYearDropdown
-                  yearDropdownItemNumber={100}
-                  // ensure popper z-index and allow custom calendar styling
-                  popperClassName="react-datepicker-popper"
-                  calendarClassName="custom-datepicker-calendar"
-                  className={`w-full pl-10 pr-4 py-1 rounded-md border ${
-                    formik.touched.dob && formik.errors.dob
-                      ? "border-red-500"
-                      : "border-gray-400"
-                  } focus:outline-none focus:ring-2 focus:ring-gray-200`}
-                  renderCustomHeader={({
-                    date,
-                    changeYear,
-                    changeMonth,
-                    decreaseMonth,
-                    increaseMonth,
-                    prevMonthButtonDisabled,
-                    nextMonthButtonDisabled,
-                  }) => {
-                    const currentYear = new Date().getFullYear();
-                    const startYear = currentYear - 100;
-                    const years = Array.from(
-                      { length: 101 },
-                      (_, i) => startYear + i
-                    );
-
-                    return (
-                      <div className="flex items-center gap-2 px-2 py-1 bg-white overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={decreaseMonth}
-                          disabled={prevMonthButtonDisabled}
-                          className="px-1 rounded hover:bg-gray-100 disabled:opacity-40 !text-xl font-semibold"
-                        >
-                          ‹
-                        </button>
-
-                        {/* use short month names + constrain width */}
-                        <select
-                          value={date.getMonth()}
-                          onChange={(e) => changeMonth(Number(e.target.value))}
-                          className="px-3 py-1 border border-gray-300 rounded-md bg-white text-sm max-w-[100px] truncate "
-                          style={{
-                            whiteSpace: "nowrap",
-                            textOverflow: "ellipsis",
-                            overflow: "hidden",
-                          }}
-                        >
-                          {Array.from({ length: 12 }).map((_, m) => (
-                            <option key={m} value={m}>
-                              {new Date(0, m).toLocaleString("default", {
-                                month: "long",
-                              })}
-                            </option>
-                          ))}
-                        </select>
-
-                        {/* limit year width so it doesn't overflow layout */}
-                        <select
-                          value={date.getFullYear()}
-                          onChange={(e) => changeYear(Number(e.target.value))}
-                          className="px-3 py-1 border-2 border-gray-800 rounded-md bg-white text-sm max-w-[100px] truncate max-h-[150px]"
-                          style={{
-                            whiteSpace: "nowrap",
-                            textOverflow: "ellipsis",
-                            overflow: "hidden",
-                            maxHeight: "100px !important",
-                          }}
-
-                        >
-                          {years.map((y) => (
-                            <option key={y} value={y}>
-                              {y}
-                            </option>
-                          ))}
-                        </select>
-
-                        <button
-                          type="button"
-                          onClick={increaseMonth}
-                          disabled={nextMonthButtonDisabled}
-                          className="p-1 rounded hover:bg-gray-100 disabled:opacity-40 !text-xl font-semibold"
-                        >
-                          ›
-                        </button>
-                      </div>
-                    );
+                  className="!w-full !pl-10 !pr-4 !py-[5px] !rounded-md !border !border-gray-400 
+                 !focus:outline-none !focus:ring-2 !focus:ring-gray-200 !bg-transparent 
+                 [&_.ant-picker-input>input::placeholder]:!text-gray-500
+                 [&_.ant-picker-input>input::placeholder]:!text-[0.95rem]"
+                  style={{
+                    backgroundColor: "transparent",
+                    borderColor: "#9ca3af",
+                    height: "34px",
                   }}
                 />
               </div>
+
               <span className="text-red-500 text-xs mt-1 h-4 block">
                 {formik.touched.dob && formik.errors.dob
                   ? formik.errors.dob
