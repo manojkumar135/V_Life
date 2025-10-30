@@ -11,6 +11,7 @@ import { useSearch } from "@/hooks/useSearch";
 import SubmitButton from "@/components/common/submitbutton";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
+import { LuRefreshCw } from "react-icons/lu";
 
 // Node type
 interface TreeNode {
@@ -38,6 +39,7 @@ export default function TreeView() {
   const [currentRoot, setCurrentRoot] = useState<TreeNode | null>(null);
   const [search, setSearch] = useState("");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const API_URL = "/api/tree-operations";
 
@@ -146,26 +148,42 @@ export default function TreeView() {
     }
   };
 
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      setLoading(true);
+      await fetchTree(""); // re-fetch entire tree
+      setSearch("");
+      setHighlightedId(null);
+      ShowToast.success("Tree refreshed!");
+    } catch (error) {
+      console.error("Error refreshing tree:", error);
+      ShowToast.error("Failed to refresh tree");
+    } finally {
+      setIsRefreshing(false);
+      setLoading(false);
+    }
+  };
+
   // inside TreeView component
 
-const handleUserClick = async (userId: string) => {
-  try {
-    setLoading(true);
-    const { data } = await axios.get(API_URL, {
-      params: { user_id: userId },
-    });
-    if (data?.data) {
-      setCurrentRoot(data.data);
-      setHighlightedId(userId);
+  const handleUserClick = async (userId: string) => {
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL, {
+        params: { user_id: userId },
+      });
+      if (data?.data) {
+        setCurrentRoot(data.data);
+        setHighlightedId(userId);
+      }
+    } catch (error) {
+      console.error("Error fetching subtree:", error);
+      ShowToast.error("Failed to load user tree");
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching subtree:", error);
-    ShowToast.error("Failed to load user tree");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   // Auto-reset tree when search is cleared
   useEffect(() => {
@@ -210,6 +228,18 @@ const handleUserClick = async (userId: string) => {
             >
               Search
             </SubmitButton>
+            <button
+              onClick={handleRefresh}
+              title="Refresh Tree"
+              className="p-1 text-black rounded-md flex items-center justify-center transition-all duration-200"
+            >
+              <LuRefreshCw
+                size={25}
+                className={`cursor-pointer ${
+                  isRefreshing ? "animate-spin" : ""
+                }`}
+              />
+            </button>
           </div>
         </div>
 

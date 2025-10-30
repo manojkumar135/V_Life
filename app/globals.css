@@ -190,15 +190,42 @@ input[type="date"]::placeholder {
 }
 
 /* ensure popper (calendar) always above modals, etc. */
-.react-datepicker-popper {
-  z-index: 9999 !important;
-}
+/* .react-datepicker-popper { */
+  /* z-index: 9999 !important; */
+/* } */
 
 /* Makes Ant Design DatePicker dropdown match input style */
-.custom-datepicker-dropdown .ant-picker-panel {
+/* .custom-datepicker-dropdown .ant-picker-panel {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 .custom-datepicker-dropdown .ant-picker-header {
   background-color: #fff;
+} */
+
+
+/* Fix alignment of react-datepicker day headers and cells */
+.react-datepicker {
+  font-family: inherit;
+  border-radius: 10px;
+  z-index: 9999 !important;
+}
+
+.react-datepicker__day-names,
+.react-datepicker__week {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day {
+  width: 2.2rem;
+  line-height: 2.2rem;
+  text-align: center;
+}
+
+/* Ensure dropdowns are scrollable and visible */
+.react-select__menu {
+  z-index: 9999 !important;
 }

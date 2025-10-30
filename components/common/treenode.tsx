@@ -1,7 +1,12 @@
+"use client";
+
 import React, { useState, useRef, useEffect } from "react";
 import { FaUserCircle } from "react-icons/fa";
 import { useVLife } from "@/store/context";
-import { useRouter } from "next/navigation"; // ⬅️ Add at top
+import { useRouter } from "next/navigation";
+import StatusModal from "@/components/common/userStatusModal";
+import axios from "axios";
+import ShowToast from "@/components/common/Toast/toast";
 
 export interface TreeNode {
   user_id: string;
@@ -25,8 +30,8 @@ interface Props {
   node: TreeNode;
   getColor: (status: string) => string;
   highlightedId?: string | null;
-  level?: number; // depth tracker
-  maxLevel?: number; // limit depth
+  level?: number;
+  maxLevel?: number;
   onUserClick?: (userId: string) => void;
 }
 
@@ -38,79 +43,117 @@ const BinaryTreeNode: React.FC<Props> = ({
   maxLevel = 4,
   onUserClick,
 }) => {
-  // console.log(node);
   const { user } = useVLife();
   const router = useRouter();
 
+  const STATUS_URL = "/api/user-status"; // 👈 replace if needed
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{
+    id: string;
+    status: string;
+    row: any;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const nodeRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+  const [hovered, setHovered] = useState(false);
+
+  const isHighlighted = highlightedId === node.user_id;
+
+  // ✅ Double click or long press → open status modal (admin only)
+  const handleStatusClick = (id: string, status: string, row: any) => {
+    if (user?.role === "admin") {
+      setSelectedUser({ id, status, row });
+      setIsStatusModalOpen(true);
+    }
+  };
+
+  // ✅ Confirm status change
+  const confirmStatusChange = async () => {
+    if (!selectedUser) return;
+    try {
+      setLoading(true);
+      const { id, status } = selectedUser;
+      const newStatus = status === "active" ? "inactive" : "active";
+
+      const res = await axios.put(STATUS_URL, { id, status: newStatus });
+      if (res.data.success) {
+        ShowToast.success(`User status changed to ${newStatus}`);
+        setIsStatusModalOpen(false);
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      ShowToast.error("Failed to update status");
+    } finally {
+      setSelectedUser(null);
+      setLoading(false);
+    }
+  };
+
+  // ✅ Register / empty slot click
   const handleEmptyClick = (side: "left" | "right") => {
     router.push(
       `/auth/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`
     );
   };
 
-  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({
-    top: 0,
-    left: 0,
-  });
-  const nodeRef = useRef<HTMLDivElement | null>(null);
-  const tooltipRef = useRef<HTMLDivElement | null>(null);
-
-  const isHighlighted = highlightedId === node.user_id;
-
-  const [hovered, setHovered] = useState(false);
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+  // ✅ Tooltip logic
   const handleMouseEnter = () => {
-    // Cancel any existing hide timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current);
-      hoverTimeoutRef.current = null;
-    }
+    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setHovered(true);
   };
 
   const handleMouseLeave = () => {
-    // Delay hiding tooltip by 2 seconds
-    hoverTimeoutRef.current = setTimeout(() => {
-      setHovered(false);
-    }, 100); // 2000ms = 2 seconds
+    hoverTimeoutRef.current = setTimeout(() => setHovered(false), 100);
   };
 
   useEffect(() => {
     if (hovered && nodeRef.current && tooltipRef.current) {
       const nodeRect = nodeRef.current.getBoundingClientRect();
       const tooltipRect = tooltipRef.current.getBoundingClientRect();
+      const LEFT_MARGIN = 80;
 
-      const LEFT_MARGIN = 80; // increased left margin
-
-      let top = nodeRect.bottom + window.scrollY + 8; // default below
+      let top = nodeRect.bottom + window.scrollY + 8;
       let left =
         nodeRect.left +
         nodeRect.width / 2 +
         window.scrollX -
         tooltipRect.width / 2;
 
-      // If tooltip goes beyond right edge → clamp
-      if (left + tooltipRect.width > window.innerWidth - 8) {
+      if (left + tooltipRect.width > window.innerWidth - 8)
         left = window.innerWidth - tooltipRect.width - 8;
-      }
-
-      // If tooltip goes beyond left edge → clamp
-      if (left < LEFT_MARGIN) {
-        left = LEFT_MARGIN;
-      }
-
-      // If tooltip goes beyond bottom → show above node
-      if (top + tooltipRect.height > window.scrollY + window.innerHeight - 8) {
+      if (left < LEFT_MARGIN) left = LEFT_MARGIN;
+      if (top + tooltipRect.height > window.scrollY + window.innerHeight - 8)
         top = nodeRect.top + window.scrollY - tooltipRect.height - 8;
-      }
 
       setTooltipPos({ top, left });
     }
   }, [hovered]);
 
+  // ✅ Long press detection for mobile
+  const handleTouchStart = () => {
+    if (user?.role === "admin") {
+      longPressTimeoutRef.current = setTimeout(() => {
+        console.log(node, node.user_status, node.user_id);
+        handleStatusClick(node.user_id, node.user_status, node);
+      }, 700);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
+  };
+
   return (
-    <div className="flex flex-col items-center relative w-full xl:w-14/15 ">
+    <div className="flex flex-col items-center relative w-full xl:w-14/15">
       {/* Node */}
       <div
         ref={nodeRef}
@@ -121,12 +164,17 @@ const BinaryTreeNode: React.FC<Props> = ({
         <FaUserCircle
           className={`${getColor(node.user_status)} ${
             isHighlighted ? "ring-4 ring-blue-700 rounded-full" : "mt-1"
-          }`}
+          } cursor-pointer transition-transform active:scale-90`}
           size={35}
+          onDoubleClick={() =>
+            handleStatusClick(node.user_id, node.user_status, node)
+          }
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         />
         <span className="text-xs text-center mt-1 capitalize">{node.name}</span>
         <span
-          className="text-xs text-center mt-1 font-semibold"
+          className="text-xs text-center mt-1 font-semibold text-gray-800 hover:text-blue-600 hover:underline cursor-pointer transition-colors duration-200"
           onClick={() => onUserClick?.(node.user_id)}
         >
           {node.user_id}
@@ -156,6 +204,7 @@ const BinaryTreeNode: React.FC<Props> = ({
               {node.user_status}
             </span>
           </div>
+
           {user?.role === "admin" && (
             <>
               {node.rank && (
@@ -180,19 +229,13 @@ const BinaryTreeNode: React.FC<Props> = ({
               )}
             </>
           )}
-          {/* {node.referBy && (
-            <div className="flex">
-              <strong className="w-20">Refer By:</strong>
-              <span className="truncate">{node.referBy}</span>
-            </div>
-          )} */}
+
           {node.referrals != null && (
             <div className="flex">
               <strong className="w-20">Referrals:</strong>
               <span className="truncate">{node.referrals}</span>
             </div>
           )}
-
           {node.referBy && (
             <div className="flex">
               <strong className="w-20">Sponser ID:</strong>
@@ -205,8 +248,6 @@ const BinaryTreeNode: React.FC<Props> = ({
               <span className="truncate">{node.parent}</span>
             </div>
           )}
-
-          {/* 👇 Team counts */}
           <div className="flex">
             <strong className="w-20">Left Team:</strong>
             <span>{node.leftCount ?? 0}</span>
@@ -226,17 +267,15 @@ const BinaryTreeNode: React.FC<Props> = ({
         </div>
       )}
 
-      {/* Show children only if within level limit */}
+      {/* Children */}
       {level < maxLevel && (
         <>
-          {/* Connector lines */}
           <div className="relative flex justify-center mt-2 w-full max-lg:min-w-[250px]">
-            <div className="absolute top-0 left-1/4  right-1/4  border-t border-gray-400 " />
+            <div className="absolute top-0 left-1/4 right-1/4 border-t border-gray-400" />
             <div className="absolute top-0 left-1/4 border-l border-gray-400 h-2" />
             <div className="absolute top-0 right-1/4 border-l border-gray-400 h-2" />
           </div>
 
-          {/* Children */}
           <div className="flex justify-center mt-2 w-full">
             {/* Left */}
             <div className="flex flex-col items-center flex-1">
@@ -287,6 +326,19 @@ const BinaryTreeNode: React.FC<Props> = ({
             </div>
           </div>
         </>
+      )}
+
+      {/* ✅ Status Modal */}
+      {isStatusModalOpen && (
+        <StatusModal
+          isOpen={isStatusModalOpen}
+          setIsOpen={setIsStatusModalOpen}
+          currentStatus={
+            selectedUser?.status === "active" ? "active" : "inactive"
+          }
+          selectedUser={selectedUser}
+          onConfirm={confirmStatusChange}
+        />
       )}
     </div>
   );

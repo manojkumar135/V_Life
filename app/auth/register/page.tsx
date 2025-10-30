@@ -11,13 +11,13 @@ import { FaUser, FaPhone, FaUsers } from "react-icons/fa";
 import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import TermsModal from "@/components/TermsModal/terms";
 import customSelectStyles from "@/components/common/CustomSelectStyles";
-import type { DatePickerProps } from "antd";
-import { DatePicker, Space } from "antd";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +29,6 @@ const teams = [
 function RegisterContent() {
   const [loading, setLoading] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const onChange: DatePickerProps["onChange"] = (date, dateString) => {
-    console.log(date, dateString);
-  };
 
   const router = useRouter();
   const params = useSearchParams();
@@ -82,7 +78,6 @@ function RegisterContent() {
       setLoading(true);
       try {
         const res = await axios.post("/api/users-operations", values);
-        console.log(res);
         if (res.data.success) {
           ShowToast.success("Registration successful!");
           router.push("/auth/login");
@@ -90,9 +85,7 @@ function RegisterContent() {
           ShowToast.error(res.data.message || "Registration failed");
         }
       } catch (err: any) {
-        const errorMessage =
-          err.response?.data?.message || err.message || "Something went wrong";
-        ShowToast.error(errorMessage);
+        ShowToast.error(err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
@@ -119,22 +112,14 @@ function RegisterContent() {
         </div>
       )}
 
-      {/* Left Form Section */}
-      <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:h-full">
-        <div
-          className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 max-md:py-4 px-8 bg-[#fffff0]
-         rounded-3xl shadow-lg border-gray-200 border xl:h-[90%] max-md:h-[80%]"
-        >
-          <p className="text-[1.5rem] font-bold text-black xl:mb-3 mb-5">
-            SIGN UP
-          </p>
+      {/* Form Section */}
+      <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6">
+        <div className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200">
+          <p className="text-[1.5rem] font-bold text-black mb-5">SIGN UP</p>
 
-          <form
-            onSubmit={formik.handleSubmit}
-            className="w-full space-y-2 overflow-y-hidden"
-          >
+          <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
             {/* Name */}
-            <div className="flex flex-col">
+            <div>
               <div className="relative">
                 <FaUser className="absolute left-3 top-2 text-gray-500" />
                 <input
@@ -144,45 +129,155 @@ function RegisterContent() {
                   value={formik.values.user_name}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
                 />
               </div>
-              <span className="text-red-500 text-xs mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 block">
                 {formik.touched.user_name && formik.errors.user_name
                   ? formik.errors.user_name
                   : "\u00A0"}
               </span>
             </div>
 
-            {/* DOB with DatePicker */}
-            <div className="flex flex-col">
+            {/* DOB */}
+            <div>
               <div className="relative">
                 <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
-
                 <DatePicker
-                  placeholder="Date of Birth"
-                  onChange={(date) => {
-                    formik.setFieldValue("dob", date ? date.toDate() : "");
+                  selected={
+                    formik.values.dob ? new Date(formik.values.dob) : null
+                  }
+                  onChange={(date: Date | null) => {
+                    formik.setFieldValue(
+                      "dob",
+                      date ? date.toISOString().split("T")[0] : ""
+                    );
                   }}
                   onBlur={() => formik.setFieldTouched("dob", true)}
-                  format="DD-MM-YYYY"
-                  inputReadOnly
-                  classNames={{
-                    popup: { root: "custom-datepicker-dropdown" },
-                  }}
-                  className="!w-full !pl-10 !pr-4 !py-[5px] !rounded-md !border !border-gray-400 
-                 !focus:outline-none !focus:ring-2 !focus:ring-gray-200 !bg-transparent 
-                 [&_.ant-picker-input>input::placeholder]:!text-gray-500
-                 [&_.ant-picker-input>input::placeholder]:!text-[0.95rem]"
-                  style={{
-                    backgroundColor: "transparent",
-                    borderColor: "#9ca3af",
-                    height: "34px",
+                  dateFormat="dd-MM-yyyy"
+                  placeholderText="Date of Birth"
+                  maxDate={new Date()}
+                  showYearDropdown
+                  showMonthDropdown
+                  scrollableYearDropdown
+                  yearDropdownItemNumber={100}
+                  popperPlacement="bottom-start"
+                  popperClassName="z-[9999]"
+                  calendarClassName="custom-datepicker-calendar"
+                  className={`w-full pl-10 pr-4 py-1 rounded-md border ${
+                    formik.touched.dob && formik.errors.dob
+                      ? "border-red-500"
+                      : "border-gray-400"
+                  } focus:ring-2 focus:ring-gray-200`}
+                  renderCustomHeader={({
+                    date,
+                    changeYear,
+                    changeMonth,
+                    decreaseMonth,
+                    increaseMonth,
+                    prevMonthButtonDisabled,
+                    nextMonthButtonDisabled,
+                  }) => {
+                    const currentYear = new Date().getFullYear();
+                    const startYear = currentYear - 100;
+                    const years = Array.from(
+                      { length: 101 },
+                      (_, i) => startYear + i
+                    );
+
+                    const monthOptions = Array.from({ length: 12 }).map(
+                      (_, m) => ({
+                        value: m,
+                        label: new Date(0, m).toLocaleString("default", {
+                          month: "long",
+                        }),
+                      })
+                    );
+
+                    const yearOptions = years.map((y) => ({
+                      value: y,
+                      label: y.toString(),
+                    }));
+
+                    const selectedMonth = monthOptions.find(
+                      (m) => m.value === date.getMonth()
+                    );
+                    const selectedYear = yearOptions.find(
+                      (y) => y.value === date.getFullYear()
+                    );
+
+                    return (
+                      <div className="flex items-center justify-center gap-2 px-2 py-1 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={decreaseMonth}
+                          disabled={prevMonthButtonDisabled}
+                          className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
+                        >
+                          ‹
+                        </button>
+                        <div className="min-w-[100px] xl:min-w-[120px]">
+                          <Select
+                            options={monthOptions}
+                            value={selectedMonth}
+                            onChange={(selected) =>
+                              selected && changeMonth(selected.value)
+                            }
+                            styles={{
+                              control: (base) => ({
+                                ...base,
+                                minHeight: "34px",
+                                fontSize: "0.85rem",
+                              }),
+                              menu: (base) => ({
+                                ...base,
+                                zIndex: 9999,
+                                fontSize: "0.85rem",
+                              }),
+                            }}
+                            menuPortalTarget={document.body}
+                            menuPosition="fixed"
+                          />
+                        </div>
+                        <div className="min-w-[80px] xl:min-w-[100px] ">
+                          <Select
+                            options={yearOptions}
+                            value={selectedYear}
+                            onChange={(selected) =>
+                              selected && changeYear(selected.value)
+                            }
+                            styles={{
+                              control: (base) => ({
+                                ...base,
+                                minHeight: "34px",
+                                fontSize: "0.85rem",
+                              }),
+                              menu: (base) => ({
+                                ...base,
+                                zIndex: 9999,
+                                // maxHeight: "200px",
+                                fontSize: "0.85rem",
+                                overflowY: "auto",
+                              }),
+                            }}
+                            menuPortalTarget={document.body}
+                            menuPosition="fixed"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={increaseMonth}
+                          disabled={nextMonthButtonDisabled}
+                          className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    );
                   }}
                 />
               </div>
-
-              <span className="text-red-500 text-xs mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 block">
                 {formik.touched.dob && formik.errors.dob
                   ? formik.errors.dob
                   : "\u00A0"}
@@ -190,7 +285,7 @@ function RegisterContent() {
             </div>
 
             {/* Email */}
-            <div className="flex flex-col">
+            <div>
               <div className="relative">
                 <FiMail className="absolute left-3 top-2 text-gray-500" />
                 <input
@@ -200,10 +295,10 @@ function RegisterContent() {
                   value={formik.values.mail}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
                 />
               </div>
-              <span className="text-red-500 text-xs mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 block">
                 {formik.touched.mail && formik.errors.mail
                   ? formik.errors.mail
                   : "\u00A0"}
@@ -211,7 +306,7 @@ function RegisterContent() {
             </div>
 
             {/* Contact */}
-            <div className="flex flex-col">
+            <div>
               <div className="relative">
                 <FaPhone className="absolute left-3 top-2 text-gray-500" />
                 <input
@@ -221,18 +316,18 @@ function RegisterContent() {
                   value={formik.values.contact}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
                 />
               </div>
-              <span className="text-red-500 text-xs mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 block">
                 {formik.touched.contact && formik.errors.contact
                   ? formik.errors.contact
                   : "\u00A0"}
               </span>
             </div>
 
-            {/* Referral ID */}
-            <div className="flex flex-col">
+            {/* Referral */}
+            <div>
               <div className="relative">
                 <IoIosLink className="absolute left-3 top-2 text-gray-500" />
                 <input
@@ -242,10 +337,10 @@ function RegisterContent() {
                   value={formik.values.referBy}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
                 />
               </div>
-              <span className="text-red-500 text-xs mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 block">
                 {formik.touched.referBy && formik.errors.referBy
                   ? formik.errors.referBy
                   : "\u00A0"}
@@ -253,20 +348,15 @@ function RegisterContent() {
             </div>
 
             {/* Team */}
-            <div className="flex flex-col">
+            <div>
               <div className="relative">
                 <FaUsers className="absolute left-3 top-2.5 text-gray-500" />
                 <Select
                   options={teams}
                   name="team"
-                  value={
-                    teams.find((t) => t.value === formik.values.team) || null
-                  }
-                  onChange={(selectedOption: any) =>
-                    formik.setFieldValue(
-                      "team",
-                      selectedOption ? selectedOption.value : ""
-                    )
+                  value={teams.find((t) => t.value === formik.values.team)}
+                  onChange={(opt) =>
+                    formik.setFieldValue("team", opt?.value || "")
                   }
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
@@ -274,7 +364,7 @@ function RegisterContent() {
                   className="w-full"
                 />
               </div>
-              <span className="text-red-500 text-xs mt-1 h-4 block">
+              <span className="text-red-500 text-xs mt-1 block">
                 {formik.touched.team && formik.errors.team
                   ? formik.errors.team
                   : "\u00A0"}
@@ -282,14 +372,13 @@ function RegisterContent() {
             </div>
 
             {/* Terms */}
-            <div className="flex items-center space-x-2 mt-0 max-md:mt-5">
+            <div className="flex items-center space-x-2">
               <input
                 type="checkbox"
                 name="terms"
                 checked={formik.values.terms}
                 onChange={formik.handleChange}
-                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer
-                 checked:bg-yellow-500 checked:border-yellow-500 relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:leading-none checked:before:text-black"
+                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer checked:bg-yellow-500 checked:border-yellow-500 relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:text-black"
               />
               <label htmlFor="terms" className="text-sm text-gray-700">
                 I agree to the{" "}
@@ -302,7 +391,7 @@ function RegisterContent() {
               </label>
             </div>
 
-            {/* Register Button */}
+            {/* Register */}
             <button
               type="submit"
               disabled={
@@ -311,25 +400,23 @@ function RegisterContent() {
                 !formik.dirty ||
                 !formik.values.terms
               }
-              className={`w-full py-1 mt-1 font-semibold rounded-md transition-colors text-[1.2rem] 
-                ${
-                  loading ||
-                  !formik.isValid ||
-                  !formik.dirty ||
-                  !formik.values.terms
-                    ? "bg-gray-400 text-white cursor-not-allowed"
-                    : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
-                }`}
+              className={`w-full py-1 mt-1 font-semibold rounded-md text-[1.2rem] ${
+                loading ||
+                !formik.isValid ||
+                !formik.dirty ||
+                !formik.values.terms
+                  ? "bg-gray-400 text-white cursor-not-allowed"
+                  : "bg-[#FFD700] text-black hover:bg-yellow-400"
+              }`}
             >
               Register
             </button>
 
-            {/* Login */}
             <div className="text-center text-sm text-black mt-1">
               Already have an account?{" "}
               <span
                 onClick={handleNavigateToLogin}
-                className="inline-flex items-center text-blue-600 font-medium cursor-pointer"
+                className="text-blue-600 font-medium cursor-pointer"
               >
                 Login here!
               </span>
@@ -341,7 +428,7 @@ function RegisterContent() {
       <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
 
       {/* Right Illustration */}
-      <div className="w-1/2 max-xl:w-2/5 flex items-center justify-center p-1 max-lg:p-0 max-lg:hidden">
+      <div className="w-1/2 max-xl:w-2/5 flex items-center justify-center p-1 max-lg:hidden">
         <DotLottieReact
           src="https://lottie.host/b80db1a0-c452-4ff8-847a-eed370430e0e/DePiYXvQ6y.lottie"
           loop
@@ -366,3 +453,5 @@ export default function RegisterPage() {
     </Suspense>
   );
 }
+
+/* ✅ Add this CSS in your global.css */
