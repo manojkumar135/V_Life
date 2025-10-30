@@ -155,7 +155,7 @@ export default function DirectTeam() {
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({
       totalItems,
-      itemsPerPage: 10,
+      itemsPerPage: 12,
       onPageChange: handlePageChange,
     });
 
@@ -196,9 +196,9 @@ export default function DirectTeam() {
 
           <Table
             columns={columns}
-            rows={usersData.slice((currentPage - 1) * 14, currentPage * 14)}
+            rows={usersData.slice((currentPage - 1) *12, currentPage *12)}
             rowIdField="_id"
-            pageSize={14}
+            pageSize={12}
             statusField="user_status"
             onIdClick={(id) => handleEdit(id)}
             onStatusClick={handleStatusClick}

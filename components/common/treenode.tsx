@@ -33,6 +33,7 @@ interface Props {
   level?: number;
   maxLevel?: number;
   onUserClick?: (userId: string) => void;
+  refreshTree?: () => void;
 }
 
 const BinaryTreeNode: React.FC<Props> = ({
@@ -42,11 +43,12 @@ const BinaryTreeNode: React.FC<Props> = ({
   level = 1,
   maxLevel = 4,
   onUserClick,
+  refreshTree,
 }) => {
   const { user } = useVLife();
   const router = useRouter();
 
-  const STATUS_URL = "/api/user-status"; // 👈 replace if needed
+  const STATUS_URL = "/api/status-operations"; // 👈 replace if needed
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{
     id: string;
@@ -69,8 +71,8 @@ const BinaryTreeNode: React.FC<Props> = ({
   const isHighlighted = highlightedId === node.user_id;
 
   // ✅ Double click or long press → open status modal (admin only)
-  const handleStatusClick = (id: string, status: string, row: any) => {
-    if (user?.role === "admin") {
+  const handleStatusClick = (id?: string, status?: string, row?: any) => {
+    if (user?.role === "admin" && id && status) {
       setSelectedUser({ id, status, row });
       setIsStatusModalOpen(true);
     }
@@ -82,12 +84,19 @@ const BinaryTreeNode: React.FC<Props> = ({
     try {
       setLoading(true);
       const { id, status } = selectedUser;
-      const newStatus = status === "active" ? "inactive" : "active";
+      // const newStatus = status === "active" ? "inactive" : "active";
 
-      const res = await axios.put(STATUS_URL, { id, status: newStatus });
+      const res = await axios.put(STATUS_URL, { id, status });
       if (res.data.success) {
-        ShowToast.success(`User status changed to ${newStatus}`);
+        const { user_id, new_status } = res.data.data;
+
+        ShowToast.success(
+          `User ${user_id} status changed to ${
+            new_status.charAt(0).toUpperCase() + new_status.slice(1)
+          }`
+        );
         setIsStatusModalOpen(false);
+        refreshTree?.();
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -101,7 +110,7 @@ const BinaryTreeNode: React.FC<Props> = ({
   // ✅ Register / empty slot click
   const handleEmptyClick = (side: "left" | "right") => {
     router.push(
-      `/auth/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`
+      `tree/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`
     );
   };
 
@@ -142,7 +151,7 @@ const BinaryTreeNode: React.FC<Props> = ({
   const handleTouchStart = () => {
     if (user?.role === "admin") {
       longPressTimeoutRef.current = setTimeout(() => {
-        console.log(node, node.user_status, node.user_id);
+        // console.log(node, node.user_status, node.user_id);
         handleStatusClick(node.user_id, node.user_status, node);
       }, 700);
     }
@@ -287,6 +296,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   level={level + 1}
                   maxLevel={maxLevel}
                   onUserClick={onUserClick}
+                   refreshTree={refreshTree}
                 />
               ) : (
                 <div
@@ -311,6 +321,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   level={level + 1}
                   maxLevel={maxLevel}
                   onUserClick={onUserClick}
+                   refreshTree={refreshTree}
                 />
               ) : (
                 <div

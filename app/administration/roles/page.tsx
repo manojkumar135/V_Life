@@ -124,7 +124,7 @@ export default function RolesPage() {
     endItem,
   } = usePagination({
     totalItems,
-    itemsPerPage: 14,
+    itemsPerPage: 12,
     onPageChange: () => {},
   });
 
@@ -167,9 +167,9 @@ export default function RolesPage() {
         {/* Table */}
         <Table
           columns={columns}
-          rows={rolesData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={rolesData.slice((currentPage - 1) *12, currentPage *12)}
           rowIdField="_id"
-          pageSize={14}
+          pageSize={12}
           statusField="role_status"
           onIdClick={(id) => router.push(`/administration/roles/editrole/${id}`)}
           onStatusClick={handleStatusClick}

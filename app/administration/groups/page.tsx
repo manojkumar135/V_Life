@@ -119,7 +119,7 @@ const confirmStatusChange = async () => {
     endItem,
   } = usePagination({
     totalItems,
-    itemsPerPage: 14,
+    itemsPerPage: 12,
     onPageChange: () => {},
   });
 
@@ -163,9 +163,9 @@ const confirmStatusChange = async () => {
         {/* Table with checkbox selection */}
         <Table
           columns={columns}
-          rows={groupsData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={groupsData.slice((currentPage - 1) *12, currentPage *12)}
           rowIdField="_id"
-          pageSize={14}
+          pageSize={12}
           statusField="group_status"
           onIdClick={(id) => router.push(`/administration/groups/editgroup/${id}`)}
           onStatusClick={handleStatusClick}

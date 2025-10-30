@@ -119,7 +119,7 @@ export default function WithdrawPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 14,
+    itemsPerPage: 12,
     onPageChange: handlePageChange,
   });
 
@@ -160,9 +160,9 @@ export default function WithdrawPage() {
 
         <Table
           columns={columns}
-          rows={withdrawData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={withdrawData.slice((currentPage - 1) *12, currentPage *12)}
           rowIdField="_id"
-          pageSize={14}
+          pageSize={12}
           statusField="withdraw_status"
           onIdClick={(id) => handleEdit(id)}
           // onStatusClick={(id, status, row) => toggleStatus(id, status, row)}

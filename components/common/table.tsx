@@ -34,7 +34,7 @@ export default function Table<T extends Row>({
   columns,
   rows,
   rowIdField,
-  pageSize = 14,
+  pageSize = 12,
   className = "",
   rowHeight = 36,
   checkboxSelection = false,

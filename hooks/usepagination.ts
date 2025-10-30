@@ -9,7 +9,7 @@ interface UsePaginationProps {
 
 const usePagination = ({
   totalItems,
-  itemsPerPage = 14,
+  itemsPerPage = 12,
   initialPage = 1,
   onPageChange,
 }: UsePaginationProps) => {

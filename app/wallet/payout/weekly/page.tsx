@@ -193,7 +193,7 @@ export default function WithdrawPage() {
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({
       totalItems,
-      itemsPerPage: 14,
+      itemsPerPage: 12,
       onPageChange: () => {},
     });
 
@@ -257,9 +257,9 @@ export default function WithdrawPage() {
         {/* Table */}
         <Table
           columns={columns}
-          rows={withdrawData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={withdrawData.slice((currentPage - 1) *12, currentPage *12)}
           rowIdField="_id"
-          pageSize={14}
+          pageSize={12}
           statusField="pstatus"
           onIdClick={(id) => router.push(`/wallet/payout/detailview/${id}`)}
           checkboxSelection

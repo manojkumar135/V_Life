@@ -80,7 +80,7 @@ function RegisterContent() {
         const res = await axios.post("/api/users-operations", values);
         if (res.data.success) {
           ShowToast.success("Registration successful!");
-          router.push("/auth/login");
+          router.back();
         } else {
           ShowToast.error(res.data.message || "Registration failed");
         }
@@ -452,4 +452,3 @@ export default function RegisterPage() {
     </Suspense>
   );
 }
-

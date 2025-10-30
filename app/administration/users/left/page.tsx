@@ -11,6 +11,7 @@ import { useVLife } from "@/store/context";
 import StatusModal from "@/components/common/userStatusModal";
 import Loader from "@/components/common/loader";
 import { handleDownload } from "@/utils/handleDownload";
+import ShowToast from "@/components/common/Toast/toast";
 
 // User type (adjust fields if your User model differs)
 interface User {
@@ -117,7 +118,12 @@ export default function LeftTeam() {
         // status_notes: statusNotes,
       });
       if (res.data.success) {
-        // ✅ Update UI
+        const { user_id, new_status } = res.data.data;
+        ShowToast.success(
+          `User ${user_id} status changed to ${
+            new_status.charAt(0).toUpperCase() + new_status.slice(1)
+          }`
+        );
         setUsersData((prev: User[]) =>
           prev.map((u) =>
             u._id === id
@@ -165,7 +171,7 @@ export default function LeftTeam() {
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({
       totalItems,
-      itemsPerPage: 10,
+      itemsPerPage: 12,
       onPageChange: handlePageChange,
     });
 
@@ -205,9 +211,9 @@ export default function LeftTeam() {
 
           <Table
             columns={columns}
-            rows={usersData.slice((currentPage - 1) * 14, currentPage * 14)}
+            rows={usersData.slice((currentPage - 1) *12, currentPage *12)}
             rowIdField="_id"
-            pageSize={14}
+            pageSize={12}
             statusField="user_status"
             onIdClick={(id) => handleEdit(id)}
             onStatusClick={handleStatusClick}

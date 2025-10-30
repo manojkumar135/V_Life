@@ -144,7 +144,7 @@ export default function BookingsPage() {
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({
       totalItems,
-      itemsPerPage: 14,
+      itemsPerPage: 12,
       onPageChange: handlePageChange,
     });
 
@@ -198,9 +198,9 @@ export default function BookingsPage() {
         {/* Table */}
         <Table
           columns={columns}
-          rows={bookingsData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={bookingsData.slice((currentPage - 1) *12, currentPage *12)}
           rowIdField="_id"
-          pageSize={14}
+          pageSize={12}
           onRowClick={handleRowClick}
           onIdClick={(id) =>
             router.push(`/wallet/rewards/Bookings/detailview/${id}`)

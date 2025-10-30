@@ -181,7 +181,7 @@ export default function TransactionHistory() {
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({
       totalItems,
-      itemsPerPage: 14,
+      itemsPerPage: 12,
       onPageChange: () => {},
     });
 
@@ -246,9 +246,9 @@ export default function TransactionHistory() {
 
         <Table
           columns={columns}
-          rows={historyData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={historyData.slice((currentPage - 1) *12, currentPage *12)}
           rowIdField="_id"
-          pageSize={14}
+          pageSize={12}
           onRowClick={(row) => console.log("Transaction clicked:", row)}
           checkboxSelection
           setSelectedRows={setSelectedRows}

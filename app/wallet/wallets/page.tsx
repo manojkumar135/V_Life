@@ -113,7 +113,7 @@ export default function WalletsPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 14,
+    itemsPerPage: 12,
     onPageChange: handlePageChange,
   });
 
@@ -157,9 +157,9 @@ export default function WalletsPage() {
 
         <Table
           columns={columns}
-          rows={walletsData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={walletsData.slice((currentPage - 1) *12, currentPage *12)}
           rowIdField="_id"
-          pageSize={14}
+          pageSize={12}
           statusField="wallet_status"
           onIdClick={(id) => handleEdit(id)}
           checkboxSelection

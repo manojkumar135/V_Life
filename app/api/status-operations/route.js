@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
-
-const date = new Date();
+import { Wallet } from "@/models/wallet";
 
 export async function PUT(req) {
   try {
     await connectDB();
 
-    // 🧾 Parse request body
     const { id, status, status_notes } = await req.json();
-
+    // console.log("Received data:", { id, status, status_notes });
     if (!id || !status) {
       return NextResponse.json(
         { success: false, message: "Missing id or status" },
@@ -20,69 +19,94 @@ export async function PUT(req) {
       );
     }
 
-    // ✅ Determine new status (toggle if needed)
     const newStatus = status === "active" ? "inactive" : "active";
-
-    // ✅ Create proper status notes
     const notes =
       status_notes ||
       (newStatus === "active"
         ? "Activated by Admin"
         : "Deactivated by Admin");
 
-    // 1️⃣ Update User document
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      {
-        user_status: newStatus,
-        status_notes: notes, // ✅ store admin note
-        activated_date: `${String(date.getDate()).padStart(2, '0')}-${String(
-          date.getMonth() + 1
-        ).padStart(2, '0')}-${date.getFullYear()}`,
+    const now = new Date();
+    const formattedDate = `${String(now.getDate()).padStart(2, "0")}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}-${now.getFullYear()}`;
 
-        last_modified_at: new Date(),
-      },
-      { new: true }
-    );
+    const isObjectId = mongoose.Types.ObjectId.isValid(id);
+    let user;
 
-    if (!updatedUser) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
-      );
+    // 🔹 Step 1: Find user by _id or user_id
+    if (isObjectId) {
+      user = await User.findById(id);
+      if (!user)
+        return NextResponse.json(
+          { success: false, message: "User not found with _id" },
+          { status: 404 }
+        );
+    } else {
+      user = await User.findOne({ user_id: id });
+      if (!user)
+        return NextResponse.json(
+          { success: false, message: "User not found with user_id" },
+          { status: 404 }
+        );
     }
 
-    // 2️⃣ Sync with Login collection (by user_id)
-    await Login.updateMany(
-      { user_id: updatedUser.user_id },
+    const userIdToUpdate = user.user_id;
+
+    // 🔹 Step 2: Update User
+    await User.updateOne(
+      { user_id: userIdToUpdate },
       {
-        status: newStatus,
-        status_notes: notes, // ✅ store admin note
-        activated_date: `${String(date.getDate()).padStart(2, '0')}-${String(
-          date.getMonth() + 1
-        ).padStart(2, '0')}-${date.getFullYear()}`,
+        user_status: newStatus,
+        status_notes: notes,
+        activated_date: formattedDate,
         last_modified_at: new Date(),
       }
     );
 
-    // 3️⃣ Sync with TreeNode collection (by user_id)
-    await TreeNode.findOneAndUpdate(
-      { user_id: updatedUser.user_id },
+    // 🔹 Step 3: Update Login
+    await Login.updateMany(
+      { user_id: userIdToUpdate },
       {
         status: newStatus,
-        status_notes: notes, // ✅ store admin note
-        activated_date: `${String(date.getDate()).padStart(2, '0')}-${String(
-          date.getMonth() + 1
-        ).padStart(2, '0')}-${date.getFullYear()}`,
+        status_notes: notes,
+        activated_date: formattedDate,
+        last_modified_at: new Date(),
+      }
+    );
+
+    // 🔹 Step 4: Update TreeNode
+    await TreeNode.updateMany(
+      { user_id: userIdToUpdate },
+      {
+        status: newStatus,
+        status_notes: notes,
+        activated_date: formattedDate,
         updatedAt: new Date(),
       }
     );
 
-    // ✅ Success response
+    // 🔹 Step 5: Update Wallet
+    await Wallet.updateMany(
+      { user_id: userIdToUpdate },
+      {
+        status: newStatus,
+        status_notes: notes,
+        last_modified_at: new Date(),
+      }
+    );
+
+    // ✅ Include user_id and newStatus in response
     return NextResponse.json({
       success: true,
-      message: `User ${updatedUser.user_name} status updated to ${newStatus}`,
-      data: updatedUser,
+      message: `User ${
+        user.user_name || user.name || userIdToUpdate
+      } status updated to ${newStatus}`,
+      data: {
+        user_id: userIdToUpdate,
+        new_status: newStatus,
+        user_name: user.user_name || user.name,
+      },
     });
   } catch (error) {
     console.error("Error in status-operations:", error);

@@ -202,7 +202,7 @@ export default function OrdersPage() {
     isLastPage,
   } = usePagination({
     totalItems,
-    itemsPerPage: 14,
+    itemsPerPage: 12,
     onPageChange: handlePageChange,
   });
 
@@ -276,9 +276,9 @@ export default function OrdersPage() {
 
         <Table
           columns={columns}
-          rows={ordersData.slice((currentPage - 1) * 14, currentPage * 14)}
+          rows={ordersData.slice((currentPage - 1) *12, currentPage *12)}
           rowIdField="_id"
-          pageSize={14}
+          pageSize={12}
           statusField="order_status" // ← show icon & click
           onIdClick={(id) => handleEdit(id)}
           checkboxSelection

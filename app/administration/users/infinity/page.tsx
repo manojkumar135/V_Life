@@ -92,11 +92,10 @@ export default function InfinityTeam() {
     router.push(`/administration/users/tree/${id}`);
   };
 
-
-    const onBack = () => {
+  const onBack = () => {
     router.push("/administration/users");
   };
-  
+
   // Ask before toggling status
   const handleStatusClick = (id: string, status: string, row: any) => {
     setSelectedUser({ id, status, row });
@@ -135,7 +134,7 @@ export default function InfinityTeam() {
     { field: "mail", headerName: "Email", flex: 1.5 },
     { field: "team", headerName: "Team", flex: 1 },
     { field: "level", headerName: "Level", flex: 1 },
-        { field: "rank", headerName: "Rank", flex: 1 },
+    { field: "rank", headerName: "Rank", flex: 1 },
 
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
@@ -157,7 +156,7 @@ export default function InfinityTeam() {
   const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
     usePagination({
       totalItems,
-      itemsPerPage: 10,
+      itemsPerPage: 12,
       onPageChange: handlePageChange,
     });
 
@@ -182,8 +181,7 @@ export default function InfinityTeam() {
             // addLabel="+ ADD USER"
             // showAddButton
             showBack
-                      onBack={onBack}
-
+            onBack={onBack}
             // onAdd={handleAddUser}
             onMore={handleDownloadClick} // ✅ Now Download
             showPagination
@@ -198,9 +196,9 @@ export default function InfinityTeam() {
 
           <Table
             columns={columns}
-            rows={usersData.slice((currentPage - 1) * 14, currentPage * 14)}
+            rows={usersData.slice((currentPage - 1) * 12, currentPage * 12)}
             rowIdField="_id"
-            pageSize={14}
+            pageSize={12}
             statusField="user_status"
             onIdClick={(id) => handleEdit(id)}
             onStatusClick={handleStatusClick}
