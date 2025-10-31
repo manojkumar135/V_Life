@@ -8,13 +8,6 @@ export interface UserType {
   user_name?: string;
   mail?: string;
   contact?: string;
-  address?: string;
-  pincode?: string;
-  country?: string;
-  state?: string;
-  district?: string;
-  locality?: string;
-  user_status?: string;
   referred_users?: string[];
 }
 
@@ -25,64 +18,65 @@ interface TreeNodeType {
   parent?: string | null;
 }
 
+/** 🧩 Helper: find if target is in left or right team of root */
+function findTeamPosition(
+  targetId: string,
+  rootId: string,
+  nodeMap: Map<string, TreeNodeType>
+): "left" | "right" | null {
+  let current = nodeMap.get(targetId);
+  if (!current) return null;
+
+  while (current?.parent) {
+    const parent = nodeMap.get(current.parent);
+    if (!parent) break;
+
+    // if parent is root, we can decide immediately
+    if (parent.user_id === rootId) {
+      if (parent.left === current.user_id) return "left";
+      if (parent.right === current.user_id) return "right";
+    }
+
+    // move upward
+    current = parent;
+  }
+
+  // if we reached here, go upward recursively to find root path
+  const parent = nodeMap.get(current?.parent || "");
+  if (!parent) return null;
+  return findTeamPosition(parent.user_id, rootId, nodeMap);
+}
+
 export async function GET(req: Request) {
   try {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
     const rootId = searchParams.get("user_id");
-    const search = searchParams.get("search") || "";
 
     if (!rootId) {
       return NextResponse.json({ error: "user_id is required" }, { status: 400 });
     }
 
-    // 1️⃣ Fetch root user
     const rootUser = await User.findOne({ user_id: rootId }).lean<UserType>();
-    if (!rootUser || !rootUser.referred_users || rootUser.referred_users.length === 0) {
+    if (!rootUser || !rootUser.referred_users?.length) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    // 2️⃣ Fetch all tree nodes to determine team
+    // Fetch all nodes
     const allNodes: TreeNodeType[] = await TreeNode.find({}).lean<TreeNodeType[]>();
     const nodeMap = new Map<string, TreeNodeType>();
-    allNodes.forEach((node) => nodeMap.set(node.user_id, node));
+    allNodes.forEach((n) => nodeMap.set(n.user_id, n));
 
-    // 3️⃣ Determine team (left or right) for each referred_user
-    const usersWithTeam: (UserType & { team: "left" | "right" })[] = [];
-
+    const result = [];
     for (const refId of rootUser.referred_users) {
-      const node = nodeMap.get(refId);
-      if (!node) continue;
+      const team = findTeamPosition(refId, rootId, nodeMap);
+      const user = await User.findOne({ user_id: refId }).lean<UserType>();
 
-      let team: "left" | "right" = "left"; // default
-
-      // Check if this node is left or right child of root
-      const rootNode = nodeMap.get(rootId);
-      if (rootNode?.left === refId) team = "left";
-      else if (rootNode?.right === refId) team = "right";
-
-      // Fetch referred user details
-      const userData = await User.findOne({ user_id: refId }).lean<UserType>();
-      if (userData) {
-        usersWithTeam.push({ ...userData, team });
-      }
+      if (user) result.push({ ...user, team });
     }
 
-    // 4️⃣ Optional search
-    let filteredUsers = usersWithTeam;
-    if (search.trim()) {
-      const searchTerms = search.split(",").map((s) => s.trim()).filter(Boolean);
-      filteredUsers = usersWithTeam.filter((user) =>
-        searchTerms.some((term) =>
-          Object.values(user)
-            .filter((v) => typeof v === "string")
-            .some((val) => val!.toLowerCase().startsWith(term.toLowerCase()))
-        )
-      );
-    }
-
-    return NextResponse.json({ data: filteredUsers, total: filteredUsers.length });
+    return NextResponse.json({ data: result, total: result.length });
   } catch (error) {
     console.error("❌ Error in /api/directteam-operations:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

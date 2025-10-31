@@ -80,7 +80,7 @@ function RegisterContent() {
         const res = await axios.post("/api/users-operations", values);
         if (res.data.success) {
           ShowToast.success("Registration successful!");
-          router.back();
+          router.push(`/tree?newuser=${res.data.userId}`);
         } else {
           ShowToast.error(res.data.message || "Registration failed");
         }

@@ -33,7 +33,7 @@ interface Props {
   level?: number;
   maxLevel?: number;
   onUserClick?: (userId: string) => void;
-  refreshTree?: () => void;
+  refreshTree?: (userId?: string) => void;
 }
 
 const BinaryTreeNode: React.FC<Props> = ({
@@ -47,13 +47,13 @@ const BinaryTreeNode: React.FC<Props> = ({
 }) => {
   const { user } = useVLife();
   const router = useRouter();
+  const STATUS_URL = "/api/status-operations";
 
-  const STATUS_URL = "/api/status-operations"; // 👈 replace if needed
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{
     id: string;
     status: string;
-    row: any;
+    row: TreeNode;
   } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -70,9 +70,9 @@ const BinaryTreeNode: React.FC<Props> = ({
 
   const isHighlighted = highlightedId === node.user_id;
 
-  // ✅ Double click or long press → open status modal (admin only)
-  const handleStatusClick = (id?: string, status?: string, row?: any) => {
-    if (user?.role === "admin" && id && status) {
+  // ✅ Handle admin double-click or long press to change status
+  const handleStatusClick = (id?: string, status?: string, row?: TreeNode) => {
+    if (user?.role === "admin" && id && status && row) {
       setSelectedUser({ id, status, row });
       setIsStatusModalOpen(true);
     }
@@ -84,19 +84,17 @@ const BinaryTreeNode: React.FC<Props> = ({
     try {
       setLoading(true);
       const { id, status } = selectedUser;
-      // const newStatus = status === "active" ? "inactive" : "active";
-
       const res = await axios.put(STATUS_URL, { id, status });
+
       if (res.data.success) {
         const { user_id, new_status } = res.data.data;
-
         ShowToast.success(
           `User ${user_id} status changed to ${
             new_status.charAt(0).toUpperCase() + new_status.slice(1)
           }`
         );
         setIsStatusModalOpen(false);
-        refreshTree?.();
+        refreshTree?.(user_id);
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -107,14 +105,14 @@ const BinaryTreeNode: React.FC<Props> = ({
     }
   };
 
-  // ✅ Register / empty slot click
+  // ✅ Empty slot click → Go to registration
   const handleEmptyClick = (side: "left" | "right") => {
     router.push(
       `tree/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`
     );
   };
 
-  // ✅ Tooltip logic
+  // ✅ Tooltip hover logic
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
     setHovered(true);
@@ -124,6 +122,7 @@ const BinaryTreeNode: React.FC<Props> = ({
     hoverTimeoutRef.current = setTimeout(() => setHovered(false), 100);
   };
 
+  // ✅ Tooltip position calculation
   useEffect(() => {
     if (hovered && nodeRef.current && tooltipRef.current) {
       const nodeRect = nodeRef.current.getBoundingClientRect();
@@ -147,11 +146,10 @@ const BinaryTreeNode: React.FC<Props> = ({
     }
   }, [hovered]);
 
-  // ✅ Long press detection for mobile
+  // ✅ Long press detection for mobile (Admin only)
   const handleTouchStart = () => {
     if (user?.role === "admin") {
       longPressTimeoutRef.current = setTimeout(() => {
-        // console.log(node, node.user_status, node.user_id);
         handleStatusClick(node.user_id, node.user_status, node);
       }, 700);
     }
@@ -181,7 +179,9 @@ const BinaryTreeNode: React.FC<Props> = ({
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         />
+
         <span className="text-xs text-center mt-1 capitalize">{node.name}</span>
+
         <span
           className="text-xs text-center mt-1 font-semibold text-gray-800 hover:text-blue-600 hover:underline cursor-pointer transition-colors duration-200"
           onClick={() => onUserClick?.(node.user_id)}
@@ -194,7 +194,7 @@ const BinaryTreeNode: React.FC<Props> = ({
       {hovered && (
         <div
           ref={tooltipRef}
-          className="fixed z-50 bg-white border shadow-md rounded-md p-2 text-xs w-60 max-w-[90vw] space-y-1"
+          className="fixed z-50 bg-white border shadow-md rounded-md p-2 text-xs w-60 max-w-[90vw] space-y-1 transition-opacity duration-200"
           style={{ top: tooltipPos.top, left: tooltipPos.left }}
         >
           <div className="flex">
@@ -207,9 +207,7 @@ const BinaryTreeNode: React.FC<Props> = ({
           </div>
           <div className="flex">
             <strong className="w-20">Status:</strong>
-            <span
-              className={`${getColor(node.user_status)} capitalize truncate`}
-            >
+            <span className={`${getColor(node.user_status)} capitalize`}>
               {node.user_status}
             </span>
           </div>
@@ -247,14 +245,14 @@ const BinaryTreeNode: React.FC<Props> = ({
           )}
           {node.referBy && (
             <div className="flex">
-              <strong className="w-20">Sponser ID:</strong>
-              <span className="truncate">{node.referBy}</span>
+              <strong className="w-20">Sponsor:</strong>
+              <span>{node.referBy}</span>
             </div>
           )}
           {node.parent && (
             <div className="flex">
               <strong className="w-20">Parent:</strong>
-              <span className="truncate">{node.parent}</span>
+              <span>{node.parent}</span>
             </div>
           )}
           <div className="flex">
@@ -286,7 +284,7 @@ const BinaryTreeNode: React.FC<Props> = ({
           </div>
 
           <div className="flex justify-center mt-2 w-full">
-            {/* Left */}
+            {/* Left child */}
             <div className="flex flex-col items-center flex-1">
               {node.left ? (
                 <BinaryTreeNode
@@ -296,7 +294,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   level={level + 1}
                   maxLevel={maxLevel}
                   onUserClick={onUserClick}
-                   refreshTree={refreshTree}
+                  refreshTree={refreshTree}
                 />
               ) : (
                 <div
@@ -304,14 +302,14 @@ const BinaryTreeNode: React.FC<Props> = ({
                   className="relative group w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1 cursor-pointer hover:bg-gray-100 transition"
                 >
                   Empty
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
                     Add
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Right */}
+            {/* Right child */}
             <div className="flex flex-col items-center flex-1">
               {node.right ? (
                 <BinaryTreeNode
@@ -321,7 +319,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   level={level + 1}
                   maxLevel={maxLevel}
                   onUserClick={onUserClick}
-                   refreshTree={refreshTree}
+                  refreshTree={refreshTree}
                 />
               ) : (
                 <div
@@ -329,7 +327,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                   className="relative group w-10 h-10 border border-dashed border-gray-400 rounded-full flex items-center justify-center text-xs text-gray-400 mt-1 cursor-pointer hover:bg-gray-100 transition"
                 >
                   Empty
-                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
                     Add
                   </span>
                 </div>

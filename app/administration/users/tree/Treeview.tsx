@@ -12,9 +12,7 @@ import SubmitButton from "@/components/common/submitbutton";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { LuRefreshCw } from "react-icons/lu";
-import { FaLongArrowAltUp } from "react-icons/fa";
 
-// Node type
 interface TreeNode {
   user_id: string;
   name: string;
@@ -31,9 +29,10 @@ export default function TreeView() {
   const { user } = useVLife();
   const { query, debouncedQuery } = useSearch();
   const router = useRouter();
-
   const searchParams = useSearchParams();
   const id = searchParams.get("id") || "";
+  const newuser = searchParams.get("newuser") || "";
+  console.log(newuser);
 
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,7 +44,6 @@ export default function TreeView() {
 
   const API_URL = "/api/tree-operations";
 
-  // Map status → color
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -59,17 +57,13 @@ export default function TreeView() {
     }
   };
 
-  // Fetch full binary tree
+  // ✅ Fetch full tree
   const fetchTree = useCallback(
     async (search: string) => {
       try {
         setLoading(true);
-
         const { data } = await axios.get(API_URL, {
-          params: {
-            user_id: user.user_id,
-            search: query,
-          },
+          params: { user_id: user.user_id, search: query },
         });
         if (data?.data) {
           setTree(data.data);
@@ -84,28 +78,20 @@ export default function TreeView() {
     [user.user_id, query]
   );
 
-  // Fetch user by ?id
+  // ✅ Fetch user by ?id (deep link)
   useEffect(() => {
     let mounted = true;
-
     const fetchUserId = async () => {
       if (!id) return;
-
       try {
         const res = await axios.get(`/api/users-operations?id=${id}`);
         const user = res?.data?.data ?? res?.data;
-
-        if (user && mounted) {
-          const userId = user.user_id ?? "";
-          setSearch(userId);
-        }
+        if (user && mounted) setSearch(user.user_id ?? "");
       } catch (e) {
         console.error("Failed to fetch user_id", e);
       }
     };
-
     fetchUserId();
-
     return () => {
       mounted = false;
     };
@@ -113,27 +99,23 @@ export default function TreeView() {
 
   useEffect(() => {
     if (!user?.user_id) return;
-    // Fetch tree only the first time or when user types a search
     if (!initialized || debouncedQuery.trim()) {
       fetchTree(debouncedQuery);
       setInitialized(true);
     }
   }, [debouncedQuery, user?.user_id, fetchTree, initialized]);
 
-  // Recursive search
   const findNode = (
     node: TreeNode | null,
     searchText: string
   ): TreeNode | null => {
     if (!node) return null;
-
     const lower = searchText.toLowerCase();
     if (
       node.user_id.toLowerCase() === lower ||
       (node.name && node.name.toLowerCase().includes(lower))
-    ) {
+    )
       return node;
-    }
 
     return (
       findNode(node.left ?? null, searchText) ||
@@ -141,10 +123,8 @@ export default function TreeView() {
     );
   };
 
-  // Handle search
   const handleSearch = () => {
     if (!tree) return;
-
     const found = findNode(tree, search);
     if (found) {
       setCurrentRoot(found);
@@ -154,11 +134,12 @@ export default function TreeView() {
     }
   };
 
+  // ✅ Full tree refresh
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
       setLoading(true);
-      await fetchTree(""); // re-fetch entire tree
+      await fetchTree("");
       setSearch("");
       setHighlightedId(null);
       ShowToast.success("Tree refreshed!");
@@ -171,8 +152,64 @@ export default function TreeView() {
     }
   };
 
-  // inside TreeView component
+  // ✅ Refresh from parent of parent (for activation / deactivation / registration)
+  const handleRefreshFromParent = async (userId?: string) => {
+    console.log(userId, "getting here");
+    try {
+      setLoading(true);
 
+      let startId = userId ?? currentRoot?.user_id ?? user.user_id;
+      let targetId = "";
+
+      // 1️⃣ Fetch parent of current user
+      const res1 = await axios.get(`/api/tree-operations?user_id=${startId}`);
+      const parentId = res1?.data?.data?.parent;
+      // console.log(res1, parentId);
+
+      if (!parentId) {
+        targetId = user.user_id;
+      } else {
+        // 2️⃣ Fetch parent of that parent (grandparent)
+        const res2 = await axios.get(
+          `/api/tree-operations?user_id=${parentId}`
+        );
+        // console.log(res2);
+        const grandParentId = res2?.data?.data?.parent;
+
+        targetId = grandParentId || parentId || user.user_id;
+      }
+
+      // 3️⃣ Now load tree from targetId
+      const res3 = await axios.get(API_URL, { params: { user_id: targetId } });
+
+      if (res3?.data?.data) {
+        setCurrentRoot(res3.data.data);
+        setHighlightedId(targetId);
+        ShowToast.success("Tree refreshed!");
+      } else {
+        ShowToast.error("Failed to refresh tree");
+      }
+    } catch (err) {
+      console.error("Error refreshing tree from parent:", err);
+      ShowToast.error("Error loading in tree ");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Auto-refresh tree if new user was just registered
+  useEffect(() => {
+    if (newuser) {
+      // Wait a short moment to ensure the backend updated links
+      setTimeout(() => {
+        handleRefreshFromParent(newuser);
+        ShowToast.success("New user added — tree updated!");
+        router.replace("/tree"); // Remove ?newuser param after refresh
+      }, 1000);
+    }
+  }, [newuser]);
+
+  // ✅ On node click → show that subtree
   const handleUserClick = async (userId: string) => {
     try {
       setLoading(true);
@@ -191,18 +228,17 @@ export default function TreeView() {
     }
   };
 
+  // ✅ Go up one level
   const handleGoUp = async () => {
     try {
       if (!currentRoot?.parent) {
         ShowToast.info("No parent found — this is the top user.");
         return;
       }
-
       setLoading(true);
       const { data } = await axios.get(API_URL, {
         params: { user_id: currentRoot.parent },
       });
-
       if (data?.data) {
         setCurrentRoot(data.data);
         setHighlightedId(currentRoot.parent);
@@ -217,10 +253,8 @@ export default function TreeView() {
     }
   };
 
-  // Auto-reset tree when search is cleared
   useEffect(() => {
     if (!search.trim() && tree) {
-      // console.log("Resetting tree view", tree);
       setCurrentRoot(tree);
       setHighlightedId(null);
     }
@@ -243,8 +277,6 @@ export default function TreeView() {
             className="ml-0 mr-3 max-sm:mr-1 cursor-pointer z-20 mb-3 max-md:mb-2 lg:-mt-5"
             onClick={() => router.push("/administration/users")}
           />
-
-          {/* Search Bar */}
           <div className="flex justify-center items-center max-md:justify-end gap-2 mb-2 w-full lg:-ml-5 p-2 max-md:p-1">
             <input
               type="text"
@@ -260,7 +292,7 @@ export default function TreeView() {
             >
               Search
             </SubmitButton>
-            {/* <button
+            <button
               onClick={handleRefresh}
               title="Refresh Tree"
               className="p-1 text-black rounded-md flex items-center justify-center transition-all duration-200"
@@ -271,13 +303,13 @@ export default function TreeView() {
                   isRefreshing ? "animate-spin" : ""
                 }`}
               />
-            </button> */}
+            </button>
           </div>
         </div>
 
         {/* Tree View */}
         <div className="flex-1 max-lg:flex overflow-x-auto pt-5">
-          <div className="flex justify-center min-w-[950px] lg:min-w-[900px] xl:min-w-[1000px]  max-md:ml-[5%] max-lg:ml-[10%]">
+          <div className="flex justify-center min-w-[950px] lg:min-w-[900px] xl:min-w-[1000px] max-md:ml-[5%] max-lg:ml-[10%]">
             {currentRoot ? (
               <BinaryTreeNode
                 node={currentRoot}
@@ -286,14 +318,15 @@ export default function TreeView() {
                 level={1}
                 maxLevel={4}
                 onUserClick={handleUserClick}
-                refreshTree={() => fetchTree("")}
+                refreshTree={(userId?: string) =>
+                  handleRefreshFromParent(userId)
+                }
               />
             ) : (
               <p>Loading tree...</p>
             )}
           </div>
         </div>
-
         {/* {currentRoot?.user_id !== user?.user_id && (
           <button
             onClick={handleGoUp}

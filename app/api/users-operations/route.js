@@ -19,7 +19,7 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
     const { newUser, newLogin } = await createUserAndLogin(body);
-    return NextResponse.json({ success: true, message: "User created successfully", user: newUser, login: newLogin }, { status: 201 });
+    return NextResponse.json({ success: true, message: "User created successfully",userId: newUser.user_id, user: newUser, login: newLogin }, { status: 201 });
   } catch (error) {
     console.error("❌ Error creating user:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
