@@ -149,42 +149,56 @@ export default function TreeView() {
 
   // ✅ Full tree refresh button
   const handleRefresh = async () => {
-  try {
-    setIsRefreshing(true);
-    let targetUserId = user?.user_id;
-
-    // If /tree/[id] param exists, use it instead of logged-in user
-    if (id) {
-      try {
-        const res = await axios.get(`/api/users-operations?id=${id}`);
-        targetUserId = res?.data?.data?.user_id || targetUserId;
-      } catch (e) {
-        console.warn("Failed to get user_id from id param:", e);
-      }
+    try {
+      setIsRefreshing(true);
+      await fetchTree();
+      setSearchQuery("");
+      setInputValue("");
+      setHighlightedId(null);
+      ShowToast.success("Tree refreshed!");
+    } catch (error) {
+      ShowToast.error("Failed to refresh tree");
+    } finally {
+      setIsRefreshing(false);
     }
+  };
 
-    if (targetUserId) {
-      const { data } = await axios.get(API_URL, {
-        params: { user_id: targetUserId },
-      });
-      if (data?.data) {
-        setTree(data.data);
-        setCurrentRoot(data.data);
-        setHighlightedId(null);
-        setSearchQuery("");
-        setInputValue("");
-        ShowToast.success("Tree refreshed!");
-      } else {
-        ShowToast.error("Failed to refresh tree");
-      }
-    }
-  } catch (error) {
-    ShowToast.error("Failed to refresh tree");
-  } finally {
-    setIsRefreshing(false);
-  }
-};
+  //   const handleRefresh = async () => {
+  //   try {
+  //     setIsRefreshing(true);
+  //     let targetUserId = user?.user_id;
 
+  //     // If /tree/[id] param exists, use it instead of logged-in user
+  //     if (id) {
+  //       try {
+  //         const res = await axios.get(`/api/users-operations?id=${id}`);
+  //         targetUserId = res?.data?.data?.user_id || targetUserId;
+  //       } catch (e) {
+  //         console.warn("Failed to get user_id from id param:", e);
+  //       }
+  //     }
+
+  //     if (targetUserId) {
+  //       const { data } = await axios.get(API_URL, {
+  //         params: { user_id: targetUserId },
+  //       });
+  //       if (data?.data) {
+  //         setTree(data.data);
+  //         setCurrentRoot(data.data);
+  //         setHighlightedId(null);
+  //         setSearchQuery("");
+  //         setInputValue("");
+  //         ShowToast.success("Tree refreshed!");
+  //       } else {
+  //         ShowToast.error("Failed to refresh tree");
+  //       }
+  //     }
+  //   } catch (error) {
+  //     ShowToast.error("Failed to refresh tree");
+  //   } finally {
+  //     setIsRefreshing(false);
+  //   }
+  // };
 
   // ✅ Auto-fill from /tree/[id]
   useEffect(() => {
@@ -239,24 +253,25 @@ export default function TreeView() {
   }, [tree, searchQuery, handleSearch]);
 
   const handleUserClick = async (userId: string) => {
-  try {
-    setLoading(true);
-    const { data } = await axios.get(API_URL, { params: { user_id: userId } });
-    if (data?.data) {
-      setCurrentRoot(data.data);
-      setHighlightedId(userId);
-      ShowToast.success(`Showing tree from ${userId}`);
-    } else {
-      ShowToast.error("User not found in tree!");
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL, {
+        params: { user_id: userId },
+      });
+      if (data?.data) {
+        setCurrentRoot(data.data);
+        setHighlightedId(userId);
+        ShowToast.success(`Showing tree from ${userId}`);
+      } else {
+        ShowToast.error("User not found in tree!");
+      }
+    } catch (err) {
+      console.error("Error loading subtree:", err);
+      ShowToast.error("Failed to load subtree");
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Error loading subtree:", err);
-    ShowToast.error("Failed to load subtree");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <Layout>
