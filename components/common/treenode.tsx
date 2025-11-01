@@ -72,6 +72,9 @@ const BinaryTreeNode: React.FC<Props> = ({
 
   // ✅ Handle admin double-click or long press to change status
   const handleStatusClick = (id?: string, status?: string, row?: TreeNode) => {
+    // ❌ Block if clicked user is same as logged-in user
+    if (id === user?.user_id) return;
+
     if (user?.role === "admin" && id && status && row) {
       setSelectedUser({ id, status, row });
       setIsStatusModalOpen(true);
@@ -108,7 +111,7 @@ const BinaryTreeNode: React.FC<Props> = ({
   // ✅ Empty slot click → Go to registration
   const handleEmptyClick = (side: "left" | "right") => {
     router.push(
-      `tree/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`
+      `/administration/users/tree/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`
     );
   };
 
@@ -148,7 +151,7 @@ const BinaryTreeNode: React.FC<Props> = ({
 
   // ✅ Long press detection for mobile (Admin only)
   const handleTouchStart = () => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" && node.user_id !== user?.user_id) {
       longPressTimeoutRef.current = setTimeout(() => {
         handleStatusClick(node.user_id, node.user_status, node);
       }, 700);
@@ -173,9 +176,11 @@ const BinaryTreeNode: React.FC<Props> = ({
             isHighlighted ? "ring-4 ring-blue-700 rounded-full" : "mt-1"
           } cursor-pointer transition-transform active:scale-90`}
           size={35}
-          onDoubleClick={() =>
-            handleStatusClick(node.user_id, node.user_status, node)
-          }
+          onDoubleClick={() => {
+            if (node.user_id !== user?.user_id) {
+              handleStatusClick(node.user_id, node.user_status, node);
+            }
+          }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         />

@@ -11,6 +11,7 @@ import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
 import StatusModal from "@/components/common/userStatusModal";
 import { handleDownload } from "@/utils/handleDownload";
+import ShowToast from "@/components/common/Toast/toast";
 
 // User type
 interface User {
@@ -110,16 +111,38 @@ export default function RightTeam() {
       setLoading(true);
 
       const { id, status } = selectedUser;
-      const res = await axios.put(STATUS_URL, { id, status });
+      // console.log(id, status);
+
+      // const statusNotes =
+      //   status === "active" ? `Deactivated by Admin` : `Activated by Admin`;
+      const res = await axios.put(STATUS_URL, {
+        id,
+        status,
+        // status_notes: statusNotes,
+      });
+      console.log(res);
       if (res.data.success) {
-        setUsersData((prev) =>
+        const { user_id, new_status } = res.data.data;
+        ShowToast.success(
+          `User ${user_id} status changed to ${
+            new_status.charAt(0).toUpperCase() + new_status.slice(1)
+          }`
+        );
+        setUsersData((prev: User[]) =>
           prev.map((u) =>
-            u._id === id ? { ...u, user_status: res.data.data.user_status } : u
+            u._id === id
+              ? {
+                  ...u,
+                  user_status: res.data.data.new_status,
+                  status_notes: res.data.data.status_notes,
+                }
+              : u
           )
         );
       }
     } catch (error) {
       console.error("Error updating status:", error);
+      setLoading(false);
     } finally {
       setSelectedUser(null);
       setLoading(false);

@@ -99,6 +99,8 @@ export default function LeftTeam() {
 
   // Ask before toggling status
   const handleStatusClick = (id: string, status: string, row: any) => {
+    console.log("Status click:", id, status, row);
+    console.log(status)
     setSelectedUser({ id, status, row });
     setIsStatusModalOpen(true);
   };
@@ -110,6 +112,8 @@ export default function LeftTeam() {
       setLoading(true);
 
       const { id, status } = selectedUser;
+      // console.log(id, status);
+
       // const statusNotes =
       //   status === "active" ? `Deactivated by Admin` : `Activated by Admin`;
       const res = await axios.put(STATUS_URL, {
@@ -117,6 +121,7 @@ export default function LeftTeam() {
         status,
         // status_notes: statusNotes,
       });
+      console.log(res);
       if (res.data.success) {
         const { user_id, new_status } = res.data.data;
         ShowToast.success(
@@ -129,7 +134,7 @@ export default function LeftTeam() {
             u._id === id
               ? {
                   ...u,
-                  user_status: res.data.data.user_status,
+                  user_status: res.data.data.new_status,
                   status_notes: res.data.data.status_notes,
                 }
               : u
@@ -211,7 +216,7 @@ export default function LeftTeam() {
 
           <Table
             columns={columns}
-            rows={usersData.slice((currentPage - 1) *12, currentPage *12)}
+            rows={usersData.slice((currentPage - 1) * 12, currentPage * 12)}
             rowIdField="_id"
             pageSize={12}
             statusField="user_status"

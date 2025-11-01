@@ -10,6 +10,8 @@ import { FiMail } from "react-icons/fi";
 import { FaUser, FaPhone, FaUsers } from "react-icons/fa";
 import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
+import { IoIosArrowBack } from "react-icons/io";
+
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -80,7 +82,9 @@ function RegisterContent() {
         const res = await axios.post("/api/users-operations", values);
         if (res.data.success) {
           ShowToast.success("Registration successful!");
-          router.push(`/tree?newuser=${res.data.userId}`);
+          router.push(
+            `/administration/users/tree?parent=${values.parent}&newuser=${res.data.userId}`
+          );
         } else {
           ShowToast.error(res.data.message || "Registration failed");
         }
@@ -112,8 +116,16 @@ function RegisterContent() {
         </div>
       )}
 
+      <div
+        className="absolute top-4 left-4  flex items-center gap-2 cursor-pointer z-50"
+        onClick={() => router.back()}
+      >
+        <IoIosArrowBack size={28} className="text-black" />
+        <p className="font-medium text-black">Back</p>
+      </div>
+
       {/* Form Section */}
-      <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6">
+      <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:mt-8">
         <div className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200">
           <p className="text-[1.5rem] font-bold text-black mb-5">SIGN UP</p>
 
@@ -333,7 +345,7 @@ function RegisterContent() {
                   type="text"
                   name="referBy"
                   placeholder="Referral ID"
-                  value={formik.values.referBy}
+                  value={formik.values.parent}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
@@ -405,7 +417,7 @@ function RegisterContent() {
                 !formik.dirty ||
                 !formik.values.terms
                   ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-[#FFD700] text-black hover:bg-yellow-400"
+                  : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
               }`}
             >
               Register
