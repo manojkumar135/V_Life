@@ -2,19 +2,20 @@
 
 import React, { Suspense } from "react";
 import TreeView from "@/app/administration/users/tree/Treeview";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation"; // ✅ FIX
 
 export default function Page() {
-  const searchParams = useSearchParams();
-
-  const id = searchParams.get("id");        // parent id
-  const newuser = searchParams.get("newuser"); // new user id
-
-  // console.log("Page params:", id, newuser);
-
   return (
     <Suspense fallback={<p>Loading Tree...</p>}>
-      <TreeView id={id} newuser={newuser} />
+      <TreeViewWrapper />
     </Suspense>
   );
+}
+
+function TreeViewWrapper() {
+  const searchParams = useSearchParams(); // ✅ now recognized
+  const id = searchParams.get("id");
+  const newuser = searchParams.get("newuser");
+
+  return <TreeView id={id} newuser={newuser} />;
 }
