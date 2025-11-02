@@ -117,6 +117,49 @@ export async function POST(request: Request) {
       // -------------------
       user.bv = (user.bv || 0) + totalBV;
       await user.save();
+
+// update self_bv (user's own BV)
+      user.self_bv = (user.self_bv || 0) + totalBV;
+
+      await user.save();
+
+      // -------------------
+      // 4️⃣ Update direct_bv for immediate referrer (referBy)
+      // -------------------
+      if (user.referBy) {
+        await User.updateOne(
+          { user_id: user.referBy },
+          { $inc: { direct_bv: totalBV } }
+        );
+      }
+
+      // -------------------
+      // 5️⃣ Update infinity_bv for user's infinity sponsor (if any)
+      //     amount = totalBV * rankPercentage(of infinity sponsor)
+      // -------------------
+      if (user.infinity) {
+        const infinitySponsor = await User.findOne({ user_id: user.infinity });
+        if (infinitySponsor) {
+          const rankPercentages: Record<string, number> = {
+            "1": 0.25,
+            "2": 0.35,
+            "3": 0.4,
+            "4": 0.45,
+            "5": 0.5,
+          };
+          const sponsorRank = String(infinitySponsor.rank || "1");
+          const pct = rankPercentages[sponsorRank] ?? 0;
+          const infinityBVToAdd = totalBV * pct;
+
+          if (infinityBVToAdd > 0) {
+            await User.updateOne(
+              { user_id: infinitySponsor.user_id },
+              { $inc: { infinity_bv: infinityBVToAdd } }
+            );
+          }
+        }
+      }
+
     }
 
     return NextResponse.json(

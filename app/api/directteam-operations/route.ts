@@ -18,33 +18,36 @@ interface TreeNodeType {
   parent?: string | null;
 }
 
-/** 🧩 Helper: find if target is in left or right team of root */
-function findTeamPosition(
+/** 🔍 Helper to get both team and level */
+function findLevelAndTeam(
   targetId: string,
   rootId: string,
   nodeMap: Map<string, TreeNodeType>
-): "left" | "right" | null {
+): { team: "left" | "right" | null; level: number | null } {
+  if (targetId === rootId) return { team: null, level: 0 };
+
   let current = nodeMap.get(targetId);
-  if (!current) return null;
+  if (!current) return { team: null, level: null };
+
+  let level = 0;
+  let team: "left" | "right" | null = null;
 
   while (current?.parent) {
     const parent = nodeMap.get(current.parent);
     if (!parent) break;
 
-    // if parent is root, we can decide immediately
+    level++;
+
     if (parent.user_id === rootId) {
-      if (parent.left === current.user_id) return "left";
-      if (parent.right === current.user_id) return "right";
+      if (parent.left === current.user_id) team = "left";
+      if (parent.right === current.user_id) team = "right";
+      return { team, level };
     }
 
-    // move upward
     current = parent;
   }
 
-  // if we reached here, go upward recursively to find root path
-  const parent = nodeMap.get(current?.parent || "");
-  if (!parent) return null;
-  return findTeamPosition(parent.user_id, rootId, nodeMap);
+  return { team: null, level: null };
 }
 
 export async function GET(req: Request) {
@@ -63,18 +66,17 @@ export async function GET(req: Request) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    // Fetch all nodes
     const allNodes: TreeNodeType[] = await TreeNode.find({}).lean<TreeNodeType[]>();
-    const nodeMap = new Map<string, TreeNodeType>();
-    allNodes.forEach((n) => nodeMap.set(n.user_id, n));
+    const nodeMap = new Map(allNodes.map((n) => [n.user_id, n]));
 
-    const result = [];
-    for (const refId of rootUser.referred_users) {
-      const team = findTeamPosition(refId, rootId, nodeMap);
-      const user = await User.findOne({ user_id: refId }).lean<UserType>();
+    const referredUsers = await User.find({
+      user_id: { $in: rootUser.referred_users }
+    }).lean<UserType[]>();
 
-      if (user) result.push({ ...user, team });
-    }
+    const result = referredUsers.map((user) => {
+      const { team, level } = findLevelAndTeam(user.user_id, rootId, nodeMap);
+      return { ...user, team, level };
+    });
 
     return NextResponse.json({ data: result, total: result.length });
   } catch (error) {

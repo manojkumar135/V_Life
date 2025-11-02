@@ -56,83 +56,99 @@ export default function Table<T extends Row>({
     [safeRows, currentPage, pageSize]
   );
 
-  const enhancedColumns: GridColDef[] = useMemo(() => {
-    return columns.map((col, idx) => {
-      const isIdCol = col.field === rowIdField || idx === 0;
-      const isStatusCol = statusField && col.field === statusField;
-      if (!isIdCol && !isStatusCol) return col;
+const enhancedColumns: GridColDef[] = useMemo(() => {
+  return columns.map((col, idx) => {
+    const isIdCol = col.field === rowIdField || idx === 0;
+    const isStatusCol = statusField && col.field === statusField;
 
+    // ✅ Default renderer for empty values
+    const defaultRenderer = (params: any) => {
+      const value = params.value;
+      return value === null || value === undefined || value === "" || value==="none" ? "-" : value;
+    };
+
+    // ✅ Apply default renderer to normal columns automatically
+    if (!isIdCol && !isStatusCol) {
       return {
         ...col,
-        sortable: col.sortable ?? false,
-        renderCell: (params) => {
-          const id = String(params.row?.[rowIdField] ?? "");
-          const value = params.value;
-
-          if (isIdCol) {
-            return (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onIdClick?.(id, params.row);
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color:
-                    params.field === "transaction_id" ? "black" : "#0000EE",
-                  textDecoration:
-                    params.field === "transaction_id" ? "none" : "underline",
-                  cursor:
-                    params.field === "transaction_id" ? "default" : "pointer",
-                }}
-              >
-                {value ?? "-"}
-              </button>
-            );
-          }
-
-          if (isStatusCol) {
-            const raw = String(value ?? "").toLowerCase();
-            const isActive =
-              raw === "active" ||
-              raw === "available" ||
-              raw === "paid" ||
-              raw === "true" ||
-              raw === "yes";
-            const Icon = isActive ? GrStatusGood : MdCancel;
-
-            return (
-              <button
-                type="button"
-                title={isActive ? "Active" : "Inactive"}
-                onClick={(e) => {
-                  if (user?.role !== "admin") return;
-                  e.stopPropagation();
-                  onStatusClick?.(id, raw, params.row);
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: user?.role === "admin" ? "pointer" : "default",
-                  display: "flex",
-                  alignItems: "center",
-                  margin: "0 0 0 10px",
-                  height: "100%",
-                  width: "100%",
-                }}
-                disabled={user?.role !== "admin"}
-              >
-                <Icon size={20} color={isActive ? "green" : "red"} />
-              </button>
-            );
-          }
-          return value ?? "-";
-        },
+        renderCell: col.renderCell ?? defaultRenderer,
       };
-    });
-  }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);
+    }
+
+    // ✅ Custom render for ID column
+    return {
+      ...col,
+      sortable: col.sortable ?? false,
+      renderCell: (params) => {
+        const id = String(params.row?.[rowIdField] ?? "");
+        const value = params.value;
+
+        if (isIdCol) {
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onIdClick?.(id, params.row);
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: params.field === "transaction_id" ? "black" : "#0000EE",
+                textDecoration:
+                  params.field === "transaction_id" ? "none" : "underline",
+                cursor:
+                  params.field === "transaction_id" ? "default" : "pointer",
+              }}
+            >
+              {value === null || value === undefined || value === "" ? "-" : value}
+            </button>
+          );
+        }
+
+        // ✅ Custom render for Status column
+        if (isStatusCol) {
+          const raw = String(value ?? "").toLowerCase();
+          const isActive =
+            raw === "active" ||
+            raw === "available" ||
+            raw === "paid" ||
+            raw === "true" ||
+            raw === "yes";
+          const Icon = isActive ? GrStatusGood : MdCancel;
+
+          return (
+            <button
+              type="button"
+              title={isActive ? "Active" : "Inactive"}
+              onClick={(e) => {
+                if (user?.role !== "admin") return;
+                e.stopPropagation();
+                onStatusClick?.(id, raw, params.row);
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: user?.role === "admin" ? "pointer" : "default",
+                display: "flex",
+                alignItems: "center",
+                margin: "0 0 0 10px",
+                height: "100%",
+                width: "100%",
+              }}
+              disabled={user?.role !== "admin"}
+            >
+              <Icon size={20} color={isActive ? "green" : "red"} />
+            </button>
+          );
+        }
+
+        return value === null || value === undefined || value === "" ? "-" : value;
+      },
+    };
+  });
+}, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);
+
 
   const handleSelectionChange = (newSelectionModel: any) => {
     // console.log("Raw selection model:", newSelectionModel);
