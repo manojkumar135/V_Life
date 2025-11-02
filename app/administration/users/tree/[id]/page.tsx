@@ -134,7 +134,7 @@ export default function TreeView() {
       const res3 = await axios.get(API_URL, { params: { user_id: targetId } });
       if (res3?.data?.data) {
         setCurrentRoot(res3.data.data);
-        setHighlightedId(targetId);
+        setHighlightedId(startId);
         ShowToast.success("Tree refreshed!");
       } else {
         ShowToast.error("Failed to refresh tree");

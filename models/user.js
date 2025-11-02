@@ -43,6 +43,9 @@ const UserSchema = new mongoose.Schema(
     referBy: { type: String },
     infinity: { type: String },
     referred_users: { type: [String], default: [] },
+    paid_directs: { type: [String], default: [] },
+    paid_directs_count: { type: Number, default: 0 },
+    infinity_referred_users: { type: [String], default: [] },
     infinity_users: [
       {
         level: { type: Number, required: true },
@@ -70,6 +73,10 @@ const UserSchema = new mongoose.Schema(
     direct_right_users: { type: [String], default: [] },
     direct_left_count: { type: Number, default: 0 },
     direct_right_count: { type: Number, default: 0 },
+    infinity_left_users: { type: [String], default: [] },
+    infinity_right_users: { type: [String], default: [] },
+    infinty_left_count: { type: Number, default: 0 },
+    infinty_right_count: { type: Number, default: 0 },
     left_team_volume: { type: Number, default: 0 }, // total business on left
     right_team_volume: { type: Number, default: 0 },
     carry_forward_left: { type: Number, default: 0 },

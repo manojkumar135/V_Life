@@ -7,6 +7,11 @@ import TreeNode from "@/models/tree";
 import { Rank } from "@/models/rank";
 import { Wallet } from "@/models/wallet";
 import mongoose from "mongoose";
+import {
+  updateInfinityTeam,
+  rebuildInfinity,
+  propagateInfinityUpdateToAncestors,
+} from "@/services/infinity";
 
 
 const date = new Date();
@@ -258,9 +263,49 @@ export async function POST(request) {
       }
 
       if (user?.referBy) {
-        const referrer = await User.findOne({ user_id: user.referBy });
-        if (referrer) await checkAndUpgradeRank(referrer);
-      }
+  const referrerId = user.referBy;
+  console.log("\n====================================");
+  console.log("🎯 ADVANCE PAYMENT TRIGGERED FOR:", user.user_id);
+  console.log("👤 Referrer:", referrerId);
+
+  // 1️⃣ Add direct referral (no duplicates)
+  const updateResult = await User.updateOne(
+    { user_id: referrerId, paid_directs: { $ne: user.user_id } },
+    {
+      $addToSet: { paid_directs: user.user_id },
+      $inc: { paid_directs_count: 1 },
+    }
+  );
+
+  console.log("📌 paid_directs update result:", updateResult);
+
+  const refBefore = await User.findOne({ user_id: referrerId });
+  console.log("✅ Updated paid_directs for referrer:", refBefore?.paid_directs);
+
+  // 2️⃣ Update Infinity team (referrer + upper chain)
+  console.log("\n🚀 Calling updateInfinityTeam for:", referrerId);
+  await updateInfinityTeam(referrerId);
+
+  console.log("🔁 Propagating Infinity to ancestors...");
+  await propagateInfinityUpdateToAncestors(referrerId);
+  console.log("✅ Infinity propagation completed");
+
+  // 3️⃣ Rank validation
+  const referrer = await User.findOne({ user_id: referrerId }, { _id: 0 });
+  if (referrer) {
+    try {
+      console.log("\n🏆 Checking Rank Upgrade for:", referrer.user_id);
+      await checkAndUpgradeRank(referrer);
+      console.log("✅ Rank check completed");
+    } catch (err) {
+      console.error("❌ Rank upgrade error:", err);
+    }
+  }
+
+  console.log("====================================\n");
+}
+
+
     }
 
     return NextResponse.json({ success: true, data: newHistory }, { status: 201 });

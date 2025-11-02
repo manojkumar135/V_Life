@@ -24,6 +24,8 @@ export interface TreeNode {
   referrals?: string;
   bv?: string;
   sv?: string;
+  infinityLeft?: number;
+  infinityRight?: number;
 }
 
 interface Props {
@@ -276,7 +278,21 @@ const BinaryTreeNode: React.FC<Props> = ({
             <strong className="w-20">SV:</strong>
             <span>{node.sv ?? 0}</span>
           </div>
+          {node.infinityLeft!= null && (
+            <div className="flex">
+              <strong className="w-20">Left Infinity:</strong>
+              <span>{node.infinityLeft?? 0}</span>
+            </div>
+          )}
+          {node.infinityRight!= null && (
+            <div className="flex">
+              <strong className="w-20">Right Infinity:</strong>
+              <span>{node.infinityRight ?? 0}</span>
+            </div>
+          )}
         </div>
+        
+        
       )}
 
       {/* Children */}

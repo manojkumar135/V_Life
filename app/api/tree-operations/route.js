@@ -43,6 +43,9 @@ async function buildTree(userId) {
     left: leftNode,
     right: rightNode,
 
+    infinityLeft:user.infinty_left_count?user.infinty_left_count:0,
+    infinityRight:user.infinty_right_count?user.infinty_right_count:0,
+
     // ✅ Counts
     leftCount: countMembers(leftNode),
     rightCount: countMembers(rightNode),

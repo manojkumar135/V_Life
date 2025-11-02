@@ -101,7 +101,7 @@ function RegisterContent() {
     const position = params.get("position");
     const parent = params.get("parent");
 
-    if (referBy) formik.setFieldValue("referBy", referBy);
+    if (referBy) formik.setFieldValue("referBy", parent);
     if (position) formik.setFieldValue("team", position);
     if (parent) formik.setFieldValue("parent", parent);
   }, [params]);
@@ -117,7 +117,7 @@ function RegisterContent() {
       )}
 
       <div
-        className="absolute top-4 left-4  flex items-center gap-2 cursor-pointer z-50"
+        className="absolute top-4 left-4  flex items-center gap-2 cursor-pointer z-30"
         onClick={() => router.back()}
       >
         <IoIosArrowBack size={28} className="text-black" />
@@ -345,7 +345,7 @@ function RegisterContent() {
                   type="text"
                   name="referBy"
                   placeholder="Referral ID"
-                  value={formik.values.parent}
+                  value={formik.values.referBy}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"

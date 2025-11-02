@@ -8,7 +8,7 @@ import TreeNode from "@/models/tree";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import {
   updateInfinityTeam,
-  rebuildInfinity,
+  // rebuildInfinity,
   propagateInfinityUpdateToAncestors,
 } from "@/services/infinity";
 
@@ -262,6 +262,7 @@ export async function createUserAndLogin(body: any) {
     user_id,
     infinity_users: [],
     referred_users: [],
+    paid_directs: [],
   });
 
   const hashedPassword = await bcrypt.hash(contact, 10);
@@ -335,13 +336,13 @@ export async function createUserAndLogin(body: any) {
       console.error("Failed to update direct_left/right on referrer:", err);
     }
 
-    const referrer = await User.findOne({ user_id: referBy });
-    if (!referrer?.infinity_users?.length) {
-      await rebuildInfinity();
-    } else {
-      await updateInfinityTeam(referBy);
-      await propagateInfinityUpdateToAncestors(referBy);
-    }
+    // const referrer = await User.findOne({ user_id: referBy });
+    // if (!referrer?.infinity_users?.length) {
+    //   await rebuildInfinity();
+    // } else {
+    //   await updateInfinityTeam(referBy);
+    //   await propagateInfinityUpdateToAncestors(referBy);
+    // }
   }
 
   return { newUser, newLogin };
