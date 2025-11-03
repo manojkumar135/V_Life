@@ -18,65 +18,57 @@ function parseDDMMYYYY(dateStr: string): Date {
   return new Date(yyyy, mm - 1, dd);
 }
 
-// ✅ Get Matching Bonus payouts from last 15 days, is_checked: false
-async function getLast15DaysMatchingPayouts() {
+// ✅ Fetch last 15 days payouts (matching + direct sales)
+async function getLast15DaysEligiblePayouts() {
   const now = new Date();
   const start = new Date(now);
   start.setDate(start.getDate() - 15);
 
   const payouts = await DailyPayout.find({
-    name: "Matching Bonus",
-    // status: "Completed",
-    is_checked: false, // Only consider unchecked payouts
+    name: { $in: ["Matching Bonus", "Direct Sales Bonus"] },
+    is_checked: false,
   });
+
   const filtered = payouts.filter((p) => {
     const payoutDate = parseDDMMYYYY(p.date);
     return payoutDate >= start && payoutDate <= now;
   });
 
   console.log(
-    `[Infinity Bonus] Found ${filtered.length} Matching Bonus payouts in last 15 days`
+    `[Infinity Bonus] Found ${filtered.length} payouts (Matching + Direct Sales) in last 15 days`
   );
   return filtered;
 }
 
-// ✅ Find sponsor by infinity_users if user.infinity is not set
+// ✅ Find sponsor if user.infinity is missing
 async function findSponsorByInfinityUsers(userId: string): Promise<any | null> {
-  const sponsors = await User.find({
-    infinity_users: {
-      $elemMatch: {
-        users: userId,
-      },
-    },
+  return await User.findOne({
+    infinity_users: { $elemMatch: { users: userId } },
     user_status: "active",
   });
-  return sponsors.length > 0 ? sponsors[0] : null;
 }
 
-// ✅ Run Infinity Bonus Logic
+// ✅ Main Logic
 export async function runInfinityBonus() {
   try {
     await connectDB();
-    console.log("🚀 [Infinity Bonus] Starting execution...");
+    console.log("🚀 [Infinity Bonus] Starting...");
 
-    const last15DaysPayouts = await getLast15DaysMatchingPayouts();
-    if (!last15DaysPayouts.length) {
-      console.log(
-        "⚠️ [Infinity Bonus] No Matching Bonus payouts found in last 15 days."
-      );
+    const payouts = await getLast15DaysEligiblePayouts();
+    if (!payouts.length) {
+      console.log("⚠️ [Infinity Bonus] No eligible payouts found.");
       return;
     }
 
     let totalCreated = 0;
 
-    for (const payout of last15DaysPayouts) {
-      // Find the user who received the matching bonus
+    for (const payout of payouts) {
       const user = await User.findOne({ user_id: payout.user_id });
       if (!user) continue;
 
       let sponsor: any = null;
 
-      // 1️⃣ Try user.infinity
+      // 1️⃣ Try direct assigned infinity sponsor
       if (user.infinity) {
         sponsor = await User.findOne({
           user_id: user.infinity,
@@ -84,7 +76,7 @@ export async function runInfinityBonus() {
         });
       }
 
-      // 2️⃣ If not found, search in infinity_users
+      // 2️⃣ If missing, find by infinity_users array
       if (!sponsor) {
         sponsor = await findSponsorByInfinityUsers(user.user_id);
       }
@@ -96,8 +88,7 @@ export async function runInfinityBonus() {
         continue;
       }
 
-      // ✅ Check sponsor rank
-      const rank = sponsor.rank; // rank can be "1" | "2" | "3" | "4" | "5" or empty/none
+      const rank = sponsor.rank;
       if (!rank || rank === "none") {
         console.log(
           `⚠️ Sponsor ${sponsor.user_id} has no rank, skipping Infinity Bonus.`
@@ -105,7 +96,6 @@ export async function runInfinityBonus() {
         continue;
       }
 
-      // Determine bonus percentage based on rank
       const rankPercentages: Record<string, number> = {
         "1": 0.25,
         "2": 0.35,
@@ -114,17 +104,10 @@ export async function runInfinityBonus() {
         "5": 0.5,
       };
       const bonusPercentage = rankPercentages[rank] || 0;
-
-      // Find sponsor's wallet
       const wallet = await Wallet.findOne({ user_id: sponsor.user_id });
 
-      // Determine payout status
       let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
-      if (!wallet || !wallet.pan_verified) {
-        payoutStatus = "OnHold"; // wallet missing or PAN not verified
-      } else {
-        payoutStatus = "Pending"; // all checks passed
-      }
+      if (!wallet || !wallet.pan_verified) payoutStatus = "OnHold";
 
       if (!wallet) {
         console.log(
@@ -133,16 +116,14 @@ export async function runInfinityBonus() {
         continue;
       }
 
-      // Release 50% of matching bonus to sponsor
       const now = new Date();
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
       const bonusAmount = payout.amount * bonusPercentage;
 
-      // ✅ Split Bonus Amount
-      const withdrawAmount = bonusAmount * 0.8; // 80%
-      const rewardAmount = bonusAmount * 0.1; // 10%
-      const tdsAmount = bonusAmount * 0.05; // 5%
-      const adminCharge = bonusAmount * 0.05; // 5%
+      const withdrawAmount = bonusAmount * 0.8;
+      const rewardAmount = bonusAmount * 0.1;
+      const tdsAmount = bonusAmount * 0.05;
+      const adminCharge = bonusAmount * 0.05;
 
       const infinityPayout = await WeeklyPayout.create({
         transaction_id: "",
@@ -164,9 +145,8 @@ export async function runInfinityBonus() {
         total: bonusAmount,
         transaction_type: "Credit",
         status: payoutStatus,
-        details: `Infinity Bonus from ${user.user_id}`,
+        details: `${payout.name} from ${user.user_id}`,
 
-        // ✅ Split fields
         withdraw_amount: withdrawAmount,
         reward_amount: rewardAmount,
         tds_amount: tdsAmount,
@@ -176,9 +156,11 @@ export async function runInfinityBonus() {
           {
             user_id: payout.user_id,
             amount: payout.amount,
+            bonus_type: payout.name,
             transaction_id: payout.transaction_id,
           },
         ],
+
         created_by: "system",
         last_modified_by: "system",
         last_modified_at: now,
@@ -208,13 +190,11 @@ export async function runInfinityBonus() {
         last_modified_at: now,
       });
 
-      // ✅ Add reward to sponsor's score
       await User.findOneAndUpdate(
         { user_id: sponsor.user_id },
         { $inc: { score: rewardAmount } }
       );
 
-      // ✅ Mark payout as checked
       await DailyPayout.updateOne(
         { _id: payout._id },
         { $set: { is_checked: true } }
@@ -222,12 +202,12 @@ export async function runInfinityBonus() {
 
       totalCreated++;
       console.log(
-        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (from ${user.user_id})`
+        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (${payout.name} from ${user.user_id})`
       );
     }
 
     console.log(
-      `\n✅ [Infinity Bonus] Execution completed. Total payouts created: ${totalCreated}`
+      `\n✅ [Infinity Bonus] Completed. Total payouts created: ${totalCreated}`
     );
   } catch (err) {
     console.error("❌ [Infinity Bonus] Error:", err);

@@ -1,12 +1,20 @@
 {
   "crons": [
     {
-      "path": "/api/CronJobs/Daily/matching-bonus",
+      "path": "/api/CronJobs/Daily",
       "schedule": "30 18 * * *"
     },
     {
-      "path": "/api/CronJobs/Daily/matching-bonus",
+      "path": "/api/CronJobs/Daily",
       "schedule": "30 6 * * *"
+    },
+    {
+      "path": "/api/CronJobs/Daily",
+      "schedule": "30 11 * * *"
+    },
+    {
+      "path": "/api/CronJobs/Fortnightly",
+      "schedule": "0 0 1,16 * *"
     }
   ]
 }

@@ -56,6 +56,8 @@ const OrderSchema = new mongoose.Schema(
     last_modified_by: { type: String },
     last_modified_at: { type: Date },
     order_status: { type: String, default: "pending" }, // pending, paid, shipped, delivered, canceled
+    bonus_checked: { type: Boolean, default: false },
+
   },
   {
     timestamps: false, // you’re handling custom fields
