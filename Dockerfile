@@ -10,16 +10,24 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Copy rest of the project
+# Copy the rest of the project
 COPY . .
 
+# Accept build arguments for secrets or tokens
+ARG KEY_ID
+ARG OAUTH_TOKEN
+
+# Set environment variables for build
+ENV KEY_ID=$KEY_ID
+ENV OAUTH_TOKEN=$OAUTH_TOKEN
+ENV NODE_ENV=production
+
+# Build the Next.js app
 RUN npm run build
 
-# Expose Vite dev port
+# Expose the production port
 EXPOSE 3000
 
-# Set environment (optional, helpful for debugging)
-ENV NODE_ENV=development
-
-# Run Vite dev server (no host restriction, fast refresh support)
+# Start the production server
 CMD ["npm", "start"]
+
