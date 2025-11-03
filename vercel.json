@@ -12,9 +12,13 @@
       "path": "/api/CronJobs/Daily",
       "schedule": "00 9 * * *"
     },
-     {
+    {
       "path": "/api/CronJobs/Daily",
       "schedule": "30 11 * * *"
+    },
+    {
+      "path": "/api/CronJobs/Daily",
+      "schedule": "* * * * *"
     },
     {
       "path": "/api/CronJobs/Fortnightly",
