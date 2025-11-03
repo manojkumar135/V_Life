@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Expose Vite dev port
-EXPOSE 5173
+EXPOSE 3000
 
 # Set environment (optional, helpful for debugging)
 ENV NODE_ENV=development
