@@ -3,6 +3,8 @@ import { runMatchingBonus } from "./app/api/CronJobs/Daily/matching-bonus/logic"
 import { runDirectSalesBonus } from "./app/api/CronJobs/Daily/direct-sales-bonus/logic";
 import { runInfinityBonus } from "./app/api/CronJobs/Fortnightly/infinity-bonus/logic";
 
+
+
 console.log("⏰ Local cron started...");
 
 // Daily → 3 times a day
@@ -18,7 +20,7 @@ cron.schedule("30 6 * * *", async () => {
   await runDirectSalesBonus();
 });
 
-cron.schedule("30 11 * * *", async () => {
+cron.schedule("50 7 * * *", async () => {
   console.log("▶️ Daily Cron (5 PM IST)");
   await runMatchingBonus();
   await runDirectSalesBonus();
