@@ -115,7 +115,7 @@ function RegisterContent() {
       {/* Form Section */}
       <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6">
         <div className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200">
-          <p className="text-[1.5rem] font-bold text-black mb-5">SIGN UP</p>
+          <p className="text-[1.4rem] font-bold text-black mb-5 xl:mb-3">SIGN UP</p>
 
           <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
             {/* Name */}

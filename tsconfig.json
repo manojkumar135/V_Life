@@ -22,6 +22,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/common/sidenav", "app/api/getFileUrl/route.ts", "models/tree.js","global.d.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/common/sidenav", "app/api/getFileUrl/route.ts", "models/tree.js","global.d.ts", "cron/cron-runner.js", "cron/cron-runner.ts", "lib/mongodb.js", "app/api/CronJobs/Daily/matching-bonus/logic.js"],
   "exclude": ["node_modules"]
 }

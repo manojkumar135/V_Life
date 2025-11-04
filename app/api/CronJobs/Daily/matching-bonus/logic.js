@@ -8,7 +8,7 @@ import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 
-function formatDate(date: Date): string {
+function formatDate(date){
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
@@ -19,8 +19,8 @@ function formatDate(date: Date): string {
 export function getCurrentWindow() {
   const now = new Date();
 
-  let start: Date;
-  let end: Date;
+  let start
+  let end
 
   // Get IST hours
   const istHours =
@@ -79,7 +79,7 @@ export function getCurrentWindow() {
 }
 
 // ✅ Convert history date+time (IST) -> UTC Date object
-export function historyToUTCDate(history: any) {
+export function historyToUTCDate(history) {
   // history.date = "DD-MM-YYYY", history.time = "HH:MM:SS" (IST)
   const [day, month, year] = history.date.split("-").map(Number);
   const [hours, minutes, seconds] = history.time.split(":").map(Number);
@@ -95,12 +95,12 @@ export function historyToUTCDate(history: any) {
 
 // ✅ Traverse tree to get all left/right team IDs
 function getTeamUserIdsFromMap(
-  allNodesMap: Map<string, any>,
-  rootUserId: string,
-  side: "left" | "right"
-): string[] {
-  const result: string[] = [];
-  const queue: string[] = [];
+  allNodesMap,
+  rootUserId,
+  side
+) {
+  const result = [];
+  const queue= [];
 
   const rootNode = allNodesMap.get(rootUserId);
   if (!rootNode) return [];
@@ -111,7 +111,7 @@ function getTeamUserIdsFromMap(
   queue.push(firstChild);
 
   while (queue.length > 0) {
-    const currentId = queue.shift()!;
+    const currentId = queue.shift();
     result.push(currentId);
 
     const currentNode = allNodesMap.get(currentId);
@@ -212,7 +212,7 @@ export async function runMatchingBonus() {
         const wallet = await Wallet.findOne({ user_id: u.user_id });
         const walletId = wallet ? wallet.wallet_id : null;
 
-        let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+        let payoutStatus = "Pending";
         if (!wallet || !wallet.pan_verified) {
           payoutStatus = "OnHold";
         } else {
