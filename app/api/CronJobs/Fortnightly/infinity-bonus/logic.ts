@@ -13,6 +13,19 @@ function formatDate(date: Date): string {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+function generateTransactionId(prefix = "MB") {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+
+  return `${prefix}-${yyyy}${mm}${dd}${hh}${min}${ss}`;
+}
+const txId = generateTransactionId("MB");
+
 function parseDDMMYYYY(dateStr: string): Date {
   const [dd, mm, yyyy] = dateStr.split("-").map(Number);
   return new Date(yyyy, mm - 1, dd);
@@ -126,7 +139,7 @@ export async function runInfinityBonus() {
       const adminCharge = bonusAmount * 0.05;
 
       const infinityPayout = await WeeklyPayout.create({
-        transaction_id: "",
+        transaction_id: `${txId}-${sponsor.user_id}`,
         payout_id,
         user_id: sponsor.user_id,
         user_name: sponsor.user_name,

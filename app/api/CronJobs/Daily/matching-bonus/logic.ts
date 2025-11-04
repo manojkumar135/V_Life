@@ -8,19 +8,56 @@ import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 
-function formatDate(date){
+function formatDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, "0");
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
   return `${dd}-${mm}-${yyyy}`;
 }
 
+async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
+  if (!user_id) {
+    return {
+      hasAdvance: false,
+      hasPermission: false,
+      reason: "Missing user_id",
+    };
+  }
+
+  // Fetch user (optional, but kept in case of invalid user)
+  const user = await User.findOne({ user_id });
+  if (!user) {
+    return {
+      hasAdvance: false,
+      hasPermission: false,
+      reason: "User not found",
+    };
+  }
+
+  // ✅ Only check if advance >= minAmount (no admin access allowed)
+  const historyRecord = await History.findOne({
+    user_id,
+    amount: { $gte: minAmount },
+  });
+
+  const hasAdvance = !!historyRecord;
+
+  return {
+    hasAdvance,
+    hasPermission: hasAdvance, // ✅ Only advance matters now
+    reason: hasAdvance ? "Advance paid" : "Advance not paid",
+  };
+}
+
+
+
+
 // ✅ Get current 12-hour IST window converted to UTC
 export function getCurrentWindow() {
   const now = new Date();
 
-  let start
-  let end
+  let start: Date;
+  let end: Date;
 
   // Get IST hours
   const istHours =
@@ -78,8 +115,24 @@ export function getCurrentWindow() {
   return { start, end };
 }
 
+
+function generateTransactionId(prefix = "MB") {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+
+  return `${prefix}-${yyyy}${mm}${dd}${hh}${min}${ss}`;
+}
+const txId = generateTransactionId("MB");
+
+
+
 // ✅ Convert history date+time (IST) -> UTC Date object
-export function historyToUTCDate(history) {
+export function historyToUTCDate(history: any) {
   // history.date = "DD-MM-YYYY", history.time = "HH:MM:SS" (IST)
   const [day, month, year] = history.date.split("-").map(Number);
   const [hours, minutes, seconds] = history.time.split(":").map(Number);
@@ -95,12 +148,12 @@ export function historyToUTCDate(history) {
 
 // ✅ Traverse tree to get all left/right team IDs
 function getTeamUserIdsFromMap(
-  allNodesMap,
-  rootUserId,
-  side
-) {
-  const result = [];
-  const queue= [];
+  allNodesMap: Map<string, any>,
+  rootUserId: string,
+  side: "left" | "right"
+): string[] {
+  const result: string[] = [];
+  const queue: string[] = [];
 
   const rootNode = allNodesMap.get(rootUserId);
   if (!rootNode) return [];
@@ -111,7 +164,7 @@ function getTeamUserIdsFromMap(
   queue.push(firstChild);
 
   while (queue.length > 0) {
-    const currentId = queue.shift();
+    const currentId = queue.shift()!;
     result.push(currentId);
 
     const currentNode = allNodesMap.get(currentId);
@@ -139,6 +192,8 @@ export async function getUserTeamsAndHistories() {
     const historyDate = historyToUTCDate(h);
     return historyDate >= start && historyDate <= end;
   });
+    // console.log(historiesInWindow,"historiesInWindow");
+
 
   const treeNodes = await TreeNode.find({});
   const allNodesMap = new Map(treeNodes.map((n) => [n.user_id, n]));
@@ -196,11 +251,11 @@ export async function runMatchingBonus() {
       if (match) {
         // ✅ Check if user is active
         const node = await TreeNode.findOne({ user_id: u.user_id });
-        if (!node || node.user_status !== "active") continue;
+        if (!node || node.status !== "active") continue;
 
-        // ✅ Check if user has paid advance ≥ 10000
-        const advancePaid = await hasAdvancePaid(u.user_id, 10000);
-        if (!advancePaid.hasPermission) continue;
+       // ✅ ✅ NEW INTERNAL ADVANCE CHECK HERE
+      const advancePaid = await checkAdvancePaid(u.user_id);
+      if (!advancePaid.hasPermission) continue;
 
         const now = new Date();
         const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
@@ -212,7 +267,7 @@ export async function runMatchingBonus() {
         const wallet = await Wallet.findOne({ user_id: u.user_id });
         const walletId = wallet ? wallet.wallet_id : null;
 
-        let payoutStatus = "Pending";
+        let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
         if (!wallet || !wallet.pan_verified) {
           payoutStatus = "OnHold";
         } else {
@@ -228,7 +283,7 @@ export async function runMatchingBonus() {
 
         // ✅ Create Daily Payout
         const payout = await DailyPayout.create({
-          transaction_id: "",
+          transaction_id: `${txId}-${u.user_id}`,
           payout_id,
           user_id: u.user_id,
           user_name: u.name,
@@ -267,6 +322,7 @@ export async function runMatchingBonus() {
           last_modified_at: now,
         });
 
+        console.log(payout,"payout");
         // ✅ If payout created, create history record
         if (payout) {
           await History.create({
@@ -311,7 +367,7 @@ export async function runMatchingBonus() {
           { $set: { ischecked: true } }
         );
 
-        // console.log(`[Matching Bonus] Payout and History created for user: ${u.user_id}, Wallet: ${walletId}`);
+        console.log(`[Matching Bonus] Payout and History created for user: ${u.user_id}, Wallet: ${walletId}`);
       }
     }
 

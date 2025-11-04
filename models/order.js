@@ -48,6 +48,7 @@ const OrderSchema = new mongoose.Schema(
     final_amount: { type: Number, },
     advance_deducted: { type: Number, default: 0 }, // amount deducted from advance
     is_first_order: { type: Boolean, default: false },
+    order_bv: { type: String, required: true }, // total BV for the order
 
     items: [OrderItemSchema],
 

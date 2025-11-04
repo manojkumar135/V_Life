@@ -16,7 +16,6 @@ import Loader from "@/components/common/loader";
 import { formatDate } from "@/components/common/formatDate";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 
-
 interface CartItem {
   product_id: string;
   id: number | string;
@@ -67,7 +66,7 @@ export default function AddOrderPage() {
   const { user, setUser, updateUserCart } = useVLife();
   const router = useRouter();
 
-  // console.log(user.category);
+  // console.log(user);
 
   const [loading, setLoading] = useState(false);
 
@@ -78,11 +77,10 @@ export default function AddOrderPage() {
   const [showCart, setShowCart] = useState(false);
   const [isFirstOrder, setIsFirstOrder] = useState(false);
   const [advancePaid, setAdvancePaid] = useState(false);
-const [advanceDetails, setAdvanceDetails] = useState({
+  const [advanceDetails, setAdvanceDetails] = useState({
     amount: 0,
     remaining: 0,
   });
-
 
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
@@ -208,9 +206,6 @@ const [advanceDetails, setAdvanceDetails] = useState({
     if (user.user_id) checkAdvancePayment();
   }, [user.user_id, cart]);
 
-
-
-
   // Update cart from context
   useEffect(() => {
     setCart(normalizeCart(user.items ?? []));
@@ -316,9 +311,12 @@ const [advanceDetails, setAdvanceDetails] = useState({
   const getTotalPrice = () =>
     cart.reduce((total, item) => total + item.price, 0);
 
+const getTotalBV = () =>
+  cart.reduce((total, item) => total + item.bv * item.quantity, 0);
+
   const createOrder = async (finalAmount: number, razorpayResponse: any) => {
     try {
-      console.log(cart)
+      console.log(cart);
       const orderItems = cart.map((item) => ({
         product_id: String(item.id),
         product: String(item.id),
@@ -337,8 +335,8 @@ const [advanceDetails, setAdvanceDetails] = useState({
       const payload = {
         user_id: user.user_id,
         rank: user.rank || "none",
-        // referBy: user.referBy,
-        // infinity: user.infinity,
+        referBy: user.referBy,
+        infinity: user.infinity,
         user_name: formData.customerName || user.user_name,
         contact: formData.contact || user.contact,
         mail: formData.customerEmail || user.mail,
@@ -352,6 +350,7 @@ const [advanceDetails, setAdvanceDetails] = useState({
         payment_signature: razorpayResponse.razorpay_signature,
         payment_type: razorpayResponse.method || "razorpay",
         items: orderItems,
+        order_bv: getTotalBV(),
         order_status: "pending",
         amount: getTotalPrice(),
         total_amount: getTotalPrice(),
@@ -359,6 +358,16 @@ const [advanceDetails, setAdvanceDetails] = useState({
         advance_deducted: isFirstOrder && advancePaid ? 10000 : 0,
         is_first_order: isFirstOrder,
       };
+
+      // // ✅ Add referBy only if exists
+      // if (user.referBy && user.referBy.trim() !== "") {
+      //   payload.referBy = user.referBy;
+      // }
+
+      // // ✅ Add infinity only if exists
+      // if (user.infinity && user.infinity.trim() !== "") {
+      //   payload.infinity = user.infinity;
+      // }
 
       const response = await axios.post("/api/order-operations", payload, {
         headers: { "Content-Type": "application/json" },

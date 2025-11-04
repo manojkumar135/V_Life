@@ -43,6 +43,8 @@ export interface UserType {
   theme?: ThemeType;
   category?: string;
   score?: number;
+  referBy?: string;
+  infinity?:string;
 
   address?: string;
   pincode?: string;
@@ -81,6 +83,8 @@ const defaultUser: UserType = {
   wallet_id: "",
   theme: "light",
   category: "",
+  referBy: "",
+  infinity:"",
   score:0,
 
   address: "",

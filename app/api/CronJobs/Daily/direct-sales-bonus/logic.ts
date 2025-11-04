@@ -83,6 +83,54 @@ export function getCurrentWindow() {
   return { start, end };
 }
 
+function generateTransactionId(prefix = "MB") {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const min = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+
+  return `${prefix}-${yyyy}${mm}${dd}${hh}${min}${ss}`;
+}
+
+const txId = generateTransactionId("DS");
+
+async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
+  if (!user_id) {
+    return {
+      hasAdvance: false,
+      hasPermission: false,
+      reason: "Missing user_id",
+    };
+  }
+
+  // Fetch user (optional, but kept in case of invalid user)
+  const user = await User.findOne({ user_id });
+  if (!user) {
+    return {
+      hasAdvance: false,
+      hasPermission: false,
+      reason: "User not found",
+    };
+  }
+
+  // ✅ Only check if advance >= minAmount (no admin access allowed)
+  const historyRecord = await History.findOne({
+    user_id,
+    amount: { $gte: minAmount },
+  });
+
+  const hasAdvance = !!historyRecord;
+
+  return {
+    hasAdvance,
+    hasPermission: hasAdvance, // ✅ Only advance matters now
+    reason: hasAdvance ? "Advance paid" : "Advance not paid",
+  };
+}
+
 /**
  * Convert Order payment date/time (IST) to UTC Date
  * order.payment_date = "DD-MM-YYYY", order.payment_time = "HH:MM:SS" (IST)
@@ -98,7 +146,9 @@ export function orderToUTCDate(order: any) {
   let utcMinutes = minutes - 30;
 
   // JS Date.UTC handles negative minutes/hours as expected (it will roll back date)
-  return new Date(Date.UTC(year, month - 1, day, utcHours, utcMinutes, seconds));
+  return new Date(
+    Date.UTC(year, month - 1, day, utcHours, utcMinutes, seconds)
+  );
 }
 
 /**
@@ -136,6 +186,7 @@ export async function getOrdersInWindow() {
     }
   });
 
+  console.log(ordersInWindow, "Orders in current direct sales bonus window");
   return ordersInWindow;
 }
 
@@ -168,8 +219,9 @@ export async function runDirectSalesBonus() {
         }
 
         // Ensure referBy is active in tree
+        console.log("ReferBy for order", order.order_id, "is", referBy);
         const node = await TreeNode.findOne({ user_id: referBy });
-        if (!node || node.user_status !== "active") {
+        if (!node || node.status !== "active") {
           // mark order as checked to avoid reprocessing
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
@@ -179,7 +231,10 @@ export async function runDirectSalesBonus() {
         }
 
         // Check hasAdvancePaid >= 10000
-        const advancePaid = await hasAdvancePaid(referBy, 10000);
+        // const advancePaid = await hasAdvancePaid(referBy, 10000);
+        const advancePaid = await checkAdvancePaid(referBy);
+        // if (!advancePaid.hasPermission) continue;
+
         if (!advancePaid.hasPermission) {
           // mark order as checked
           await Order.findOneAndUpdate(
@@ -190,7 +245,7 @@ export async function runDirectSalesBonus() {
         }
 
         // Compute BV and bonus amounts
-        const orderBV = computeOrderBV(order); // total BV for order
+        const orderBV = Number(order.order_bv || 0);
         if (orderBV <= 0) {
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
@@ -200,7 +255,7 @@ export async function runDirectSalesBonus() {
         }
 
         // Bonus percentage from BV (default 10%)
-        const totalAmount = Number((orderBV * 0.10).toFixed(2)); // 10% of BV
+        const totalAmount = Number((orderBV * 0.1).toFixed(2)); // 10% of BV
         if (totalAmount <= 0) {
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
@@ -231,7 +286,7 @@ export async function runDirectSalesBonus() {
 
         // Create DailyPayout for referBy
         const payout = await DailyPayout.create({
-          transaction_id: "",
+          transaction_id: `${txId}-${node.user_id}`,
           payout_id,
           user_id: referBy,
           user_name: node?.name || "",
@@ -299,9 +354,12 @@ export async function runDirectSalesBonus() {
           { order_id: order.order_id },
           { $set: { bonus_checked: true, last_modified_at: new Date() } }
         );
-
       } catch (errInner) {
-        console.error("[Direct Sales Bonus] error processing order:", order?.order_id, errInner);
+        console.error(
+          "[Direct Sales Bonus] error processing order:",
+          order?.order_id,
+          errInner
+        );
         // mark as checked to avoid infinite retry if you prefer, or leave to manual
         try {
           await Order.findOneAndUpdate(
