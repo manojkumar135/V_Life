@@ -24,7 +24,7 @@ function generateTransactionId(prefix = "MB") {
 
   return `${prefix}-${yyyy}${mm}${dd}${hh}${min}${ss}`;
 }
-const txId = generateTransactionId("MB");
+const txId = generateTransactionId("IB");
 
 function parseDDMMYYYY(dateStr: string): Date {
   const [dd, mm, yyyy] = dateStr.split("-").map(Number);
@@ -101,6 +101,7 @@ export async function runInfinityBonus() {
         continue;
       }
 
+      console.log(sponsor);
       const rank = sponsor.rank;
       if (!rank || rank === "none") {
         console.log(
@@ -138,15 +139,23 @@ export async function runInfinityBonus() {
       const tdsAmount = bonusAmount * 0.05;
       const adminCharge = bonusAmount * 0.05;
 
+      // ✅ Dynamic Infinity Bonus Title
+      const infinityTitleMap: Record<string, string> = {
+        "Direct Sales Bonus": "Infinity Sales Bonus",
+        "Matching Bonus": "Infinity Matching Bonus",
+      };
+      const infinityTitle = infinityTitleMap[payout.name] || "Infinity Bonus";
+
       const infinityPayout = await WeeklyPayout.create({
-        transaction_id: `${txId}-${sponsor.user_id}`,
+        // transaction_id: `${txId}-${sponsor.user_id}`,
+        transaction_id: payout_id,
         payout_id,
         user_id: sponsor.user_id,
         user_name: sponsor.user_name,
         rank: wallet?.rank,
         wallet_id: wallet.wallet_id,
-        name: "Infinity Bonus",
-        title: "Infinity Bonus",
+        name: infinityTitle,
+        title: infinityTitle,
         account_holder_name: wallet?.account_holder_name || "",
         bank_name: wallet?.bank_name || "",
         account_number: wallet?.account_number || "",
@@ -155,15 +164,17 @@ export async function runInfinityBonus() {
         time: now.toTimeString().slice(0, 5),
         available_balance: wallet?.balance || 0,
         amount: bonusAmount,
-        total: bonusAmount,
         transaction_type: "Credit",
         status: payoutStatus,
-        details: `${payout.name} from ${user.user_id}`,
+        details: `${infinityTitle} from ${user.user_id}`,
 
+        total_amount: bonusAmount,
         withdraw_amount: withdrawAmount,
         reward_amount: rewardAmount,
         tds_amount: tdsAmount,
         admin_charge: adminCharge,
+        from: payout.user_id,
+        to: sponsor.user_id,
 
         team_users: [
           {
@@ -192,6 +203,13 @@ export async function runInfinityBonus() {
         time: infinityPayout.time,
         available_balance: infinityPayout.available_balance,
         amount: infinityPayout.amount,
+        total_amount: infinityPayout.amount,
+        withdraw_amount: infinityPayout.withdraw_amount,
+        reward_amount: infinityPayout.reward_amount,
+        tds_amount: infinityPayout.tds_amount,
+        admin_charge: infinityPayout.admin_charge,
+        to: infinityPayout.to,
+        from: infinityPayout.from,
         transaction_type: infinityPayout.transaction_type,
         details: infinityPayout.details,
         status: infinityPayout.status,

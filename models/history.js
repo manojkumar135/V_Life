@@ -21,11 +21,15 @@ const HistorySchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     transaction_type: { type: String, required: true, enum: ["Credit", "Debit"] },
     details: { type: String },
-    status: { type: String, required: true, enum: ["Pending", "Completed", "Failed","OnHold"] },
+    status: { type: String, required: true, enum: ["Pending", "Completed", "Failed", "OnHold"] },
     first_payment: { type: Boolean, default: false },
     advance: { type: Boolean, default: false },
     ischecked: { type: Boolean, default: false },
 
+    from: { type: String, },
+    to: { type: String, },
+
+    total_amount: { type: Number, },
     withdraw_amount: { type: Number, default: 0 },
     reward_amount: { type: Number, default: 0 },
     tds_amount: { type: Number, default: 0 },

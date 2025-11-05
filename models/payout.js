@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { TbDualScreen } from "react-icons/tb";
 
 const payoutSchema = new mongoose.Schema({
-  transaction_id: { type: String,},
+  transaction_id: { type: String, },
   payout_id: { type: String, required: true, unique: true },
   wallet_id: { type: String },
   user_id: { type: String, required: true },
@@ -27,7 +27,10 @@ const payoutSchema = new mongoose.Schema({
   admin_charge: { type: Number, default: 0 },
   transaction_type: { type: String, required: true, enum: ["Credit", "Debit"], default: "Credit" },
   details: { type: String },
-  status: { type: String, required: true, enum: ["Pending", "Completed", "Failed","OnHold"], default: "Completed" },
+  status: { type: String, required: true, enum: ["Pending", "Completed", "Failed", "OnHold"], default: "Completed" },
+
+  from: { type: String, },
+  to: { type: String, },
 
   left_users: [{ type: Object }],
   right_users: [{ type: Object }],

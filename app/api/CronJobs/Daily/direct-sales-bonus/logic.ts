@@ -186,7 +186,7 @@ export async function getOrdersInWindow() {
     }
   });
 
-  console.log(ordersInWindow, "Orders in current direct sales bonus window");
+  // console.log(ordersInWindow, "Orders in current direct sales bonus window");
   return ordersInWindow;
 }
 
@@ -255,7 +255,7 @@ export async function runDirectSalesBonus() {
         }
 
         // Bonus percentage from BV (default 10%)
-        const totalAmount = Number((orderBV * 0.1).toFixed(2)); // 10% of BV
+        const totalAmount = Number(orderBV.toFixed(2)); // 10% of BV
         if (totalAmount <= 0) {
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
@@ -286,7 +286,8 @@ export async function runDirectSalesBonus() {
 
         // Create DailyPayout for referBy
         const payout = await DailyPayout.create({
-          transaction_id: `${txId}-${node.user_id}`,
+          // transaction_id: `${txId}-${node.user_id}`,
+          transaction_id:payout_id,
           payout_id,
           user_id: referBy,
           user_name: node?.name || "",
@@ -307,6 +308,9 @@ export async function runDirectSalesBonus() {
           reward_amount: rewardAmount,
           tds_amount: tdsAmount,
           admin_charge: adminCharge,
+
+          to: referBy,
+          from: order.user_id,
           transaction_type: "Credit",
           status: payoutStatus,
           details: `Direct Sales Bonus for order ${order.order_id}`,
@@ -331,6 +335,13 @@ export async function runDirectSalesBonus() {
             time: payout.time,
             available_balance: payout.available_balance,
             amount: payout.amount,
+            total_amount: payout.amount,
+            withdraw_amount: payout.withdraw_amount,
+            reward_amount: payout.reward_amount,
+            tds_amount: payout.tds_amount,
+            admin_charge: payout.admin_charge,
+            to: payout.to,
+            from: payout.from,
             transaction_type: payout.transaction_type,
             details: payout.details,
             status: payout.status,
@@ -353,6 +364,11 @@ export async function runDirectSalesBonus() {
         await Order.findOneAndUpdate(
           { order_id: order.order_id },
           { $set: { bonus_checked: true, last_modified_at: new Date() } }
+        );
+
+        await History.findOneAndUpdate(
+          { order_id: order.order_id },
+          { $set: {ischecked: true, last_modified_at: new Date() } }
         );
       } catch (errInner) {
         console.error(

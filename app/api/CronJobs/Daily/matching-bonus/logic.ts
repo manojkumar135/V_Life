@@ -49,9 +49,6 @@ async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
   };
 }
 
-
-
-
 // ✅ Get current 12-hour IST window converted to UTC
 export function getCurrentWindow() {
   const now = new Date();
@@ -115,7 +112,6 @@ export function getCurrentWindow() {
   return { start, end };
 }
 
-
 function generateTransactionId(prefix = "MB") {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -128,8 +124,6 @@ function generateTransactionId(prefix = "MB") {
   return `${prefix}-${yyyy}${mm}${dd}${hh}${min}${ss}`;
 }
 const txId = generateTransactionId("MB");
-
-
 
 // ✅ Convert history date+time (IST) -> UTC Date object
 export function historyToUTCDate(history: any) {
@@ -192,8 +186,7 @@ export async function getUserTeamsAndHistories() {
     const historyDate = historyToUTCDate(h);
     return historyDate >= start && historyDate <= end;
   });
-    // console.log(historiesInWindow,"historiesInWindow");
-
+  // console.log(historiesInWindow,"historiesInWindow");
 
   const treeNodes = await TreeNode.find({});
   const allNodesMap = new Map(treeNodes.map((n) => [n.user_id, n]));
@@ -253,9 +246,9 @@ export async function runMatchingBonus() {
         const node = await TreeNode.findOne({ user_id: u.user_id });
         if (!node || node.status !== "active") continue;
 
-       // ✅ ✅ NEW INTERNAL ADVANCE CHECK HERE
-      const advancePaid = await checkAdvancePaid(u.user_id);
-      if (!advancePaid.hasPermission) continue;
+        // ✅ ✅ NEW INTERNAL ADVANCE CHECK HERE
+        const advancePaid = await checkAdvancePaid(u.user_id);
+        if (!advancePaid.hasPermission) continue;
 
         const now = new Date();
         const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
@@ -283,7 +276,8 @@ export async function runMatchingBonus() {
 
         // ✅ Create Daily Payout
         const payout = await DailyPayout.create({
-          transaction_id: `${txId}-${u.user_id}`,
+          transaction_id: payout_id,
+          // transaction_id: `${txId}-${u.user_id}`,
           payout_id,
           user_id: u.user_id,
           user_name: u.name,
@@ -304,6 +298,8 @@ export async function runMatchingBonus() {
           reward_amount: rewardAmount,
           tds_amount: tdsAmount,
           admin_charge: adminCharge,
+          to: u.user_id,
+          from: "",
           transaction_type: "Credit",
           status: payoutStatus,
           details: "Daily Matching Bonus",
@@ -322,7 +318,7 @@ export async function runMatchingBonus() {
           last_modified_at: now,
         });
 
-        console.log(payout,"payout");
+        console.log(payout, "payout");
         // ✅ If payout created, create history record
         if (payout) {
           await History.create({
@@ -338,6 +334,13 @@ export async function runMatchingBonus() {
             time: payout.time,
             available_balance: payout.available_balance,
             amount: payout.amount,
+            total_amount: payout.amount,
+            withdraw_amount: payout.withdraw_amount,
+            reward_amount: payout.reward_amount,
+            tds_amount: payout.tds_amount,
+            admin_charge: payout.admin_charge,
+            to: payout.to,
+            from: payout.from,
             transaction_type: payout.transaction_type,
             details: payout.details,
             status: payout.status,
@@ -349,10 +352,10 @@ export async function runMatchingBonus() {
             last_modified_at: now,
           });
 
-           await User.findOneAndUpdate(
-          { user_id: u.user_id },
-          { $inc: { score: rewardAmount } }
-        );
+          await User.findOneAndUpdate(
+            { user_id: u.user_id },
+            { $inc: { score: rewardAmount } }
+          );
         }
 
         // ✅ Mark histories as checked
@@ -367,7 +370,9 @@ export async function runMatchingBonus() {
           { $set: { ischecked: true } }
         );
 
-        console.log(`[Matching Bonus] Payout and History created for user: ${u.user_id}, Wallet: ${walletId}`);
+        console.log(
+          `[Matching Bonus] Payout and History created for user: ${u.user_id}, Wallet: ${walletId}`
+        );
       }
     }
 
