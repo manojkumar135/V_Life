@@ -124,11 +124,12 @@ export default function TreeView() {
       if (!parentId) {
         targetId = user.user_id;
       } else {
-        const res2 = await axios.get(
-          `/api/tree-operations?user_id=${parentId}`
-        );
-        const grandParentId = res2?.data?.data?.parent;
-        targetId = grandParentId || parentId || user.user_id;
+        // const res2 = await axios.get(
+        //   `/api/tree-operations?user_id=${parentId}`
+        // );
+        // const grandParentId = res2?.data?.data?.parent;
+        // targetId = grandParentId || parentId || user.user_id
+        targetId = parentId || user.user_id;
       }
 
       const res3 = await axios.get(API_URL, { params: { user_id: targetId } });
