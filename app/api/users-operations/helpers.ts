@@ -394,52 +394,38 @@ async function createTreeNode(
  * - Updates referrer User's referred_users and direct left/right counts
  */
 export async function createUserAndLogin(body: CreateUserInput): Promise<CreatedResult> {
-  // Basic validation
-  if (!body) throw new Error("Request body required");
-  const {
-    mail,
-    contact,
-    dob,
-    user_name,
-    first_name,
-    last_name,
-    role,
-    role_id,
-    title,
-    address,
-    pincode,
-    locality,
-    referBy,
-    team,
-    parent, // explicit parent id
-  } = body;
+  const { mail, contact, user_name, referBy, team, parent } = body;
 
-  if (typeof mail !== "string" || !mail) throw new Error("mail is required");
-  if (typeof contact !== "string" || !contact) throw new Error("contact is required");
-  if (typeof user_name !== "string" || !user_name) throw new Error("user_name is required");
-  if (typeof referBy !== "string" || !referBy) throw new Error("referBy (sponsor) must be provided");
-  if (team !== "left" && team !== "right") throw new Error("team must be 'left' or 'right'");
-
-  // ensure referBy exists
-  const referrerExists = await User.findOne({ user_id: referBy }).lean().exec();
-  if (!referrerExists) throw new Error("referBy (sponsor) not found");
-
-  // if parent provided ensure exists
-  if (parent) {
-    const parentExists = await TreeNode.findOne({ user_id: parent }).lean().exec();
-    if (!parentExists) throw new Error("Specified parent not found in tree");
-  }
+  if (!mail || !contact || !user_name || !referBy || !team) throw new Error("Required fields missing");
 
   // duplicates
-  const existingUser = await User.findOne({ $or: [{ mail }, { contact }] }).lean().exec();
-  const existingLogin = await Login.findOne({ $or: [{ mail }, { contact }] }).lean().exec();
+  const existingUser = await User.findOne({ $or: [{ mail }, { contact }] }).lean();
+  const existingLogin = await Login.findOne({ $or: [{ mail }, { contact }] }).lean();
   if (existingUser || existingLogin) throw new Error("Email or Contact already exists");
 
-  // generate IDs
+  // referrer exists
+  const referrer = await User.findOne({ user_id: referBy }).lean();
+  if (!referrer) throw new Error("referBy (sponsor) not found");
+
+  // parent check if provided
+  if (parent) {
+    const parentNode = await TreeNode.findOne({ user_id: parent }).lean();
+    if (!parentNode) throw new Error("Specified parent not found in tree");
+
+    // validate placement
+    const valid = await isValidReferrerForPlacement(referBy, parent, team);
+    if (!valid) throw new Error("Invalid placement: sponsor cannot place user here");
+  } else {
+    // check automatic placement under sponsor
+    const placement = await findAvailablePlacement(referBy, team);
+    const valid = await isValidReferrerForPlacement(referBy, placement.parent?.user_id ?? "", placement.side);
+    if (!valid) throw new Error("Invalid automatic placement under sponsor");
+  }
+
+  // -------------------- now placement is valid, we can safely create user --------------------
   const user_id = await generateUniqueCustomId("US", User, 8, 8);
   const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
 
-  // create user doc
   const newUserDoc = await User.create({
     ...body,
     user_id,
@@ -448,80 +434,43 @@ export async function createUserAndLogin(body: CreateUserInput): Promise<Created
     paid_directs: [],
   });
 
-  // hash default password (contact)
   const hashedPassword = await bcrypt.hash(contact, 10);
 
-  // create login doc
   const newLoginDoc = await Login.create({
     login_id,
     user_id,
-    user_name,
-    first_name: first_name ?? "",
-    last_name: last_name ?? "",
-    dob: dob ?? "",
-    role: role ?? "",
-    role_id: role_id ?? "",
-    title: title ?? "",
-    mail,
-    contact,
-    address: address ?? "",
-    pincode: pincode ?? "",
-    locality: locality ?? "",
-    referBy: referBy ?? "",
+    // user_name,
+    // mail,
+    // contact,
     password: hashedPassword,
     status: "inactive",
+    ...body, // optional fields
   });
 
-  // create tree node with strict checks
-  await createTreeNode(newUserDoc.toObject ? newUserDoc.toObject() : (newUserDoc as unknown as Record<string, unknown>), parent ?? undefined, referBy, team);
+  // create tree node
+  await createTreeNode(
+    newUserDoc.toObject ? newUserDoc.toObject() : (newUserDoc as unknown as Record<string, unknown>),
+    parent ?? undefined,
+    referBy,
+    team
+  );
 
-  // best-effort: send welcome email (do not fail creation if email fails)
+  // best-effort email
   try {
     await sendWelcomeEmail(mail, user_name, user_id, contact);
-  } catch (err) {
-    // log and continue
-    // eslint-disable-next-line no-console
-    console.error("Email send failed:", err);
-  }
-
-  // update referrer's user doc: referred_users
-  await User.updateOne({ user_id: referBy }, { $addToSet: { referred_users: user_id } }).exec();
-
-  // update direct_left/right counters on referrer
-  try {
-    const refNode = await TreeNode.findOne({ user_id: referBy }).lean<ITreeNode | null>().exec();
-    // determine side of the new user relative to referrer:
-    // If referrer is direct parent after the tree insert, one of refNode.left/right equals user_id.
-    let sideToUpdate: "left" | "right" = team;
-    if (refNode) {
-      if (refNode.left === user_id) sideToUpdate = "left";
-      else if (refNode.right === user_id) sideToUpdate = "right";
-      else sideToUpdate = team;
-    }
-
-    if (sideToUpdate === "left") {
-      await User.updateOne({ user_id: referBy }, { $addToSet: { direct_left_users: user_id }, $inc: { direct_left_count: 1 } }).exec();
-    } else {
-      await User.updateOne({ user_id: referBy }, { $addToSet: { direct_right_users: user_id }, $inc: { direct_right_count: 1 } }).exec();
-    }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error("Failed to update direct_left/right on referrer:", err);
-  }
-
-  // Optional: update infinity team and propagate (kept as best-effort)
-  try {
-    // await updateInfinityTeam(referBy);
-    // await propagateInfinityUpdateToAncestors(referBy);
   } catch {
     // ignore
   }
 
+  // update referrer info
+  await User.updateOne({ user_id: referBy }, { $addToSet: { referred_users: user_id } });
+
   return {
-    newUser: (newUserDoc.toObject ? newUserDoc.toObject() : (newUserDoc as unknown as Record<string, unknown>)),
-    newLogin: (newLoginDoc.toObject ? newLoginDoc.toObject() : (newLoginDoc as unknown as Record<string, unknown>)),
+    newUser: newUserDoc.toObject ? newUserDoc.toObject() : (newUserDoc as unknown as Record<string, unknown>),
+    newLogin: newLoginDoc.toObject ? newLoginDoc.toObject() : (newLoginDoc as unknown as Record<string, unknown>),
   };
 }
+
 
 export default {
   createUserAndLogin,
