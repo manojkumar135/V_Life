@@ -137,16 +137,146 @@ export const sendWelcomeEmail = async (
   return transporter.sendMail(mailOptions);
 };
 
+
+// ------------------ VALIDATION HELPERS ------------------
+
+/**
+ * Return the chain of user_ids obtained by repeatedly following `direction`
+ * starting from the *child* of startUserId.
+ *
+ * For example, getDirectionalChainFromNode(A, "left") returns [A.left, (A.left).left, ...]
+ */
+async function getDirectionalChainFromNode(
+  startUserId: string,
+  direction: "left" | "right",
+  startByChild = true
+): Promise<string[]> {
+  const result: string[] = [];
+  const startNode: any = await TreeNode.findOne({ user_id: startUserId }).lean();
+  if (!startNode) return result;
+
+  // nextId starts with the immediate child if startByChild
+  let nextId = startByChild ? startNode[direction] : startNode.user_id;
+  while (nextId) {
+    result.push(nextId);
+    const nextNode: any = await TreeNode.findOne({ user_id: nextId }).lean();
+    if (!nextNode) break;
+    nextId = nextNode[direction];
+  }
+  return result;
+}
+
+/**
+ * Compute allowed nodes for a sponsor:
+ * - sponsor itself
+ * - sponsor's extreme-left chain (sponsor.left, sponsor.left.left, ...)
+ * - sponsor's extreme-right chain (sponsor.right, sponsor.right.right, ...)
+ *
+ * NOTE: we intentionally do NOT include siblings, cross-branch children or internal nodes
+ * that are not on either extreme chain.
+ */
+async function computeAllowedNodesForSponsor(sponsorId: string): Promise<Set<string>> {
+  const allowed = new Set<string>();
+  const sponsorNode: any = await TreeNode.findOne({ user_id: sponsorId }).lean();
+  if (!sponsorNode) return allowed;
+
+  allowed.add(sponsorId);
+
+  const extremeLeft = await getDirectionalChainFromNode(sponsorId, "left", true);
+  const extremeRight = await getDirectionalChainFromNode(sponsorId, "right", true);
+
+  extremeLeft.forEach((id) => allowed.add(id));
+  extremeRight.forEach((id) => allowed.add(id));
+
+  return allowed;
+}
+
+/**
+ * Validate that the intended placement (either explicit parentId or the computed
+ * automatic placement under sponsor) is within sponsor's allowed extreme-left/right nodes.
+ *
+ * Behavior:
+ * - If sponsorId not found -> throw
+ * - If parentId provided: ensure that parent exists and side is free and parent is allowed by sponsor
+ * - If parentId NOT provided: compute automatic placement using findAvailablePlacement(sponsorId, team)
+ *   and ensure that computed parent is inside allowed nodes.
+ */
+async function validateSponsorPlacement(
+  sponsorId: string,
+  parentId: string | undefined,
+  team: "left" | "right"
+) {
+  const sponsorNode = await TreeNode.findOne({ user_id: sponsorId }).lean();
+  if (!sponsorNode) throw new Error("Sponsor not found in tree");
+
+  const allowed = await computeAllowedNodesForSponsor(sponsorId);
+
+  if (parentId) {
+    const parentNode: any = await TreeNode.findOne({ user_id: parentId }).lean();
+    if (!parentNode) throw new Error("Selected parent (explicit) not found");
+
+    if (parentNode[team]) {
+      throw new Error(`Selected parent already has a user on ${team} side`);
+    }
+
+    if (!allowed.has(parentId)) {
+      throw new Error("Selected Referral ID is outside sponsor's allowed extreme-left/right scope");
+    }
+
+    // All checks passed for explicit parent
+    return;
+  }
+
+  // No explicit parent => compute automatic placement under sponsor
+  const placement = await findAvailablePlacement(sponsorId, team);
+  // placement.parent may be null (tree empty) - in that case allowed should contain null? treat empty tree as allowed
+  if (!placement.parent) {
+    // empty tree case: allowed by default (no parent to validate)
+    return;
+  }
+
+  const computedParentId = placement.parent.user_id;
+  if (!computedParentId) {
+    throw new Error("Automatic placement failed to determine a parent");
+  }
+
+  // If computed parent slot is already filled, findAvailablePlacement would have walked to the extreme available.
+  // Ensure computed parent is within sponsor's allowed nodes
+  if (!allowed.has(computedParentId)) {
+    throw new Error("Automatic placement under sponsor would fall outside sponsor's allowed scope");
+  }
+
+  return;
+}
+
 // ------------------ TREE LOGIC ------------------
+
+/**
+ * Find the place under `parentId` by walking down `team` to the extreme empty spot.
+ * If parentId is falsy: find the root node (parent: null) and start from there.
+ * If tree is empty -> returns { parent: null, side: team } meaning root insertion.
+ */
 async function findAvailablePlacement(
-  parentId: string,
+  parentId: string | undefined | null,
   team: "left" | "right" = "right"
 ) {
   const count = await TreeNode.countDocuments();
   if (count === 0) return { parent: null, side: team };
 
-  const current = await TreeNode.findOne({ user_id: parentId });
-  if (!current) throw new Error("Parent not found in tree");
+  // start node
+  let current: any;
+  if (!parentId) {
+    // find root (node with parent: null). If you have multiple roots this finds the first.
+    current = await TreeNode.findOne({ parent: null });
+    if (!current) {
+      // fallback: take any node
+      current = await TreeNode.findOne({});
+      if (!current) throw new Error("No nodes present to find placement under");
+    }
+  } else {
+    current = await TreeNode.findOne({ user_id: parentId });
+    if (!current) throw new Error("Parent not found in tree");
+  }
 
   let node = current;
   let side: "left" | "right" = team;
@@ -163,30 +293,28 @@ async function findAvailablePlacement(
 async function createTreeNode(
   user: any,
   parentId?: string, // explicit parent
-  referrerId?: string, // fallback for automatic placement
+  referrerId?: string, // sponsor/referrer for fallback auto placement
   team: "left" | "right" = "right"
 ) {
   let parentNode: any = null;
   let side: "left" | "right" = team;
 
   if (parentId) {
-    // Use the explicit parent
+    // Use the explicit parent provided by frontend
     parentNode = await TreeNode.findOne({ user_id: parentId });
     if (!parentNode) throw new Error("Specified parent not found in tree");
 
     if (parentNode[team]) {
-      throw new Error(
-        `Parent already has a user on the ${team} side. Choose another side.`
-      );
+      throw new Error(`Parent already has a user on the ${team} side. Choose another side.`);
     }
   } else if (referrerId) {
-    // No explicit parent → find placement under referBy
+    // No explicit parent → find placement under referBy (sponsor)
     const placement = await findAvailablePlacement(referrerId, team);
-    parentNode = placement.parent;
+    parentNode = placement.parent; // may be null if tree empty
     side = placement.side;
   } else {
-    // No parent and no referBy → auto placement
-    const placement = await findAvailablePlacement("", team);
+    // No parent and no referBy → auto placement starting from root
+    const placement = await findAvailablePlacement(undefined, team);
     parentNode = placement.parent;
     side = placement.side;
   }
@@ -230,6 +358,7 @@ async function createTreeNode(
 }
 
 // ------------------ CREATE USER ------------------
+
 export async function createUserAndLogin(body: any) {
   const {
     mail,
@@ -246,14 +375,36 @@ export async function createUserAndLogin(body: any) {
     locality,
     referBy,
     team,
-    parent, // explicit parent
+    parent, // explicit parent (provided by frontend)
   } = body;
 
+  // 1) Basic uniqueness checks
   const existingUser = await User.findOne({ $or: [{ mail }, { contact }] });
   const existingLogin = await Login.findOne({ $or: [{ mail }, { contact }] });
-  if (existingUser || existingLogin)
-    throw new Error("Email or Contact already exists");
+  if (existingUser || existingLogin) throw new Error("Email or Contact already exists");
 
+  // 2) If referBy is provided, enforce that team is present (left/right) and validate placement BEFORE creating records
+  if (referBy) {
+    if (!team || (team !== "left" && team !== "right")) {
+      throw new Error("Team side (left or right) is required when referBy is provided.");
+    }
+    // Validate: either explicit parent (if provided) or automatic computed parent under sponsor must be in allowed set
+    await validateSponsorPlacement(referBy, parent, team as "left" | "right");
+  }
+
+  // Note: If referBy not provided, we allow parent to be provided or omitted.
+  // If parent provided without referBy, we should validate parent existence & slot availability
+  if (!referBy && parent) {
+    const parentNode = await TreeNode.findOne({ user_id: parent }).lean();
+    if (!parentNode) throw new Error("Specified parent not found in tree");
+    const chosenTeam = (team && (team === "left" || team === "right")) ? team : "right";
+   if ((parentNode as any)[chosenTeam]) {
+  throw new Error(`Parent already has a user on ${chosenTeam} side`);
+}
+
+  }
+
+  // 3) Generate IDs and create User + Login (only after validation passed)
   const user_id = await generateUniqueCustomId("US", User, 8, 8);
   const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
 
@@ -288,18 +439,20 @@ export async function createUserAndLogin(body: any) {
   });
 
   // Tree logic: prefer explicit parent, else referBy
-  await createTreeNode(newUser, parent, referBy, team as "left" | "right");
+  await createTreeNode(newUser, parent, referBy, (team as "left" | "right") || "right");
 
   try {
     await sendWelcomeEmail(mail, user_name, user_id, contact);
   } catch (err) {
     console.error("Email send failed:", err);
-    // Optionally, continue without failing registration
+    // don't fail registration on email error
   }
+
   if (referBy) {
+    // update User.referred_users and direct left/right counters
     await User.updateOne(
       { user_id: referBy },
-      { $push: { referred_users: user_id } }
+      { $addToSet: { referred_users: user_id } }
     );
 
     try {
@@ -336,6 +489,7 @@ export async function createUserAndLogin(body: any) {
       console.error("Failed to update direct_left/right on referrer:", err);
     }
 
+    // update infinity structures if required
     // const referrer = await User.findOne({ user_id: referBy });
     // if (!referrer?.infinity_users?.length) {
     //   await rebuildInfinity();
