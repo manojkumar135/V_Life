@@ -204,7 +204,7 @@ async function computeAllowedNodesForSponsor(sponsorId: string): Promise<Set<str
 async function validateSponsorPlacement(
   sponsorId: string,
   parentId: string | undefined,
-  team: "left" | "right"
+  team: "left" | "right",
 ) {
   const sponsorNode = await TreeNode.findOne({ user_id: sponsorId }).lean();
   if (!sponsorNode) throw new Error("Sponsor not found in tree");

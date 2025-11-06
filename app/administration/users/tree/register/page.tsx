@@ -30,7 +30,14 @@ const teams = [
 
 function RegisterContent() {
   const [loading, setLoading] = useState(false);
-  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  // const [isTermsOpen, setIsTermsOpen] = useState(false);
+   const [modalType, setModalType] = useState<
+      "terms" | "privacy" | "refund" | null
+    >(null);
+  
+    const openModal = (type: "terms" | "privacy" | "refund") =>
+      setModalType(type);
+    const closeModal = () => setModalType(null);
 
   const router = useRouter();
   const params = useSearchParams();
@@ -126,7 +133,7 @@ function RegisterContent() {
 
       {/* Form Section */}
       <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:mt-8">
-        <div className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200">
+        <div className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200 max-md:mt-10">
           <p className="text-[1.5rem] font-bold text-black mb-5">SIGN UP</p>
 
           <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
@@ -391,13 +398,27 @@ function RegisterContent() {
                 onChange={formik.handleChange}
                 className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer checked:bg-yellow-500 checked:border-yellow-500 relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:text-black"
               />
-              <label htmlFor="terms" className="text-sm text-gray-700">
+              <label htmlFor="terms" className="text-xs text-gray-700">
                 I agree to the{" "}
                 <span
                   className="text-blue-600 cursor-pointer"
-                  onClick={() => setIsTermsOpen(true)}
+                  onClick={() => openModal("terms")}
                 >
-                  Terms and Conditions
+                  Terms 
+                </span>
+                ,{" "}
+                <span
+                  className="text-blue-600 cursor-pointer"
+                  onClick={() => openModal("privacy")}
+                >
+                  Privacy 
+                </span>{" "}
+                and{" "}
+                <span
+                  className="text-blue-600 cursor-pointer"
+                  onClick={() => openModal("refund")}
+                >
+                  Refund policy
                 </span>
               </label>
             </div>
@@ -436,7 +457,7 @@ function RegisterContent() {
         </div>
       </div>
 
-      <TermsModal isOpen={isTermsOpen} onClose={() => setIsTermsOpen(false)} />
+      <TermsModal isOpen={!!modalType} type={modalType} onClose={closeModal} />
 
       {/* Right Illustration */}
       <div className="w-1/2 max-xl:w-2/5 flex items-center justify-center p-1 max-lg:hidden">
