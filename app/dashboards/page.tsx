@@ -10,6 +10,7 @@ import { TiTick } from "react-icons/ti";
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import showToast from "@/components/common/Toast/toast";
 
 import {
   FaLink,
@@ -19,6 +20,11 @@ import {
   FaWallet,
 } from "react-icons/fa";
 import { MdOutlineCheckCircle } from "react-icons/md";
+
+interface LinkButtonProps {
+  text: string;
+  onClick: () => void;
+}
 
 const rankImages: Record<string, string> = {
   no: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761374765/Untitled_design_2_buhazb.png",
@@ -56,6 +62,21 @@ const DashboardPage: React.FC = () => {
     }
   }, [user_id]);
   // console.log(user.rank);
+
+   /* ------------ Maverick Link Actions ------------ */
+  const handleCopyLink = async (position: "left" | "right") => {
+    const link = `https://v-life-gules.vercel.app/auth/register?referBy=${user_id}&position=${position}`;
+    await navigator.clipboard.writeText(link);
+    // Determine organization name based on position
+  const orgName = position === "left" ? "Organization 1" : "Organization 2";
+
+  showToast.success(`Copied ${orgName} link to share`)
+  };
+
+ const handleShopping = () => {
+  router.push(showAlert ? "/orders" : "/orders/addorder");
+};
+
 
   return (
     <Layout>
@@ -230,10 +251,17 @@ const DashboardPage: React.FC = () => {
                 </div>
               </InfoCard>
 
+            {/* --- Maverick Links --- */}
               <InfoCard title="Maverick Links">
-                <LinkButton text="JOIN ORGANISATION 1" />
-                <LinkButton text="JOIN ORGANISATION 2" />
-                <LinkButton text="SHOPPING LINK" />
+                <LinkButton
+                  text="JOIN ORGANISATION 1"
+                  onClick={() => handleCopyLink("left")}
+                />
+                <LinkButton
+                  text="JOIN ORGANISATION 2"
+                  onClick={() => handleCopyLink("right")}
+                />
+                <LinkButton text="SHOPPING LINK" onClick={handleShopping} />
               </InfoCard>
             </div>
 
@@ -307,6 +335,7 @@ export default DashboardPage;
 
 /* ------------ Sub Components ------------- */
 
+// ---------------- InfoCard ----------------
 const InfoCard = ({
   title,
   children,
@@ -314,16 +343,17 @@ const InfoCard = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden h-46 ">
+  <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden h-46">
     <div
-      className="bg-[radial-gradient(circle_at_top,_#353a44,_#7e8594)] text-white
-     text-md text-center font-semibold py-2 font-sans"
+      className="bg-[radial-gradient(circle_at_top,_#353a44,_#7e8594)] 
+                 text-white text-md text-center font-semibold py-2 font-sans"
     >
       {title}
     </div>
     <div className="py-2 px-4 text-gray-700">{children}</div>
   </div>
 );
+
 
 const StatusItem = ({ label, value }: { label: string; value?: string }) => {
   const hasValue = Boolean(value);
@@ -342,11 +372,22 @@ const StatusItem = ({ label, value }: { label: string; value?: string }) => {
   );
 };
 
-const LinkButton = ({ text }: { text: string }) => (
-  <button className="w-full flex items-center justify-between max-md:text-xs text-xs border border-gray-500 text-black px-3 py-2 rounded-md mt-2 cursor-pointer">
+// ---------------- LinkButton ----------------
+const LinkButton = ({
+  text,
+  onClick,
+}: {
+  text: string;
+  onClick: () => void;
+}) => (
+  <button
+    onClick={onClick}
+    className="w-full flex items-center justify-between text-xs border border-gray-500 text-black px-3 py-2 rounded-md mt-2 cursor-pointer hover:bg-gray-100 transition"
+  >
     {text} <FaLink />
   </button>
 );
+
 
 const DashBox = ({
   icon,

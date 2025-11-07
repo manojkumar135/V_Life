@@ -127,29 +127,75 @@ const BinaryTreeNode: React.FC<Props> = ({
     hoverTimeoutRef.current = setTimeout(() => setHovered(false), 100);
   };
 
-  // ✅ Tooltip position calculation
-  useEffect(() => {
-    if (hovered && nodeRef.current && tooltipRef.current) {
-      const nodeRect = nodeRef.current.getBoundingClientRect();
-      const tooltipRect = tooltipRef.current.getBoundingClientRect();
-      const LEFT_MARGIN = 80;
+ // ---------------- Improved tooltip positioning ----------------
+useEffect(() => {
+  if (!hovered) return;
 
-      let top = nodeRect.bottom + window.scrollY + 8;
-      let left =
-        nodeRect.left +
-        nodeRect.width / 2 +
-        window.scrollX -
-        tooltipRect.width / 2;
+  const updatePos = () => {
+    if (!nodeRef.current || !tooltipRef.current) return;
 
-      if (left + tooltipRect.width > window.innerWidth - 8)
-        left = window.innerWidth - tooltipRect.width - 8;
-      if (left < LEFT_MARGIN) left = LEFT_MARGIN;
-      if (top + tooltipRect.height > window.scrollY + window.innerHeight - 8)
-        top = nodeRect.top + window.scrollY - tooltipRect.height - 8;
+    const nodeRect = nodeRef.current.getBoundingClientRect();
+    // measure tooltip using its current size
+    const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-      setTooltipPos({ top, left });
+    const MARGIN = 8; // margin from viewport edge
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const scrollX = window.scrollX || window.pageXOffset || 0;
+
+    // Horizontal center relative to node
+    let left = nodeRect.left + nodeRect.width / 2 + scrollX - tooltipRect.width / 2;
+    // Clamp horizontally to viewport with margin
+    left = Math.min(Math.max(left, MARGIN + scrollX), window.innerWidth - tooltipRect.width - MARGIN + scrollX);
+
+    // Calculate available vertical space (in viewport coordinates)
+    const spaceBelow = window.innerHeight - nodeRect.bottom - MARGIN;
+    const spaceAbove = nodeRect.top - MARGIN;
+
+    let top: number;
+    let preferAbove = false;
+
+    // Prefer placing below if it fits
+    if (spaceBelow >= tooltipRect.height) {
+      top = nodeRect.bottom + MARGIN + scrollY;
+    } else if (spaceAbove >= tooltipRect.height) {
+      // else place above if it fits there
+      top = nodeRect.top - tooltipRect.height - MARGIN + scrollY;
+      preferAbove = true;
+    } else {
+      // If neither side fully fits, clamp inside viewport:
+      // prefer below but clamp between top and bottom margins
+      const desiredBelow = nodeRect.bottom + MARGIN + scrollY;
+      const minTop = scrollY + MARGIN;
+      const maxTop = scrollY + window.innerHeight - tooltipRect.height - MARGIN;
+      top = Math.min(Math.max(desiredBelow, minTop), maxTop);
+      // if clamped to top region, it effectively becomes "above-like"
+      preferAbove = top < nodeRect.bottom + scrollY;
     }
-  }, [hovered]);
+
+    // apply position
+    setTooltipPos({ top, left });
+
+    // optional: store whether placed above to allow arrow styling
+    if (tooltipRef.current) {
+      tooltipRef.current.setAttribute("data-above", preferAbove ? "true" : "false");
+    }
+  };
+
+  // initial set
+  updatePos();
+
+  // update on window resize / scroll (use capture for scroll to catch ancestors)
+  window.addEventListener("resize", updatePos);
+  window.addEventListener("scroll", updatePos, true);
+
+  // cleanup
+  return () => {
+    window.removeEventListener("resize", updatePos);
+    window.removeEventListener("scroll", updatePos, true);
+  };
+  // include node.user_id so position recalculates when hovering a different node
+}, [hovered, node.user_id]);
+
 
   // ✅ Long press detection for mobile (Admin only)
   const handleTouchStart = () => {

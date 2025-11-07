@@ -62,7 +62,11 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const createWelcomeEmailBody = (userName: string, userId: string, contact: string): string => {
+const createWelcomeEmailBody = (
+  userName: string,
+  userId: string,
+  contact: string
+): string => {
   return `
     <!DOCTYPE html>
     <html>
@@ -154,7 +158,12 @@ const createWelcomeEmailBody = (userName: string, userId: string, contact: strin
   `;
 };
 
-export const sendWelcomeEmail = async (email: string, userName: string, userId: string, contact: string) => {
+export const sendWelcomeEmail = async (
+  email: string,
+  userName: string,
+  userId: string,
+  contact: string
+) => {
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
@@ -183,10 +192,14 @@ async function findAvailablePlacement(
   }
 
   if (!startUserId) {
-    throw new Error("startUserId must be provided for placement search on non-empty tree");
+    throw new Error(
+      "startUserId must be provided for placement search on non-empty tree"
+    );
   }
 
-  const start = await TreeNode.findOne({ user_id: startUserId }).lean<ITreeNode | null>().exec();
+  const start = await TreeNode.findOne({ user_id: startUserId })
+    .lean<ITreeNode | null>()
+    .exec();
   if (!start) throw new Error("Start user (sponsor) not found in tree");
 
   let current: ITreeNode = start;
@@ -196,7 +209,9 @@ async function findAvailablePlacement(
   // (we follow rule 3: traverse sponsor’s side until empty)
   while ((current as any)[side]) {
     const nextId = (current as any)[side] as string;
-    const nextNode = await TreeNode.findOne({ user_id: nextId }).lean<ITreeNode | null>().exec();
+    const nextNode = await TreeNode.findOne({ user_id: nextId })
+      .lean<ITreeNode | null>()
+      .exec();
     if (!nextNode) {
       // tree inconsistent — stop and return current as parent
       break;
@@ -216,7 +231,9 @@ async function getAncestorChain(nodeId: string): Promise<string[]> {
   let currentId: string | null = nodeId;
   while (currentId) {
     chain.push(currentId);
-    const node = await TreeNode.findOne({ user_id: currentId }).lean<ITreeNode | null>().exec();
+    const node = await TreeNode.findOne({ user_id: currentId })
+      .lean<ITreeNode | null>()
+      .exec();
     if (!node) break;
     currentId = node.parent ?? null;
   }
@@ -254,7 +271,9 @@ async function isValidReferrerForPlacement(
   for (let i = 0; i < path.length - 1; i++) {
     const ancId = path[i];
     const childId = path[i + 1];
-    const ancNode = await TreeNode.findOne({ user_id: ancId }).lean<ITreeNode | null>().exec();
+    const ancNode = await TreeNode.findOne({ user_id: ancId })
+      .lean<ITreeNode | null>()
+      .exec();
     if (!ancNode) return false;
     const wentLeft = ancNode.left === childId;
     const wentRight = ancNode.right === childId;
@@ -291,32 +310,47 @@ async function createTreeNode(
 
   if (explicitParentId) {
     // Parent must exist
-    parentNode = await TreeNode.findOne({ user_id: explicitParentId }).lean<ITreeNode | null>().exec();
+    parentNode = await TreeNode.findOne({ user_id: explicitParentId })
+      .lean<ITreeNode | null>()
+      .exec();
     if (!parentNode) {
       throw new Error("Specified parent not found in tree");
     }
 
     // Selected side must be free
     if ((parentNode as any)[team]) {
-      throw new Error(`Parent already has a user on the ${team} side. Choose another side or a different parent.`);
+      throw new Error(
+        `Parent already has a user on the ${team} side. Choose another side or a different parent.`
+      );
     }
 
     // referrer must be provided
     if (!referrerId) {
-      throw new Error("referBy (sponsor) must be provided when explicit parent is specified");
+      throw new Error(
+        "referBy (sponsor) must be provided when explicit parent is specified"
+      );
     }
 
     // sponsor must be ancestor AND path side must match (or be direct parent)
-    const valid = await isValidReferrerForPlacement(referrerId, explicitParentId, team);
+    const valid = await isValidReferrerForPlacement(
+      referrerId,
+      explicitParentId,
+      team
+    );
     if (!valid) {
-      throw new Error("Invalid placement: the provided sponsor (referBy) is not permitted to add at this parent/side.");
+      throw new Error(
+        "Invalid placement: the provided sponsor (referBy) is not permitted to add at this parent/side."
+      );
     }
   } else {
     // No explicit parent given => traverse referrer's chain on `team`
     if (!referrerId) {
       // if tree empty, allow root creation only when referrerId not provided and tree empty
       const count = await TreeNode.countDocuments().exec();
-      if (count > 0) throw new Error("referBy (sponsor) must be provided when parent is not specified");
+      if (count > 0)
+        throw new Error(
+          "referBy (sponsor) must be provided when parent is not specified"
+        );
       parentNode = null;
       side = team;
     } else {
@@ -325,8 +359,17 @@ async function createTreeNode(
       parentNode = placement.parent;
       side = placement.side;
       // before returning, ensure parentNode is allowed for sponsor (should be by traversal)
-      if (parentNode && !(await isValidReferrerForPlacement(referrerId, parentNode.user_id, side))) {
-        throw new Error("Invalid automatic placement: sponsor cannot place at the discovered parent/side");
+      if (
+        parentNode &&
+        !(await isValidReferrerForPlacement(
+          referrerId,
+          parentNode.user_id,
+          side
+        ))
+      ) {
+        throw new Error(
+          "Invalid automatic placement: sponsor cannot place at the discovered parent/side"
+        );
       }
     }
   }
@@ -347,7 +390,9 @@ async function createTreeNode(
     refer_by: referrerId ?? null,
   });
 
-  const createdObj = createdDoc.toObject ? (createdDoc.toObject() as ITreeNode) : (createdDoc as unknown as ITreeNode);
+  const createdObj = createdDoc.toObject
+    ? (createdDoc.toObject() as ITreeNode)
+    : (createdDoc as unknown as ITreeNode);
 
   // Update parent pointer atomically: ensure side still free (race-safe attempt)
   if (parentNode) {
@@ -355,7 +400,9 @@ async function createTreeNode(
       { user_id: parentNode.user_id, [side]: { $in: [null, "", undefined] } },
       { $set: { [side]: userRecord.user_id } },
       { new: true }
-    ).lean().exec();
+    )
+      .lean()
+      .exec();
 
     if (!update) {
       // rollback created node to avoid orphan (best-effort) and surface clear error
@@ -364,7 +411,9 @@ async function createTreeNode(
       } catch {
         // ignore
       }
-      throw new Error("Failed to attach new node to parent (slot was taken concurrently). Try again.");
+      throw new Error(
+        "Failed to attach new node to parent (slot was taken concurrently). Try again."
+      );
     }
   }
 
@@ -373,7 +422,10 @@ async function createTreeNode(
     try {
       await TreeNode.updateOne(
         { user_id: referrerId },
-        { $addToSet: { referrals: userRecord.user_id }, $inc: { referral_count: 1 } }
+        {
+          $addToSet: { referrals: userRecord.user_id },
+          $inc: { referral_count: 1 },
+        }
       ).exec();
     } catch {
       // ignore minor failure here
@@ -393,15 +445,23 @@ async function createTreeNode(
  * - Sends welcome email (best-effort)
  * - Updates referrer User's referred_users and direct left/right counts
  */
-export async function createUserAndLogin(body: CreateUserInput): Promise<CreatedResult> {
+export async function createUserAndLogin(
+  body: CreateUserInput
+): Promise<CreatedResult> {
   const { mail, contact, user_name, referBy, team, parent } = body;
 
-  if (!mail || !contact || !user_name || !referBy || !team) throw new Error("Required fields missing");
+  if (!mail || !contact || !user_name || !referBy || !team)
+    throw new Error("Required fields missing");
 
   // duplicates
-  const existingUser = await User.findOne({ $or: [{ mail }, { contact }] }).lean();
-  const existingLogin = await Login.findOne({ $or: [{ mail }, { contact }] }).lean();
-  if (existingUser || existingLogin) throw new Error("Email or Contact already exists");
+  const existingUser = await User.findOne({
+    $or: [{ mail }, { contact }],
+  }).lean();
+  const existingLogin = await Login.findOne({
+    $or: [{ mail }, { contact }],
+  }).lean();
+  if (existingUser || existingLogin)
+    throw new Error("Email or Contact already exists");
 
   // referrer exists
   const referrer = await User.findOne({ user_id: referBy }).lean();
@@ -414,11 +474,16 @@ export async function createUserAndLogin(body: CreateUserInput): Promise<Created
 
     // validate placement
     const valid = await isValidReferrerForPlacement(referBy, parent, team);
-    if (!valid) throw new Error("Invalid placement: sponsor cannot place user here");
+    if (!valid)
+      throw new Error("Invalid placement: sponsor cannot place user here");
   } else {
     // check automatic placement under sponsor
     const placement = await findAvailablePlacement(referBy, team);
-    const valid = await isValidReferrerForPlacement(referBy, placement.parent?.user_id ?? "", placement.side);
+    const valid = await isValidReferrerForPlacement(
+      referBy,
+      placement.parent?.user_id ?? "",
+      placement.side
+    );
     if (!valid) throw new Error("Invalid automatic placement under sponsor");
   }
 
@@ -436,21 +501,22 @@ export async function createUserAndLogin(body: CreateUserInput): Promise<Created
 
   const hashedPassword = await bcrypt.hash(contact, 10);
 
- const newLoginDoc = await Login.create({
-  ...body,
-  login_id,
-  user_id,
-  user_name: body.user_name,
-  mail: body.mail,
-  contact: body.contact,
-  password: hashedPassword,
-  status: "inactive",
-});
-
+  const newLoginDoc = await Login.create({
+    ...body,
+    login_id,
+    user_id,
+    user_name: body.user_name,
+    mail: body.mail,
+    contact: body.contact,
+    password: hashedPassword,
+    status: "inactive",
+  });
 
   // create tree node
   await createTreeNode(
-    newUserDoc.toObject ? newUserDoc.toObject() : (newUserDoc as unknown as Record<string, unknown>),
+    newUserDoc.toObject
+      ? newUserDoc.toObject()
+      : (newUserDoc as unknown as Record<string, unknown>),
     parent ?? undefined,
     referBy,
     team
@@ -464,14 +530,20 @@ export async function createUserAndLogin(body: CreateUserInput): Promise<Created
   }
 
   // update referrer info
-  await User.updateOne({ user_id: referBy }, { $addToSet: { referred_users: user_id } });
+  await User.updateOne(
+    { user_id: referBy },
+    { $addToSet: { referred_users: user_id } }
+  );
 
   return {
-    newUser: newUserDoc.toObject ? newUserDoc.toObject() : (newUserDoc as unknown as Record<string, unknown>),
-    newLogin: newLoginDoc.toObject ? newLoginDoc.toObject() : (newLoginDoc as unknown as Record<string, unknown>),
+    newUser: newUserDoc.toObject
+      ? newUserDoc.toObject()
+      : (newUserDoc as unknown as Record<string, unknown>),
+    newLogin: newLoginDoc.toObject
+      ? newLoginDoc.toObject()
+      : (newLoginDoc as unknown as Record<string, unknown>),
   };
 }
-
 
 export default {
   createUserAndLogin,
