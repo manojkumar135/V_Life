@@ -436,16 +436,17 @@ export async function createUserAndLogin(body: CreateUserInput): Promise<Created
 
   const hashedPassword = await bcrypt.hash(contact, 10);
 
-  const newLoginDoc = await Login.create({
-    login_id,
-    user_id,
-    // user_name,
-    // mail,
-    // contact,
-    password: hashedPassword,
-    status: "inactive",
-    ...body, // optional fields
-  });
+ const newLoginDoc = await Login.create({
+  ...body,
+  login_id,
+  user_id,
+  user_name: body.user_name,
+  mail: body.mail,
+  contact: body.contact,
+  password: hashedPassword,
+  status: "inactive",
+});
+
 
   // create tree node
   await createTreeNode(
