@@ -46,7 +46,7 @@ const DashboardPage: React.FC = () => {
     const checkAdvancePayment = async () => {
       try {
         const paid = await hasAdvancePaid(user_id, 10000);
-        // console.log(paid)
+        console.log(paid)
 
         if (!paid.hasPermission) {
           setShowAlert(true);
@@ -61,6 +61,7 @@ const DashboardPage: React.FC = () => {
       checkAdvancePayment();
     }
   }, [user_id]);
+  console.log(showAlert)
   // console.log(user.rank);
 
    /* ------------ Maverick Link Actions ------------ */

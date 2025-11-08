@@ -238,7 +238,7 @@ export async function runMatchingBonus() {
       if (!node || node.status !== "active") continue;
 
       const advancePaid = await checkAdvancePaid(u.user_id);
-      if (!advancePaid.hasPermission) continue;
+      // if (!advancePaid.hasPermission) continue;
 
       const now = new Date();
       const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
