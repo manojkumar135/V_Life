@@ -35,7 +35,7 @@ if (!isOpen || !type) return null;
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      onClick={onClose}
+      onClick={onClose}  
     >
       <div
         className="bg-white rounded-lg shadow-lg relative p-6 h-4/5 w-5/7 max-sm:h-6/7 max-md:w-11/12"

@@ -2,21 +2,22 @@
 
 import { useState, useEffect, useRef } from "react";
 import { HiUserCircle } from "react-icons/hi";
-import { MdNotificationsNone } from "react-icons/md";
+import { MdNotificationsNone, MdDelete } from "react-icons/md";
 import { HiOutlineMenuAlt2 } from "react-icons/hi";
+import { IoClose } from "react-icons/io5";
 import { useVLife } from "@/store/context";
 import ShowToast from "@/components/common/Toast/toast";
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { user } = useVLife();
-  const [showPopup, setShowPopup] = useState(false);
+
+  const [showModal, setShowModal] = useState(false);
   const [alerts, setAlerts] = useState([
-    { id: 1, message: "Payment received successfully!" },
-    { id: 2, message: "Your profile was updated." },
-    { id: 3, message: "New referral joined your team." },
+    { id: 1, message: "Payment received successfully!", seen: false },
+    { id: 2, message: "Your profile was updated.", seen: true },
+    { id: 3, message: "New referral joined your team.", seen: false },
   ]);
 
-  const popupRef = useRef<HTMLDivElement>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipTimer, setTooltipTimer] = useState<NodeJS.Timeout | null>(null);
 
@@ -31,26 +32,28 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
     }
   };
 
-  // ✅ Toggle notification popup
-  const togglePopup = () => setShowPopup((prev) => !prev);
+  // ✅ Toggle modal
+  const toggleModal = () => setShowModal((prev) => !prev);
 
-  // ✅ Close popup on outside click
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-        setShowPopup(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // ✅ Mark alert as seen
+  const markAsSeen = (id: number) => {
+    setAlerts((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, seen: true } : a))
+    );
+  };
+
+  // ✅ Delete alert
+  const handleDelete = (id: number) => {
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const unseenCount = alerts.filter((a) => !a.seen).length;
 
   // ✅ Tooltip delay logic
   const handleMouseEnter = () => {
-    const timer = setTimeout(() => setShowTooltip(true), 700); // 700ms delay
+    const timer = setTimeout(() => setShowTooltip(true), 700);
     setTooltipTimer(timer);
   };
-
   const handleMouseLeave = () => {
     if (tooltipTimer) clearTimeout(tooltipTimer);
     setShowTooltip(false);
@@ -85,46 +88,78 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
       {/* RIGHT: Notification + Avatar */}
       <div className="flex items-center space-x-4 max-md:space-x-2 relative">
         {/* 🔔 Notification Button */}
-        <div className="relative" ref={popupRef}>
-          <button
-            className="p-1 rounded-full bg-gray-100 cursor-pointer relative"
-            onClick={togglePopup}
-          >
-            <MdNotificationsNone className="w-6 h-6 text-gray-700" />
-            {alerts.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full px-[5px] py-[1px]">
-                {alerts.length}
-              </span>
-            )}
-          </button>
+        <button
+          className="p-1 rounded-full bg-gray-100 cursor-pointer relative"
+          onClick={toggleModal}
+        >
+          <MdNotificationsNone className="w-6 h-6 text-gray-700" />
+          {unseenCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full px-[5px] py-[1px]">
+              {unseenCount}
+            </span>
+          )}
+        </button>
 
-          {/* 🔔 Popup */}
-          {showPopup && (
-            <div className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-md border border-gray-200 z-50">
-              <div className="p-3 border-b font-semibold text-gray-800">
-                Notifications
-              </div>
-              <div className="max-h-64 overflow-y-auto">
+        {/* 🧾 Modal */}
+        {showModal && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+            onClick={toggleModal}
+          >
+            <div
+              className="bg-white rounded-lg shadow-lg relative p-6 h-4/5 w-5/7 max-sm:h-6/7 max-md:w-11/12"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* ❌ Close Button */}
+              <button
+                className="absolute top-3 right-3 text-gray-500 hover:text-red-600 cursor-pointer"
+                onClick={toggleModal}
+              >
+                <IoClose size={24} />
+              </button>
+
+              <h2 className="text-xl font-semibold mb-4">Notifications</h2>
+
+              <div className="text-sm text-gray-700 h-8/9 overflow-y-auto border-t border-gray-200 pt-2">
                 {alerts.length > 0 ? (
                   alerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className="px-3 py-2 hover:bg-gray-50 text-sm text-gray-700 border-b last:border-0"
+                      onClick={() => markAsSeen(alert.id)}
+                      className={`flex justify-between items-center px-4 py-2 border-b last:border-0 cursor-pointer transition-colors ${
+                        alert.seen
+                          ? "bg-gray-50 text-gray-500"
+                          : "bg-white hover:bg-blue-50 text-gray-800"
+                      }`}
                     >
-                      {alert.message}
+                      <span
+                        className={`text-sm ${
+                          alert.seen ? "font-normal" : "font-semibold"
+                        }`}
+                      >
+                        {alert.message}
+                      </span>
+                      <MdDelete
+                        className="text-gray-400 hover:text-red-500 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(alert.id);
+                        }}
+                        size={18}
+                      />
                     </div>
                   ))
                 ) : (
-                  <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                  <div className="px-4 py-8 text-center text-gray-500 text-sm">
                     No new notifications
                   </div>
                 )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* 👤 User Avatar with delayed tooltip */}
+        {/* 👤 User Avatar with tooltip */}
         <div
           className="relative flex items-center justify-center"
           onMouseEnter={handleMouseEnter}
@@ -145,7 +180,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             )}
           </button>
 
-          {/* Tooltip with fade animation + delay */}
+          {/* Tooltip */}
           <div
             className={`absolute top-10 -translate-x-1/2 flex flex-col items-center bg-gray-800 text-white text-xs rounded-md px-2 py-1 whitespace-nowrap transition-all duration-300 ${
               showTooltip

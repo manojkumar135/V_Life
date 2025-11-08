@@ -50,6 +50,7 @@ async function getLast15DaysEligiblePayouts() {
   console.log(
     `[Infinity Bonus] Found ${filtered.length} payouts (Matching + Direct Sales) in last 15 days`
   );
+  // console.log(filtered)
   return filtered;
 }
 
@@ -123,12 +124,12 @@ export async function runInfinityBonus() {
       let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
       if (!wallet || !wallet.pan_verified) payoutStatus = "OnHold";
 
-      if (!wallet) {
-        console.log(
-          `⚠️ No wallet found for ${sponsor.user_id}, skipping Infinity Bonus.`
-        );
-        continue;
-      }
+      // if (!wallet) {
+      //   console.log(
+      //     `⚠️ No wallet found for ${sponsor.user_id}, skipping Infinity Bonus.`
+      //   );
+      //   continue;
+      // }
 
       const now = new Date();
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
@@ -152,8 +153,8 @@ export async function runInfinityBonus() {
         payout_id,
         user_id: sponsor.user_id,
         user_name: sponsor.user_name,
-        rank: wallet?.rank,
-        wallet_id: wallet.wallet_id,
+        rank: sponsor?.rank || "none",
+        wallet_id: wallet ? wallet.wallet_id : "",
         name: infinityTitle,
         title: infinityTitle,
         account_holder_name: wallet?.account_holder_name || "",
@@ -215,7 +216,7 @@ export async function runInfinityBonus() {
         status: infinityPayout.status,
         first_payment: false,
         advance: false,
-        ischecked: false,
+        ischecked: true,
         created_by: "system",
         last_modified_by: "system",
         last_modified_at: now,

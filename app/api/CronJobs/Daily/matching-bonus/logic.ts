@@ -1,4 +1,4 @@
-// app/api/CronJobs/Daily/matching-bonus/logic.ts
+// ...existing code...
 import { connectDB } from "@/lib/mongodb";
 import { History } from "@/models/history";
 import { DailyPayout } from "@/models/payout";
@@ -24,8 +24,7 @@ async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
     };
   }
 
-  // Fetch user (optional, but kept in case of invalid user)
-  const user = await User.findOne({ user_id });
+  const user = await User.findOne({ user_id }).lean() as any;
   if (!user) {
     return {
       hasAdvance: false,
@@ -34,81 +33,49 @@ async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
     };
   }
 
-  // ✅ Only check if advance >= minAmount (no admin access allowed)
   const historyRecord = await History.findOne({
     user_id,
     amount: { $gte: minAmount },
-  });
+  }).lean() as any;
 
   const hasAdvance = !!historyRecord;
 
   return {
     hasAdvance,
-    hasPermission: hasAdvance, // ✅ Only advance matters now
+    hasPermission: hasAdvance,
     reason: hasAdvance ? "Advance paid" : "Advance not paid",
   };
 }
 
-// ✅ Get current 12-hour IST window converted to UTC
+// Get current 12-hour IST window converted to UTC
 export function getCurrentWindow() {
   const now = new Date();
 
   let start: Date;
   let end: Date;
 
-  // Get IST hours
+  // Get IST hours approximation
   const istHours =
     now.getUTCHours() + 5 + (now.getUTCMinutes() + 30 >= 60 ? 1 : 0);
 
   if (istHours < 12) {
-    // 12:00 AM - 11:59 AM IST
+    // 12:00 AM - 11:59 AM IST -> UTC 00:00 - 05:59
     start = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        0,
-        0,
-        0
-      )
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0)
     );
     end = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        5,
-        59,
-        59,
-        999
-      )
-    ); // 11:59 AM IST = 5:59 UTC
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 5, 59, 59, 999)
+    );
   } else {
-    // 12:00 PM - 11:59 PM IST
+    // 12:00 PM - 11:59 PM IST -> UTC 06:00 - 17:59
     start = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        6,
-        0,
-        0
-      )
-    ); // 12:00 PM IST = 6:00 UTC
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 6, 0, 0)
+    );
     end = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        17,
-        59,
-        59,
-        999
-      )
-    ); // 11:59 PM IST = 17:59 UTC
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 17, 59, 59, 999)
+    );
   }
 
-  // console.log(`[Matching Bonus] Current UTC window: ${start.toISOString()} - ${end.toISOString()}`);
   return { start, end };
 }
 
@@ -125,22 +92,59 @@ function generateTransactionId(prefix = "MB") {
 }
 const txId = generateTransactionId("MB");
 
-// ✅ Convert history date+time (IST) -> UTC Date object
-export function historyToUTCDate(history: any) {
-  // history.date = "DD-MM-YYYY", history.time = "HH:MM:SS" (IST)
-  const [day, month, year] = history.date.split("-").map(Number);
-  const [hours, minutes, seconds] = history.time.split(":").map(Number);
+// historyToUTCDate kept for diagnostics / fallback (not used for filtering)
+export function historyToUTCDate(history: any): Date {
+  if (!history?.date || !history?.time) {
+    throw new Error("Invalid history object: missing date or time");
+  }
 
-  // IST -> UTC by subtracting 5h30m
-  const utcHours = hours - 5;
-  const utcMinutes = minutes - 30;
+  const dateParts = history.date.split("-").map((s: string) => s.trim());
+  if (dateParts.length !== 3) {
+    throw new Error("Invalid date format in history");
+  }
 
-  return new Date(
-    Date.UTC(year, month - 1, day, utcHours, utcMinutes, seconds)
-  );
+  // Support both "DD-MM-YYYY" and "YYYY-MM-DD"
+  let day: number;
+  let month: number;
+  let year: number;
+  if (dateParts[0].length === 4) {
+    // YYYY-MM-DD
+    year = Number(dateParts[0]);
+    month = Number(dateParts[1]);
+    day = Number(dateParts[2]);
+  } else {
+    // DD-MM-YYYY
+    day = Number(dateParts[0]);
+    month = Number(dateParts[1]);
+    year = Number(dateParts[2]);
+  }
+
+  if ([day, month, year].some((n) => !Number.isFinite(n))) {
+    throw new Error("Invalid numeric date parts in history");
+  }
+
+  const timeStr = String(history.time).trim();
+  const timeRegex = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i;
+  const m = timeStr.match(timeRegex);
+  if (!m) {
+    throw new Error("Invalid time format in history: " + timeStr);
+  }
+  let hh = Number(m[1]);
+  const mm = Number(m[2]);
+  const ss = m[3] ? Number(m[3]) : 0;
+  const ampm = m[4] ? m[4].toUpperCase() : null;
+
+  if (ampm) {
+    if (hh === 12) hh = 0;
+    if (ampm === "PM") hh += 12;
+  }
+
+  const istMillis = Date.UTC(year, month - 1, day, hh, mm, ss);
+  const utcMillis = istMillis - (5 * 60 + 30) * 60 * 1000;
+  return new Date(utcMillis);
 }
 
-// ✅ Traverse tree to get all left/right team IDs
+// Traverse tree to get all left/right team IDs
 function getTeamUserIdsFromMap(
   allNodesMap: Map<string, any>,
   rootUserId: string,
@@ -171,46 +175,41 @@ function getTeamUserIdsFromMap(
   return result;
 }
 
-// ✅ Get all users with left/right teams and histories
+// Get all users with left/right teams and histories (uses created_at window)
 export async function getUserTeamsAndHistories() {
   await connectDB();
   const { start, end } = getCurrentWindow();
 
-  const histories = await History.find({
+  // Select histories using created_at (UTC) window to avoid fragile parsing
+  const historiesInWindow = (await History.find({
     first_payment: true,
     advance: true,
     ischecked: false,
-  });
+    created_at: { $gte: start, $lte: end },
+  }).lean()) as any[];
 
-  const historiesInWindow = histories.filter((h) => {
-    const historyDate = historyToUTCDate(h);
-    return historyDate >= start && historyDate <= end;
-  });
-  // console.log(historiesInWindow,"historiesInWindow");
+  // DEBUG: helpful diagnostics for missing records
+  console.log(`[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`);
+  console.log(`[Matching Bonus] historiesInWindow count: ${historiesInWindow.length}`);
 
-  const treeNodes = await TreeNode.find({});
-  const allNodesMap = new Map(treeNodes.map((n) => [n.user_id, n]));
+  const treeNodes = (await TreeNode.find({}).lean()) as any[];
+  const allNodesMap = new Map<string, any>(treeNodes.map((n: any) => [n.user_id, n]));
 
-  const result = [];
+  const result: Array<{
+    user_id: string;
+    name?: string;
+    left_team: string[];
+    right_team: string[];
+    left_histories: any[];
+    right_histories: any[];
+  }> = [];
 
   for (const node of treeNodes) {
-    const leftTeamIds = getTeamUserIdsFromMap(
-      allNodesMap,
-      node.user_id,
-      "left"
-    );
-    const rightTeamIds = getTeamUserIdsFromMap(
-      allNodesMap,
-      node.user_id,
-      "right"
-    );
+    const leftTeamIds = getTeamUserIdsFromMap(allNodesMap, node.user_id, "left");
+    const rightTeamIds = getTeamUserIdsFromMap(allNodesMap, node.user_id, "right");
 
-    const leftHistories = historiesInWindow.filter((h) =>
-      leftTeamIds.includes(h.user_id)
-    );
-    const rightHistories = historiesInWindow.filter((h) =>
-      rightTeamIds.includes(h.user_id)
-    );
+    const leftHistories = historiesInWindow.filter((h) => leftTeamIds.includes(h.user_id));
+    const rightHistories = historiesInWindow.filter((h) => rightTeamIds.includes(h.user_id));
 
     result.push({
       user_id: node.user_id,
@@ -225,160 +224,131 @@ export async function getUserTeamsAndHistories() {
   return result;
 }
 
-// ✅ Run Matching Bonus
+// Run Matching Bonus
 export async function runMatchingBonus() {
   try {
+    await connectDB();
     const teamsAndHistories = await getUserTeamsAndHistories();
 
     for (const u of teamsAndHistories) {
-      // console.log("------------------------------------------------");
-      // console.log(`User: ${u.user_id} - ${u.name}`);
-      // console.log("Left team IDs:", u.left_team);
-      // console.log("Right team IDs:", u.right_team);
-      // console.log("Left histories:", u.left_histories.map(h => h.user_id));
-      // console.log("Right histories:", u.right_histories.map(h => h.user_id));
-
       const match = u.left_histories.length > 0 && u.right_histories.length > 0;
-      // console.log("Match eligible:", match);
+      if (!match) continue;
 
-      if (match) {
-        // ✅ Check if user is active
-        const node = await TreeNode.findOne({ user_id: u.user_id });
-        if (!node || node.status !== "active") continue;
+      const node = (await TreeNode.findOne({ user_id: u.user_id }).lean()) as any;
+      if (!node || node.status !== "active") continue;
 
-        // ✅ ✅ NEW INTERNAL ADVANCE CHECK HERE
-        const advancePaid = await checkAdvancePaid(u.user_id);
-        if (!advancePaid.hasPermission) continue;
+      const advancePaid = await checkAdvancePaid(u.user_id);
+      if (!advancePaid.hasPermission) continue;
 
-        const now = new Date();
-        const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
+      const now = new Date();
+      const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
+      const formattedDate = formatDate(now);
 
-        // ✅ Format date
-        const formattedDate = formatDate(now);
+      const wallet = (await Wallet.findOne({ user_id: u.user_id }).lean()) as any;
+      const walletId = wallet ? wallet.wallet_id : null;
 
-        // ✅ Find wallet of the user
-        const wallet = await Wallet.findOne({ user_id: u.user_id });
-        const walletId = wallet ? wallet.wallet_id : null;
+      let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+      if (!wallet || !wallet.pan_verified) payoutStatus = "OnHold";
 
-        let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
-        if (!wallet || !wallet.pan_verified) {
-          payoutStatus = "OnHold";
-        } else {
-          payoutStatus = "Pending"; // All checks passed but not completed until manual approval if needed
-        }
+      const totalAmount = 5000;
+      const withdrawAmount = totalAmount * 0.8;
+      const rewardAmount = totalAmount * 0.1;
+      const tdsAmount = totalAmount * 0.05;
+      const adminCharge = totalAmount * 0.05;
 
-        // ✅ Calculate split amounts
-        const totalAmount = 5000;
-        const withdrawAmount = totalAmount * 0.8; // 80%
-        const rewardAmount = totalAmount * 0.1; // 10%
-        const tdsAmount = totalAmount * 0.05; // 5%
-        const adminCharge = totalAmount * 0.05; // 5%
+      const payout = await DailyPayout.create({
+        transaction_id: payout_id,
+        payout_id,
+        user_id: u.user_id,
+        user_name: u.name,
+        rank: wallet?.rank,
+        wallet_id: walletId,
+        name: "Matching Bonus",
+        title: "Matching Bonus",
+        account_holder_name: wallet?.account_holder_name || "",
+        bank_name: wallet?.bank_name || "",
+        account_number: wallet?.account_number || "",
+        ifsc_code: wallet?.ifsc_code || "",
+        date: formattedDate,
+        time: now.toTimeString().slice(0, 5),
+        available_balance: wallet?.balance || 0,
+        amount: totalAmount,
+        totalamount: totalAmount,
+        withdraw_amount: withdrawAmount,
+        reward_amount: rewardAmount,
+        tds_amount: tdsAmount,
+        admin_charge: adminCharge,
+        to: u.user_id,
+        from: "",
+        transaction_type: "Credit",
+        status: payoutStatus,
+        details: "Daily Matching Bonus",
+        left_users: u.left_histories.map((h: any) => ({
+          user_id: h.user_id,
+          transaction_id: h.transaction_id,
+          amount: h.amount,
+        })),
+        right_users: u.right_histories.map((h: any) => ({
+          user_id: h.user_id,
+          transaction_id: h.transaction_id,
+          amount: h.amount,
+        })),
+        created_by: "system",
+        last_modified_by: "system",
+        last_modified_at: now,
+      });
 
-        // ✅ Create Daily Payout
-        const payout = await DailyPayout.create({
-          transaction_id: payout_id,
-          // transaction_id: `${txId}-${u.user_id}`,
-          payout_id,
-          user_id: u.user_id,
-          user_name: u.name,
-          rank: wallet?.rank,
-          wallet_id: walletId,
-          name: "Matching Bonus",
-          title: "Matching Bonus",
-          account_holder_name: wallet?.account_holder_name || "",
-          bank_name: wallet?.bank_name || "",
-          account_number: wallet?.account_number || "",
-          ifsc_code: wallet?.ifsc_code || "",
-          date: formattedDate,
-          time: now.toTimeString().slice(0, 5),
-          available_balance: wallet?.balance || 0,
-          amount: totalAmount,
-          totalamount: totalAmount,
-          withdraw_amount: withdrawAmount,
-          reward_amount: rewardAmount,
-          tds_amount: tdsAmount,
-          admin_charge: adminCharge,
-          to: u.user_id,
-          from: "",
-          transaction_type: "Credit",
-          status: payoutStatus,
-          details: "Daily Matching Bonus",
-          left_users: u.left_histories.map((h) => ({
-            user_id: h.user_id,
-            transaction_id: h.transaction_id,
-            amount: h.amount,
-          })),
-          right_users: u.right_histories.map((h) => ({
-            user_id: h.user_id,
-            transaction_id: h.transaction_id,
-            amount: h.amount,
-          })),
+      if (payout) {
+        await History.create({
+          transaction_id: payout.transaction_id,
+          wallet_id: payout.wallet_id,
+          user_id: payout.user_id,
+          user_name: payout.user_name,
+          account_holder_name: payout.account_holder_name,
+          bank_name: payout.bank_name,
+          account_number: payout.account_number,
+          ifsc_code: payout.ifsc_code,
+          date: payout.date,
+          time: payout.time,
+          available_balance: payout.available_balance,
+          amount: payout.amount,
+          total_amount: payout.amount,
+          withdraw_amount: payout.withdraw_amount,
+          reward_amount: payout.reward_amount,
+          tds_amount: payout.tds_amount,
+          admin_charge: payout.admin_charge,
+          to: payout.to,
+          from: payout.from,
+          transaction_type: payout.transaction_type,
+          details: payout.details,
+          status: payout.status,
+          first_payment: false,
+          advance: false,
+          ischecked: false,
           created_by: "system",
           last_modified_by: "system",
           last_modified_at: now,
         });
 
-        console.log(payout, "payout");
-        // ✅ If payout created, create history record
-        if (payout) {
-          await History.create({
-            transaction_id: payout.transaction_id,
-            wallet_id: payout.wallet_id,
-            user_id: payout.user_id,
-            user_name: payout.user_name,
-            account_holder_name: payout.account_holder_name,
-            bank_name: payout.bank_name,
-            account_number: payout.account_number,
-            ifsc_code: payout.ifsc_code,
-            date: payout.date,
-            time: payout.time,
-            available_balance: payout.available_balance,
-            amount: payout.amount,
-            total_amount: payout.amount,
-            withdraw_amount: payout.withdraw_amount,
-            reward_amount: payout.reward_amount,
-            tds_amount: payout.tds_amount,
-            admin_charge: payout.admin_charge,
-            to: payout.to,
-            from: payout.from,
-            transaction_type: payout.transaction_type,
-            details: payout.details,
-            status: payout.status,
-            first_payment: false,
-            advance: false,
-            ischecked: false,
-            created_by: "system",
-            last_modified_by: "system",
-            last_modified_at: now,
-          });
-
-          await User.findOneAndUpdate(
-            { user_id: u.user_id },
-            { $inc: { score: rewardAmount } }
-          );
-        }
-
-        // ✅ Mark histories as checked
-        await History.updateMany(
-          {
-            _id: {
-              $in: [...u.left_histories, ...u.right_histories].map(
-                (h) => h._id
-              ),
-            },
-          },
-          { $set: { ischecked: true } }
-        );
-
-        console.log(
-          `[Matching Bonus] Payout and History created for user: ${u.user_id}, Wallet: ${walletId}`
-        );
+        await User.findOneAndUpdate({ user_id: u.user_id }, { $inc: { score: rewardAmount } }).exec();
       }
-    }
 
-    // console.log("[Matching Bonus] Execution completed");
+      const historyIds = [...u.left_histories, ...u.right_histories].map((h: any) => h._id).filter(Boolean);
+      if (historyIds.length > 0) {
+        await History.updateMany({ _id: { $in: historyIds } }, { $set: { ischecked: true } }).exec();
+      }
+
+      console.log(`[Matching Bonus] Payout created for ${u.user_id} status=${payout?.status} histories marked: ${historyIds.length}`);
+    }
   } catch (err) {
     console.error("[Matching Bonus] Error:", err);
     throw err;
   }
 }
+
+export default {
+  runMatchingBonus,
+  getUserTeamsAndHistories,
+  getCurrentWindow,
+};
+// ...existing code...
