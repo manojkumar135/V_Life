@@ -42,18 +42,37 @@ export default function TreeView({ id, newuser }: TreeViewProps) {
 
   const API_URL = "/api/tree-operations";
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "text-green-600";
-      case "inactive":
-        return "text-red-600";
-      case "pending":
-        return "text-yellow-500";
-      default:
-        return "text-gray-600";
+const getStatusColor = (status: string, statusNotes?: string) => {
+  // Access user role
+  const { user } = useVLife();
+
+  // Normalize input
+  const normalizedStatus = status?.toLowerCase() || "";
+  const normalizedNotes = statusNotes?.toLowerCase() || "";
+
+  // 🟠⚫ Only visible for admin
+  if (user?.role === "admin") {
+    if (normalizedStatus === "active" && normalizedNotes === "activated by admin") {
+      return "text-orange-500"; // Orange for admin
     }
-  };
+    if (normalizedStatus === "inactive" && normalizedNotes === "deactivated by admin") {
+      return "text-black"; // Black for admin
+    }
+  }
+
+  // ✅ Default for all users
+  switch (normalizedStatus) {
+    case "active":
+      return "text-green-600";
+    case "inactive":
+      return "text-red-600";
+    case "pending":
+      return "text-yellow-500";
+    default:
+      return "text-gray-600";
+  }
+};
+
 
   // fetch full tree for the logged in user
   const fetchTree = useCallback(async () => {

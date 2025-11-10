@@ -28,6 +28,7 @@ async function buildTree(userId) {
     user_id: node.user_id,
     name: node.name,
     user_status: node.status || "inactive",
+    status_notes: user?.status_notes || "",
     rank: user?.rank || "none",
     contact: node.contact || "",
     mail: node.mail || "",
@@ -43,8 +44,8 @@ async function buildTree(userId) {
     left: leftNode,
     right: rightNode,
 
-    infinityLeft:user.infinty_left_count?user.infinty_left_count:0,
-    infinityRight:user.infinty_right_count?user.infinty_right_count:0,
+    infinityLeft: user.infinty_left_count ? user.infinty_left_count : 0,
+    infinityRight: user.infinty_right_count ? user.infinty_right_count : 0,
 
     // ✅ Counts
     leftCount: countMembers(leftNode),

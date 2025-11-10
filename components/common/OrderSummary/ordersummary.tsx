@@ -40,13 +40,19 @@ export default function OrderFormCartSection({
   handleInputChange,
   isFirstOrder,
   createOrder,
+  onPaymentSuccess,
 }: any) {
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"qr" | "upi" | "card">("qr");
+  const [paymentMethod, setPaymentMethod] = useState<"qr" | "upi" | "card">(
+    "qr"
+  );
   const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
-  const [advanceDetails, setAdvanceDetails] = useState({ amount: 0, remaining: 0 });
+  const [advanceDetails, setAdvanceDetails] = useState({
+    amount: 0,
+    remaining: 0,
+  });
 
   const router = useRouter();
   const [address, setAddress] = useState("");
@@ -155,9 +161,7 @@ export default function OrderFormCartSection({
     }
   };
 
-  const finalAmount = isFirstOrder
-    ? advanceDetails.remaining
-    : getTotalPrice();
+  const finalAmount = isFirstOrder ? advanceDetails.remaining : getTotalPrice();
 
   const handlePaymentInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -425,21 +429,23 @@ export default function OrderFormCartSection({
                 {/* Totals */}
                 <div className="xl:pt-4 xl:border-t fixed bottom-0 left-0 right-0 max-lg:bg-white max-lg:shadow-[0_-4px_6px_rgba(0,0,0,0.1)] max-lg:rounded-t-xl">
                   <div className="px-6 py-4 bg-white -mt-4">
-                    {isFirstOrder && hasPaidAdvance && advanceDetails.amount > 0 && (
-                      <>
-                        <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
-                          <span>Subtotal</span>
-                          <span className="font-semibold">
-                            ₹ {getTotalPrice().toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-sm text-red-500 mt-1">
-                          <span>Advance Paid</span>
-                          <span>- ₹ {advanceDetails.amount.toFixed(2)}</span>
-                        </div>
-                        <div className="border-t border-gray-200 my-3"></div>
-                      </>
-                    )}
+                    {isFirstOrder &&
+                      hasPaidAdvance &&
+                      advanceDetails.amount > 0 && (
+                        <>
+                          <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
+                            <span>Subtotal</span>
+                            <span className="font-semibold">
+                              ₹ {getTotalPrice().toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm text-red-500 mt-1">
+                            <span>Advance Paid</span>
+                            <span>- ₹ {advanceDetails.amount.toFixed(2)}</span>
+                          </div>
+                          <div className="border-t border-gray-200 my-3"></div>
+                        </>
+                      )}
 
                     <div className="flex justify-between items-center text-lg md:text-xl font-bold text-gray-900">
                       <span>Total Amount</span>
@@ -559,6 +565,9 @@ export default function OrderFormCartSection({
             console.log("✅ Payment successful:", res);
             await createOrder(finalAmount, res);
             setShowPayment(false);
+            if (onPaymentSuccess) {
+              onPaymentSuccess();
+            }
           }}
           onClose={() => {
             setShowPayment(false);

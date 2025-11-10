@@ -66,6 +66,19 @@ export default function AddOrderPage() {
   const { user, setUser, updateUserCart } = useVLife();
   const router = useRouter();
 
+  
+const handlePaymentSuccess = () => {
+  // 1️⃣ Start loader
+  setShowCart(false)
+  setLoading(true);
+
+  // 2️⃣ Wait for 3 seconds, then redirect
+  setTimeout(() => {
+    setLoading(false);
+    router.push("/orders");
+  }, 3000);
+};
+
   // console.log(user);
 
   const [loading, setLoading] = useState(false);
@@ -187,6 +200,7 @@ export default function AddOrderPage() {
     const checkAdvancePayment = async () => {
       try {
         const result = await hasAdvancePaid(user.user_id, 10000);
+        // console.log(result)
         setAdvancePaid(result.hasAdvance);
         if (result.hasAdvance) {
           setAdvanceDetails({
@@ -583,6 +597,8 @@ const getTotalBV = () =>
               handleInputChange={handleInputChange}
               isFirstOrder={isFirstOrder}
               createOrder={createOrder}
+                onPaymentSuccess={handlePaymentSuccess} 
+
             />
           </div>
         </div>

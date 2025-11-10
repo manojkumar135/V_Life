@@ -6,22 +6,115 @@ import { MdNotificationsNone, MdDelete } from "react-icons/md";
 import { HiOutlineMenuAlt2 } from "react-icons/hi";
 import { IoClose } from "react-icons/io5";
 import { useVLife } from "@/store/context";
+import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 
 export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const { user } = useVLife();
 
   const [showModal, setShowModal] = useState(false);
-  const [alerts, setAlerts] = useState([
-    { id: 1, message: "Payment received successfully!", seen: false },
-    { id: 2, message: "Your profile was updated.", seen: true },
-    { id: 3, message: "New referral joined your team.", seen: false },
-  ]);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipTimer, setTooltipTimer] = useState<NodeJS.Timeout | null>(null);
 
-  // ✅ Copy user ID
+  // ✅ Fetch alerts
+  const fetchAlerts = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      let url = "/api/alerts-operations?";
+
+      if (user.role === "admin") {
+        // Admin: get alerts where (role=admin & priority=high) OR user_id=user.user_id
+        url += `role=admin&priority=high&user_id=${user.user_id}`;
+      } else {
+        // User: get alerts for their user_id only
+        url += `role=user&user_id=${user.user_id}`;
+      }
+
+      const res = await axios.get(url);
+      if (res.data.success) {
+        const sorted = res.data.data.sort(
+          (a: any, b: any) => Number(a.read) - Number(b.read)
+        );
+        setAlerts(sorted);
+      } else {
+        ShowToast.error(res.data.message || "Failed to load alerts");
+      }
+    } catch (err) {
+      console.error("Fetch Alerts Error:", err);
+      ShowToast.error("Failed to load alerts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch on mount & when user changes
+  useEffect(() => {
+    if (user?.user_id) fetchAlerts();
+  }, [user]);
+
+  // ✅ Mark all alerts as seen when modal opens
+  const markAllAsSeen = async () => {
+    if (!alerts.length) return;
+
+    try {
+      const unseenIds = alerts.filter((a) => !a.read).map((a) => a._id || a.id);
+      if (unseenIds.length > 0) {
+        await axios.patch("/api/alerts-operations", {
+          ids: unseenIds,
+          read: true,
+        });
+        setAlerts((prev) =>
+          prev.map((a) => ({ ...a, read: true }))
+        );
+      }
+    } catch (err) {
+      console.error("Mark all seen failed:", err);
+    }
+  };
+
+  // ✅ Toggle modal and mark all as seen
+  const toggleModal = async () => {
+    setShowModal((prev) => {
+      const newState = !prev;
+      if (!prev && alerts.length > 0) {
+        markAllAsSeen(); // Mark all as seen when opening modal
+      }
+      return newState;
+    });
+  };
+
+  // ✅ Mark individual alert as seen
+  const markAsSeen = async (id: string) => {
+    try {
+      await axios.patch(`/api/alerts-operations?id=${id}`, { read: true });
+      setAlerts((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, read: true } : a))
+      );
+    } catch {
+      // ShowToast.error("Failed to mark alert as read");
+    }
+  };
+
+  // ✅ Delete alert
+  const handleDelete = async (id: string) => {
+    try {
+      setLoading(true);
+      await axios.delete(`/api/alerts-operations?id=${id}`);
+      setAlerts((prev) => prev.filter((a) => a.id !== id));
+      ShowToast.success("Alert deleted");
+      setShowModal(false);
+    } catch {
+      ShowToast.error("Failed to delete alert");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Copy User ID
   const handleCopy = async () => {
     if (!user?.user_id) return;
     try {
@@ -32,24 +125,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
     }
   };
 
-  // ✅ Toggle modal
-  const toggleModal = () => setShowModal((prev) => !prev);
-
-  // ✅ Mark alert as seen
-  const markAsSeen = (id: number) => {
-    setAlerts((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, seen: true } : a))
-    );
-  };
-
-  // ✅ Delete alert
-  const handleDelete = (id: number) => {
-    setAlerts((prev) => prev.filter((a) => a.id !== id));
-  };
-
-  const unseenCount = alerts.filter((a) => !a.seen).length;
-
-  // ✅ Tooltip delay logic
+  // Tooltip show/hide logic
   const handleMouseEnter = () => {
     const timer = setTimeout(() => setShowTooltip(true), 700);
     setTooltipTimer(timer);
@@ -58,6 +134,8 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
     if (tooltipTimer) clearTimeout(tooltipTimer);
     setShowTooltip(false);
   };
+
+  const unseenCount = alerts.filter((a) => !a.read).length;
 
   return (
     <header className="flex items-center justify-between w-full px-4 py-2 h-[60px] pt-3">
@@ -100,7 +178,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           )}
         </button>
 
-        {/* 🧾 Modal */}
+        {/* 🧾 Notifications Modal */}
         {showModal && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
@@ -110,7 +188,6 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
               className="bg-white rounded-lg shadow-lg relative p-6 h-4/5 w-5/7 max-sm:h-6/7 max-md:w-11/12"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* ❌ Close Button */}
               <button
                 className="absolute top-3 right-3 text-gray-500 hover:text-red-600 cursor-pointer"
                 onClick={toggleModal}
@@ -121,29 +198,47 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
               <h2 className="text-xl font-semibold mb-4">Notifications</h2>
 
               <div className="text-sm text-gray-700 h-8/9 overflow-y-auto border-t border-gray-200 pt-2">
-                {alerts.length > 0 ? (
+                {loading ? (
+                  <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                    Loading...
+                  </div>
+                ) : alerts.length > 0 ? (
                   alerts.map((alert) => (
                     <div
-                      key={alert.id}
-                      onClick={() => markAsSeen(alert.id)}
-                      className={`flex justify-between items-center px-4 py-2 border-b last:border-0 cursor-pointer transition-colors ${
-                        alert.seen
-                          ? "bg-gray-50 text-gray-500"
-                          : "bg-white hover:bg-blue-50 text-gray-800"
+                      key={alert._id || alert.id}
+                      onClick={() => {
+                        markAsSeen(alert._id || alert.id);
+                        if (alert.link) window.location.href = alert.link;
+                      }}
+                      className={`flex justify-between items-start p-4 mb-3 rounded-lg border border-gray-200 border-l-4 cursor-pointer transition-colors shadow-sm ${
+                        alert.read
+                          ? "bg-gray-50 text-gray-500 border-l-gray-400"
+                          : "bg-white hover:bg-blue-50 text-gray-800 border-l-blue-500"
                       }`}
                     >
-                      <span
-                        className={`text-sm ${
-                          alert.seen ? "font-normal" : "font-semibold"
-                        }`}
-                      >
-                        {alert.message}
-                      </span>
+                      <div className="flex flex-col flex-grow pr-3">
+                        <span
+                          className={`text-sm mb-1 ${
+                            alert.read ? "font-normal" : "font-semibold"
+                          }`}
+                        >
+                          {alert.title || "Notification"}
+                        </span>
+                        {alert.description && (
+                          <p className="text-xs text-gray-600 mb-1 line-clamp-2">
+                            {alert.description}
+                          </p>
+                        )}
+                        <span className="text-[11px] text-gray-400">
+                          {alert.date || ""}
+                        </span>
+                      </div>
+
                       <MdDelete
-                        className="text-gray-400 hover:text-red-500 cursor-pointer"
+                        className="text-red-400 hover:text-red-600 cursor-pointer flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDelete(alert.id);
+                          handleDelete(alert._id || alert.id);
                         }}
                         size={18}
                       />
@@ -159,7 +254,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           </div>
         )}
 
-        {/* 👤 User Avatar with tooltip */}
+        {/* 👤 User Avatar */}
         <div
           className="relative flex items-center justify-center"
           onMouseEnter={handleMouseEnter}

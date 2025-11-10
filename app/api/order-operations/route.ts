@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import { Order } from "@/models/order";
 import { User } from "@/models/user";
 import { History } from "@/models/history";
+import { Alert } from "@/models/alert";
 
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
@@ -37,6 +38,7 @@ interface OrderPayload {
   address: string;
   payment_date: string;
   amount?: number;
+  final_amount: number;
   items: OrderItem[];
   created_at?: Date;
   created_by?: string;
@@ -103,7 +105,7 @@ export async function POST(request: Request) {
           .join("-"),
         time: new Date().toLocaleTimeString(),
         available_balance: user.wallet_balance || 0,
-        amount,
+        amount:body.final_amount,
         transaction_type: "Debit",
         details: body.is_first_order
           ? "Order Payment (₹10,000 Advance Deducted)"
@@ -118,7 +120,7 @@ export async function POST(request: Request) {
       user.bv = (user.bv || 0) + totalBV;
       await user.save();
 
-// update self_bv (user's own BV)
+      // update self_bv (user's own BV)
       user.self_bv = (user.self_bv || 0) + totalBV;
 
       await user.save();
@@ -159,8 +161,34 @@ export async function POST(request: Request) {
           }
         }
       }
-
     }
+
+    const alertDate = new Date();
+    const formattedDate = alertDate
+      .toISOString()
+      .split("T")[0]
+      .split("-")
+      .reverse()
+      .join("-"); // 10-11-2025 format
+
+      console.log(formattedDate)
+
+    await Alert.create({
+      // alert_id: `AL${Date.now()}`,
+      user_id: user.user_id,
+      user_contact: user.contact || "",
+      user_email: user.mail || "",
+      user_status: user.user_status || "active",
+      title: "New Order Placed",
+      description: `A new order has been placed by user ID ${user.user_id}.`,
+      role: "admin",
+      link: "/orders",
+      related_id: newOrder.order_id,
+      alert_type: "success",
+      date: formattedDate,
+      priority: "high",
+      delivered_via: "system",
+    });
 
     return NextResponse.json(
       { success: true, data: newOrder, addedBV: totalBV },

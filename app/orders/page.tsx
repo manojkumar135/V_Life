@@ -61,6 +61,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const checkAdvancePayment = async () => {
       const paid = await hasAdvancePaid(user_id, 10000);
+      console.log(paid)
       setHasPaidAdvance(paid.hasPermission);
 
       if (!paid.hasPermission) {
@@ -257,7 +258,7 @@ export default function OrdersPage() {
           showAddButton={
             user?.role === "admin"
               ? true
-              : user?.role === "user" && user?.status === "active"
+              : user?.role === "user" && user?.status.toLowerCase() === "active"
               ? hasPaidAdvance
               : false
           }

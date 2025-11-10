@@ -12,6 +12,8 @@ export interface TreeNode {
   user_id: string;
   name: string;
   user_status: string;
+  status_notes?: string; 
+
   rank?: string;
   contact?: string;
   mail?: string;
@@ -30,7 +32,7 @@ export interface TreeNode {
 
 interface Props {
   node: TreeNode;
-  getColor: (status: string) => string;
+getColor: (status: string, statusNotes?: string) => string;
   highlightedId?: string | null;
   level?: number;
   maxLevel?: number;
@@ -127,75 +129,82 @@ const BinaryTreeNode: React.FC<Props> = ({
     hoverTimeoutRef.current = setTimeout(() => setHovered(false), 100);
   };
 
- // ---------------- Improved tooltip positioning ----------------
-useEffect(() => {
-  if (!hovered) return;
+  // ---------------- Improved tooltip positioning ----------------
+  useEffect(() => {
+    if (!hovered) return;
 
-  const updatePos = () => {
-    if (!nodeRef.current || !tooltipRef.current) return;
+    const updatePos = () => {
+      if (!nodeRef.current || !tooltipRef.current) return;
 
-    const nodeRect = nodeRef.current.getBoundingClientRect();
-    // measure tooltip using its current size
-    const tooltipRect = tooltipRef.current.getBoundingClientRect();
+      const nodeRect = nodeRef.current.getBoundingClientRect();
+      // measure tooltip using its current size
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-    const MARGIN = 8; // margin from viewport edge
-    const scrollY = window.scrollY || window.pageYOffset || 0;
-    const scrollX = window.scrollX || window.pageXOffset || 0;
+      const MARGIN = 8; // margin from viewport edge
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      const scrollX = window.scrollX || window.pageXOffset || 0;
 
-    // Horizontal center relative to node
-    let left = nodeRect.left + nodeRect.width / 2 + scrollX - tooltipRect.width / 2;
-    // Clamp horizontally to viewport with margin
-    left = Math.min(Math.max(left, MARGIN + scrollX), window.innerWidth - tooltipRect.width - MARGIN + scrollX);
+      // Horizontal center relative to node
+      let left =
+        nodeRect.left + nodeRect.width / 2 + scrollX - tooltipRect.width / 2;
+      // Clamp horizontally to viewport with margin
+      left = Math.min(
+        Math.max(left, MARGIN + scrollX),
+        window.innerWidth - tooltipRect.width - MARGIN + scrollX
+      );
 
-    // Calculate available vertical space (in viewport coordinates)
-    const spaceBelow = window.innerHeight - nodeRect.bottom - MARGIN;
-    const spaceAbove = nodeRect.top - MARGIN;
+      // Calculate available vertical space (in viewport coordinates)
+      const spaceBelow = window.innerHeight - nodeRect.bottom - MARGIN;
+      const spaceAbove = nodeRect.top - MARGIN;
 
-    let top: number;
-    let preferAbove = false;
+      let top: number;
+      let preferAbove = false;
 
-    // Prefer placing below if it fits
-    if (spaceBelow >= tooltipRect.height) {
-      top = nodeRect.bottom + MARGIN + scrollY;
-    } else if (spaceAbove >= tooltipRect.height) {
-      // else place above if it fits there
-      top = nodeRect.top - tooltipRect.height - MARGIN + scrollY;
-      preferAbove = true;
-    } else {
-      // If neither side fully fits, clamp inside viewport:
-      // prefer below but clamp between top and bottom margins
-      const desiredBelow = nodeRect.bottom + MARGIN + scrollY;
-      const minTop = scrollY + MARGIN;
-      const maxTop = scrollY + window.innerHeight - tooltipRect.height - MARGIN;
-      top = Math.min(Math.max(desiredBelow, minTop), maxTop);
-      // if clamped to top region, it effectively becomes "above-like"
-      preferAbove = top < nodeRect.bottom + scrollY;
-    }
+      // Prefer placing below if it fits
+      if (spaceBelow >= tooltipRect.height) {
+        top = nodeRect.bottom + MARGIN + scrollY;
+      } else if (spaceAbove >= tooltipRect.height) {
+        // else place above if it fits there
+        top = nodeRect.top - tooltipRect.height - MARGIN + scrollY;
+        preferAbove = true;
+      } else {
+        // If neither side fully fits, clamp inside viewport:
+        // prefer below but clamp between top and bottom margins
+        const desiredBelow = nodeRect.bottom + MARGIN + scrollY;
+        const minTop = scrollY + MARGIN;
+        const maxTop =
+          scrollY + window.innerHeight - tooltipRect.height - MARGIN;
+        top = Math.min(Math.max(desiredBelow, minTop), maxTop);
+        // if clamped to top region, it effectively becomes "above-like"
+        preferAbove = top < nodeRect.bottom + scrollY;
+      }
 
-    // apply position
-    setTooltipPos({ top, left });
+      // apply position
+      setTooltipPos({ top, left });
 
-    // optional: store whether placed above to allow arrow styling
-    if (tooltipRef.current) {
-      tooltipRef.current.setAttribute("data-above", preferAbove ? "true" : "false");
-    }
-  };
+      // optional: store whether placed above to allow arrow styling
+      if (tooltipRef.current) {
+        tooltipRef.current.setAttribute(
+          "data-above",
+          preferAbove ? "true" : "false"
+        );
+      }
+    };
 
-  // initial set
-  updatePos();
+    // initial set
+    updatePos();
 
-  // update on window resize / scroll (use capture for scroll to catch ancestors)
-  window.addEventListener("resize", updatePos);
-  window.addEventListener("scroll", updatePos, true);
+    // update on window resize / scroll (use capture for scroll to catch ancestors)
+    window.addEventListener("resize", updatePos);
+    window.addEventListener("scroll", updatePos, true);
 
-  // cleanup
-  return () => {
-    window.removeEventListener("resize", updatePos);
-    window.removeEventListener("scroll", updatePos, true);
-  };
-  // include node.user_id so position recalculates when hovering a different node
-}, [hovered, node.user_id]);
-
+    // cleanup
+    return () => {
+      window.removeEventListener("resize", updatePos);
+      window.removeEventListener("scroll", updatePos, true);
+    };
+    // include node.user_id so position recalculates when hovering a different node
+  }, [hovered, node.user_id]);
 
   // ✅ Long press detection for mobile (Admin only)
   const handleTouchStart = () => {
@@ -220,7 +229,7 @@ useEffect(() => {
         onMouseLeave={handleMouseLeave}
       >
         <FaUserCircle
-          className={`${getColor(node.user_status)} ${
+          className={`${getColor(node.user_status, node.status_notes)} ${
             isHighlighted ? "ring-4 ring-blue-700 rounded-full" : "mt-1"
           } cursor-pointer transition-transform active:scale-90`}
           size={35}
@@ -260,7 +269,7 @@ useEffect(() => {
           </div>
           <div className="flex">
             <strong className="w-20">Status:</strong>
-            <span className={`${getColor(node.user_status)} capitalize`}>
+            <span className={`${getColor(node.user_status,node.status_notes)} capitalize`}>
               {node.user_status}
             </span>
           </div>
@@ -324,21 +333,19 @@ useEffect(() => {
             <strong className="w-20">SV:</strong>
             <span>{node.sv ?? 0}</span>
           </div>
-          {node.infinityLeft!= null && (
+          {node.infinityLeft != null && (
             <div className="flex">
               <strong className="w-20">Left Infinity:</strong>
-              <span>{node.infinityLeft?? 0}</span>
+              <span>{node.infinityLeft ?? 0}</span>
             </div>
           )}
-          {node.infinityRight!= null && (
+          {node.infinityRight != null && (
             <div className="flex">
               <strong className="w-20">Right Infinity:</strong>
               <span>{node.infinityRight ?? 0}</span>
             </div>
           )}
         </div>
-        
-        
       )}
 
       {/* Children */}
