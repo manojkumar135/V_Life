@@ -21,6 +21,18 @@ import {
 } from "react-icons/fa";
 import { MdOutlineCheckCircle } from "react-icons/md";
 
+interface DashboardSummary {
+  user_id: string;
+  totalPayout: number;
+  selfPV: number;
+  purchaseCount: number;
+  rewardValue: number;
+  matchingBonus: number;
+  infinityBonus: number;
+  directTeamSales: number;
+  infinityTeamSales: number;
+}
+
 interface LinkButtonProps {
   text: string;
   onClick: () => void;
@@ -41,6 +53,7 @@ const DashboardPage: React.FC = () => {
   const router = useRouter();
 
   const [showAlert, setShowAlert] = useState(false);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
 
   useEffect(() => {
     const checkAdvancePayment = async () => {
@@ -64,20 +77,42 @@ const DashboardPage: React.FC = () => {
   // console.log(showAlert)
   // console.log(user.rank);
 
-   /* ------------ Maverick Link Actions ------------ */
+  useEffect(() => {
+    const fetchDashboardSummary = async () => {
+      if (!user_id) return;
+      try {
+        const res = await axios.get(
+          `/api/dashboard-operations/purchase-count?user_id=${user_id}`
+        );
+
+        console.log("Dashboard Summary Response:", res.data);
+        if (res.data.success) {
+          setSummary(res.data.data);
+        } else {
+          setSummary(null);
+        }
+      } catch (err) {
+        console.error("Error fetching dashboard summary:", err);
+        setSummary(null);
+      }
+    };
+
+    fetchDashboardSummary();
+  }, [user_id]);
+
+  /* ------------ Maverick Link Actions ------------ */
   const handleCopyLink = async (position: "left" | "right") => {
     const link = `https://v-life-gules.vercel.app/auth/register?referBy=${user_id}&position=${position}`;
     await navigator.clipboard.writeText(link);
     // Determine organization name based on position
-  const orgName = position === "left" ? "Organization 1" : "Organization 2";
+    const orgName = position === "left" ? "Organization 1" : "Organization 2";
 
-  showToast.success(`Copied ${orgName} link to share`)
+    showToast.success(`Copied ${orgName} link to share`);
   };
 
- const handleShopping = () => {
-  router.push(showAlert ? "/orders" : "/orders/addorder");
-};
-
+  const handleShopping = () => {
+    router.push(showAlert ? "/orders" : "/orders/addorder");
+  };
 
   return (
     <Layout>
@@ -88,7 +123,7 @@ const DashboardPage: React.FC = () => {
           message={
             <>
               To activate your account, please pay{" "}
-              <span className="font-semibold text-lg">₹10,000</span> as prepaid.
+              <span className="font-semibold text-lg">₹ 10,000</span> as prepaid.
               This will be adjusted in your first order.
             </>
           }
@@ -178,13 +213,13 @@ const DashboardPage: React.FC = () => {
                     <span className="w-3 mx-1 text-center">:</span>
                     <span>{user?.activated_date || "N/A"}</span>
                   </div>
-                  <div className="flex items-center">
+                  {/* <div className="flex items-center">
                     <span className="font-semibold w-27 text-left ">
                       Last Order Date
                     </span>
                     <span className="w-3 mx-1 text-center">:</span>
                     <span>--</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
@@ -252,7 +287,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               </InfoCard>
 
-            {/* --- Maverick Links --- */}
+              {/* --- Maverick Links --- */}
               <InfoCard title="Maverick Links">
                 <LinkButton
                   text="JOIN ORGANISATION 1"
@@ -280,38 +315,42 @@ const DashboardPage: React.FC = () => {
                 <DashBox
                   icon={<FaRupeeSign />}
                   title="Total Payout"
-                  value="0.00"
+                  value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
                 />
-                <DashBox icon={<FaUser />} title="Self PV" value="0" />
+                <DashBox
+                  icon={<FaUser />}
+                  title="Self PV"
+                  value={summary?.selfPV?.toString() || "0"}
+                />
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Purchase Countdown"
-                  value="1"
+                  value={summary?.purchaseCount?.toString() || "0"}
                 />
                 <DashBox
                   icon={<FaWallet />}
                   title="Reward Value"
-                  value="0.00"
+                  value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Matching Bonus"
-                  value="0.00"
+                  value={`₹ ${summary?.matchingBonus?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Infinity Bonus"
-                  value="0.00"
+                  value={`₹ ${summary?.infinityBonus?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Direct Team Sales"
-                  value="0.00"
+                  value={`₹  ${summary?.directTeamSales?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Infinity Team Sales"
-                  value="0.00"
+                  value={`₹ ${summary?.infinityTeamSales?.toFixed(2) || "0.00"}`}
                 />
                 {/* <DashBox
                   icon={<FaShoppingBag />}
@@ -355,7 +394,6 @@ const InfoCard = ({
   </div>
 );
 
-
 const StatusItem = ({ label, value }: { label: string; value?: string }) => {
   const hasValue = Boolean(value);
 
@@ -364,7 +402,7 @@ const StatusItem = ({ label, value }: { label: string; value?: string }) => {
       <span>{label}</span>
       {hasValue ? (
         <span className="text-green-500 font-semibold">
-          <TiTick size={25} className="w-6 h-6"/>
+          <TiTick size={25} className="w-6 h-6" />
         </span>
       ) : (
         <span className="text-red-500 font-semibold">N/A</span>
@@ -388,7 +426,6 @@ const LinkButton = ({
     {text} <FaLink />
   </button>
 );
-
 
 const DashBox = ({
   icon,

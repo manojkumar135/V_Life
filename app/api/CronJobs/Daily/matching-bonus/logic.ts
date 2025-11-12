@@ -202,6 +202,7 @@ function getTeamUserIdsFromMap(
     if (currentNode.right) queue.push(currentNode.right);
   }
 
+
   return result;
 }
 
@@ -283,6 +284,7 @@ export async function runMatchingBonus() {
   try {
     await connectDB();
     const teamsAndHistories = await getUserTeamsAndHistories();
+    
 
     let totalPayouts = 0;
 
