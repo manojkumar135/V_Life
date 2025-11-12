@@ -8,6 +8,7 @@ import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { Alert } from "@/models/alert";
 
 /**
  * Helper - format date as DD-MM-YYYY
@@ -206,6 +207,8 @@ export async function runDirectSalesBonus() {
       return;
     }
 
+    let totalPayouts = 0;
+
     for (const order of orders) {
       try {
         const referBy = order.referBy;
@@ -287,7 +290,7 @@ export async function runDirectSalesBonus() {
         // Create DailyPayout for referBy
         const payout = await DailyPayout.create({
           // transaction_id: `${txId}-${node.user_id}`,
-          transaction_id:payout_id,
+          transaction_id: payout_id,
           payout_id,
           user_id: referBy,
           user_name: node?.name || "",
@@ -322,6 +325,8 @@ export async function runDirectSalesBonus() {
 
         // Create History record if payout created
         if (payout) {
+          totalPayouts++;
+
           await History.create({
             transaction_id: payout.transaction_id,
             wallet_id: payout.wallet_id,
@@ -358,6 +363,25 @@ export async function runDirectSalesBonus() {
             { user_id: referBy },
             { $inc: { score: rewardAmount } }
           );
+
+          await Alert.create({
+            user_id: referBy,
+            user_name: node?.name,
+            user_contact: node?.contact,
+            user_email: node?.mail,
+            user_status: node?.status || "active",
+            related_id: payout.payout_id,
+            link: "/wallet/payout/daily",
+            title: "Direct Sales Bonus Released 🎉",
+            description: `You earned ₹${totalAmount.toLocaleString()} from Direct Sales Bonus on order ${
+              order.order_id
+            }.`,
+            role: "user",
+            priority: "medium",
+            read: false,
+            date: formattedDate,
+            created_at: now,
+          });
         }
 
         // Mark order as processed for direct sales bonus
@@ -368,7 +392,7 @@ export async function runDirectSalesBonus() {
 
         await History.findOneAndUpdate(
           { order_id: order.order_id },
-          { $set: {ischecked: true, last_modified_at: new Date() } }
+          { $set: { ischecked: true, last_modified_at: new Date() } }
         );
       } catch (errInner) {
         console.error(
@@ -384,6 +408,19 @@ export async function runDirectSalesBonus() {
           );
         } catch {}
       }
+    }
+
+    if (totalPayouts > 0) {
+      await Alert.create({
+        role: "admin",
+        title: "Direct Sales Bonus Payouts Released",
+        description: `${totalPayouts} direct sales bonus payout(s) have been successfully processed.`,
+        priority: "high",
+        read: false,
+        link: "/wallet/payout/daily",
+        date: formatDate(new Date()),
+        created_at: new Date(),
+      });
     }
   } catch (err) {
     console.error("[Direct Sales Bonus] Error:", err);

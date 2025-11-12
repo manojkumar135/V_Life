@@ -1,4 +1,3 @@
-// ...existing code...
 import { connectDB } from "@/lib/mongodb";
 import { History } from "@/models/history";
 import { DailyPayout } from "@/models/payout";
@@ -7,6 +6,7 @@ import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { Alert } from "@/models/alert";
 
 function formatDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, "0");
@@ -24,7 +24,7 @@ async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
     };
   }
 
-  const user = await User.findOne({ user_id }).lean() as any;
+  const user = (await User.findOne({ user_id }).lean()) as any;
   if (!user) {
     return {
       hasAdvance: false,
@@ -33,10 +33,10 @@ async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
     };
   }
 
-  const historyRecord = await History.findOne({
+  const historyRecord = (await History.findOne({
     user_id,
     amount: { $gte: minAmount },
-  }).lean() as any;
+  }).lean()) as any;
 
   const hasAdvance = !!historyRecord;
 
@@ -61,18 +61,48 @@ export function getCurrentWindow() {
   if (istHours < 12) {
     // 12:00 AM - 11:59 AM IST -> UTC 00:00 - 05:59
     start = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0)
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        0,
+        0,
+        0
+      )
     );
     end = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 5, 59, 59, 999)
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        5,
+        59,
+        59,
+        999
+      )
     );
   } else {
     // 12:00 PM - 11:59 PM IST -> UTC 06:00 - 17:59
     start = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 6, 0, 0)
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        6,
+        0,
+        0
+      )
     );
     end = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 17, 59, 59, 999)
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        17,
+        59,
+        59,
+        999
+      )
     );
   }
 
@@ -189,15 +219,24 @@ export async function getUserTeamsAndHistories() {
   }).lean()) as any[];
 
   // DEBUG: helpful diagnostics for missing records
-  console.log(`[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`);
-  console.log(`[Matching Bonus] historiesInWindow count: ${historiesInWindow.length}`);
+  console.log(
+    `[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`
+  );
+  console.log(
+    `[Matching Bonus] historiesInWindow count: ${historiesInWindow.length}`
+  );
 
   const treeNodes = (await TreeNode.find({}).lean()) as any[];
-  const allNodesMap = new Map<string, any>(treeNodes.map((n: any) => [n.user_id, n]));
+  const allNodesMap = new Map<string, any>(
+    treeNodes.map((n: any) => [n.user_id, n])
+  );
 
   const result: Array<{
     user_id: string;
     name?: string;
+    contact?: string;
+    mail?: string;
+    status?: string;
     left_team: string[];
     right_team: string[];
     left_histories: any[];
@@ -205,15 +244,30 @@ export async function getUserTeamsAndHistories() {
   }> = [];
 
   for (const node of treeNodes) {
-    const leftTeamIds = getTeamUserIdsFromMap(allNodesMap, node.user_id, "left");
-    const rightTeamIds = getTeamUserIdsFromMap(allNodesMap, node.user_id, "right");
+    const leftTeamIds = getTeamUserIdsFromMap(
+      allNodesMap,
+      node.user_id,
+      "left"
+    );
+    const rightTeamIds = getTeamUserIdsFromMap(
+      allNodesMap,
+      node.user_id,
+      "right"
+    );
 
-    const leftHistories = historiesInWindow.filter((h) => leftTeamIds.includes(h.user_id));
-    const rightHistories = historiesInWindow.filter((h) => rightTeamIds.includes(h.user_id));
+    const leftHistories = historiesInWindow.filter((h) =>
+      leftTeamIds.includes(h.user_id)
+    );
+    const rightHistories = historiesInWindow.filter((h) =>
+      rightTeamIds.includes(h.user_id)
+    );
 
     result.push({
       user_id: node.user_id,
       name: node.name,
+      contact: node.contact,
+      mail: node.mail,
+      status: node.status,
       left_team: leftTeamIds,
       right_team: rightTeamIds,
       left_histories: leftHistories,
@@ -230,11 +284,15 @@ export async function runMatchingBonus() {
     await connectDB();
     const teamsAndHistories = await getUserTeamsAndHistories();
 
+    let totalPayouts = 0;
+
     for (const u of teamsAndHistories) {
       const match = u.left_histories.length > 0 && u.right_histories.length > 0;
       if (!match) continue;
 
-      const node = (await TreeNode.findOne({ user_id: u.user_id }).lean()) as any;
+      const node = (await TreeNode.findOne({
+        user_id: u.user_id,
+      }).lean()) as any;
       if (!node || node.status !== "active") continue;
 
       const advancePaid = await checkAdvancePaid(u.user_id);
@@ -244,7 +302,9 @@ export async function runMatchingBonus() {
       const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
       const formattedDate = formatDate(now);
 
-      const wallet = (await Wallet.findOne({ user_id: u.user_id }).lean()) as any;
+      const wallet = (await Wallet.findOne({
+        user_id: u.user_id,
+      }).lean()) as any;
       const walletId = wallet ? wallet.wallet_id : null;
 
       let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
@@ -299,6 +359,7 @@ export async function runMatchingBonus() {
       });
 
       if (payout) {
+        totalPayouts++;
         await History.create({
           transaction_id: payout.transaction_id,
           wallet_id: payout.wallet_id,
@@ -330,15 +391,60 @@ export async function runMatchingBonus() {
           last_modified_at: now,
         });
 
-        await User.findOneAndUpdate({ user_id: u.user_id }, { $inc: { score: rewardAmount } }).exec();
+        await User.findOneAndUpdate(
+          { user_id: u.user_id },
+          { $inc: { score: rewardAmount } }
+        ).exec();
+
+        // ✅ Create alert for user
+        await Alert.create({
+          user_id: u.user_id,
+          user_name: u.name,
+          user_contact: u.contact,
+          user_email: u.mail,
+          user_status: u.status || "active",
+          related_id: payout.payout_id,
+          link: "/wallet/payout/daily",
+
+          title: "Matching Bonus Released 🎉",
+          description: `Your matching bonus of ₹${totalAmount.toLocaleString()} has been released.`,
+          role: "user",
+          priority: "medium",
+          read: false,
+          date: formattedDate,
+          created_at: now,
+        });
       }
 
-      const historyIds = [...u.left_histories, ...u.right_histories].map((h: any) => h._id).filter(Boolean);
+      const historyIds = [...u.left_histories, ...u.right_histories]
+        .map((h: any) => h._id)
+        .filter(Boolean);
       if (historyIds.length > 0) {
-        await History.updateMany({ _id: { $in: historyIds } }, { $set: { ischecked: true } }).exec();
+        await History.updateMany(
+          { _id: { $in: historyIds } },
+          { $set: { ischecked: true } }
+        ).exec();
       }
 
-      console.log(`[Matching Bonus] Payout created for ${u.user_id} status=${payout?.status} histories marked: ${historyIds.length}`);
+      console.log(
+        `[Matching Bonus] Payout created for ${u.user_id} status=${payout?.status} histories marked: ${historyIds.length}`
+      );
+      if (totalPayouts > 0) {
+        await Alert.create({
+          role: "admin",
+          title: "Matching Bonus Payouts Released",
+          description: `${totalPayouts} user payout(s) have been successfully released today.`,
+          priority: "high",
+          read: false,
+          link: "/wallet/payout/daily",
+
+          date: formatDate(new Date()),
+          created_at: new Date(),
+        });
+        console.log(
+          `[Matching Bonus] Admin alert created for ${totalPayouts} payouts`
+        );
+      }
     }
   } catch (err) {
     console.error("[Matching Bonus] Error:", err);
@@ -351,4 +457,3 @@ export default {
   getUserTeamsAndHistories,
   getCurrentWindow,
 };
-// ...existing code...

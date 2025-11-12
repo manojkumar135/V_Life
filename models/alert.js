@@ -5,6 +5,7 @@ const alertSchema = new mongoose.Schema(
         alert_id: { type: String, },
 
         user_id: { type: String, },
+        user_name: { type: String, },
         user_contact: { type: String, },
         user_email: { type: String, },
         user_status: { type: String, },
