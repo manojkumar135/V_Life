@@ -77,15 +77,20 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   };
 
   // ✅ Toggle modal and mark all as seen
-  const toggleModal = async () => {
-    setShowModal((prev) => {
-      const newState = !prev;
-      if (!prev && alerts.length > 0) {
-        markAllAsSeen(); // Mark all as seen when opening modal
-      }
-      return newState;
-    });
-  };
+  // ✅ Toggle modal and mark all as seen only when closing
+const toggleModal = async () => {
+  setShowModal((prev) => {
+    const newState = !prev;
+
+    // 🧠 When closing modal (prev = true → newState = false)
+    if (prev && alerts.length > 0) {
+      markAllAsSeen();
+    }
+
+    return newState;
+  });
+};
+
 
   // ✅ Mark individual alert as seen
   const markAsSeen = async (id: string) => {
@@ -195,9 +200,9 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
                 <IoClose size={24} />
               </button>
 
-              <h2 className="text-xl font-semibold mb-4">Notifications</h2>
+              <h2 className="text-xl font-semibold mb-1 lg:mb-3">Notifications</h2>
 
-              <div className="text-sm text-gray-700 h-8/9 overflow-y-auto border-t border-gray-200 pt-2">
+              <div className="text-sm text-gray-700 h-8/9 max-md:h-12/13 overflow-y-auto border-t border-gray-200 pt-1 ">
                 {loading ? (
                   <div className="px-4 py-8 text-center text-gray-500 text-sm">
                     Loading...
@@ -210,7 +215,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
                         markAsSeen(alert._id || alert.id);
                         if (alert.link) window.location.href = alert.link;
                       }}
-                      className={`flex justify-between items-start p-4 mb-3 rounded-lg border border-gray-200 border-l-4 cursor-pointer transition-colors shadow-sm ${
+                      className={`flex justify-between items-start py-3 px-2 mb-4 rounded-lg border border-gray-200 border-l-4 cursor-pointer transition-colors shadow-sm ${
                         alert.read
                           ? "bg-gray-50 text-gray-500 border-l-gray-400"
                           : "bg-white hover:bg-blue-50 text-gray-800 border-l-blue-500"

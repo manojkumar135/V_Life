@@ -5,6 +5,8 @@ import { User } from "@/models/user";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { Wallet } from "@/models/wallet";
+import { Alert } from "@/models/alert";
+
 
 export async function PUT(req) {
   try {
@@ -96,12 +98,34 @@ export async function PUT(req) {
       }
     );
 
+    await Alert.create({
+      user_id: userIdToUpdate,
+      user_name: user.user_name || user.name || "",
+      user_contact: user.user_contact || "",
+      user_email: user.user_email || "",
+      user_status: newStatus,
+      role: "user",
+      priority: "high",
+      title:
+        newStatus === "active"
+          ? "🎉 Account Activated!"
+          : "⚠️ Account Deactivated",
+      message:
+        newStatus === "active"
+          ? "Your account has been successfully activated. You can now place orders and access all features."
+          : "Your account has been deactivated by the admin. Please contact support for more details.",
+      type: "status",
+      link: newStatus === "active" ? "/orders" : null, // ✅ Only add link for active users
+      read: false,
+      date: formattedDate,
+    });
+
+
     // ✅ Include user_id and newStatus in response
     return NextResponse.json({
       success: true,
-      message: `User ${
-        user.user_name || user.name || userIdToUpdate
-      } status updated to ${newStatus}`,
+      message: `User ${user.user_name || user.name || userIdToUpdate
+        } status updated to ${newStatus}`,
       data: {
         user_id: userIdToUpdate,
         new_status: newStatus,

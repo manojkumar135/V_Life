@@ -7,6 +7,8 @@ import TreeNode from "@/models/tree";
 import { Rank } from "@/models/rank";
 import { Wallet } from "@/models/wallet";
 import mongoose from "mongoose";
+import { Alert } from "@/models/alert";
+
 import {
   updateInfinityTeam,
   rebuildInfinity,
@@ -260,50 +262,102 @@ export async function POST(request) {
           Wallet.updateOne({ user_id: body.user_id }, { $set: updateData }),
 
         ]);
+
+        // ✅ Create alert for activation
+        await Alert.create({
+          user_id: user.user_id,
+          user_name: user.user_name || "",
+          user_contact: user.user_contact || "",
+          user_email: user.user_email || "",
+          user_status: "active",
+          role: "user",
+          priority: "high",
+          title: "🎉 Account Activated!",
+          message: `Hi ${user.user_name}, your account is now active. You can start placing orders and earning rewards.`,
+          type: "activation",
+          link: "/orders",
+          read: false,
+          date: (() => {
+            const dd = String(date.getDate()).padStart(2, "0");
+            const mm = String(date.getMonth() + 1).padStart(2, "0");
+            const yyyy = date.getFullYear();
+            return `${dd}-${mm}-${yyyy}`;
+          })(),
+        });
       }
 
       if (user?.referBy) {
-  const referrerId = user.referBy;
-  console.log("\n====================================");
-  console.log("🎯 ADVANCE PAYMENT TRIGGERED FOR:", user.user_id);
-  console.log("👤 Referrer:", referrerId);
+        const referrerId = user.referBy;
+        console.log("\n====================================");
+        console.log("🎯 ADVANCE PAYMENT TRIGGERED FOR:", user.user_id);
+        console.log("👤 Referrer:", referrerId);
 
-  // 1️⃣ Add direct referral (no duplicates)
-  const updateResult = await User.updateOne(
-    { user_id: referrerId, paid_directs: { $ne: user.user_id } },
-    {
-      $addToSet: { paid_directs: user.user_id },
-      $inc: { paid_directs_count: 1 },
-    }
-  );
+        // 1️⃣ Add direct referral (no duplicates)
+        const updateResult = await User.updateOne(
+          { user_id: referrerId, paid_directs: { $ne: user.user_id } },
+          {
+            $addToSet: { paid_directs: user.user_id },
+            $inc: { paid_directs_count: 1 },
+          }
+        );
 
-  console.log("📌 paid_directs update result:", updateResult);
+        console.log("📌 paid_directs update result:", updateResult);
 
-  const refBefore = await User.findOne({ user_id: referrerId });
-  console.log("✅ Updated paid_directs for referrer:", refBefore?.paid_directs);
+        const refBefore = await User.findOne({ user_id: referrerId });
+        console.log("✅ Updated paid_directs for referrer:", refBefore?.paid_directs);
 
-  // 2️⃣ Update Infinity team (referrer + upper chain)
-  console.log("\n🚀 Calling updateInfinityTeam for:", referrerId);
-  await updateInfinityTeam(referrerId);
+        // 2️⃣ Update Infinity team (referrer + upper chain)
+        console.log("\n🚀 Calling updateInfinityTeam for:", referrerId);
+        await updateInfinityTeam(referrerId);
 
-  console.log("🔁 Propagating Infinity to ancestors...");
-  await propagateInfinityUpdateToAncestors(referrerId);
-  console.log("✅ Infinity propagation completed");
+        console.log("🔁 Propagating Infinity to ancestors...");
+        await propagateInfinityUpdateToAncestors(referrerId);
+        console.log("✅ Infinity propagation completed");
 
-  // 3️⃣ Rank validation
-  const referrer = await User.findOne({ user_id: referrerId }, { _id: 0 });
-  if (referrer) {
-    try {
-      console.log("\n🏆 Checking Rank Upgrade for:", referrer.user_id);
-      await checkAndUpgradeRank(referrer);
-      console.log("✅ Rank check completed");
-    } catch (err) {
-      console.error("❌ Rank upgrade error:", err);
-    }
-  }
+        // 3️⃣ Rank validation
+        const referrer = await User.findOne({ user_id: referrerId }, { _id: 0 });
+        if (referrer) {
+          try {
+            console.log("\n🏆 Checking Rank Upgrade for:", referrer.user_id);
+            const oldRank = referrer.rank;
 
-  console.log("====================================\n");
-}
+            await checkAndUpgradeRank(referrer);
+            // Fetch updated rank
+            const updatedReferrer = await User.findOne({ user_id: referrer.user_id });
+            if (updatedReferrer && updatedReferrer.rank !== oldRank) {
+              console.log(`🎉 ${referrer.user_id} achieved new rank: ${updatedReferrer.rank}`);
+
+              // ✅ Create Alert for Rank Achievement
+              await Alert.create({
+                user_id: referrer.user_id,
+                user_name: updatedReferrer.user_name || "",
+                user_contact: updatedReferrer.user_contact || "",
+                user_email: updatedReferrer.user_email || "",
+                user_status: updatedReferrer.user_status || "active",
+                role: "user",
+                priority: "high",
+                title: "🎖️ Rank Achieved!",
+                message: `Congratulations ${updatedReferrer.user_name}! You've achieved Rank ${updatedReferrer.rank}. Keep up the great work!`,
+                type: "achievement",
+                link: "/dashboards",
+                read: false,
+                date: (() => {
+                  const now = new Date();
+                  const dd = String(now.getDate()).padStart(2, "0");
+                  const mm = String(now.getMonth() + 1).padStart(2, "0");
+                  const yyyy = now.getFullYear();
+                  return `${dd}-${mm}-${yyyy}`;
+                })(),
+              });
+            }
+            console.log("✅ Rank check completed");
+          } catch (err) {
+            console.error("❌ Rank upgrade error:", err);
+          }
+        }
+
+        console.log("====================================\n");
+      }
 
 
     }

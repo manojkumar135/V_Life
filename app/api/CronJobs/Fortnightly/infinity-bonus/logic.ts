@@ -250,6 +250,7 @@ export async function runInfinityBonus() {
         date: formatDate(now),
         created_at: now,
       });
+      
       totalCreated++;
       console.log(
         `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (${payout.name} from ${user.user_id})`
