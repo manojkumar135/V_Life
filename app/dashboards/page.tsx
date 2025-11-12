@@ -439,6 +439,6 @@ const DashBox = ({
   <div className=" text-black bg-white rounded-xl p-3 text-center flex flex-col items-center justify-center shadow-[0_4px_10px_rgba(255, 218, 68, 0.2)] border-[1.5px] border-gray-500 hover:scale-[1.01] transition-transform duration-150">
     <div className="text-2xl mb-2 text-yellow-400">{icon}</div>
     <p className="text-xs font-medium">{title}</p>
-    <p className="text-lg font-bold mt-1">{value}</p>
+    <p className="text-lg font-semibold mt-1">{value}</p>
   </div>
 );
