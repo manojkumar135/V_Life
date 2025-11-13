@@ -22,24 +22,35 @@ export async function GET(request: Request) {
 
     // 💰 2️⃣ Total Payout (sum of all payouts)
     const dailyPayoutSum = await DailyPayout.aggregate([
-      { $match: { user_id, status: "Completed" } },
+      { $match: { user_id } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
 
     const weeklyPayoutSum = await WeeklyPayout.aggregate([
-      { $match: { user_id, status: "Completed" } },
+      { $match: { user_id } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
 
     const totalPayout =
       (dailyPayoutSum[0]?.total || 0) + (weeklyPayoutSum[0]?.total || 0);
 
-    // 🎁 3️⃣ Reward Value
-    const rewardSum = await DailyPayout.aggregate([
-      { $match: { user_id, name: "Reward" } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
+    // 🎁 3️⃣ Reward Amount (sum of reward_amount field from both)
+    const [dailyReward, weeklyReward] = await Promise.all([
+      DailyPayout.aggregate([
+        { $match: { user_id } },
+        { $group: { _id: null, total: { $sum: "$reward_amount" } } },
+      ]),
+      WeeklyPayout.aggregate([
+        { $match: { user_id } },
+        { $group: { _id: null, total: { $sum: "$reward_amount" } } },
+      ]),
     ]);
-    const rewardValue = rewardSum[0]?.total || 0;
+
+    const rewardAmount =
+      (dailyReward[0]?.total || 0) + (weeklyReward[0]?.total || 0);
+
+    const rewardValue =
+      (dailyReward[0]?.total || 0) + (weeklyReward[0]?.total || 0);
 
     // ⚙️ 4️⃣ Matching Bonus
     const matchingBonusSum = await DailyPayout.aggregate([
@@ -48,26 +59,27 @@ export async function GET(request: Request) {
     ]);
     const matchingBonus = matchingBonusSum[0]?.total || 0;
 
-    // 💎 5️⃣ Infinity Bonus
-    const infinityBonusSum = await DailyPayout.aggregate([
-      { $match: { user_id, name: "Infinity Bonus" } },
+    // 💎 5️⃣ Infinity Bonus (from Weekly Payouts only)
+    const infinityBonusSum = await WeeklyPayout.aggregate([
+      { $match: { user_id, name: "Infinity Matching Bonus" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
+
     const infinityBonus = infinityBonusSum[0]?.total || 0;
 
     // 👥 6️⃣ Direct Team Sales
     const directTeamSalesSum = await DailyPayout.aggregate([
-      { $match: { user_id, name: "Direct Team Sales" } },
+      { $match: { user_id, name: "Direct Sales Bonus" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
     const directTeamSales = directTeamSalesSum[0]?.total || 0;
 
-    // 🌐 7️⃣ Infinity Team Sales
-    const infinityTeamSalesSum = await DailyPayout.aggregate([
-      { $match: { user_id, name: "Infinity Team Sales" } },
+    // 🌐 7️⃣ Infinity Sales Bonus
+    const infinitySalesBonusSum = await WeeklyPayout.aggregate([
+      { $match: { user_id, name: "Infinity Sales Bonus" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
-    const infinityTeamSales = infinityTeamSalesSum[0]?.total || 0;
+    const infinityTeamSales = infinitySalesBonusSum[0]?.total || 0;
 
     // 📦 8️⃣ Self PV (just an example; replace with actual logic if different)
     const selfPV = purchaseCount * 10; // e.g., 10 PV per order

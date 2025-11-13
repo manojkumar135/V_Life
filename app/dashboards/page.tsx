@@ -11,6 +11,7 @@ import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import showToast from "@/components/common/Toast/toast";
+import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
 
 import {
   FaLink,
@@ -20,6 +21,9 @@ import {
   FaWallet,
 } from "react-icons/fa";
 import { MdOutlineCheckCircle } from "react-icons/md";
+import { RiMoneyRupeeCircleLine } from "react-icons/ri";
+import { MdOutlineAttachMoney } from "react-icons/md";
+import { FaPercent } from "react-icons/fa";
 
 interface DashboardSummary {
   user_id: string;
@@ -54,6 +58,11 @@ const DashboardPage: React.FC = () => {
 
   const [showAlert, setShowAlert] = useState(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [amountSummary, setAmountSummary] = useState({
+    income: 0,
+    purchases: 0,
+    tax: 0,
+  });
 
   useEffect(() => {
     const checkAdvancePayment = async () => {
@@ -100,6 +109,24 @@ const DashboardPage: React.FC = () => {
     fetchDashboardSummary();
   }, [user_id]);
 
+  useEffect(() => {
+    const fetchAmountSummary = async () => {
+      if (!user_id) return;
+      try {
+        const role = user?.role || "user";
+        const res = await axios.get(
+          `/api/dashboard-operations/amount-count?user_id=${user_id}&role=${user.role}`
+        );
+        if (res.data.success) {
+          setAmountSummary(res.data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching amount summary:", err);
+      }
+    };
+    fetchAmountSummary();
+  }, [user_id]);
+
   /* ------------ Maverick Link Actions ------------ */
   const handleCopyLink = async (position: "left" | "right") => {
     const link = `https://v-life-gules.vercel.app/auth/register?referBy=${user_id}&position=${position}`;
@@ -123,15 +150,41 @@ const DashboardPage: React.FC = () => {
           message={
             <>
               To activate your account, please pay{" "}
-              <span className="font-semibold text-lg">₹ 10,000</span> as prepaid.
-              This will be adjusted in your first order.
+              <span className="font-semibold text-lg">₹ 10,000</span> as
+              prepaid. This will be adjusted in your first order.
             </>
           }
           buttonLabel="Pay Now"
           buttonAction={() => router.push("/historys/payAdvance")}
           onClose={() => setShowAlert(false)}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 -mt-5">
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 -mt-5 mb-5">
+          <Card
+            icon={
+              <RiMoneyRupeeCircleLine className="text-green-600" size={35} />
+            }
+            label="Income"
+            amount={`₹ ${amountSummary.income.toFixed(2)}`}
+            className="bg-green-50 border-green-200"
+          />
+          <Card
+            icon={<FaWallet className="text-pink-600" size={30} />}
+            label="Expense"
+            amount={`₹ ${amountSummary.purchases.toFixed(2)}`}
+            className="bg-pink-50 border-pink-200"
+          />
+          {/* <Card
+            icon={<FaPercent className="text-yellow-600" size={30} />}
+            label="Tax Deducted"
+            amount={`₹ ${amountSummary.tax.toFixed(2)}`}
+            className="bg-yellow-50 border-yellow-200"
+          /> */}
+          <TimeRemainingCard />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6  ">
           {/* --- LEFT COLUMN --- */}
           <div className="space-y-6">
             {/* Profile Card */}
@@ -322,6 +375,7 @@ const DashboardPage: React.FC = () => {
                   title="Self PV"
                   value={summary?.selfPV?.toString() || "0"}
                 />
+
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Purchase Countdown"
@@ -350,7 +404,9 @@ const DashboardPage: React.FC = () => {
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Infinity Team Sales"
-                  value={`₹ ${summary?.infinityTeamSales?.toFixed(2) || "0.00"}`}
+                  value={`₹ ${
+                    summary?.infinityTeamSales?.toFixed(2) || "0.00"
+                  }`}
                 />
                 {/* <DashBox
                   icon={<FaShoppingBag />}
@@ -439,6 +495,31 @@ const DashBox = ({
   <div className=" text-black bg-white rounded-xl p-3 text-center flex flex-col items-center justify-center shadow-[0_4px_10px_rgba(255, 218, 68, 0.2)] border-[1.5px] border-gray-500 hover:scale-[1.01] transition-transform duration-150">
     <div className="text-2xl mb-2 text-yellow-400">{icon}</div>
     <p className="text-xs font-medium">{title}</p>
-    <p className="text-lg font-semibold mt-1">{value}</p>
+    <p className="text-md font-semibold mt-1">{value}</p>
+  </div>
+);
+
+// Summary card component
+const Card = ({
+  icon,
+  label,
+  amount,
+  className = "", // allows passing bg, border, etc.
+}: {
+  icon: React.ReactNode;
+  label: string;
+  amount: string;
+  className?: string;
+}) => (
+  <div
+    className={`flex items-center justify-between shadow rounded-lg p-4 border ${className}`}
+  >
+    <div className="flex items-center gap-4">
+      <div className="bg-transparent p-2 rounded-full">{icon}</div>
+      <div>
+        <p className="text-sm text-gray-500">{label}</p>
+        <p className="text-xl font-semibold">{amount}</p>
+      </div>
+    </div>
   </div>
 );

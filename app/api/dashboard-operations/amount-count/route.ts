@@ -17,16 +17,18 @@ export async function GET(request: Request) {
       );
     }
 
-    // 🔍 Filter: admin sees all, user sees own
+    // 🧩 Filter logic
     const filter = role === "admin" ? {} : { user_id };
 
-    // Fetch relevant records
+    // Fetch records
     const records = await History.find(filter, {
       transaction_type: 1,
       amount: 1,
       tds_amount: 1,
       status: 1,
     }).lean();
+
+    // console.log(records, user_id, role,records?.length);
 
     if (!records?.length) {
       return NextResponse.json(
@@ -39,21 +41,20 @@ export async function GET(request: Request) {
     let income = 0;
     let tax = 0;
 
-    // 🔄 Apply role-based logic
+    // 💰 Calculate based on role
     records.forEach((r) => {
-      if (r.status !== "Completed") return;
+      // if (r.status !== "Completed") return;
 
-      // 🧾 Common tax addition
       tax += r.tds_amount || 0;
 
-      if (role === "admin") {
-        // For admin: reverse logic
-        if (r.transaction_type === "Credit") purchases += r.amount || 0; // user paid → admin received
-        if (r.transaction_type === "Debit") income += r.amount || 0; // admin paid user
-      } else {
-        // For normal user
-        if (r.transaction_type === "Debit") purchases += r.amount || 0; // user spent
-        if (r.transaction_type === "Credit") income += r.amount || 0; // user earned
+      if (role === "user") {
+        // user: Credit = income, Debit = expense
+        if (r.transaction_type === "Credit") income += r.amount || 0;
+        if (r.transaction_type === "Debit") purchases += r.amount || 0;
+      } else if (role === "admin") {
+        // admin: Credit = expense, Debit = income
+        if (r.transaction_type === "Credit") purchases += r.amount || 0;
+        if (r.transaction_type === "Debit") income += r.amount || 0;
       }
     });
 

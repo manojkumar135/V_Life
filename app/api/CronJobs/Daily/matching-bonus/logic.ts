@@ -224,8 +224,10 @@ export async function getUserTeamsAndHistories() {
     `[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`
   );
   console.log(
-    `[Matching Bonus] historiesInWindow count: ${historiesInWindow.length}`
+    `[Matching Bonus] historiesInWindow count: ${historiesInWindow}`
   );
+
+  
 
   const treeNodes = (await TreeNode.find({}).lean()) as any[];
   const allNodesMap = new Map<string, any>(
@@ -275,7 +277,7 @@ export async function getUserTeamsAndHistories() {
       right_histories: rightHistories,
     });
   }
-
+// console.log(result, "Matching Bonus Result");
   return result;
 }
 
@@ -290,6 +292,7 @@ export async function runMatchingBonus() {
 
     for (const u of teamsAndHistories) {
       const match = u.left_histories.length > 0 && u.right_histories.length > 0;
+      // console.log(match,"Matching Bonus Check for User:", u.user_id);
       if (!match) continue;
 
       const node = (await TreeNode.findOne({

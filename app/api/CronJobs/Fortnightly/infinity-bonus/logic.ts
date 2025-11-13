@@ -48,6 +48,7 @@ async function getLast15DaysEligiblePayouts() {
     const payoutDate = parseDDMMYYYY(p.date);
     return payoutDate >= start && payoutDate <= now;
   });
+  // console.log(filtered )
 
   console.log(
     `[Infinity Bonus] Found ${filtered.length} payouts (Matching + Direct Sales) in last 15 days`
