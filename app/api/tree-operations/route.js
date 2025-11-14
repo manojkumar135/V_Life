@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
+import infinity from "@/services/infinity";
 
 // 🛠 Recursive builder with counts + User details
 async function buildTree(userId) {
@@ -39,6 +40,7 @@ async function buildTree(userId) {
     sv: user?.sv || 0,
     referBy: user?.referBy || "",
     referrals: user?.referred_users?.length || 0,
+    infinity: user?.infinity ?? "none",
 
     // ✅ Binary structure
     left: leftNode,

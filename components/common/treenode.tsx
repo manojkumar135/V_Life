@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import StatusModal from "@/components/common/userStatusModal";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
+import infinity from "@/services/infinity";
 
 export interface TreeNode {
   user_id: string;
@@ -28,6 +29,7 @@ export interface TreeNode {
   sv?: string;
   infinityLeft?: number;
   infinityRight?: number;
+  infinity?: string;
 }
 
 interface Props {
@@ -309,6 +311,12 @@ const BinaryTreeNode: React.FC<Props> = ({
             <div className="flex">
               <strong className="w-20">Sponsor:</strong>
               <span>{node.referBy}</span>
+            </div>
+          )}
+          {node.infinity && (
+            <div className="flex">
+              <strong className="w-20">Infinity:</strong>
+              <span>{node.infinity}</span>
             </div>
           )}
           {node.parent && (

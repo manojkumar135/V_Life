@@ -12,7 +12,7 @@ export default function RegistrationSuccess() {
   const userId = searchParams.get("userId") || "";
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-[#f8f4ff] p-2 mx-3">
+    <div className="min-h-screen flex justify-center items-center bg-[#f8f4ff] p-2 ">
       <div
         className="absolute top-4 left-4  flex items-center gap-2 cursor-pointer z-30"
         onClick={() => router.push("/")}
@@ -20,7 +20,7 @@ export default function RegistrationSuccess() {
         <IoIosArrowBack size={28} className="text-black" />
         <p className="font-medium text-black">Back</p>
       </div>
-      <div className="bg-white w-full max-w-sm rounded-2xl shadow-lg p-4 text-center">
+      <div className="bg-white w-full max-w-sm rounded-2xl shadow-lg p-4 text-center mx-3">
         {/* Tick Icon */}
         <div className="flex justify-center mb-2 relative">
           <div className="w-18 h-18 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center shadow-lg">

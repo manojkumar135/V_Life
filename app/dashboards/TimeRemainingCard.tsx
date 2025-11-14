@@ -63,13 +63,15 @@ const TimeRemainingCard = () => {
 
   // 🎯 On mount
   useEffect(() => {
-    fetchTeamData();
-    setSecondsLeft(calculateSecondsLeft());
+  if (!user?.user_id) return; // wait until user loads
 
-    // fetch team data every 1 min
-    const interval = setInterval(fetchTeamData, 60000);
-    return () => clearInterval(interval);
-  }, [user]);
+  fetchTeamData();
+  setSecondsLeft(calculateSecondsLeft());
+
+  const interval = setInterval(fetchTeamData, 60000);
+  return () => clearInterval(interval);
+}, [user?.user_id]); // 👈 stable dependency (string), not whole user object
+
 
   // ⏳ Countdown timer
   useEffect(() => {
@@ -114,8 +116,10 @@ const TimeRemainingCard = () => {
         >
           {formatTime(secondsLeft)} hrs
         </p>
-        <p className="text-sm text-gray-500 mt-2 font-semibold">left</p>
+        <p className="text-sm text-gray-600 mt-2 font-semibold">left</p>
       </div>
+
+
 
       {/* Team Counts */}
       {loading ? (
