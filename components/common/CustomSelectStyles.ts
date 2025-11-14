@@ -34,6 +34,12 @@ const customSelectStyles = {
     ...provided,
     zIndex: 9999,
   }),
+
+  singleValue: (provided: any) => ({
+    ...provided,
+    color: "#374151", // <-- FIXED normal dark text
+    fontSize: "1rem",
+  }),
 };
 
 export default customSelectStyles;
