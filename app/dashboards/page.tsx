@@ -14,8 +14,6 @@ import showToast from "@/components/common/Toast/toast";
 import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
 import CryptoJS from "crypto-js";
 
-
-
 import {
   FaLink,
   FaRupeeSign,
@@ -27,8 +25,6 @@ import { MdOutlineCheckCircle } from "react-icons/md";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { MdOutlineAttachMoney } from "react-icons/md";
 import { FaPercent } from "react-icons/fa";
-
-
 
 interface DashboardSummary {
   user_id: string;
@@ -61,8 +57,7 @@ const DashboardPage: React.FC = () => {
   const user_id = user?.user_id || "";
   const router = useRouter();
 
-const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
-
+  const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
 
   const [showAlert, setShowAlert] = useState(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -136,31 +131,32 @@ const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
   }, [user_id]);
 
   /* ------------ Maverick Link Actions ------------ */
- const handleCopyLink = async (position: "left" | "right") => {
-  if (!user_id) {
-    showToast.error("User ID missing");
-    return;
-  }
+  const handleCopyLink = async (position: "left" | "right") => {
+    if (!user_id) {
+      showToast.error("User ID missing");
+      return;
+    }
 
-  // Payload to encrypt
-  const payload = { referBy: user_id, position };
+    // Payload to encrypt
+    const payload = { referBy: user_id, position };
 
-  // Encrypt using AES
-  const encrypted = CryptoJS.AES.encrypt(
-    JSON.stringify(payload),
-    SECRET_KEY
-  ).toString();
+    // Encrypt using AES
+    const encrypted = CryptoJS.AES.encrypt(
+      JSON.stringify(payload),
+      SECRET_KEY
+    ).toString();
 
-  // URL encoded encrypted string
-  const link = `https://v-life-gules.vercel.app/auth/register?ref=${encodeURIComponent(encrypted)}`;
+    // URL encoded encrypted string
+    const link = `https://v-life-gules.vercel.app/auth/register?ref=${encodeURIComponent(
+      encrypted
+    )}`;
 
-  // Copy URL to clipboard
-  await navigator.clipboard.writeText(link);
+    // Copy URL to clipboard
+    await navigator.clipboard.writeText(link);
 
-  const orgName = position === "left" ? "Organization 1" : "Organization 2";
-  showToast.success(`Copied ${orgName} link to share`);
-};
-
+    const orgName = position === "left" ? "Organization 1" : "Organization 2";
+    showToast.success(`Copied ${orgName} link to share`);
+  };
 
   const handleShopping = () => {
     router.push(showAlert ? "/orders" : "/orders/addorder");
@@ -185,8 +181,8 @@ const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
         />
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 -mt-5 mb-5">
-          <Card
+        {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 -mt-5 mb-5"> */}
+        {/* <Card
             icon={
               <RiMoneyRupeeCircleLine className="text-green-600" size={35} />
             }
@@ -199,21 +195,23 @@ const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
             label="Expense"
             amount={`₹ ${amountSummary.purchases.toFixed(2)}`}
             className="bg-pink-50 border-pink-200"
-          />
-          {/* <Card
+          /> */}
+        {/* <Card
             icon={<FaPercent className="text-yellow-600" size={30} />}
             label="Tax Deducted"
             amount={`₹ ${amountSummary.tax.toFixed(2)}`}
             className="bg-yellow-50 border-yellow-200"
           /> */}
-          <TimeRemainingCard />
-        </div>
+        {/* </div> */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6  ">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6  -mt-5">
           {/* --- LEFT COLUMN --- */}
-          <div className="space-y-6">
+          <div className="space-y-6 max-md:space-y-3">
             {/* Profile Card */}
-            <div className="bg-white rounded-2xl shadow-md p-6 border-[1.5px] border-gray-300">
+            <div
+              className="bg-white
+ rounded-2xl shadow-md p-6 max-md:p-3 border-[1.5px] border-gray-300"
+            >
               <div className="flex flex-col md:flex-row justify-center  lg:flex-col items-center text-center">
                 <div className="w-24 h-24 mb-4 md:w-28 md:h-28 border-0 border-gray-600 rounded-full flex items-center justify-center bg-white shadow-lg md:mr-12 lg:mr-0">
                   <img
@@ -302,29 +300,31 @@ const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
               </div>
             </div>
 
+            <TimeRemainingCard />
+
             {/* Product Card */}
-            <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-44 2xl:h-120">
-              {/* For screens up to lg */}
-              <img
+            {/* <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-44 2xl:h-120"> */}
+            {/* For screens up to lg */}
+            {/* <img
                 src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760765861/ionizer_with_kitchen_t3da7q.jpg"
                 alt="Product small"
                 className="w-full object-contain block lg:hidden"
-              />
+              /> */}
 
-              {/* For screens lg and above */}
-              <img
+            {/* For screens lg and above */}
+            {/* <img
                 src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760763474/ionizers_khpjpn.jpg"
                 alt="Product large"
                 className="w-full object-cover hidden lg:block"
-              />
-            </div>
+              /> */}
+            {/* </div> */}
           </div>
 
           {/* --- RIGHT COLUMN (MAIN DASHBOARD) --- */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 max-md:space-y-3">
             {/* Top Info Cards Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <InfoCard title="Achieved Rank">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-md:-mt-2">
+              <InfoCard title="Achieved Rank ">
                 <div className="mx-auto">
                   {/* --- Dynamic Rank Image --- */}
                   <img
@@ -341,7 +341,7 @@ const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
                   <p className="text-black text-center text-sm font-semibold items-end">
                     {user?.rank && user.rank !== "0" && user.rank !== "none" ? (
                       <>
-                        <span className="text-black text-lg font-bold">
+                        <span className="text-black text-lg font-extrabold">
                           {user.rank}
                         </span>{" "}
                         STAR
@@ -389,15 +389,20 @@ const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
               </div>
 
               {/* Dashboard Boxes */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-3 gap-5 p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-2 gap-5 p-5">
                 <DashBox
                   icon={<FaRupeeSign />}
                   title="Total Payout"
                   value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
+                  icon={<FaWallet />}
+                  title="Reward Value"
+                  value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
+                />
+                <DashBox
                   icon={<FaUser />}
-                  title="Self PV"
+                  title="Matching Pairs"
                   value={summary?.selfPV?.toString() || "0"}
                 />
 
@@ -406,11 +411,7 @@ const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
                   title="Purchase Countdown"
                   value={summary?.purchaseCount?.toString() || "0"}
                 />
-                <DashBox
-                  icon={<FaWallet />}
-                  title="Reward Value"
-                  value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
-                />
+
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Matching Bonus"

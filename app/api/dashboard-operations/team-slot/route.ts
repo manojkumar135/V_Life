@@ -70,6 +70,8 @@ export async function GET(request: Request) {
 
     
 
+    
+
     if (!historiesInWindow.length) {
       return NextResponse.json({
         success: true,

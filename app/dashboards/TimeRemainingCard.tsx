@@ -4,39 +4,56 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaRegClock } from "react-icons/fa";
 import { useVLife } from "@/store/context";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const TimeRemainingCard = () => {
   const { user } = useVLife();
+
   const [teamData, setTeamData] = useState({
     leftTeam: 0,
     rightTeam: 0,
-    timeRemaining: "00:00:00",
   });
-  const [loading, setLoading] = useState(true);
-  const [isCritical, setIsCritical] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(0); // store remaining seconds
 
-  // 🔁 Fetch team data with user_id
+  const [loading, setLoading] = useState(true);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [isCritical, setIsCritical] = useState(false);
+
+  // ✅ Get seconds left to next cycle (12 PM or 12 AM IST)
+  const calculateSecondsLeft = () => {
+    const now = dayjs().tz("Asia/Kolkata");
+
+    let nextCycle;
+
+    if (now.hour() < 12) {
+      nextCycle = now.hour(12).minute(0).second(0).millisecond(0);
+    } else {
+      nextCycle = now.add(1, "day").hour(0).minute(0).second(0).millisecond(0);
+    }
+
+    const diff = nextCycle.diff(now, "second");
+    return diff > 0 ? diff : 0;
+  };
+
+  // 📌 Fetch team data API
   const fetchTeamData = async () => {
     if (!user?.user_id) return;
+
     try {
       const res = await axios.get("/api/dashboard-operations/team-slot", {
         params: { user_id: user.user_id },
       });
 
       const data = res.data;
-      // Convert timeRemaining (hh:mm:ss) to seconds
-      const [h, m, s] = (data.timeRemaining || "00:00:00").split(":").map(Number);
-      const totalSeconds = h * 3600 + m * 60 + s;
 
-      setSecondsLeft(totalSeconds);
       setTeamData({
         leftTeam: data.leftTeam || 0,
         rightTeam: data.rightTeam || 0,
-        timeRemaining: data.timeRemaining || "00:00:00",
       });
-
-      setIsCritical(h < 1);
     } catch (err) {
       console.error("❌ Error fetching team data:", err);
     } finally {
@@ -44,84 +61,88 @@ const TimeRemainingCard = () => {
     }
   };
 
-  // 🧭 Fetch data on mount
+  // 🎯 On mount
   useEffect(() => {
     fetchTeamData();
-    const interval = setInterval(fetchTeamData, 60000); // refresh every 1 minute for team data
+    setSecondsLeft(calculateSecondsLeft());
+
+    // fetch team data every 1 min
+    const interval = setInterval(fetchTeamData, 60000);
     return () => clearInterval(interval);
-  }, [user?.user_id]);
+  }, [user]);
 
-  // ⏳ Countdown every second
+  // ⏳ Countdown timer
   useEffect(() => {
-    if (secondsLeft <= 0) return;
-
     const timer = setInterval(() => {
       setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
+        if (prev <= 1) return calculateSecondsLeft();
         return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timer);
+  }, []);
+
+  // ❤️ Critical last hour warning
+  useEffect(() => {
+    setIsCritical(secondsLeft < 3600); // < 1 hour
   }, [secondsLeft]);
 
-  // Format seconds into HH:mm:ss
+  // Format in HH:mm:ss
   const formatTime = (secs: number) => {
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = secs % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(
-      2,
-      "0"
-    )}:${String(s).padStart(2, "0")}`;
+    const h = String(Math.floor(secs / 3600)).padStart(2, "0");
+    const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
+    const s = String(secs % 60).padStart(2, "0");
+    return `${h}:${m}:${s}`;
   };
-
-  const displayTime = formatTime(secondsLeft);
 
   return (
     <div
-      className={`relative flex items-center justify-between shadow rounded-lg p-4 border transition-all duration-300 ${
+      className={`relative flex flex-col items-center justify-between  transition-all duration-300 bg-white rounded-2xl shadow-md p-6  border-[1.5px] border-gray-300 ${
         isCritical
-          ? "border-red-300 bg-red-50"
-          : "border-yellow-200 bg-yellow-50"
+          ? "border-red-200 bg-red-50"
+          : "bg-yellow-50 border-yellow-150 "
       }`}
     >
-      {/* 👥 Left / Right Team section */}
+      {/* Countdown */}
+      <div className=" mx-auto  flex items-center gap-1 w-full justify-center py-3 max-md:pt-0 max-lg:mb-3">
+        <FaRegClock className="text-gray-700" size={25} />
+        <p
+          className={`max-md:text-xl text-3xl font-semibold ml-1 ${
+            isCritical ? "text-red-600" : "text-gray-800"
+          }`}
+        >
+          {formatTime(secondsLeft)} hrs
+        </p>
+        <p className="text-sm text-gray-500 mt-2 font-semibold">left</p>
+      </div>
+
+      {/* Team Counts */}
       {loading ? (
         <p className="text-sm text-gray-500 animate-pulse">Loading...</p>
       ) : (
-        <div className="flex items-center gap-8">
-          <div className="flex flex-col items-center px-4">
-            <p className="text-sm text-gray-500">Left Team</p>
-            <p className="text-lg font-semibold text-green-600">
+        <div className="flex  items-center gap-8 max-md:gap-6 w-full  lg:py-4">
+          <div className="flex flex-col items-center px-1 w-1/2">
+            <p className="text-sm text-gray-800 font-semibold font-sans">
+              LEFT BV COUNT
+            </p>
+
+            <p className="text-xl font-semibold text-green-600">
               {teamData.leftTeam}
             </p>
           </div>
 
-          <div className="flex flex-col items-center">
-            <p className="text-sm text-gray-500">Right Team</p>
-            <p className="text-lg font-semibold text-pink-600">
+          <div className="flex flex-col items-center w-1/2">
+            <p className="text-sm text-gray-800 font-semibold font-sans">
+              RIGHT BV COUNT
+            </p>
+
+            <p className="text-xl font-semibold text-pink-600">
               {teamData.rightTeam}
             </p>
           </div>
         </div>
       )}
-
-      {/* 🕒 Time Remaining */}
-      <div className="absolute bottom-2 right-4 flex items-center gap-1">
-        <FaRegClock className="text-gray-700" size={16} />
-        <p
-          className={`text-sm font-semibold ml-1 ${
-            isCritical ? "text-red-600" : "text-gray-800"
-          }`}
-        >
-          {displayTime} hrs
-        </p>
-        <p className="text-sm text-gray-600">left</p>
-      </div>
     </div>
   );
 };

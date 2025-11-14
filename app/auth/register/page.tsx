@@ -92,7 +92,13 @@ function RegisterContent() {
         const res = await axios.post("/api/users-operations", values);
         if (res.data.success) {
           ShowToast.success("Registration successful!");
-          router.push("/auth/login");
+          router.push(
+            `/auth/success?username=${encodeURIComponent(
+              values.user_name
+            )}&userId=${encodeURIComponent(
+              res.data.userId
+            )}&email=${encodeURIComponent(values.mail)}`
+          );
         } else {
           ShowToast.error(res.data.message || "Registration failed");
         }
