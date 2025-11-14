@@ -100,7 +100,11 @@ function RegisterContent() {
     },
   });
 
+  const [isInitialSet, setIsInitialSet] = useState(false);
+
   useEffect(() => {
+    if (isInitialSet) return;
+
     const referBy = params.get("referBy");
     const position = params.get("position");
     const parent = params.get("parent");
@@ -108,8 +112,9 @@ function RegisterContent() {
     if (referBy) formik.setFieldValue("referBy", referBy);
     if (position) formik.setFieldValue("team", position);
     if (parent) formik.setFieldValue("parent", parent);
-  }, [params]);
 
+    setIsInitialSet(true);
+  }, [params, isInitialSet]);
   const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
@@ -346,6 +351,7 @@ function RegisterContent() {
                   value={formik.values.referBy}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
+                  readOnly
                   className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
                 />
               </div>
@@ -369,6 +375,7 @@ function RegisterContent() {
                   }
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
+                  isDisabled={true}
                   placeholder="Select Organization"
                   className="w-full"
                 />
@@ -398,20 +405,23 @@ function RegisterContent() {
                   Terms and Conditions
                 </span>
               </label> */}
-              <label htmlFor="terms" className="max-xs:text-[0.7rem] text-xs xl:text-sm text-gray-700">
+              <label
+                htmlFor="terms"
+                className="max-xs:text-[0.7rem] text-xs xl:text-sm text-gray-700"
+              >
                 I agree to the{" "}
                 <span
                   className="text-blue-600 cursor-pointer"
                   onClick={() => openModal("terms")}
                 >
-                  Terms 
+                  Terms
                 </span>
                 ,{" "}
                 <span
                   className="text-blue-600 cursor-pointer"
                   onClick={() => openModal("privacy")}
                 >
-                  Privacy 
+                  Privacy
                 </span>{" "}
                 and{" "}
                 <span
