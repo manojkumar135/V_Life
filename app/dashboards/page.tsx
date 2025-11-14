@@ -12,6 +12,9 @@ import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import showToast from "@/components/common/Toast/toast";
 import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
+import CryptoJS from "crypto-js";
+
+
 
 import {
   FaLink,
@@ -24,6 +27,8 @@ import { MdOutlineCheckCircle } from "react-icons/md";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { MdOutlineAttachMoney } from "react-icons/md";
 import { FaPercent } from "react-icons/fa";
+
+
 
 interface DashboardSummary {
   user_id: string;
@@ -55,6 +60,9 @@ const DashboardPage: React.FC = () => {
   const { user } = useVLife();
   const user_id = user?.user_id || "";
   const router = useRouter();
+
+const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
+
 
   const [showAlert, setShowAlert] = useState(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -128,14 +136,31 @@ const DashboardPage: React.FC = () => {
   }, [user_id]);
 
   /* ------------ Maverick Link Actions ------------ */
-  const handleCopyLink = async (position: "left" | "right") => {
-    const link = `https://v-life-gules.vercel.app/auth/register?referBy=${user_id}&position=${position}`;
-    await navigator.clipboard.writeText(link);
-    // Determine organization name based on position
-    const orgName = position === "left" ? "Organization 1" : "Organization 2";
+ const handleCopyLink = async (position: "left" | "right") => {
+  if (!user_id) {
+    showToast.error("User ID missing");
+    return;
+  }
 
-    showToast.success(`Copied ${orgName} link to share`);
-  };
+  // Payload to encrypt
+  const payload = { referBy: user_id, position };
+
+  // Encrypt using AES
+  const encrypted = CryptoJS.AES.encrypt(
+    JSON.stringify(payload),
+    SECRET_KEY
+  ).toString();
+
+  // URL encoded encrypted string
+  const link = `https://v-life-gules.vercel.app/auth/register?ref=${encodeURIComponent(encrypted)}`;
+
+  // Copy URL to clipboard
+  await navigator.clipboard.writeText(link);
+
+  const orgName = position === "left" ? "Organization 1" : "Organization 2";
+  showToast.success(`Copied ${orgName} link to share`);
+};
+
 
   const handleShopping = () => {
     router.push(showAlert ? "/orders" : "/orders/addorder");

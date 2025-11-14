@@ -19,6 +19,8 @@ import Loader from "@/components/common/loader";
 import TermsModal from "@/components/TermsModal/terms";
 import customSelectStyles from "@/components/common/CustomSelectStyles";
 
+import CryptoJS from "crypto-js";
+
 export const dynamic = "force-dynamic";
 
 const teams = [
@@ -27,6 +29,8 @@ const teams = [
 ];
 
 function RegisterContent() {
+const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
+
   const [loading, setLoading] = useState(false);
   // const [isTermsOpen, setIsTermsOpen] = useState(false);
 
@@ -102,19 +106,34 @@ function RegisterContent() {
 
   const [isInitialSet, setIsInitialSet] = useState(false);
 
-  useEffect(() => {
-    if (isInitialSet) return;
+ useEffect(() => {
+  if (isInitialSet) return;
 
-    const referBy = params.get("referBy");
-    const position = params.get("position");
-    const parent = params.get("parent");
+  const ref = params.get("ref");
+  const parent = params.get("parent");
 
-    if (referBy) formik.setFieldValue("referBy", referBy);
-    if (position) formik.setFieldValue("team", position);
-    if (parent) formik.setFieldValue("parent", parent);
+  if (ref) {
+    try {
+      const decrypted = CryptoJS.AES.decrypt(
+        decodeURIComponent(ref),
+        SECRET_KEY
+      ).toString(CryptoJS.enc.Utf8);
 
-    setIsInitialSet(true);
-  }, [params, isInitialSet]);
+      const data = JSON.parse(decrypted); 
+      // { referBy: "...", position: "left/right" }
+
+      if (data.referBy) formik.setFieldValue("referBy", data.referBy);
+      if (data.position) formik.setFieldValue("team", data.position);
+    } catch (err) {
+      console.error("Invalid referral code", err);
+    }
+  }
+
+  if (parent) formik.setFieldValue("parent", parent);
+
+  setIsInitialSet(true);
+}, [params, isInitialSet]);
+
   const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
