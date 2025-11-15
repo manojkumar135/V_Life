@@ -70,7 +70,10 @@ export async function GET(request: Request) {
     }
     if (user_id) query.user_id = user_id;
 
-    const wallets = await Wallet.find(query).sort({ createdAt: -1 });
+    const wallets = await Wallet.find(query).sort({
+      last_modified_at: -1,
+      created_at: -1,
+    });
     return NextResponse.json({ success: true, data: wallets });
   } catch (error: any) {
     return NextResponse.json(

@@ -36,6 +36,7 @@ interface DashboardSummary {
   infinityBonus: number;
   directTeamSales: number;
   infinityTeamSales: number;
+  daysAfterActivation: number;
 }
 
 interface LinkButtonProps {
@@ -406,10 +407,15 @@ const DashboardPage: React.FC = () => {
                   value={summary?.matches?.toString() || "0"}
                 />
 
-                <DashBox
+                {/* <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Purchase Countdown"
                   value={summary?.purchaseCount?.toString() || "0"}
+                /> */}
+                <DashBox
+                  icon={<MdOutlineCheckCircle />}
+                  title="Days from Activation"
+                  value={`${summary?.daysAfterActivation?.toString() || "0"} days`}
                 />
 
                 <DashBox

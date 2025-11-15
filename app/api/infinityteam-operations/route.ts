@@ -42,13 +42,17 @@ export async function GET(req: Request) {
     const rootId = searchParams.get("user_id");
 
     if (!rootId) {
-      return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "user_id is required" },
+        { status: 400 }
+      );
     }
 
     // 1️⃣ Fetch root user with infinity_users
     const rootUser = await User.findOne({
       user_id: rootId,
-    }).lean<UserType | null>();
+    })
+    .lean<UserType | null>();
 
     if (!rootUser?.infinity_users || rootUser.infinity_users.length === 0) {
       return NextResponse.json({ data: [], total: 0 });
@@ -141,7 +145,9 @@ export async function GET(req: Request) {
         if (seenUserIds.has(uid)) continue; // skip duplicates
         seenUserIds.add(uid);
 
-        const userData = await User.findOne({ user_id: uid }).lean<UserType>();
+        const userData = await User.findOne({ user_id: uid })
+          .sort({ createdAt: -1 })
+          .lean<UserType>();
         if (!userData) continue;
 
         // ✅ Check if user has paid advance (amount >= 10000 and status Completed)
@@ -172,6 +178,9 @@ export async function GET(req: Request) {
     });
   } catch (error) {
     console.error("❌ Error in /api/infinityteam:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

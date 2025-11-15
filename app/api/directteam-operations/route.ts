@@ -58,7 +58,10 @@ export async function GET(req: Request) {
     const rootId = searchParams.get("user_id");
 
     if (!rootId) {
-      return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "user_id is required" },
+        { status: 400 }
+      );
     }
 
     const rootUser = await User.findOne({ user_id: rootId }).lean<UserType>();
@@ -66,12 +69,16 @@ export async function GET(req: Request) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    const allNodes: TreeNodeType[] = await TreeNode.find({}).lean<TreeNodeType[]>();
+    const allNodes: TreeNodeType[] = await TreeNode.find({}).lean<
+      TreeNodeType[]
+    >();
     const nodeMap = new Map(allNodes.map((n) => [n.user_id, n]));
 
     const referredUsers = await User.find({
-      user_id: { $in: rootUser.referred_users }
-    }).lean<UserType[]>();
+      user_id: { $in: rootUser.referred_users },
+    })
+      .sort({ createdAt: -1 })
+      .lean<UserType[]>();
 
     const result = referredUsers.map((user) => {
       const { team, level } = findLevelAndTeam(user.user_id, rootId, nodeMap);
@@ -81,6 +88,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ data: result, total: result.length });
   } catch (error) {
     console.error("❌ Error in /api/directteam-operations:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }

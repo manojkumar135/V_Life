@@ -134,7 +134,10 @@ export async function GET(request: Request) {
 
     // ✅ Final query
     const finalQuery = conditions.length ? { $and: [baseQuery, ...conditions] } : baseQuery;
-    const payouts = await DailyPayout.find(finalQuery).sort({ date: -1 });
+    const payouts = await DailyPayout.find(finalQuery).sort({
+      last_modified_at: -1,
+      created_at: -1,
+    });
 
     return NextResponse.json({ success: true, data: payouts }, { status: 200 });
   } catch (error: any) {

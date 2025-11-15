@@ -73,12 +73,13 @@ export async function GET(req) {
           { district: regex },
           { locality: regex },
           { user_status: regex },
+          { status_notes: regex }
         ];
       });
     }
 
     // 5️⃣ Fetch user details from User table with filtering in DB
-    const users = await User.find(query).lean();
+    const users = await User.find(query).sort({ created_at: -1 }).lean();
 
     return NextResponse.json({
       data: users,

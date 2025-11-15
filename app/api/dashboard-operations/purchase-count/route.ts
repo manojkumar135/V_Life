@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Order } from "@/models/order";
 import { DailyPayout, WeeklyPayout } from "@/models/payout";
+import { User } from "@/models/user";
 
 export async function GET(request: Request) {
   try {
@@ -15,6 +16,26 @@ export async function GET(request: Request) {
         { success: false, message: "User ID required" },
         { status: 400 }
       );
+    }
+
+    // 🧑‍💼 Fetch user to read activated_date
+    const user = await User.findOne({ user_id });
+
+    // 🆕 Compute days after activation
+    let daysAfterActivation = 0;
+
+    if (user?.activated_date) {
+      // activated_date = "DD-MM-YYYY"
+      const [day, month, year] = user.activated_date.split("-");
+
+      // construct valid date: YYYY-MM-DD
+      const activated = new Date(`${year}-${month}-${day}`);
+      const now = new Date();
+
+      if (!isNaN(activated.getTime())) {
+        const diffTime = now.getTime() - activated.getTime();
+        daysAfterActivation = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      }
     }
 
     // 🛒 1️⃣ Purchase Count (from orders)
@@ -102,6 +123,7 @@ export async function GET(request: Request) {
           infinityBonus,
           directTeamSales,
           infinityTeamSales,
+          daysAfterActivation,
         },
       },
       { status: 200 }

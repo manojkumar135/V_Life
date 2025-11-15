@@ -105,7 +105,7 @@ export async function POST(request: Request) {
           .join("-"),
         time: new Date().toLocaleTimeString(),
         available_balance: user.wallet_balance || 0,
-        amount:body.final_amount,
+        amount: body.final_amount,
         transaction_type: "Debit",
         details: body.is_first_order
           ? "Order Payment (₹10,000 Advance Deducted)"
@@ -171,7 +171,7 @@ export async function POST(request: Request) {
       .reverse()
       .join("-"); // 10-11-2025 format
 
-      console.log(formattedDate)
+    console.log(formattedDate);
 
     await Alert.create({
       // alert_id: `AL${Date.now()}`,
@@ -374,7 +374,11 @@ export async function GET(request: Request) {
     const finalQuery =
       conditions.length > 0 ? { $and: [baseQuery, ...conditions] } : baseQuery;
 
-    const orders = await Order.find(finalQuery).sort({ payment_date: -1 });
+    const orders = await Order.find(finalQuery).sort({
+      last_modified_at: -1,
+      created_at: -1,
+    });
+    // console.log(orders);
 
     return NextResponse.json({ success: true, data: orders }, { status: 200 });
   } catch (error: any) {
