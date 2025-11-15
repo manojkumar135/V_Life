@@ -57,6 +57,9 @@ export default function GroupsPage() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchGroups(debouncedQuery); 
+
+        goToPage(1);
+
   }, [debouncedQuery, user?.user_id, fetchGroups]);
 
   // Ask before toggling status
@@ -117,6 +120,8 @@ const confirmStatusChange = async () => {
     prevPage,
     startItem,
     endItem,
+    goToPage,
+
   } = usePagination({
     totalItems,
     itemsPerPage: 12,

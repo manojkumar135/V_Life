@@ -16,7 +16,7 @@ import AlertBox from "@/components/Alerts/advanceAlert";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
-import { handleDownload } from "@/utils/handleDownload"; 
+import { handleDownload } from "@/utils/handleDownload";
 import { formatDate } from "@/components/common/formatDate";
 
 export default function TransactionHistory() {
@@ -101,6 +101,8 @@ export default function TransactionHistory() {
     } finally {
       if (isMounted) setLoading(false);
     }
+    goToPage(1);
+
     return () => {
       isMounted = false;
     };
@@ -115,75 +117,86 @@ export default function TransactionHistory() {
     { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
 
     // Admin only
-    user?.role === "admin" && { field: "user_id", headerName: "User ID", flex: 1 },
+    user?.role === "admin" && {
+      field: "user_id",
+      headerName: "User ID",
+      flex: 1,
+    },
 
     { field: "date", headerName: "Date", flex: 1 },
     { field: "details", headerName: "Detail", flex: 1.5 },
 
     {
-    field: "amount",
-    headerName: "Amount (₹)",
-    flex: 1,
-    align: "right",
-    renderCell: (params: GridRenderCellParams<any, number>) => {
-      const type = String(params.row.transaction_type ?? "").toLowerCase();
-      const isUser = user?.role === "user";
-      const isCredit = type === "credit";
+      field: "amount",
+      headerName: "Amount (₹)",
+      flex: 1,
+      align: "right",
+      renderCell: (params: GridRenderCellParams<any, number>) => {
+        const type = String(params.row.transaction_type ?? "").toLowerCase();
+        const isUser = user?.role === "user";
+        const isCredit = type === "credit";
 
-      // ✅ Match color logic with role
-      const textColor = isUser
-        ? isCredit
-          ? "text-green-600"
-          : "text-red-600"
-        : isCredit
+        // ✅ Match color logic with role
+        const textColor = isUser
+          ? isCredit
+            ? "text-green-600"
+            : "text-red-600"
+          : isCredit
           ? "text-red-600"
           : "text-green-600";
 
-      return (
-        <span className={`pr-5 ${textColor}`}>
-          ₹ {Number(params.value ?? 0).toFixed(2)}
-        </span>
-      );
+        return (
+          <span className={`pr-5 ${textColor}`}>
+            ₹ {Number(params.value ?? 0).toFixed(2)}
+          </span>
+        );
+      },
     },
-  },
 
-  {
-    field: "transaction_type",
-    headerName: "Status",
-    flex: 1,
-    renderCell: (params: GridRenderCellParams<any, string>) => {
-      const type = String(params.value ?? "").toLowerCase();
-      const isUser = user?.role === "user";
-      const isCredit = type === "credit";
+    {
+      field: "transaction_type",
+      headerName: "Status",
+      flex: 1,
+      renderCell: (params: GridRenderCellParams<any, string>) => {
+        const type = String(params.value ?? "").toLowerCase();
+        const isUser = user?.role === "user";
+        const isCredit = type === "credit";
 
-      // ✅ Invert icons & colors for admin
-      const Icon = isUser
-        ? isCredit
-          ? FaPlusCircle
-          : FaMinusCircle
-        : isCredit
+        // ✅ Invert icons & colors for admin
+        const Icon = isUser
+          ? isCredit
+            ? FaPlusCircle
+            : FaMinusCircle
+          : isCredit
           ? FaMinusCircle
           : FaPlusCircle;
 
-      const iconColor = isUser
-        ? isCredit
-          ? "text-green-600"
-          : "text-red-600"
-        : isCredit
+        const iconColor = isUser
+          ? isCredit
+            ? "text-green-600"
+            : "text-red-600"
+          : isCredit
           ? "text-red-600"
           : "text-green-600";
 
-      return <Icon className={`${iconColor} text-lg ml-4 mt-2`} />;
+        return <Icon className={`${iconColor} text-lg ml-4 mt-2`} />;
+      },
     },
-  },
   ].filter(Boolean) as GridColDef[];
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
-    usePagination({
-      totalItems,
-      itemsPerPage: 12,
-      onPageChange: () => {},
-    });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({
+    totalItems,
+    itemsPerPage: 12,
+    onPageChange: () => {},
+  });
 
   const onBack = () => router.push("/wallet");
   const handlePayAdvance = () => router.push("/historys/payAdvance");
@@ -246,7 +259,7 @@ export default function TransactionHistory() {
 
         <Table
           columns={columns}
-          rows={historyData.slice((currentPage - 1) *12, currentPage *12)}
+          rows={historyData.slice((currentPage - 1) * 12, currentPage * 12)}
           rowIdField="_id"
           pageSize={12}
           onRowClick={(row) => console.log("Transaction clicked:", row)}

@@ -47,6 +47,8 @@ export default function WithdrawPage() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchWithdrawals(debouncedQuery);
+
+    goToPage(1);
   }, [debouncedQuery, user?.user_id]);
 
   // Delete withdrawal
@@ -117,6 +119,7 @@ export default function WithdrawPage() {
     endItem,
     isFirstPage,
     isLastPage,
+    goToPage,
   } = usePagination({
     totalItems,
     itemsPerPage: 12,
@@ -160,7 +163,7 @@ export default function WithdrawPage() {
 
         <Table
           columns={columns}
-          rows={withdrawData.slice((currentPage - 1) *12, currentPage *12)}
+          rows={withdrawData.slice((currentPage - 1) * 12, currentPage * 12)}
           rowIdField="_id"
           pageSize={12}
           statusField="withdraw_status"

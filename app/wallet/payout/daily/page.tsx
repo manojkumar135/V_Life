@@ -72,6 +72,9 @@ export default function DailyPayoutPage() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchWithdrawals();
+
+        goToPage(1);
+
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // ✅ Table columns
@@ -149,7 +152,7 @@ export default function DailyPayoutPage() {
   ];
 
   // ✅ Pagination hook
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
+  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
     usePagination({
       totalItems,
       itemsPerPage: 12,

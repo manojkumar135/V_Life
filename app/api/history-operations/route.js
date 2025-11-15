@@ -6,7 +6,7 @@ import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { Rank } from "@/models/rank";
 import { Wallet } from "@/models/wallet";
-import mongoose from "mongoose";
+import mongoose from "mongoose"; 
 import { Alert } from "@/models/alert";
 
 import {
@@ -273,7 +273,7 @@ export async function POST(request) {
           role: "user",
           priority: "high",
           title: "🎉 Account Activated!",
-          message: `Hi ${user.user_name}, your account is now active. You can start placing orders and earning rewards.`,
+          description: `Hi ${user.user_name}, your account is now active. You can start placing orders and earning rewards.`,
           type: "activation",
           link: "/orders",
           read: false,
@@ -337,7 +337,7 @@ export async function POST(request) {
                 role: "user",
                 priority: "high",
                 title: "🎖️ Rank Achieved!",
-                message: `Congratulations ${updatedReferrer.user_name}! You've achieved Rank ${updatedReferrer.rank}. Keep up the great work!`,
+                description: `Congratulations ${updatedReferrer.user_name}! You've achieved Rank ${updatedReferrer.rank}. Keep up the great work!`,
                 type: "achievement",
                 link: "/dashboards",
                 read: false,

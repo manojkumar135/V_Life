@@ -86,6 +86,9 @@ export default function LeftTeam() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchUsers(debouncedQuery);
+
+    // reset to page 1 when searching
+    goToPage(1);
   }, [debouncedQuery, user?.user_id]);
 
   // Edit user
@@ -100,7 +103,7 @@ export default function LeftTeam() {
   // Ask before toggling status
   const handleStatusClick = (id: string, status: string, row: any) => {
     console.log("Status click:", id, status, row);
-    console.log(status)
+    console.log(status);
     setSelectedUser({ id, status, row });
     setIsStatusModalOpen(true);
   };
@@ -173,12 +176,19 @@ export default function LeftTeam() {
     // optional server pagination
   }, [query]);
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
-    usePagination({
-      totalItems,
-      itemsPerPage: 12,
-      onPageChange: handlePageChange,
-    });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({
+    totalItems,
+    itemsPerPage: 12,
+    onPageChange: handlePageChange,
+  });
 
   const handleAddUser = () => {
     router.push("/administration/users/adduser?team=left");

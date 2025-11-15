@@ -87,6 +87,9 @@ export default function RightTeam() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchUsers(debouncedQuery);
+
+        goToPage(1);
+
   }, [debouncedQuery, user?.user_id]);
 
   // Navigate to edit
@@ -175,7 +178,7 @@ export default function RightTeam() {
     [query]
   );
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
+  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
     usePagination({
       totalItems,
       itemsPerPage: 12,

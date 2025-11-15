@@ -4,14 +4,11 @@ import {
   GridRowSelectionModel,
   GridColDef,
   GridCallbackDetails,
-  // GridSortComparator, GridSortCellParams
 } from "@mui/x-data-grid";
 import { useMemo, useState } from "react";
 import { GrStatusGood } from "react-icons/gr";
 import { MdCancel } from "react-icons/md";
 import { useVLife } from "@/store/context";
-import React, { useRef } from "react";
-
 
 type Row = Record<string, any>;
 
@@ -59,54 +56,50 @@ export default function Table<T extends Row>({
     [safeRows, currentPage, pageSize]
   );
 
-  // 🔹 Add a new state to track header click count
-const [statusSortCycle, setStatusSortCycle] = useState<number>(0);
+  // 🔹 NEW: Track top color for cycling on sort click
+  const colorCycle: ("green" | "orange" | "red" | "black")[] = [
+    "green",
+    "orange",
+    "red",
+    "black",
+  ];
+  const [topColor, setTopColor] = useState<
+    "green" | "orange" | "red" | "black"
+  >("green");
 
-// 🔹 Define the cycle order
-const colorCycle: ("green" | "orange" | "red" | "black" | null)[] = [
-  "green",
-  "orange",
-  "black",
-  "red",
-  null, // null → normal sorting
-];
+  const handleStatusHeaderClick = () => {
+    const currentIndex = colorCycle.indexOf(topColor);
+    const nextIndex = (currentIndex + 1) % colorCycle.length;
+    setTopColor(colorCycle[nextIndex]);
+  };
 
-// 🔹 Update topColor dynamically based on click count
-const topColor = colorCycle[statusSortCycle % colorCycle.length];
+  // ✅ Function to assign numeric weight for status sorting
+  const getStatusWeight = (row: any, statusField?: string) => {
+    const raw = String(row?.[statusField ?? ""] ?? "").toLowerCase();
+    const statusNotes = String(row?.status_notes ?? "").toLowerCase();
 
-// 🔹 Function to handle header click
-const handleStatusHeaderClick = () => {
-  setStatusSortCycle((prev) => prev + 1);
-};
+    const isActive =
+      raw === "active" ||
+      raw === "available" ||
+      raw === "paid" ||
+      raw === "true" ||
+      raw === "yes";
 
-const directionRef = useRef<"asc" | "desc">("asc");
+    let iconColor = isActive ? "green" : "red";
 
+    if (user?.role === "admin") {
+      if (isActive && statusNotes === "activated by admin")
+        iconColor = "orange";
+      else if (!isActive && statusNotes === "deactivated by admin")
+        iconColor = "black";
+    }
 
-// ✅ Function to assign numeric weight for status sorting
-const getStatusWeight = (row: any, statusField?: string) => {
-  const raw = String(row?.[statusField ?? ""] ?? "").toLowerCase();
-  const statusNotes = String(row?.status_notes ?? "").toLowerCase();
-
-  const isActive =
-    raw === "active" ||
-    raw === "available" ||
-    raw === "paid" ||
-    raw === "true" ||
-    raw === "yes";
-
-  let iconColor = isActive ? "green" : "red";
-
-  if (user?.role === "admin") {
-    if (isActive && statusNotes === "activated by admin") iconColor = "orange";
-    else if (!isActive && statusNotes === "deactivated by admin") iconColor = "black";
-  }
-
-  // 🔹 Apply topColor weighting
-  if (topColor && iconColor === topColor) return -1; // bring this group to top
-  const groupOrder = ["orange", "black", "green", "red"];
-  const index = groupOrder.indexOf(iconColor);
-  return index !== -1 ? index : 5;
-};
+    // 🔹 Weight based on topColor
+    if (iconColor === topColor) return -1; // bring topColor to top
+    const groupOrder = ["orange", "black", "green", "red"];
+    const index = groupOrder.indexOf(iconColor);
+    return index !== -1 ? index : 5;
+  };
 
   const enhancedColumns: GridColDef[] = useMemo(() => {
     return columns.map((col, idx) => {
@@ -221,32 +214,16 @@ const getStatusWeight = (row: any, statusField?: string) => {
             ? "-"
             : value;
         },
-        // 🔹 Sort comparator for status column
-       sortComparator: (
-  v1: any,
-  v2: any,
-  cell1: any,
-  cell2: any
-) => {
-  const row1 = cell1.api.getRow(cell1.id);
-  const row2 = cell2.api.getRow(cell2.id);
+        // ✅ Add status sort comparator
+        sortComparator: (v1, v2, cell1, cell2) => {
+          const row1 = cell1.api.getRow(cell1.id);
+          const row2 = cell2.api.getRow(cell2.id);
 
-  const w1 = getStatusWeight(row1, statusField);
-  const w2 = getStatusWeight(row2, statusField);
+          const w1 = getStatusWeight(row1, statusField);
+          const w2 = getStatusWeight(row2, statusField);
 
-  // Rotate order each time
-  return directionRef.current === "asc" ? w1 - w2 : w2 - w1;
-},
-
-        // 🔹 Header click cycles topColor
-        renderHeader: (params) => (
-          <div
-            style={{ cursor: "pointer", userSelect: "none" }}
-            onClick={handleStatusHeaderClick}
-          >
-            {params.colDef.headerName}
-          </div>
-        ),
+          return w1 - w2; // always orange > black > green > red
+        },
       };
     });
   }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);

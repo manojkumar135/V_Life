@@ -29,7 +29,7 @@ import { FaPercent } from "react-icons/fa";
 interface DashboardSummary {
   user_id: string;
   totalPayout: number;
-  selfPV: number;
+  matches: number;
   purchaseCount: number;
   rewardValue: number;
   matchingBonus: number;
@@ -171,7 +171,7 @@ const DashboardPage: React.FC = () => {
           message={
             <>
               To activate your account, please pay{" "}
-              <span className="font-semibold text-lg">₹ 10,000</span> as
+              <span className="font-semibold text-lg"> ₹ 10,000</span> as
               prepaid. This will be adjusted in your first order.
             </>
           }
@@ -403,7 +403,7 @@ const DashboardPage: React.FC = () => {
                 <DashBox
                   icon={<FaUser />}
                   title="Matching Pairs"
-                  value={summary?.selfPV?.toString() || "0"}
+                  value={summary?.matches?.toString() || "0"}
                 />
 
                 <DashBox

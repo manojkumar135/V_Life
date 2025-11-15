@@ -111,6 +111,9 @@ export default function OrdersPage() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchOrders(debouncedQuery);
+
+        goToPage(1);
+
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // Delete order
@@ -201,6 +204,7 @@ export default function OrdersPage() {
     endItem,
     isFirstPage,
     isLastPage,
+    goToPage
   } = usePagination({
     totalItems,
     itemsPerPage: 12,

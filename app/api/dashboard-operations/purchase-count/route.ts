@@ -81,8 +81,13 @@ export async function GET(request: Request) {
     ]);
     const infinityTeamSales = infinitySalesBonusSum[0]?.total || 0;
 
-    // 📦 8️⃣ Self PV (just an example; replace with actual logic if different)
-    const selfPV = purchaseCount * 10; // e.g., 10 PV per order
+    // 📦 8️⃣ Matching Bonus COUNT → matches
+    const matchingBonusCountAgg = await DailyPayout.aggregate([
+      { $match: { user_id, name: "Matching Bonus" } },
+      { $count: "count" },
+    ]);
+
+    const matches = matchingBonusCountAgg[0]?.count || 0;
 
     return NextResponse.json(
       {
@@ -90,7 +95,7 @@ export async function GET(request: Request) {
         data: {
           user_id,
           totalPayout,
-          selfPV,
+          matches,
           purchaseCount,
           rewardValue,
           matchingBonus,

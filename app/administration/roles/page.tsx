@@ -61,6 +61,9 @@ export default function RolesPage() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchRoles(debouncedQuery);
+
+        goToPage(1);
+
   }, [debouncedQuery, user?.user_id, fetchRoles]);
 
   // Ask before toggling status
@@ -122,6 +125,7 @@ export default function RolesPage() {
     prevPage,
     startItem,
     endItem,
+    goToPage,
   } = usePagination({
     totalItems,
     itemsPerPage: 12,

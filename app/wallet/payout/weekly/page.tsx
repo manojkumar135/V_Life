@@ -73,6 +73,9 @@ export default function WithdrawPage() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchWithdrawals();
+
+        goToPage(1);
+
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // ✅ Delete withdrawal
@@ -190,7 +193,7 @@ export default function WithdrawPage() {
   ];
 
   // ✅ Pagination hook
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
+  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
     usePagination({
       totalItems,
       itemsPerPage: 12,

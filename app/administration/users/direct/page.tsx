@@ -85,6 +85,9 @@ export default function DirectTeam() {
   useEffect(() => {
     if (!user?.user_id) return;
     fetchUsers(debouncedQuery);
+
+        goToPage(1);
+
   }, [debouncedQuery, user?.user_id]);
 
   // Edit user
@@ -152,7 +155,7 @@ export default function DirectTeam() {
     // optional server pagination
   }, [query]);
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
+  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
     usePagination({
       totalItems,
       itemsPerPage: 12,

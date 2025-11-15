@@ -110,7 +110,7 @@ export async function PUT(req) {
         newStatus === "active"
           ? "🎉 Account Activated!"
           : "⚠️ Account Deactivated",
-      message:
+      description:
         newStatus === "active"
           ? "Your account has been successfully activated. You can now place orders and access all features."
           : "Your account has been deactivated by the admin. Please contact support for more details.",
