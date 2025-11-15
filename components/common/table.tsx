@@ -4,11 +4,14 @@ import {
   GridRowSelectionModel,
   GridColDef,
   GridCallbackDetails,
+  // GridSortComparator, GridSortCellParams
 } from "@mui/x-data-grid";
 import { useMemo, useState } from "react";
 import { GrStatusGood } from "react-icons/gr";
 import { MdCancel } from "react-icons/md";
 import { useVLife } from "@/store/context";
+import React, { useRef } from "react";
+
 
 type Row = Record<string, any>;
 
@@ -56,6 +59,55 @@ export default function Table<T extends Row>({
     [safeRows, currentPage, pageSize]
   );
 
+  // 🔹 Add a new state to track header click count
+const [statusSortCycle, setStatusSortCycle] = useState<number>(0);
+
+// 🔹 Define the cycle order
+const colorCycle: ("green" | "orange" | "red" | "black" | null)[] = [
+  "green",
+  "orange",
+  "black",
+  "red",
+  null, // null → normal sorting
+];
+
+// 🔹 Update topColor dynamically based on click count
+const topColor = colorCycle[statusSortCycle % colorCycle.length];
+
+// 🔹 Function to handle header click
+const handleStatusHeaderClick = () => {
+  setStatusSortCycle((prev) => prev + 1);
+};
+
+const directionRef = useRef<"asc" | "desc">("asc");
+
+
+// ✅ Function to assign numeric weight for status sorting
+const getStatusWeight = (row: any, statusField?: string) => {
+  const raw = String(row?.[statusField ?? ""] ?? "").toLowerCase();
+  const statusNotes = String(row?.status_notes ?? "").toLowerCase();
+
+  const isActive =
+    raw === "active" ||
+    raw === "available" ||
+    raw === "paid" ||
+    raw === "true" ||
+    raw === "yes";
+
+  let iconColor = isActive ? "green" : "red";
+
+  if (user?.role === "admin") {
+    if (isActive && statusNotes === "activated by admin") iconColor = "orange";
+    else if (!isActive && statusNotes === "deactivated by admin") iconColor = "black";
+  }
+
+  // 🔹 Apply topColor weighting
+  if (topColor && iconColor === topColor) return -1; // bring this group to top
+  const groupOrder = ["orange", "black", "green", "red"];
+  const index = groupOrder.indexOf(iconColor);
+  return index !== -1 ? index : 5;
+};
+
   const enhancedColumns: GridColDef[] = useMemo(() => {
     return columns.map((col, idx) => {
       const isIdCol = col.field === rowIdField || idx === 0;
@@ -83,7 +135,7 @@ export default function Table<T extends Row>({
       // ✅ Custom render for ID column
       return {
         ...col,
-        sortable: col.sortable ?? false,
+        sortable: true, // 🔥 enable sorting
         renderCell: (params: any) => {
           const id = String(params.row?.[rowIdField] ?? "");
           const value = params.value;
@@ -129,16 +181,12 @@ export default function Table<T extends Row>({
             ).toLowerCase();
             const Icon = isActive ? GrStatusGood : MdCancel;
 
-            // Default icon color
             let iconColor = isActive ? "green" : "red";
-
-            // 🔸 Admin-specific combined conditions
             if (user?.role === "admin") {
-              if (isActive && statusNotes === "activated by admin") {
-                iconColor = "orange"; // active + activated by admin
-              } else if (!isActive && statusNotes === "deactivated by admin") {
-                iconColor = "black"; // inactive + deactivated by admin
-              }
+              if (isActive && statusNotes === "activated by admin")
+                iconColor = "orange";
+              else if (!isActive && statusNotes === "deactivated by admin")
+                iconColor = "black";
             }
 
             return (
@@ -173,6 +221,32 @@ export default function Table<T extends Row>({
             ? "-"
             : value;
         },
+        // 🔹 Sort comparator for status column
+       sortComparator: (
+  v1: any,
+  v2: any,
+  cell1: any,
+  cell2: any
+) => {
+  const row1 = cell1.api.getRow(cell1.id);
+  const row2 = cell2.api.getRow(cell2.id);
+
+  const w1 = getStatusWeight(row1, statusField);
+  const w2 = getStatusWeight(row2, statusField);
+
+  // Rotate order each time
+  return directionRef.current === "asc" ? w1 - w2 : w2 - w1;
+},
+
+        // 🔹 Header click cycles topColor
+        renderHeader: (params) => (
+          <div
+            style={{ cursor: "pointer", userSelect: "none" }}
+            onClick={handleStatusHeaderClick}
+          >
+            {params.colDef.headerName}
+          </div>
+        ),
       };
     });
   }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);

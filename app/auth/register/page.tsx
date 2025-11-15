@@ -113,32 +113,40 @@ function RegisterContent() {
   const [isInitialSet, setIsInitialSet] = useState(false);
 
   useEffect(() => {
-    if (isInitialSet) return;
+  if (isInitialSet) return;
 
-    const ref = params.get("ref");
-    const parent = params.get("parent");
+  const ref = params.get("ref");
+  const referBy = params.get("referBy");
+  const position = params.get("position");
+  const parent = params.get("parent");
 
-    if (ref) {
-      try {
-        const decrypted = CryptoJS.AES.decrypt(
-          decodeURIComponent(ref),
-          SECRET_KEY
-        ).toString(CryptoJS.enc.Utf8);
+  // 1️⃣ Encrypted method (old)
+  if (ref) {
+    try {
+      const decrypted = CryptoJS.AES.decrypt(
+        decodeURIComponent(ref),
+        SECRET_KEY
+      ).toString(CryptoJS.enc.Utf8);
 
-        const data = JSON.parse(decrypted);
-        // { referBy: "...", position: "left/right" }
+      const data = JSON.parse(decrypted);
 
-        if (data.referBy) formik.setFieldValue("referBy", data.referBy);
-        if (data.position) formik.setFieldValue("team", data.position);
-      } catch (err) {
-        console.error("Invalid referral code", err);
-      }
+      if (data.referBy) formik.setFieldValue("referBy", data.referBy);
+      if (data.position) formik.setFieldValue("team", data.position);
+    } catch (err) {
+      console.error("Invalid referral code", err);
     }
+  }
 
-    if (parent) formik.setFieldValue("parent", parent);
+  // 2️⃣ Direct parameters (new)
+  if (referBy) formik.setFieldValue("referBy", referBy);
+  if (position) formik.setFieldValue("team", position);
 
-    setIsInitialSet(true);
-  }, [params, isInitialSet]);
+  // parent
+  if (parent) formik.setFieldValue("parent", parent);
+
+  setIsInitialSet(true);
+}, [params, isInitialSet]);
+
 
   const handleNavigateToLogin = () => router.push("/auth/login");
 

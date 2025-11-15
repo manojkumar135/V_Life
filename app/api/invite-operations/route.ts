@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
+import CryptoJS from "crypto-js";
+
+const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
 
 // Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -13,8 +16,29 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Create encrypted invite link
+function createEncryptedInviteLink(
+  referBy: string,
+  position: "left" | "right"
+) {
+  const payload = { referBy, position };
+  const encrypted = CryptoJS.AES.encrypt(
+    JSON.stringify(payload),
+    SECRET_KEY!
+  ).toString();
+
+  return `https://v-life-gules.vercel.app/auth/register?ref=${encodeURIComponent(
+    encrypted
+  )}`;
+}
+
 // Email template
-const createInviteEmailBody = (inviterName: string, inviterId: string) => {
+const createInviteEmailBody = (
+  inviterName: string,
+  inviterId: string,
+  link: string,
+  position: string
+) => {
   return `
     <!DOCTYPE html>
     <html>
@@ -29,12 +53,16 @@ const createInviteEmailBody = (inviterName: string, inviterId: string) => {
           <h2 style="margin:0;color:#0c3978;">You're Invited 🚀</h2>
         </div>
         <p>Hello,</p>
-        <p><strong>${inviterName}</strong> (<b>${inviterId}</b>) has invited you to join <b>V Life Global</b>.</p>
-        <p>👉 Please use <b>${inviterId}</b> as your <strong>Referral ID</strong> during registration.</p>
+       <p><strong>${inviterName}</strong> (${inviterId}) has invited you to join <b>Maverick</b>.</p>
+        
+        <p>You are invited to join Organization: <b>${position}</b>.</p>
+
+                <p>Click below to register securely:</p>
+
         
         <!-- Styled button -->
         <div style="text-align:center;margin-top:20px;">
-          <a href="https://v-life-gules.vercel.app/"
+          <a href="${link}"
              style="background-color:#facc15; /* yellow-400 */
                     color:#000; 
                     font-weight:600; 
@@ -56,12 +84,11 @@ const createInviteEmailBody = (inviterName: string, inviterId: string) => {
   `;
 };
 
-
 export async function POST(req: Request) {
   try {
-    const { email, user_id, user_name } = await req.json();
+    const { email, user_id, user_name,position } = await req.json();
 
-    if (!email || !user_id || !user_name) {
+    if (!email || !user_id || !user_name|| !position) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
@@ -71,23 +98,37 @@ export async function POST(req: Request) {
     await connectDB();
     const existingUser = await User.findOne({ mail: lowerEmail });
     if (existingUser) {
-      return NextResponse.json({ error: "Email already exists" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email already exists" },
+        { status: 400 }
+      );
     }
 
-    // Build HTML body
-    const htmlBody = createInviteEmailBody(user_name, user_id);
+     // Create secure link
+    const link = createEncryptedInviteLink(user_id, position);
+
+    // Build email HTML
+    const html = createInviteEmailBody(
+      user_name,
+      user_id,
+      link,
+      position === "left" ? "Organization 1" : "Organization 2"
+    );
 
     // Send mail
     await transporter.sendMail({
-      from: `"V Life Global" <${process.env.EMAIL_USER}>`,
+      from: `"Maverick" <${process.env.EMAIL_USER}>`,
       to: lowerEmail,
-      subject: "You’re Invited to Join V Life Global!",
-      html: htmlBody,
+      subject: "You’re Invited to Join Maverick!",
+      html,
     });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Invite error:", error);
-    return NextResponse.json({ error: "Failed to send invite" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to send invite" },
+      { status: 500 }
+    );
   }
 }
