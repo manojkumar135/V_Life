@@ -21,6 +21,7 @@ export interface UserType {
   state?: string;
   district?: string;
   locality?: string;
+  rank?: string;
   user_status?: string;
   infinity_users?: InfinityLevel[];
 }
@@ -40,6 +41,7 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const rootId = searchParams.get("user_id");
+    const search = searchParams.get("search") || "";
 
     if (!rootId) {
       return NextResponse.json(
@@ -51,8 +53,7 @@ export async function GET(req: Request) {
     // 1️⃣ Fetch root user with infinity_users
     const rootUser = await User.findOne({
       user_id: rootId,
-    })
-    .lean<UserType | null>();
+    }).lean<UserType | null>();
 
     if (!rootUser?.infinity_users || rootUser.infinity_users.length === 0) {
       return NextResponse.json({ data: [], total: 0 });
@@ -171,10 +172,46 @@ export async function GET(req: Request) {
         });
       }
     }
+    // 🔍 4️⃣ Apply Search (without touching previous logic)
+    let finalResults = results;
+
+    if (search) {
+      const terms = search
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .map((t) => t.toLowerCase());
+
+      finalResults = results.filter((item) => {
+        const values = [
+          item.user_id,
+          item.user_name,
+          item.mail,
+          item.contact,
+          item.address,
+          item.pincode,
+          item.country,
+          item.state,
+          item.district,
+          item.locality,
+          item.user_status,
+          item.rank,
+
+          String(item.level),
+          item.team,
+        ]
+          .filter(Boolean)
+          .map((v) => String(v).toLowerCase());
+
+        return terms.every((term) =>
+          values.some((field) => field.startsWith(term))
+        );
+      });
+    }
 
     return NextResponse.json({
-      data: results,
-      total: results.length,
+      data: finalResults,
+      total: finalResults.length,
     });
   } catch (error) {
     console.error("❌ Error in /api/infinityteam:", error);

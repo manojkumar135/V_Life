@@ -71,6 +71,7 @@ export default function LeftTeam() {
         const { data } = await axios.get(API_URL, {
           params: { user_id: user.user_id, team, search },
         });
+        // console.log(data ,"Left team users data");
         const users: User[] = data.data || [];
         setUsersData(users);
         setTotalItems(users.length);
@@ -176,6 +177,27 @@ export default function LeftTeam() {
     // optional server pagination
   }, [query]);
 
+
+  // Controlled sorting inside Table.tsx passes sort model back
+const [sortModel, setSortModel] = useState<any[]>([]);
+
+// Apply sorting on FULL dataset before pagination
+const sortedData = [...usersData].sort((a, b) => {
+  if (!sortModel.length) return 0;
+
+  const field = sortModel[0].field as keyof typeof a;
+  const direction = sortModel[0].sort === "asc" ? 1 : -1;
+
+  const v1 = a[field] ?? "";
+  const v2 = b[field] ?? "";
+
+  if (v1 < v2) return -1 * direction;
+  if (v1 > v2) return 1 * direction;
+  return 0;
+});
+
+
+
   const {
     currentPage,
     totalPages,
@@ -226,7 +248,7 @@ export default function LeftTeam() {
 
           <Table
             columns={columns}
-            rows={usersData.slice((currentPage - 1) * 12, currentPage * 12)}
+rows={sortedData.slice(startItem - 1, endItem)}
             rowIdField="_id"
             pageSize={12}
             statusField="user_status"

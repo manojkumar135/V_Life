@@ -3,12 +3,14 @@ import {
   DataGrid,
   GridRowSelectionModel,
   GridColDef,
+  GridSortModel,
   GridCallbackDetails,
 } from "@mui/x-data-grid";
 import { useMemo, useState } from "react";
 import { GrStatusGood } from "react-icons/gr";
 import { MdCancel } from "react-icons/md";
 import { useVLife } from "@/store/context";
+import { useEffect } from "react";
 
 type Row = Record<string, any>;
 
@@ -28,6 +30,11 @@ interface TableProps<T extends Row> {
   setRowSelectionModel?: (selected: GridRowSelectionModel) => void;
   setSelectedRows?: (rows: T[]) => void;
   processedRows?: T[];
+
+  sortModel?: GridSortModel; // typed
+  onSortModelChange?: (model: GridSortModel) => void;
+  currentPage?: number;
+  setCurrentPage?: (p: number) => void;
 }
 
 export default function Table<T extends Row>({
@@ -46,15 +53,32 @@ export default function Table<T extends Row>({
   setRowSelectionModel,
   setSelectedRows,
   processedRows = [],
+  sortModel,
+  onSortModelChange,
+  currentPage: currentPageProp,
+  setCurrentPage: setCurrentPageProp,
 }: TableProps<T>) {
-  const [currentPage, setCurrentPage] = useState(1);
+  // const [currentPage, setCurrentPage] = useState(1);
   const { user } = useVLife();
 
+  const [internalPage, setInternalPage] = useState(1);
+  // use external currentPage if provided
+  const currentPage =
+    typeof currentPageProp === "number" ? currentPageProp : internalPage;
+  const setCurrentPage = (p: number) => {
+    if (typeof setCurrentPageProp === "function") setCurrentPageProp(p);
+    else setInternalPage(p);
+  };
+
   const safeRows = Array.isArray(rows) ? rows : [];
-  const paginatedRows = useMemo(
-    () => safeRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [safeRows, currentPage, pageSize]
+
+  // Use typed GridSortModel for state (handles readonly)
+  const [sortModelLocal, setSortModelLocal] = useState<GridSortModel>(
+    sortModel ?? []
   );
+  useEffect(() => {
+    if (sortModel) setSortModelLocal(sortModel);
+  }, [sortModel]);
 
   // 🔹 NEW: Track top color for cycling on sort click
   const colorCycle: ("green" | "orange" | "red" | "black")[] = [
@@ -128,7 +152,7 @@ export default function Table<T extends Row>({
       // ✅ Custom render for ID column
       return {
         ...col,
-        sortable: true, // 🔥 enable sorting
+        // sortable: true,
         renderCell: (params: any) => {
           const id = String(params.row?.[rowIdField] ?? "");
           const value = params.value;
@@ -228,6 +252,45 @@ export default function Table<T extends Row>({
     });
   }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);
 
+  // sort entire dataset (safeRows) using sortModelLocal, then slice for current page
+  const sortedRows = useMemo(() => {
+    if (!sortModelLocal || sortModelLocal.length === 0) return safeRows;
+    const model = sortModelLocal[0];
+    if (!model || !model.field) return safeRows;
+    const field = model.field;
+    const dir = model.sort === "asc" ? 1 : -1;
+
+    const comparator = (a: any, b: any) => {
+      if (field === statusField) {
+        return (
+          dir *
+          (getStatusWeight(a, statusField) - getStatusWeight(b, statusField))
+        );
+      }
+      const va = a[field];
+      const vb = b[field];
+      if (va == null && vb == null) return 0;
+      if (va == null) return -1 * dir;
+      if (vb == null) return 1 * dir;
+      if (typeof va === "number" && typeof vb === "number")
+        return (va - vb) * dir;
+      return String(va).localeCompare(String(vb)) * dir;
+    };
+
+    return [...safeRows].sort(comparator);
+  }, [safeRows, sortModelLocal, statusField]);
+
+  const paginatedRows = useMemo(
+    () =>
+      sortedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [sortedRows, currentPage, pageSize]
+  );
+
+  useEffect(() => {
+    // reset to page 1 when rows change
+    setCurrentPage(1);
+  }, [rows]);
+
   const handleSelectionChange = (newSelectionModel: any) => {
     // console.log("Raw selection model:", newSelectionModel);
 
@@ -274,19 +337,35 @@ export default function Table<T extends Row>({
           columns={enhancedColumns}
           checkboxSelection={checkboxSelection}
           disableRowSelectionOnClick
-          disableColumnMenu
+          // disableColumnMenu
           hideFooterPagination
           rowHeight={rowHeight}
           getRowId={(row) => String(row[rowIdField] ?? "")}
           localeText={{ noRowsLabel: "No Records Found" }}
           onRowSelectionModelChange={handleSelectionChange}
+          disableColumnMenu={false} // Enable column menu
           rowSelectionModel={rowSelectionModel}
           onRowClick={(params) => onRowClick && onRowClick(params.row)}
+          sortingMode="client"
+          sortModel={sortModelLocal}
+          onSortModelChange={(model) => {
+            setSortModelLocal(model);
+            onSortModelChange?.(model);
+            // when user sorts, go back to page 1
+            setCurrentPage(1);
+          }}
           sx={{
             backgroundColor: "white",
             border: 0,
             zIndex: 1,
             position: "relative",
+
+            "& .MuiDataGrid-iconButtonContainer .MuiSvgIcon-root": {
+              color: "#ffffff", // white dots
+            },
+            "& .MuiDataGrid-menuIconButton .MuiSvgIcon-root": {
+              color: "#ffffff", // white dots on hover/focus
+            },
 
             "& .MuiDataGrid-overlay": {
               padding: "20px !important",

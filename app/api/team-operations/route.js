@@ -69,6 +69,7 @@ export async function GET(req) {
           { address: regex },
           { pincode: regex },
           { country: regex },
+          { rank: regex },
           { state: regex },
           { district: regex },
           { locality: regex },

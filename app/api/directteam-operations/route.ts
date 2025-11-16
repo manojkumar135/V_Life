@@ -56,6 +56,8 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const rootId = searchParams.get("user_id");
+        const search = searchParams.get("search") || "";
+
 
     if (!rootId) {
       return NextResponse.json(
@@ -74,9 +76,42 @@ export async function GET(req: Request) {
     >();
     const nodeMap = new Map(allNodes.map((n) => [n.user_id, n]));
 
-    const referredUsers = await User.find({
-      user_id: { $in: rootUser.referred_users },
-    })
+    /** ---------------------------------------
+     *  🔍 SEARCH LOGIC ADDED HERE
+     * --------------------------------------*/
+    let query: any = {
+      user_id: { $in: rootUser.referred_users }
+    };
+
+    if (search) {
+      const searchTerms = search
+        .split(",")
+        .map((v) => v.trim())
+        .filter(Boolean);
+
+      query.$or = searchTerms.flatMap((term) => {
+        const regex = new RegExp("^" + term, "i");
+        return [
+          { user_id: regex },
+          { user_name: regex },
+          { mail: regex },
+          { contact: regex },
+          { address: regex },
+          { pincode: regex },
+          { country: regex },
+          { state: regex },
+          { district: regex },
+          { locality: regex },
+          { rank: regex },
+          { user_status: regex },
+          { status_notes: regex }
+        ];
+      });
+    }
+
+
+    /**Fetch filtered referred users*/
+    const referredUsers = await User.find(query)
       .sort({ createdAt: -1 })
       .lean<UserType[]>();
 

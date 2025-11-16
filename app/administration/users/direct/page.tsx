@@ -137,7 +137,7 @@ export default function DirectTeam() {
     { field: "mail", headerName: "Email", flex: 1.5 },
     { field: "team", headerName: "Team", flex: 1 },
 
-    { field: "rank", headerName: "Rank", flex: 1 },
+    { field: "rank", headerName: "Rank", flex: 1, },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 

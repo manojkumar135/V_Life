@@ -83,11 +83,11 @@ export default function WalletsPage() {
   const columns = [
     { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
     ...(user?.role === "admin"
-      ? [{ field: "user_id", headerName: "User ID", flex: 1 },
-        { field: "user_name", headerName: "User Name", flex: 1.2 },
-                // { field: "rank", headerName: "Rank", flex: 0.5 }
-
-      ]
+      ? [
+          { field: "user_id", headerName: "User ID", flex: 1 },
+          { field: "user_name", headerName: "User Name", flex: 1.2 },
+          // { field: "rank", headerName: "Rank", flex: 0.5,valueGetter: (params:any) => Number(params.row.rank) }
+        ]
       : []),
     { field: "bank_name", headerName: "Bank Name", flex: 1.6 },
     { field: "account_number", headerName: "Account Number", flex: 1.5 },
@@ -157,7 +157,7 @@ export default function WalletsPage() {
 
         <Table
           columns={columns}
-          rows={walletsData.slice((currentPage - 1) *12, currentPage *12)}
+          rows={walletsData.slice((currentPage - 1) * 12, currentPage * 12)}
           rowIdField="_id"
           pageSize={12}
           statusField="wallet_status"
