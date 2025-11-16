@@ -122,14 +122,20 @@ export default function TransactionHistory() {
       headerName: "User ID",
       flex: 1,
     },
+     user?.role === "admin" && {
+      field: "user_name",
+      headerName: "Name",
+      flex: 1,
+    },
+
 
     { field: "date", headerName: "Date", flex: 1 },
-    { field: "details", headerName: "Detail", flex: 1.5 },
+    { field: "details", headerName: "Detail", flex: 1.8 },
 
     {
       field: "amount",
       headerName: "Amount (₹)",
-      flex: 1,
+      flex: 0.8,
       align: "right",
       renderCell: (params: GridRenderCellParams<any, number>) => {
         const type = String(params.row.transaction_type ?? "").toLowerCase();
@@ -156,7 +162,7 @@ export default function TransactionHistory() {
     {
       field: "transaction_type",
       headerName: "Status",
-      flex: 1,
+      flex: 0.5,
       renderCell: (params: GridRenderCellParams<any, string>) => {
         const type = String(params.value ?? "").toLowerCase();
         const isUser = user?.role === "user";
