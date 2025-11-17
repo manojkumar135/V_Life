@@ -4,12 +4,13 @@ import {
   GridRowSelectionModel,
   GridColDef,
   GridSortModel,
-  GridColumnHeaderParams,
+  GridCallbackDetails,
 } from "@mui/x-data-grid";
-import { useMemo, useState, useEffect, MouseEvent } from "react";
+import { useMemo, useState } from "react";
 import { GrStatusGood } from "react-icons/gr";
 import { MdCancel } from "react-icons/md";
 import { useVLife } from "@/store/context";
+import { useEffect } from "react";
 
 type Row = Record<string, any>;
 
@@ -29,37 +30,26 @@ interface TableProps<T extends Row> {
   setRowSelectionModel?: (selected: GridRowSelectionModel) => void;
   setSelectedRows?: (rows: T[]) => void;
   processedRows?: T[];
-  sortModel?: GridSortModel;
+
+  sortModel?: GridSortModel; // typed
   onSortModelChange?: (model: GridSortModel) => void;
   currentPage?: number;
   setCurrentPage?: (p: number) => void;
 }
 
-// status color types
 type StatusColor = "green" | "red" | "orange" | "black";
 type SortCycleStep = StatusColor | "default";
 
-// cycle definition: 1→green, 2→red, 3→orange, 4→black, 5→default, 6→repeat
 const SORT_CYCLE: SortCycleStep[] = ["green", "red", "orange", "black", "default"];
 
 /**
- * Robust helper: normalize text
- */
-function norm(s: any): string {
-  return String(s ?? "").trim().toLowerCase();
-}
-
-/**
- * Determine the color of a row based on status and status_notes fields.
- * - GREEN → status ∈ {"active","available","paid","true","yes"}
- * - RED → otherwise
- * - ORANGE → GREEN + status_notes === "activated by admin"
- * - BLACK → RED + status_notes === "deactivated by admin"
+ * Determine the color of a row based on status and status_notes fields
  */
 function getStatusColor(row: any, statusField?: string): StatusColor {
-  const statusValue = norm(row?.[statusField ?? ""]);
-  const statusNotes = norm(row?.status_notes);
+  const statusValue = String(row?.[statusField ?? ""] ?? "").toLowerCase();
+  const statusNotes = String(row?.status_notes ?? "").toLowerCase();
 
+  // Check if status is "active"
   const isActive =
     statusValue === "active" ||
     statusValue === "available" ||
@@ -67,40 +57,50 @@ function getStatusColor(row: any, statusField?: string): StatusColor {
     statusValue === "true" ||
     statusValue === "yes";
 
+  // Apply color rules
   if (isActive) {
+    // GREEN by default
     if (statusNotes === "activated by admin") return "orange";
     return "green";
   } else {
+    // RED by default
     if (statusNotes === "deactivated by admin") return "black";
     return "red";
   }
 }
 
 /**
- * Convert a prioritized color into a stable numeric weight for sorting.
- * When priorityColor === null/"default" -> uses baseline order: green, red, orange, black
- * When priorityColor is set -> that color is weight 0 (top), others follow in baseline order.
+ * Get sort weight for a row based on current cycle priority
  */
 function getStatusWeight(
   row: any,
   statusField?: string,
-  priorityColor: SortCycleStep = "default"
+  cycleStep: SortCycleStep = "default"
 ): number {
   const color = getStatusColor(row, statusField);
 
-  const baseline: StatusColor[] = ["green", "red", "orange", "black"];
-
-  if (priorityColor === "default") {
-    return baseline.indexOf(color);
+  if (cycleStep === "default") {
+    // Default order: green=0, red=1, orange=2, black=3
+    const weights: Record<StatusColor, number> = {
+      green: 0,
+      red: 1,
+      orange: 2,
+      black: 3,
+    };
+    return weights[color];
   }
 
-  // create order with priorityColor first, then the rest in baseline order preserving relative order
-  const ordered: StatusColor[] = [
-    priorityColor as StatusColor,
-    ...baseline.filter((c) => c !== (priorityColor as StatusColor)),
-  ];
+  // Cycle sorting: prioritize cycleStep color to top
+  if (color === cycleStep) return -1;
 
-  return ordered.indexOf(color);
+  // Push others below by their default weight + offset
+  const weights: Record<StatusColor, number> = {
+    green: 0,
+    red: 1,
+    orange: 2,
+    black: 3,
+  };
+  return (weights[color] ?? 0) + 10;
 }
 
 export default function Table<T extends Row>({
@@ -119,14 +119,16 @@ export default function Table<T extends Row>({
   setRowSelectionModel,
   setSelectedRows,
   processedRows = [],
-  sortModel: sortModelProp,
+  sortModel,
   onSortModelChange,
   currentPage: currentPageProp,
   setCurrentPage: setCurrentPageProp,
 }: TableProps<T>) {
+  // const [currentPage, setCurrentPage] = useState(1);
   const { user } = useVLife();
 
   const [internalPage, setInternalPage] = useState(1);
+  // use external currentPage if provided
   const currentPage =
     typeof currentPageProp === "number" ? currentPageProp : internalPage;
   const setCurrentPage = (p: number) => {
@@ -135,23 +137,13 @@ export default function Table<T extends Row>({
   };
 
   const safeRows = Array.isArray(rows) ? rows : [];
-
-  // local sort model to show MUI indicator
-  const [sortModelLocal, setSortModelLocal] = useState<GridSortModel>(
-    sortModelProp ? [...sortModelProp] : []
-  );
-  useEffect(() => {
-    if (sortModelProp) setSortModelLocal([...sortModelProp]);
-  }, [sortModelProp]);
-
-  // status cycle state
+  // Status sort cycle state
   const [statusSortCycle, setStatusSortCycle] = useState<SortCycleStep>("default");
 
-  // enhance columns: status render + comparator (DataGrid comparator kept but we do global sort before pagination)
   const enhancedColumns: GridColDef[] = useMemo(() => {
     return columns.map((col, idx) => {
       const isIdCol = col.field === rowIdField || idx === 0;
-      const isStatusCol = Boolean(statusField && col.field === statusField);
+      const isStatusCol = statusField && col.field === statusField;
 
       const defaultRenderer = (params: any) => {
         const value = params.value;
@@ -196,7 +188,7 @@ export default function Table<T extends Row>({
           }
 
           if (isStatusCol) {
-            const raw = norm(value);
+            const raw = String(value ?? "").toLowerCase();
             const isActive =
               raw === "active" ||
               raw === "available" ||
@@ -204,13 +196,15 @@ export default function Table<T extends Row>({
               raw === "true" ||
               raw === "yes";
 
-            const statusNotes = norm(params.row?.status_notes);
+            const statusNotes = String(params.row?.status_notes ?? "").toLowerCase();
             const Icon = isActive ? GrStatusGood : MdCancel;
 
             let iconColor = isActive ? "green" : "red";
             if (user?.role === "admin") {
-              if (isActive && statusNotes === "activated by admin") iconColor = "orange";
-              else if (!isActive && statusNotes === "deactivated by admin") iconColor = "black";
+              if (isActive && statusNotes === "activated by admin")
+                iconColor = "orange";
+              else if (!isActive && statusNotes === "deactivated by admin")
+                iconColor = "black";
             }
 
             return (
@@ -241,65 +235,23 @@ export default function Table<T extends Row>({
 
           return value === null || value === undefined || value === "" ? "-" : value;
         },
-        // keep comparator defensive — unused for global sort but helpful for client behavior
-        sortComparator: (v1, v2, cell1, cell2) => {
-          try {
-            const r1 = cell1.api.getRow(cell1.id);
-            const r2 = cell2.api.getRow(cell2.id);
-            const w1 = getStatusWeight(r1, statusField, statusSortCycle);
-            const w2 = getStatusWeight(r2, statusField, statusSortCycle);
-            return w1 - w2;
-          } catch {
-            return 0;
-          }
-        },
       };
     });
-  }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role, statusSortCycle]);
+  }, [columns, rowIdField, statusField, onIdClick, onStatusClick, user?.role]);
 
-  // Global sorting applied to full dataset BEFORE pagination
+  // Sort full dataset using custom status cycle
   const sortedRows = useMemo(() => {
-    // if cycle is default -> honor non-status column sort if provided by user
     if (statusSortCycle === "default") {
-      if (sortModelLocal && sortModelLocal.length > 0) {
-        const item = sortModelLocal[0];
-        const field = String(item.field);
-        const dir = item.sort === "asc" ? 1 : -1;
-        return [...safeRows].sort((a, b) => {
-          const va = a[field];
-          const vb = b[field];
-          if (va == null && vb == null) return 0;
-          if (va == null) return -1 * dir;
-          if (vb == null) return 1 * dir;
-          if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
-          return String(va).localeCompare(String(vb)) * dir;
-        });
-      }
       return safeRows;
     }
 
-    // When a priority color is active, build ordered list with that color first
-    const ordered: StatusColor[] = [
-      statusSortCycle as StatusColor,
-      ...["green", "red", "orange", "black"].filter((c) => c !== statusSortCycle),
-    ] as StatusColor[];
-
-    // map color -> weight index
-    const idxMap = new Map<StatusColor, number>();
-    ordered.forEach((c, i) => idxMap.set(c, i));
-
-    return [...safeRows].sort((a, b) => {
-      const ca = getStatusColor(a, statusField);
-      const cb = getStatusColor(b, statusField);
-      const wa = idxMap.get(ca) ?? 99;
-      const wb = idxMap.get(cb) ?? 99;
-      if (wa !== wb) return wa - wb;
-      // stable tie-breaker: use user_id or rowId to keep deterministic order
-      const ida = String(a[rowIdField] ?? "");
-      const idb = String(b[rowIdField] ?? "");
-      return ida.localeCompare(idb);
+    const sorted = [...safeRows].sort((a, b) => {
+      const weightA = getStatusWeight(a, statusField, statusSortCycle);
+      const weightB = getStatusWeight(b, statusField, statusSortCycle);
+      return weightA - weightB;
     });
-  }, [safeRows, statusSortCycle, sortModelLocal, statusField, rowIdField]);
+    return sorted;
+  }, [safeRows, statusSortCycle, statusField]);
 
   const paginatedRows = useMemo(
     () => sortedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
@@ -307,7 +259,6 @@ export default function Table<T extends Row>({
   );
 
   useEffect(() => {
-    // reset to first page when source rows change
     setCurrentPage(1);
   }, [rows]);
 
@@ -315,9 +266,15 @@ export default function Table<T extends Row>({
     if (!checkboxSelection || !setSelectedRows) return;
     let selectedIds: string[] = [];
 
-    if (newSelectionModel && typeof newSelectionModel === "object" && "ids" in newSelectionModel) {
+    if (
+      newSelectionModel &&
+      typeof newSelectionModel === "object" &&
+      "ids" in newSelectionModel
+    ) {
       if (newSelectionModel.type === "exclude") {
-        selectedIds = rows.map((row) => String(row[rowIdField])).filter((id) => !newSelectionModel.ids.has(id));
+        selectedIds = rows
+          .map((row) => String(row[rowIdField]))
+          .filter((id) => !newSelectionModel.ids.has(id));
       } else {
         selectedIds = Array.from(newSelectionModel.ids).map(String);
       }
@@ -325,47 +282,36 @@ export default function Table<T extends Row>({
       selectedIds = (newSelectionModel as (string | number)[]).map(String);
     }
 
-    const selectedData = rows.filter((row) => selectedIds.includes(String(row[rowIdField])));
+    const selectedData = rows.filter((row) =>
+      selectedIds.includes(String(row[rowIdField]))
+    );
     setSelectedRows(selectedData);
   };
 
-  // Intercept header clicks to implement strict 5-step cycle for status column
-  const handleColumnHeaderClick = (params: GridColumnHeaderParams, event: MouseEvent) => {
-    if (!statusField) return;
-    if (params.field === statusField) {
-      event.preventDefault();
-      const curr = SORT_CYCLE.indexOf(statusSortCycle);
-      const next = (curr + 1) % SORT_CYCLE.length;
-      const nextCycle = SORT_CYCLE[next];
-      setStatusSortCycle(nextCycle);
-
-      // update visible sort indicator: empty when default, else asc (we use a fixed asc indicator)
-      const newSortModel: GridSortModel = nextCycle === "default" ? [] : [{ field: statusField!, sort: "asc" }];
-      setSortModelLocal(newSortModel);
-      onSortModelChange?.(newSortModel);
-      setCurrentPage(1);
-    }
-  };
-
-  // When user sorts other columns via DataGrid, reset the status cycle
+  // Handle sort model change
   const handleSortModelChange = (model: GridSortModel) => {
     if (!model || model.length === 0) {
-      setSortModelLocal([]);
       setStatusSortCycle("default");
       onSortModelChange?.(model);
       setCurrentPage(1);
       return;
     }
-    const first = model[0];
-    if (first.field !== statusField) {
-      setSortModelLocal([...model]);
+
+    const sortItem = model[0];
+    if (sortItem.field === statusField) {
+      // Cycle through the 5-step sort for status column
+      const currentIndex = SORT_CYCLE.indexOf(statusSortCycle);
+      const nextIndex = (currentIndex + 1) % SORT_CYCLE.length;
+      const nextCycle = SORT_CYCLE[nextIndex];
+      setStatusSortCycle(nextCycle);
+      onSortModelChange?.(model);
+      setCurrentPage(1);
+    } else {
+      // For non-status columns, reset status cycle to default
       setStatusSortCycle("default");
       onSortModelChange?.(model);
       setCurrentPage(1);
-      return;
     }
-    // if status-field model change originates from grid, just sync the local model
-    setSortModelLocal([...model]);
   };
 
   return (
@@ -394,7 +340,6 @@ export default function Table<T extends Row>({
               : []
           }
           onSortModelChange={handleSortModelChange}
-          onColumnHeaderClick={handleColumnHeaderClick}
           
           sx={{
             backgroundColor: "white",
