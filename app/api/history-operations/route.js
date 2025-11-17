@@ -112,6 +112,7 @@ async function checkAndUpgradeRank(user) {
 
   const directs = await User.find({ referBy: user.user_id }).lean();
   const treeNode = await TreeNode.findOne({ user_id: user.user_id }).lean();
+
   const leftUserId = await resolveChildUserId(treeNode?.left);
   const rightUserId = await resolveChildUserId(treeNode?.right);
 
@@ -120,21 +121,32 @@ async function checkAndUpgradeRank(user) {
     const paid = await History.findOne({ user_id: direct.user_id, advance: true }).lean();
     if (paid) {
       const team = await getUserTeam(user.user_id, direct.user_id);
-      paidDirects.push({ user: direct, payment_id: paid._id, team });
+      paidDirects.push({
+        user: direct,
+        payment_id: paid._id,
+        team,
+      });
     }
   }
 
   const totalPaid = paidDirects.length;
+
   const leftUser = paidDirects.find(d => d.team === "left");
   const rightUser = paidDirects.find(d => d.team === "right");
 
   let rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
   if (!rankRecord) {
-    await Rank.create({ user_id: user.user_id, user_name: user.user_name || "", ranks: {} });
+    await Rank.create({
+      user_id: user.user_id,
+      user_name: user.user_name || "",
+      ranks: {},
+    });
     rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
   }
 
-  // Partial qualification record
+  // ------------------------------------------
+  // PARTIAL 1-STAR STORAGE (AS IS)
+  // ------------------------------------------
   if (currentRank < 1) {
     const existingQualified = rankRecord?.ranks?.["1_star"]?.qualified_users || [];
     const toAdd = [];
@@ -147,6 +159,7 @@ async function checkAndUpgradeRank(user) {
         payment_id: leftUser.payment_id,
       });
     }
+
     if (rightUser && !existingQualified.some(u => u.team === "right")) {
       toAdd.push({
         user_id: rightUser.user.user_id,
@@ -158,17 +171,21 @@ async function checkAndUpgradeRank(user) {
 
     if (toAdd.length) {
       const merged = [...existingQualified, ...toAdd];
+
       await Rank.findOneAndUpdate(
         { user_id: user.user_id },
         { $set: { "ranks.1_star.qualified_users": merged } },
         { upsert: true }
       );
+
       console.log(`Partial 1-star progress for ${user.user_id}:`, merged);
       rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
     }
   }
 
-  // Full 1-star
+  // ------------------------------------------
+  // FULL 1-STAR RANKUP (AS IS)
+  // ------------------------------------------
   if (currentRank < 1 && leftUser && rightUser) {
     await updateUserRank(user.user_id, 1, [
       {
@@ -184,31 +201,44 @@ async function checkAndUpgradeRank(user) {
         payment_id: rightUser.payment_id,
       },
     ]);
+
     console.log(`${user.user_id} achieved 1-star rank ✅`);
     return;
   }
 
-  // 2-star to 5-star logic
+  // ------------------------------------------
+  // UPDATED: 2–5 STAR USING SAME LEFT+RIGHT LOGIC
+  // ------------------------------------------
   if (currentRank >= 1 && currentRank < 5) {
     const nextRank = currentRank + 1;
-    const requiredPaid = nextRank * 2;
-    if (totalPaid >= requiredPaid) {
-      const qualifiedUsers = paidDirects
-        .slice(requiredPaid - 2, requiredPaid)
-        .map(d => ({
-          user_id: d.user.user_id,
-          user_name: d.user.user_name || "",
-          team: d.team,
-          payment_id: d.payment_id,
-        }));
 
-      await updateUserRank(user.user_id, nextRank, qualifiedUsers);
-      console.log(`${user.user_id} achieved ${nextRank}-star rank ✅`);
+    const nextLeft = paidDirects.find(d => d.team === "left");
+    const nextRight = paidDirects.find(d => d.team === "right");
+
+    if (nextLeft && nextRight) {
+      await updateUserRank(user.user_id, nextRank, [
+        {
+          user_id: nextLeft.user.user_id,
+          user_name: nextLeft.user.user_name || "",
+          team: "left",
+          payment_id: nextLeft.payment_id,
+        },
+        {
+          user_id: nextRight.user.user_id,
+          user_name: nextRight.user.user_name || "",
+          team: "right",
+          payment_id: nextRight.payment_id,
+        },
+      ]);
+
+      console.log(`${user.user_id} achieved ${nextRank}-star rank ⭐`);
       return;
     }
   }
 
-  // Already 5-star
+  // ------------------------------------------
+  // 5-STAR EXTRA STORAGE (UNCHANGED)
+  // ------------------------------------------
   if (currentRank >= 5) {
     const extraUsers = paidDirects.map(d => ({
       user_id: d.user.user_id,
@@ -216,6 +246,7 @@ async function checkAndUpgradeRank(user) {
       team: d.team,
       payment_id: d.payment_id,
     }));
+
     await Rank.findOneAndUpdate(
       { user_id: user.user_id },
       { $set: { "ranks.extra": { qualified_users: extraUsers } } },
@@ -223,6 +254,7 @@ async function checkAndUpgradeRank(user) {
     );
   }
 }
+
 
 // ✅ POST - Create payment record
 export async function POST(request) {
