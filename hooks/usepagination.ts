@@ -43,6 +43,9 @@ const usePagination = ({
 
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
+  const isFirstPage = currentPage === 1;
+  const isLastPage = currentPage === totalPages;
+
   return {
     currentPage,
     totalPages,
@@ -51,6 +54,8 @@ const usePagination = ({
     goToPage,
     startItem,
     endItem,
+    isFirstPage,
+    isLastPage,
   };
 };
 
