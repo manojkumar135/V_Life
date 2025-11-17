@@ -112,7 +112,7 @@ function RegisterContent() {
 
   const [isInitialSet, setIsInitialSet] = useState(false);
 
-  useEffect(() => {
+ useEffect(() => {
   if (isInitialSet) return;
 
   const ref = params.get("ref");
@@ -120,7 +120,6 @@ function RegisterContent() {
   const position = params.get("position");
   const parent = params.get("parent");
 
-  // 1️⃣ Encrypted method (old)
   if (ref) {
     try {
       const decrypted = CryptoJS.AES.decrypt(
@@ -137,15 +136,13 @@ function RegisterContent() {
     }
   }
 
-  // 2️⃣ Direct parameters (new)
   if (referBy) formik.setFieldValue("referBy", referBy);
   if (position) formik.setFieldValue("team", position);
-
-  // parent
   if (parent) formik.setFieldValue("parent", parent);
 
   setIsInitialSet(true);
 }, [params, isInitialSet]);
+
 
 
   const handleNavigateToLogin = () => router.push("/auth/login");
