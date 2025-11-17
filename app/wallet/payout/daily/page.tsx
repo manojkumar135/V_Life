@@ -14,6 +14,7 @@ import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 import { GridColDef } from "@mui/x-data-grid";
+import { handleDownload } from "@/utils/handleDownload";
 
 export default function DailyPayoutPage() {
   const { user } = useVLife();
@@ -28,6 +29,8 @@ export default function DailyPayoutPage() {
   // ✅ date filter state
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(true); // open on first load
+  const [downloading, setDownloading] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
   const API_URL = "/api/dailyPayout-operations";
 
@@ -39,6 +42,25 @@ export default function DailyPayoutPage() {
       setAdvancePaid(paid.hasPermission);
     })();
   }, [user?.user_id]);
+
+  const handleDownloadClick = () => {
+    handleDownload<any>({
+      rows: selectedRows, // or selected rows if you want selection-based export
+      fileName: "Daliy Payouts",
+      format: "xlsx",
+      excludeHeaders: [
+        "_id",
+        "__v",
+        "created_at",
+        "last_modified_at",
+        "is_checked",
+        "left_users",
+        "right_users",
+        "created_by",
+      ],
+      onFinish: () => setDownloading(false),
+    });
+  };
 
   // ✅ Fetch withdrawals
   const fetchWithdrawals = useCallback(async () => {
@@ -69,12 +91,16 @@ export default function DailyPayoutPage() {
     }
   }, [user?.role, user?.user_id, query, dateFilter]);
 
+  const handleRowClick = (row: any) => {
+    console.log("Order clicked:", row);
+    // handle navigation or modal etc.
+  };
+
   useEffect(() => {
     if (!user?.user_id) return;
     fetchWithdrawals();
 
-        goToPage(1);
-
+    goToPage(1);
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // ✅ Table columns
@@ -152,12 +178,19 @@ export default function DailyPayoutPage() {
   ];
 
   // ✅ Pagination hook
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
-    usePagination({
-      totalItems,
-      itemsPerPage: 12,
-      onPageChange: () => {},
-    });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({
+    totalItems,
+    itemsPerPage: 12,
+    onPageChange: () => {},
+  });
 
   // ✅ Button actions
   const handlePayOut = () => {
@@ -186,6 +219,8 @@ export default function DailyPayoutPage() {
           setSearch={setQuery}
           showAddButton={user?.role === "jk"}
           showBack
+          showMoreOptions={user?.role === "admin"}
+          onMore={handleDownloadClick}
           onBack={onBack}
           addLabel="Add Payout"
           onAdd={handlePayOut}
@@ -219,13 +254,16 @@ export default function DailyPayoutPage() {
 
         <Table
           columns={columns}
-          rows={withdrawData.slice((currentPage - 1) *12, currentPage *12)}
+          rows={withdrawData}
+          currentPage={currentPage}
+          setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
           statusField="pstatus"
           onIdClick={(id) => router.push(`/wallet/payout/detailview/${id}`)}
           checkboxSelection
-          onRowClick={(row) => console.log("payout clicked:", row)}
+          onRowClick={handleRowClick}
+          setSelectedRows={setSelectedRows}
         />
 
         {/* Date Filter Modal */}

@@ -141,7 +141,7 @@ export default function BookingsPage() {
     [query]
   );
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
+  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
     usePagination({
       totalItems,
       itemsPerPage: 12,
@@ -198,7 +198,9 @@ export default function BookingsPage() {
         {/* Table */}
         <Table
           columns={columns}
-          rows={bookingsData.slice((currentPage - 1) *12, currentPage *12)}
+          rows={bookingsData}
+           currentPage={currentPage}
+            setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
           onRowClick={handleRowClick}

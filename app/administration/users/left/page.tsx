@@ -227,7 +227,9 @@ export default function LeftTeam() {
 
           <Table
             columns={columns}
-            rows={usersData.slice((currentPage - 1) * 12, currentPage * 12)}
+            rows={usersData} // send full dataset
+            currentPage={currentPage}
+            setCurrentPage={goToPage}
             rowIdField="_id"
             pageSize={12}
             statusField="user_status"

@@ -199,7 +199,9 @@ export default function InfinityTeam() {
 
           <Table
             columns={columns}
-            rows={usersData.slice((currentPage - 1) * 12, currentPage * 12)}
+            rows={usersData}
+             currentPage={currentPage}
+            setCurrentPage={goToPage}
             rowIdField="_id"
             pageSize={12}
             statusField="user_status"

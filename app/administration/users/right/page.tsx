@@ -88,8 +88,7 @@ export default function RightTeam() {
     if (!user?.user_id) return;
     fetchUsers(debouncedQuery);
 
-        goToPage(1);
-
+    goToPage(1);
   }, [debouncedQuery, user?.user_id]);
 
   // Navigate to edit
@@ -157,7 +156,7 @@ export default function RightTeam() {
     { field: "user_name", headerName: "User Name", flex: 1 },
     { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 2 },
-    { field: "rank", headerName: "Rank", flex: 1 ,},
+    { field: "rank", headerName: "Rank", flex: 1 },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 
@@ -178,12 +177,19 @@ export default function RightTeam() {
     [query]
   );
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
-    usePagination({
-      totalItems,
-      itemsPerPage: 12,
-      onPageChange: handlePageChange,
-    });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({
+    totalItems,
+    itemsPerPage: 12,
+    onPageChange: handlePageChange,
+  });
 
   const handleAddUser = () => {
     router.push("/administration/users/adduser?team=right");
@@ -220,7 +226,9 @@ export default function RightTeam() {
 
         <Table
           columns={columns}
-          rows={usersData.slice((currentPage - 1) *12, currentPage *12)}
+          rows={usersData}
+          currentPage={currentPage}
+          setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
           statusField="user_status"

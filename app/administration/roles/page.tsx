@@ -171,7 +171,9 @@ export default function RolesPage() {
         {/* Table */}
         <Table
           columns={columns}
-          rows={rolesData.slice((currentPage - 1) *12, currentPage *12)}
+          rows={rolesData}
+           currentPage={currentPage}
+            setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
           statusField="role_status"

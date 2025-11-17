@@ -61,7 +61,7 @@ export default function OrdersPage() {
   useEffect(() => {
     const checkAdvancePayment = async () => {
       const paid = await hasAdvancePaid(user_id, 10000);
-      console.log(paid)
+      console.log(paid);
       setHasPaidAdvance(paid.hasPermission);
 
       if (!paid.hasPermission) {
@@ -112,8 +112,7 @@ export default function OrdersPage() {
     if (!user?.user_id) return;
     fetchOrders(debouncedQuery);
 
-        goToPage(1);
-
+    goToPage(1);
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
   // Delete order
@@ -202,9 +201,8 @@ export default function OrdersPage() {
     prevPage,
     startItem,
     endItem,
-    isFirstPage,
-    isLastPage,
-    goToPage
+
+    goToPage,
   } = usePagination({
     totalItems,
     itemsPerPage: 12,
@@ -281,7 +279,9 @@ export default function OrdersPage() {
 
         <Table
           columns={columns}
-          rows={ordersData.slice((currentPage - 1) *12, currentPage *12)}
+          rows={ordersData}
+          currentPage={currentPage}
+          setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
           statusField="order_status" // ← show icon & click
