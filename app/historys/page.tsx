@@ -112,6 +112,27 @@ export default function TransactionHistory() {
     fetchHistory();
   }, [fetchHistory]);
 
+  const formatTime = (value: string) => {
+    console.log("Formatting time:", value);
+    if (!value) return "";
+
+    // CASE 1: Already in 12-hour format (contains AM/PM)
+    if (/am|pm/i.test(value)) {
+      return value.toUpperCase();
+    }
+
+    // CASE 2: Convert 24-hour → 12-hour format
+    const [hourStr, minuteStr] = value.split(":");
+    let hour = Number(hourStr);
+    const minute = minuteStr?.padStart(2, "0") || "00";
+
+    const ampm = hour >= 12 ? "PM" : "AM";
+
+    hour = hour % 12 || 12;
+
+    return `${hour.toString().padStart(2, "0")}:${minute} ${ampm}`;
+  };
+
   // ✅ Columns setup
   const columns: GridColDef[] = [
     { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
@@ -122,14 +143,24 @@ export default function TransactionHistory() {
       headerName: "User ID",
       flex: 1,
     },
-     user?.role === "admin" && {
+    user?.role === "admin" && {
       field: "user_name",
       headerName: "Name",
       flex: 1,
     },
 
+    { field: "date", headerName: "Date", flex: 0.6 },
+    {
+      field: "time",
+      headerName: "Time",
+      flex: 0.6,
+      renderCell: (params: any) => {
+        const time = params?.row?.time;
+        console.log("Original time value:", time);
+        return formatTime(time);
+      },
+    },
 
-    { field: "date", headerName: "Date", flex: 1 },
     { field: "details", headerName: "Detail", flex: 1.8 },
 
     {
@@ -162,7 +193,7 @@ export default function TransactionHistory() {
     {
       field: "transaction_type",
       headerName: "Status",
-      flex: 0.5,
+      flex: 0.6,
       renderCell: (params: GridRenderCellParams<any, string>) => {
         const type = String(params.value ?? "").toLowerCase();
         const isUser = user?.role === "user";
@@ -265,7 +296,9 @@ export default function TransactionHistory() {
 
         <Table
           columns={columns}
-          rows={historyData.slice((currentPage - 1) * 12, currentPage * 12)}
+          rows={historyData}
+          currentPage={currentPage}
+          setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
           onRowClick={(row) => console.log("Transaction clicked:", row)}
