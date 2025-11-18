@@ -30,6 +30,7 @@ if (!isOpen || !type) return null;
     },
   };
 
+  // if (!dataMap[type]) return null;
   const { title, content } = dataMap[type];
 
   return (

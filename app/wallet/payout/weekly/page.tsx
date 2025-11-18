@@ -94,6 +94,7 @@ export default function WithdrawPage() {
         "left_users",
         "right_users",
         "created_by",
+        "last_modified_by",
       ],
       onFinish: () => setDownloading(false),
     });
