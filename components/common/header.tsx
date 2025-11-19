@@ -67,9 +67,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           ids: unseenIds,
           read: true,
         });
-        setAlerts((prev) =>
-          prev.map((a) => ({ ...a, read: true }))
-        );
+        setAlerts((prev) => prev.map((a) => ({ ...a, read: true })));
       }
     } catch (err) {
       console.error("Mark all seen failed:", err);
@@ -78,19 +76,18 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
   // ✅ Toggle modal and mark all as seen
   // ✅ Toggle modal and mark all as seen only when closing
-const toggleModal = async () => {
-  setShowModal((prev) => {
-    const newState = !prev;
+  const toggleModal = async () => {
+    setShowModal((prev) => {
+      const newState = !prev;
 
-    // 🧠 When closing modal (prev = true → newState = false)
-    if (prev && alerts.length > 0) {
-      markAllAsSeen();
-    }
+      // 🧠 When closing modal (prev = true → newState = false)
+      if (prev && alerts.length > 0) {
+        markAllAsSeen();
+      }
 
-    return newState;
-  });
-};
-
+      return newState;
+    });
+  };
 
   // ✅ Mark individual alert as seen
   const markAsSeen = async (id: string) => {
@@ -186,7 +183,7 @@ const toggleModal = async () => {
         {/* 🧾 Notifications Modal */}
         {showModal && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 w-full h-full backdrop-blur-sm"
             onClick={toggleModal}
           >
             <div
@@ -200,7 +197,9 @@ const toggleModal = async () => {
                 <IoClose size={24} />
               </button>
 
-              <h2 className="text-xl font-semibold mb-1 lg:mb-3">Notifications</h2>
+              <h2 className="text-xl font-semibold mb-1 lg:mb-3">
+                Notifications
+              </h2>
 
               <div className="text-sm text-gray-700 h-8/9 max-md:h-12/13 overflow-y-auto border-t border-gray-200 pt-1 ">
                 {loading ? (

@@ -36,7 +36,7 @@ const alertSchema = new mongoose.Schema(
 );
 
 // Optional index for faster lookups by user_id
-alertSchema.index({ user_id: 1, seen: 1, createdAt: -1 });
+alertSchema.index({ createdAt: 1 }, { expireAfterSeconds: 20 * 24 * 60 * 60 });
 
 export const Alert =
     mongoose.models.Alert || mongoose.model("Alert", alertSchema);

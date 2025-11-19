@@ -351,9 +351,9 @@ const MaverickHome = () => {
 
       {/* FOOTER */}
       <footer className="bg-gray-700 text-gray-300 py-4 max-md:py-4 px-6 md:px-16">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-10">
           {/* LEFT — 2/4 WIDTH */}
-          <div className="lg:col-span-2">
+          <div className="md:col-span-2">
             <h3 className="text-xl font-bold text-white mb-1">Maverick</h3>
             <p className="text-gray-400 text-sm">
               Pioneering a new era of opportunity, community, and growth.
@@ -417,7 +417,7 @@ const MaverickHome = () => {
           </div>
 
           {/* RIGHT — 1/4 WIDTH */}
-          <div className="lg:col-span-1 flex flex-col items-center">
+          <div className="lg:col-span-1 flex flex-col items-center md:items-start xl:items-center">
             <h4 className="text-lg font-semibold text-white mb-3">Follow Us</h4>
             <div className="flex space-x-4 text-lg">
               <a href="#" className="hover:text-yellow-400 transition">

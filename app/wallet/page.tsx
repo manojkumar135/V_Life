@@ -5,9 +5,12 @@ import Layout from "@/layout/Layout";
 import { Wallet, Banknote, Shuffle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FaGift } from "react-icons/fa6";
+import { VscGraph } from "react-icons/vsc";
+import { useVLife } from "@/store/context";
 
 const page = () => {
   const router = useRouter();
+  const { user } = useVLife();
 
   return (
     <Layout>
@@ -19,7 +22,9 @@ const page = () => {
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <Wallet size={32} />
-            <span className="mt-2 text-lg font-semibold">Wallets</span>
+            <span className="mt-2 text-lg font-semibold">
+              {user.role === "admin" ? "Wallets" : "Wallet"}
+            </span>
           </div>
 
           {/* Withdraw Card */}
@@ -37,6 +42,15 @@ const page = () => {
           >
             <FaGift size={32} />
             <span className="mt-2 text-lg font-semibold">Rewards</span>
+          </div>
+
+          {/* Reports Card */}
+          <div
+            onClick={() => router.push("/reports")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <VscGraph size={32} />
+            <span className="mt-2 text-lg font-semibold">Reports</span>
           </div>
 
           {/* Convert Card */}
