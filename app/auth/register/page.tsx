@@ -34,6 +34,9 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   // const [isTermsOpen, setIsTermsOpen] = useState(false);
 
+  const [isReferByPreset, setIsReferByPreset] = useState(false);
+  const [isTeamPreset, setIsTeamPreset] = useState(false);
+
   const [modalType, setModalType] = useState<
     "terms" | "privacy" | "refund" | null
   >(null);
@@ -112,38 +115,53 @@ function RegisterContent() {
 
   const [isInitialSet, setIsInitialSet] = useState(false);
 
- useEffect(() => {
-  if (isInitialSet) return;
+  useEffect(() => {
+    if (isInitialSet) return;
 
-  const ref = params.get("ref");
-  const referBy = params.get("referBy");
-  const position = params.get("position");
-  const parent = params.get("parent");
+    const ref = params.get("ref");
+    const referBy = params.get("referBy");
+    const position = params.get("position");
+    const parent = params.get("parent");
 
-  if (ref) {
-    try {
-      const decrypted = CryptoJS.AES.decrypt(
-        decodeURIComponent(ref),
-        SECRET_KEY
-      ).toString(CryptoJS.enc.Utf8);
+    let referPreset = false;
+    let teamPreset = false;
 
-      const data = JSON.parse(decrypted);
+    if (ref) {
+      try {
+        const decrypted = CryptoJS.AES.decrypt(
+          decodeURIComponent(ref),
+          SECRET_KEY
+        ).toString(CryptoJS.enc.Utf8);
 
-      if (data.referBy) formik.setFieldValue("referBy", data.referBy);
-      if (data.position) formik.setFieldValue("team", data.position);
-    } catch (err) {
-      console.error("Invalid referral code", err);
+        const data = JSON.parse(decrypted);
+
+        if (data.referBy) {
+          formik.setFieldValue("referBy", data.referBy);
+          referPreset = true;
+        }
+        if (data.position) {
+          formik.setFieldValue("team", data.position);
+          teamPreset = true;
+        }
+      } catch (err) {
+        console.error("Invalid referral code", err);
+      }
     }
-  }
 
-  if (referBy) formik.setFieldValue("referBy", referBy);
-  if (position) formik.setFieldValue("team", position);
-  if (parent) formik.setFieldValue("parent", parent);
+    if (referBy) {
+      formik.setFieldValue("referBy", referBy);
+      referPreset = true;
+    }
+    if (position) {
+      formik.setFieldValue("team", position);
+      teamPreset = true;
+    }
+    if (parent) formik.setFieldValue("parent", parent);
 
-  setIsInitialSet(true);
-}, [params, isInitialSet]);
-
-
+    setIsReferByPreset(referPreset);
+    setIsTeamPreset(teamPreset);
+    setIsInitialSet(true);
+  }, [params, isInitialSet]);
 
   const handleNavigateToLogin = () => router.push("/auth/login");
 
@@ -381,8 +399,12 @@ function RegisterContent() {
                   value={formik.values.referBy}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
-                  readOnly
-                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
+                  readOnly={isReferByPreset} // only read-only if preset
+                  className={`w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200 ${
+                    isReferByPreset
+                      ? "bg-gray-100 cursor-not-allowed"
+                      : "bg-white"
+                  }`}
                 />
               </div>
               <span className="text-red-500 text-xs mt-1 block">
@@ -405,7 +427,7 @@ function RegisterContent() {
                   }
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
-                  isDisabled={true}
+                  isDisabled={isTeamPreset}
                   placeholder="Select Organization"
                   className="w-full"
                 />

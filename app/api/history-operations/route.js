@@ -6,7 +6,7 @@ import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { Rank } from "@/models/rank";
 import { Wallet } from "@/models/wallet";
-import mongoose from "mongoose"; 
+import mongoose from "mongoose";
 import { Alert } from "@/models/alert";
 
 import {
@@ -97,14 +97,12 @@ async function updateUserRank(userId, rankLevel, qualifiedUsers) {
   await TreeNode.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
   await Wallet.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
 
-
 }
 
-// ✅ Rank Upgrade Logic
+// ✅ Rank Upgrade Logic with unused_left and unused_right
 async function checkAndUpgradeRank(user) {
   console.log(`Checking rank for user: ${user.user_id}`);
-  const currentRank = parseInt(user.rank === "none" ? "0" : user.rank, 10);
-
+  let currentRank = parseInt(user.rank === "none" ? "0" : user.rank, 10);
   if (currentRank >= 5) {
     console.log(`${user.user_id} is already at 5-star rank.`);
     return;
@@ -113,9 +111,11 @@ async function checkAndUpgradeRank(user) {
   const directs = await User.find({ referBy: user.user_id }).lean();
   const treeNode = await TreeNode.findOne({ user_id: user.user_id }).lean();
 
+  // Resolve left/right child user_ids
   const leftUserId = await resolveChildUserId(treeNode?.left);
   const rightUserId = await resolveChildUserId(treeNode?.right);
 
+  // Paid directs only
   const paidDirects = [];
   for (const direct of directs) {
     const paid = await History.findOne({ user_id: direct.user_id, advance: true }).lean();
@@ -129,116 +129,92 @@ async function checkAndUpgradeRank(user) {
     }
   }
 
-  const totalPaid = paidDirects.length;
-
-  const leftUser = paidDirects.find(d => d.team === "left");
-  const rightUser = paidDirects.find(d => d.team === "right");
-
-  let rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
+  let rankRecord = await Rank.findOne({ user_id: user.user_id });
   if (!rankRecord) {
-    await Rank.create({
+    rankRecord = await Rank.create({
       user_id: user.user_id,
       user_name: user.user_name || "",
       ranks: {},
     });
-    rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
   }
 
-  // ------------------------------------------
-  // PARTIAL 1-STAR STORAGE (AS IS)
-  // ------------------------------------------
-  if (currentRank < 1) {
-    const existingQualified = rankRecord?.ranks?.["1_star"]?.qualified_users || [];
-    const toAdd = [];
+  // Iterate from current rank + 1 to 5 to check promotions
+  for (let nextRank = currentRank + 1; nextRank <= 5; nextRank++) {
+    const rankKey = `${nextRank}_star`;
+    const existingRank = rankRecord.ranks[rankKey] || {};
+    const qualified = existingRank.qualified_users || [];
+    const unusedLeft = existingRank.unused_left || [];
+    const unusedRight = existingRank.unused_right || [];
 
-    if (leftUser && !existingQualified.some(u => u.team === "left")) {
-      toAdd.push({
-        user_id: leftUser.user.user_id,
-        user_name: leftUser.user.user_name || "",
-        team: "left",
-        payment_id: leftUser.payment_id,
-      });
-    }
+    // Combine previous unused directs with new paid directs
+    let leftCandidate = paidDirects.find(d => d.team === "left" && !qualified.some(q => q.user_id === d.user.user_id));
+    let rightCandidate = paidDirects.find(d => d.team === "right" && !qualified.some(q => q.user_id === d.user.user_id));
 
-    if (rightUser && !existingQualified.some(u => u.team === "right")) {
-      toAdd.push({
-        user_id: rightUser.user.user_id,
-        user_name: rightUser.user.user_name || "",
-        team: "right",
-        payment_id: rightUser.payment_id,
-      });
-    }
+    if (!leftCandidate && unusedLeft.length) leftCandidate = unusedLeft.shift();
+    if (!rightCandidate && unusedRight.length) rightCandidate = unusedRight.shift();
 
-    if (toAdd.length) {
-      const merged = [...existingQualified, ...toAdd];
+    // Partial storage for future
+    const newUnusedLeft = leftCandidate ? [] : paidDirects.filter(d => d.team === "left" && !qualified.some(q => q.user_id === d.user.user_id));
+    const newUnusedRight = rightCandidate ? [] : paidDirects.filter(d => d.team === "right" && !qualified.some(q => q.user_id === d.user.user_id));
+
+    // If both left and right exist, promote rank
+    if (leftCandidate && rightCandidate) {
+      const qualifiedUsers = [
+        {
+          user_id: leftCandidate.user.user_id,
+          user_name: leftCandidate.user.user_name || "",
+          team: "left",
+          payment_id: leftCandidate.payment_id,
+        },
+        {
+          user_id: rightCandidate.user.user_id,
+          user_name: rightCandidate.user.user_name || "",
+          team: "right",
+          payment_id: rightCandidate.payment_id,
+        },
+      ];
 
       await Rank.findOneAndUpdate(
         { user_id: user.user_id },
-        { $set: { "ranks.1_star.qualified_users": merged } },
-        { upsert: true }
+        {
+          $set: {
+            [`ranks.${rankKey}.qualified_users`]: qualifiedUsers,
+            [`ranks.${rankKey}.achieved_at`]: new Date(),
+            [`ranks.${rankKey}.unused_left`]: newUnusedLeft,
+            [`ranks.${rankKey}.unused_right`]: newUnusedRight,
+          },
+          $setOnInsert: { user_name: user.user_name },
+        },
+        { upsert: true, new: true }
       );
 
-      console.log(`Partial 1-star progress for ${user.user_id}:`, merged);
-      rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
+      // Update rank in other collections
+      await updateUserRank(user.user_id, nextRank, qualifiedUsers);
+      console.log(`🎖️ ${user.user_id} achieved ${nextRank}-star rank`);
+
+      currentRank = nextRank; // move to next iteration
+    } else {
+      // Store remaining paid directs in unused arrays for future
+      await Rank.findOneAndUpdate(
+        { user_id: user.user_id },
+        {
+          $set: {
+            [`ranks.${rankKey}.unused_left`]: [...unusedLeft, ...newUnusedLeft],
+            [`ranks.${rankKey}.unused_right`]: [...unusedRight, ...newUnusedRight],
+          },
+          $setOnInsert: { user_name: user.user_name },
+        },
+        { upsert: true, new: true }
+      );
+      console.log(`Partial ${nextRank}-star stored for future:`, {
+        unusedLeft: [...unusedLeft, ...newUnusedLeft],
+        unusedRight: [...unusedRight, ...newUnusedRight],
+      });
+      break; // cannot upgrade further
     }
   }
 
-  // ------------------------------------------
-  // FULL 1-STAR RANKUP (AS IS)
-  // ------------------------------------------
-  if (currentRank < 1 && leftUser && rightUser) {
-    await updateUserRank(user.user_id, 1, [
-      {
-        user_id: leftUser.user.user_id,
-        user_name: leftUser.user.user_name || "",
-        team: "left",
-        payment_id: leftUser.payment_id,
-      },
-      {
-        user_id: rightUser.user.user_id,
-        user_name: rightUser.user.user_name || "",
-        team: "right",
-        payment_id: rightUser.payment_id,
-      },
-    ]);
-
-    console.log(`${user.user_id} achieved 1-star rank ✅`);
-    return;
-  }
-
-  // ------------------------------------------
-  // UPDATED: 2–5 STAR USING SAME LEFT+RIGHT LOGIC
-  // ------------------------------------------
-  if (currentRank >= 1 && currentRank < 5) {
-    const nextRank = currentRank + 1;
-
-    const nextLeft = paidDirects.find(d => d.team === "left");
-    const nextRight = paidDirects.find(d => d.team === "right");
-
-    if (nextLeft && nextRight) {
-      await updateUserRank(user.user_id, nextRank, [
-        {
-          user_id: nextLeft.user.user_id,
-          user_name: nextLeft.user.user_name || "",
-          team: "left",
-          payment_id: nextLeft.payment_id,
-        },
-        {
-          user_id: nextRight.user.user_id,
-          user_name: nextRight.user.user_name || "",
-          team: "right",
-          payment_id: nextRight.payment_id,
-        },
-      ]);
-
-      console.log(`${user.user_id} achieved ${nextRank}-star rank ⭐`);
-      return;
-    }
-  }
-
-  // ------------------------------------------
-  // 5-STAR EXTRA STORAGE (UNCHANGED)
-  // ------------------------------------------
+  // Handle extra users beyond 5-star
   if (currentRank >= 5) {
     const extraUsers = paidDirects.map(d => ({
       user_id: d.user.user_id,
@@ -246,14 +222,14 @@ async function checkAndUpgradeRank(user) {
       team: d.team,
       payment_id: d.payment_id,
     }));
-
     await Rank.findOneAndUpdate(
       { user_id: user.user_id },
-      { $set: { "ranks.extra": { qualified_users: extraUsers } } },
+      { $set: { extra: { qualified_users: extraUsers } } },
       { upsert: true }
     );
   }
 }
+
 
 
 // ✅ POST - Create payment record

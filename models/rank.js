@@ -18,24 +18,39 @@ const RankSchema = new mongoose.Schema(
     ranks: {
       "1_star": {
         qualified_users: [QualifiedUserSchema],
+        unused_left: [QualifiedUserSchema],
+        unused_right: [QualifiedUserSchema],
         achieved_at: { type: Date },
       },
       "2_star": {
         qualified_users: [QualifiedUserSchema],
+        unused_left: [QualifiedUserSchema],
+        unused_right: [QualifiedUserSchema],
         achieved_at: { type: Date },
       },
       "3_star": {
         qualified_users: [QualifiedUserSchema],
+        unused_left: [QualifiedUserSchema],
+        unused_right: [QualifiedUserSchema],
         achieved_at: { type: Date },
       },
       "4_star": {
         qualified_users: [QualifiedUserSchema],
+        unused_left: [QualifiedUserSchema],
+        unused_right: [QualifiedUserSchema],
         achieved_at: { type: Date },
       },
       "5_star": {
         qualified_users: [QualifiedUserSchema],
+        unused_left: [QualifiedUserSchema],
+        unused_right: [QualifiedUserSchema],
         achieved_at: { type: Date },
       },
+    },
+
+    // Extra users beyond 5-star rank
+    extra: {
+      qualified_users: [QualifiedUserSchema],
     },
   },
   {
@@ -43,6 +58,7 @@ const RankSchema = new mongoose.Schema(
     collection: "ranks",
   }
 );
+
 
 export const Rank =
   mongoose.models.Rank || mongoose.model("Rank", RankSchema);

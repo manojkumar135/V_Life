@@ -359,8 +359,8 @@ const DashboardPage: React.FC = () => {
 
               <InfoCard title="KYC Status">
                 <div className="text-sm space-y-1">
-                  <StatusItem label="Bank" value={user?.wallet_id} />
                   <StatusItem label="PAN" value={user?.pan} />
+                  <StatusItem label="Bank" value={user?.wallet_id} />
                   <StatusItem label="ID Proof" value={user?.aadhar} />
                   <StatusItem label="Address" value={user?.pincode} />
                 </div>
@@ -415,7 +415,9 @@ const DashboardPage: React.FC = () => {
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Days from Activation"
-                  value={`${summary?.daysAfterActivation?.toString() || "0"} days`}
+                  value={`${
+                    summary?.daysAfterActivation?.toString() || "0"
+                  } days`}
                 />
 
                 <DashBox
