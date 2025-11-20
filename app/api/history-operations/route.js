@@ -71,7 +71,10 @@ async function getUserTeam(rootUserId, targetUserId) {
   return "any";
 }
 
-// ✅ Helper: Update or insert rank details
+
+// -------------------------------------------------------------
+// UTIL: Update rank across all collections
+// -------------------------------------------------------------
 async function updateUserRank(userId, rankLevel, qualifiedUsers) {
   const rankKey = `${rankLevel}_star`;
 
@@ -79,156 +82,152 @@ async function updateUserRank(userId, rankLevel, qualifiedUsers) {
     { user_id: userId },
     {
       $set: {
-        user_name: qualifiedUsers.length ? qualifiedUsers[0]?.referrer_name || undefined : undefined,
         [`ranks.${rankKey}`]: {
           qualified_users: qualifiedUsers,
           achieved_at: new Date(),
         },
       },
     },
-    { upsert: true, new: true }
+    { upsert: true }
   );
 
   await User.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
-  await Login.updateOne(
-    { user_id: userId },
-    { $set: { rank: String(rankLevel) } }
-  );
+  await Login.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
   await TreeNode.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
   await Wallet.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
-
 }
 
-// ✅ Rank Upgrade Logic with unused_left and unused_right
+// -------------------------------------------------------------
+// NEW — FIXED RANK LOGIC (DO NOT MODIFY)
+// -------------------------------------------------------------
 async function checkAndUpgradeRank(user) {
-  console.log(`Checking rank for user: ${user.user_id}`);
-  let currentRank = parseInt(user.rank === "none" ? "0" : user.rank, 10);
-  if (currentRank >= 5) {
-    console.log(`${user.user_id} is already at 5-star rank.`);
-    return;
-  }
+  console.log(`Checking rank for ${user.user_id}`);
 
+  let currentRank = parseInt(user.rank === "none" ? "0" : user.rank);
+  if (currentRank >= 5) return;
+
+  // -------------------------------------------------------------
+  // STEP 1 — FETCH PAID DIRECTS WITH TEAM SIDE
+  // -------------------------------------------------------------
   const directs = await User.find({ referBy: user.user_id }).lean();
-  const treeNode = await TreeNode.findOne({ user_id: user.user_id }).lean();
-
-  // Resolve left/right child user_ids
-  const leftUserId = await resolveChildUserId(treeNode?.left);
-  const rightUserId = await resolveChildUserId(treeNode?.right);
-
-  // Paid directs only
   const paidDirects = [];
+
   for (const direct of directs) {
     const paid = await History.findOne({ user_id: direct.user_id, advance: true }).lean();
     if (paid) {
       const team = await getUserTeam(user.user_id, direct.user_id);
-      paidDirects.push({
-        user: direct,
-        payment_id: paid._id,
-        team,
-      });
+      if (team === "left" || team === "right") {
+        paidDirects.push({
+          user_id: direct.user_id,
+          user_name: direct.user_name,
+          team,
+          payment_id: paid._id,
+        });
+      }
     }
   }
 
-  let rankRecord = await Rank.findOne({ user_id: user.user_id });
-  if (!rankRecord) {
-    rankRecord = await Rank.create({
-      user_id: user.user_id,
-      user_name: user.user_name || "",
-      ranks: {},
+  // -------------------------------------------------------------
+  // STEP 2 — SPLIT INTO LEFT / RIGHT POOLS
+  // -------------------------------------------------------------
+  let leftPool = paidDirects.filter(u => u.team === "left");
+  let rightPool = paidDirects.filter(u => u.team === "right");
+
+  // -------------------------------------------------------------
+  // STEP 3 — LOAD EXISTING RANKS AND REMOVE USED USERS
+  // -------------------------------------------------------------
+  const rankRecord = await Rank.findOne({ user_id: user.user_id }).lean();
+  const usedUsers = [];
+
+  if (rankRecord?.ranks) {
+    Object.values(rankRecord.ranks).forEach(rank => {
+      if (rank.qualified_users) {
+        rank.qualified_users.forEach(u => usedUsers.push(u.user_id));
+      }
     });
   }
 
-  // Iterate from current rank + 1 to 5 to check promotions
+  // Remove previously used users
+  leftPool = leftPool.filter(u => !usedUsers.includes(u.user_id));
+  rightPool = rightPool.filter(u => !usedUsers.includes(u.user_id));
+
+  // -------------------------------------------------------------
+  // STEP 4 — ASSIGN RANKS (ONE LEFT + ONE RIGHT PER STAR)
+  // -------------------------------------------------------------
   for (let nextRank = currentRank + 1; nextRank <= 5; nextRank++) {
     const rankKey = `${nextRank}_star`;
-    const existingRank = rankRecord.ranks[rankKey] || {};
-    const qualified = existingRank.qualified_users || [];
-    const unusedLeft = existingRank.unused_left || [];
-    const unusedRight = existingRank.unused_right || [];
 
-    // Combine previous unused directs with new paid directs
-    let leftCandidate = paidDirects.find(d => d.team === "left" && !qualified.some(q => q.user_id === d.user.user_id));
-    let rightCandidate = paidDirects.find(d => d.team === "right" && !qualified.some(q => q.user_id === d.user.user_id));
-
-    if (!leftCandidate && unusedLeft.length) leftCandidate = unusedLeft.shift();
-    if (!rightCandidate && unusedRight.length) rightCandidate = unusedRight.shift();
-
-    // Partial storage for future
-    const newUnusedLeft = leftCandidate ? [] : paidDirects.filter(d => d.team === "left" && !qualified.some(q => q.user_id === d.user.user_id));
-    const newUnusedRight = rightCandidate ? [] : paidDirects.filter(d => d.team === "right" && !qualified.some(q => q.user_id === d.user.user_id));
-
-    // If both left and right exist, promote rank
-    if (leftCandidate && rightCandidate) {
-      const qualifiedUsers = [
-        {
-          user_id: leftCandidate.user.user_id,
-          user_name: leftCandidate.user.user_name || "",
-          team: "left",
-          payment_id: leftCandidate.payment_id,
-        },
-        {
-          user_id: rightCandidate.user.user_id,
-          user_name: rightCandidate.user.user_name || "",
-          team: "right",
-          payment_id: rightCandidate.payment_id,
-        },
-      ];
-
+    // Stop if shortage
+    if (leftPool.length < 1 || rightPool.length < 1) {
       await Rank.findOneAndUpdate(
         { user_id: user.user_id },
         {
           $set: {
-            [`ranks.${rankKey}.qualified_users`]: qualifiedUsers,
-            [`ranks.${rankKey}.achieved_at`]: new Date(),
-            [`ranks.${rankKey}.unused_left`]: newUnusedLeft,
-            [`ranks.${rankKey}.unused_right`]: newUnusedRight,
+            [`ranks.${rankKey}.unused_left`]: leftPool,
+            [`ranks.${rankKey}.unused_right`]: rightPool,
           },
-          $setOnInsert: { user_name: user.user_name },
         },
-        { upsert: true, new: true }
+        { upsert: true }
       );
-
-      // Update rank in other collections
-      await updateUserRank(user.user_id, nextRank, qualifiedUsers);
-      console.log(`🎖️ ${user.user_id} achieved ${nextRank}-star rank`);
-
-      currentRank = nextRank; // move to next iteration
-    } else {
-      // Store remaining paid directs in unused arrays for future
-      await Rank.findOneAndUpdate(
-        { user_id: user.user_id },
-        {
-          $set: {
-            [`ranks.${rankKey}.unused_left`]: [...unusedLeft, ...newUnusedLeft],
-            [`ranks.${rankKey}.unused_right`]: [...unusedRight, ...newUnusedRight],
-          },
-          $setOnInsert: { user_name: user.user_name },
-        },
-        { upsert: true, new: true }
-      );
-      console.log(`Partial ${nextRank}-star stored for future:`, {
-        unusedLeft: [...unusedLeft, ...newUnusedLeft],
-        unusedRight: [...unusedRight, ...newUnusedRight],
-      });
-      break; // cannot upgrade further
+      console.log(`Stopped at ${nextRank}-star due to shortage`);
+      break;
     }
-  }
 
-  // Handle extra users beyond 5-star
-  if (currentRank >= 5) {
-    const extraUsers = paidDirects.map(d => ({
-      user_id: d.user.user_id,
-      user_name: d.user.user_name || "",
-      team: d.team,
-      payment_id: d.payment_id,
-    }));
+    // CONSUME one left + one right
+    const left = leftPool.shift();
+    const right = rightPool.shift();
+
+    const qualifiedUsers = [
+      {
+        user_id: left.user_id,
+        user_name: left.user_name,
+        payment_id: left.payment_id,
+        team: "left",
+      },
+      {
+        user_id: right.user_id,
+        user_name: right.user_name,
+        payment_id: right.payment_id,
+        team: "right",
+      },
+    ];
+
+    // Save the rank
     await Rank.findOneAndUpdate(
       { user_id: user.user_id },
-      { $set: { extra: { qualified_users: extraUsers } } },
+      {
+        $set: {
+          [`ranks.${rankKey}.qualified_users`]: qualifiedUsers,
+          [`ranks.${rankKey}.achieved_at`]: new Date(),
+          [`ranks.${rankKey}.unused_left`]: leftPool,
+          [`ranks.${rankKey}.unused_right`]: rightPool,
+        },
+      },
       { upsert: true }
     );
+
+    await updateUserRank(user.user_id, nextRank, qualifiedUsers);
+
+    console.log(`⭐ ${nextRank}-star assigned to ${user.user_id}`);
+
+    currentRank = nextRank;
   }
+
+  // -------------------------------------------------------------
+  // STEP 5 — SAVE EXTRA USERS
+  // -------------------------------------------------------------
+  const extraUsers = [...leftPool, ...rightPool];
+
+  await Rank.findOneAndUpdate(
+    { user_id: user.user_id },
+    { $set: { extra: { qualified_users: extraUsers } } },
+    { upsert: true }
+  );
+
+  console.log(`Final rank for ${user.user_id}: ${currentRank}`);
 }
+
+
 
 
 
@@ -311,8 +310,18 @@ export async function POST(request) {
 
         console.log("📌 paid_directs update result:", updateResult);
 
+        const infinityUpdate = await User.updateOne(
+          { user_id: referrerId, infinity_referred_users: { $ne: user.user_id } },
+          {
+            $addToSet: { infinity_referred_users: user.user_id },
+            $inc: { infinity_referred_count: 1 },
+          }
+        );
+        console.log("📌 infinity_referred_users update result:", infinityUpdate);
+
+
         const refBefore = await User.findOne({ user_id: referrerId });
-        console.log("✅ Updated paid_directs for referrer:", refBefore?.paid_directs);
+        console.log("✅ Updated paid_directs for referrer:", refBefore?.paid_directs,refBefore?.infinity_referred_users);
 
         // 2️⃣ Update Infinity team (referrer + upper chain)
         console.log("\n🚀 Calling updateInfinityTeam for:", referrerId);

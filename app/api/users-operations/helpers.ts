@@ -45,6 +45,7 @@ export interface CreateUserInput {
   referBy: string; // sponsor (required)
   team: "left" | "right"; // required
   parent?: string | null; // optional explicit parent
+  user_status?: string;
   [key: string]: unknown;
 }
 
@@ -464,8 +465,22 @@ export async function createUserAndLogin(
     throw new Error("Email or Contact already exists");
 
   // referrer exists
-  const referrer = await User.findOne({ user_id: referBy }).lean();
+  const referrer: any = await User.findOne({ user_id: referBy }).lean();
   if (!referrer) throw new Error("referBy (sponsor) not found");
+
+  // Block creation if sponsor is inactive & deactivated by admin
+  if (
+    (referrer.user_status === "inactive" ||
+      referrer.user_status === "deactivated" ||
+      !referrer.user_status) &&
+    String(referrer.status_notes ?? "")
+      .trim()
+      .toLowerCase() === "deactivated by admin"
+  ) {
+    throw new Error(
+      "Cannot create user: the specified sponsor has been deactivated by admin and cannot sponsor new users."
+    );
+  }
 
   // parent check if provided
   if (parent) {

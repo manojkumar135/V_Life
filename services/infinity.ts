@@ -3,6 +3,13 @@ import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 
 /**
+ * Helper: normalize id
+ */
+function idStr(v: any) {
+  return String(v ?? "");
+}
+
+/**
  * Returns the infinity level of `childId` under `ownerId` by walking upward
  * through the binary tree using TreeNode.parent links.
  *
@@ -10,27 +17,17 @@ import TreeNode from "@/models/tree";
  * AUTO fallback: if not found → returns 1
  */
 export async function getInfinityLevel(ownerId: string, childId: string) {
-  console.log(`\n🧭 getInfinityLevel(): owner=${ownerId}, child=${childId}`);
-
   let level = 1;
   let current: any = await TreeNode.findOne({ user_id: childId }).lean().exec();
 
-  if (!current) {
-    console.warn("⚠️ TREE NODE NOT FOUND for child. Defaulting to level 1");
-    return 1;
-  }
+  if (!current) return 1;
 
-  // walk upward via parent links until we find owner
   while (current && current.parent) {
-    if (current.parent === ownerId) {
-      console.log(`✅ Found owner in path. Final Level = ${level}`);
-      return level;
-    }
+    if (current.parent === ownerId) return level;
     level++;
     current = await TreeNode.findOne({ user_id: current.parent }).lean().exec();
   }
 
-  console.warn("⚠️ Child is NOT in owner branch. AUTO MODE → Level 1");
   return 1;
 }
 
@@ -39,43 +36,21 @@ export async function getInfinityLevel(ownerId: string, childId: string) {
  * Returns: "left" | "right" | null
  */
 export async function detectInfinitySide(ownerId: string, newReferralId: string) {
-  console.log(`\n↔️ detectInfinitySide(): owner=${ownerId}, child=${newReferralId}`);
-
   const ownerNode: any = await TreeNode.findOne({ user_id: ownerId }).lean().exec();
   let current: any = await TreeNode.findOne({ user_id: newReferralId }).lean().exec();
 
-  if (!current) {
-    console.warn("⚠️ Child tree node not found:", newReferralId);
-    return null;
-  }
-  if (!ownerNode) {
-    console.warn("⚠️ Owner tree node not found:", ownerId);
-    return null;
-  }
+  if (!current || !ownerNode) return null;
 
-  // walk up until we reach an immediate child under owner
   while (current && current.parent) {
     if (current.parent === ownerId) {
       const directChildId = current.user_id;
-      if (ownerNode.left === directChildId) {
-        console.log(`✅ Detected LEFT side: directChild=${directChildId}`);
-        return "left";
-      }
-      if (ownerNode.right === directChildId) {
-        console.log(`✅ Detected RIGHT side: directChild=${directChildId}`);
-        return "right";
-      }
-
-      console.warn(
-        `⚠️ Direct child ${directChildId} found under owner ${ownerId} but owner.left/right don't match`
-      );
+      if (ownerNode.left === directChildId) return "left";
+      if (ownerNode.right === directChildId) return "right";
       return null;
     }
-
     current = await TreeNode.findOne({ user_id: current.parent }).lean().exec();
   }
 
-  console.warn("⚠️ Could not find owner in the upward chain for child:", newReferralId);
   return null;
 }
 
@@ -84,44 +59,62 @@ export async function detectInfinitySide(ownerId: string, newReferralId: string)
  */
 export async function updateInfinitySideCount(ownerId: string, newReferralId: string) {
   try {
-    console.log(`\n↕️ updateInfinitySideCount(): owner=${ownerId}, child=${newReferralId}`);
-
     let side = await detectInfinitySide(ownerId, newReferralId);
-
-    if (!side) {
-      console.warn("⚠️ Side detection failed → AUTO fallback = left");
-      side = "left";
-    }
+    if (!side) side = "left";
 
     if (side === "left") {
-      await User.updateOne(
-        { user_id: ownerId },
-        { $addToSet: { infinity_left_users: newReferralId } }
-      ).exec();
+      await User.updateOne({ user_id: ownerId }, { $addToSet: { infinity_left_users: newReferralId } }).exec();
     } else {
-      await User.updateOne(
-        { user_id: ownerId },
-        { $addToSet: { infinity_right_users: newReferralId } }
-      ).exec();
+      await User.updateOne({ user_id: ownerId }, { $addToSet: { infinity_right_users: newReferralId } }).exec();
     }
 
     const ownerRaw: any = await User.findOne({ user_id: ownerId }).lean().exec();
-    if (!ownerRaw) {
-      console.warn("⚠️ Owner user record not found while updating counts:", ownerId);
-      return;
+    const leftCount = Array.isArray(ownerRaw?.infinity_left_users) ? ownerRaw.infinity_left_users.length : 0;
+    const rightCount = Array.isArray(ownerRaw?.infinity_right_users) ? ownerRaw.infinity_right_users.length : 0;
+
+    await User.updateOne({ user_id: ownerId }, { $set: { infinty_left_count: leftCount, infinty_right_count: rightCount } }).exec();
+  } catch (err) {
+    console.error("updateInfinitySideCount error:", err);
+  }
+}
+
+/**
+ * Keep infinity_referred_count in sync with infinity_referred_users length
+ */
+export async function updateInfinityReferredCount(ownerId: string) {
+  try {
+    const ownerRaw: any = await User.findOne({ user_id: ownerId }).lean().exec();
+    const count = Array.isArray(ownerRaw?.infinity_referred_users) ? ownerRaw.infinity_referred_users.length : 0;
+    await User.updateOne({ user_id: ownerId }, { $set: { infinity_referred_count: count } }).exec();
+  } catch (err) {
+    console.error("updateInfinityReferredCount error:", err);
+  }
+}
+
+/**
+ * Remove a referral from owner.infinity_users levels (keeps infinity_referred_users intact).
+ * Ensures owner does not list the referral inside any level arrays.
+ */
+export async function removeReferralFromOwnerLevels(ownerId: string, referralId: string) {
+  try {
+    const ownerDoc: any = await User.findOne({ user_id: ownerId }).exec();
+    if (!ownerDoc || !Array.isArray(ownerDoc.infinity_users)) return;
+
+    let modified = false;
+    for (const lvl of ownerDoc.infinity_users) {
+      if (Array.isArray(lvl.users) && lvl.users.includes(referralId)) {
+        lvl.users = lvl.users.filter((u: string) => idStr(u) !== idStr(referralId));
+        modified = true;
+      }
     }
 
-    const leftCount = Array.isArray(ownerRaw.infinity_left_users) ? ownerRaw.infinity_left_users.length : 0;
-    const rightCount = Array.isArray(ownerRaw.infinity_right_users) ? ownerRaw.infinity_right_users.length : 0;
+    ownerDoc.infinity_users = ownerDoc.infinity_users.filter((e: any) => Array.isArray(e.users) && e.users.length > 0);
 
-    await User.updateOne(
-      { user_id: ownerId },
-      { $set: { infinty_left_count: leftCount, infinty_right_count: rightCount } }
-    ).exec();
-
-    console.log(`📊 Updated counts for ${ownerId} → left:${leftCount} right:${rightCount}`);
+    if (modified) {
+      await ownerDoc.save();
+    }
   } catch (err) {
-    console.error("❌ updateInfinitySideCount error:", err);
+    console.error("removeReferralFromOwnerLevels error:", err);
   }
 }
 
@@ -129,80 +122,66 @@ export async function updateInfinitySideCount(ownerId: string, newReferralId: st
  * Adds a user to infinity_users array (by level) and updates their infinity sponsor,
  * then updates side arrays & counts using TreeNode placement.
  *
- * Improvements:
- * - Compute real level using TreeNode unless explicit level is intentionally provided.
- * - Remove the user from other levels before inserting to avoid duplicates across levels.
+ * - idempotent: will not create duplicates in same owner.level
+ * - ensures infinity_referred_users contains referral (atomic $addToSet)
  */
-export async function addToInfinityTeam(
-  userId: string,
-  newReferralId: string,
-  level?: number
-) {
-  console.log(`\n➕ addToInfinityTeam(): Adding ${newReferralId} → ${userId} @ requested Level ${level ?? "auto"}`);
-
+export async function addToInfinityTeam(userId: string, newReferralId: string, level?: number) {
   if (!userId || !newReferralId) return;
 
   const userDoc: any = await User.findOne({ user_id: userId }).exec();
-  if (!userDoc) {
-    console.warn("⚠️ Owner user not found:", userId);
-    return;
-  }
+  if (!userDoc) return;
 
-  // Ensure infinity_users exists
-  if (!Array.isArray(userDoc.infinity_users)) {
-    userDoc.infinity_users = [];
-  }
+  if (!Array.isArray(userDoc.infinity_users)) userDoc.infinity_users = [];
+  if (!Array.isArray(userDoc.infinity_referred_users)) userDoc.infinity_referred_users = [];
 
-  // Determine correct level using TreeNode if not explicitly provided or forced
-  let targetLevel = typeof level === "number" && !isNaN(level) ? Number(level) : await getInfinityLevel(userId, newReferralId);
+  const targetLevel = (typeof level === "number" && !isNaN(level) && level >= 1) ? Number(level) : await getInfinityLevel(userId, newReferralId);
 
-  // Normalize level to integer >=1
-  if (!targetLevel || targetLevel < 1) targetLevel = 1;
-
-  // Remove referral from any other level entries (dedupe across levels)
+  // remove referral from other levels within same owner
   let modified = false;
   for (const lvlEntry of userDoc.infinity_users) {
-    if (Array.isArray(lvlEntry.users) && lvlEntry.users.includes(newReferralId) && Number(lvlEntry.level) !== Number(targetLevel)) {
-      lvlEntry.users = lvlEntry.users.filter((u: string) => u !== newReferralId);
+    if (Array.isArray(lvlEntry.users) && lvlEntry.users.includes(newReferralId) && Number(lvlEntry.level) !== targetLevel) {
+      lvlEntry.users = lvlEntry.users.filter((u: string) => idStr(u) !== idStr(newReferralId));
       modified = true;
     }
   }
-
-  // Clean up empty level entries
   userDoc.infinity_users = userDoc.infinity_users.filter((e: any) => Array.isArray(e.users) && e.users.length > 0);
 
-  // Find or create target level entry
-  let existingLevelEntry = userDoc.infinity_users.find((lvl: any) => Number(lvl.level) === Number(targetLevel));
-  if (existingLevelEntry) {
-    if (!existingLevelEntry.users.includes(newReferralId)) {
-      existingLevelEntry.users.push(newReferralId);
+  // find or create level entry
+  let existing = userDoc.infinity_users.find((l: any) => Number(l.level) === Number(targetLevel));
+  if (existing) {
+    if (!existing.users.includes(newReferralId)) {
+      existing.users.push(newReferralId);
       modified = true;
-      console.log("📌 Pushed newReferral to existing level entry");
-    } else {
-      console.log("⚠️ Skipping — user already exists in this level");
     }
   } else {
     userDoc.infinity_users.push({ level: targetLevel, users: [newReferralId] });
     modified = true;
-    console.log("📌 Creating new level entry and adding user");
+  }
+
+  // local update to flat list (kept for doc consistency) — final persistence via atomic update below
+  if (!userDoc.infinity_referred_users.includes(newReferralId)) {
+    userDoc.infinity_referred_users.push(newReferralId);
+    modified = true;
   }
 
   if (modified) {
     await userDoc.save();
-    console.log("✅ Saved infinity_users for owner:", userId);
-  } else {
-    // still ensure we saved earlier if no structural changes but infinity may still be set on referral
-    console.log("ℹ️ No changes to owner's infinity_users needed");
   }
 
-  // Update the referred user's infinity sponsor (always set to direct sponsor for reference)
+  // atomic ensure flat list contains referral and keep referred count in sync
+  try {
+    await User.updateOne({ user_id: userId }, { $addToSet: { infinity_referred_users: newReferralId } }).exec();
+    await updateInfinityReferredCount(userId);
+  } catch (err) {
+    console.error("atomic addToSet infinity_referred_users failed:", err);
+  }
+
+  // set referral's infinity pointer
   await User.updateOne({ user_id: newReferralId }, { $set: { infinity: userId } }).exec();
   await Login.updateOne({ user_id: newReferralId }, { $set: { infinity: userId } }).exec();
 
-  // Update left/right side arrays and counts
+  // update side arrays and counts
   await updateInfinitySideCount(userId, newReferralId);
-
-  console.log(`✅ addToInfinityTeam completed for ${newReferralId} -> ${userId} (final level ${targetLevel})`);
 }
 
 /**
@@ -210,105 +189,161 @@ export async function addToInfinityTeam(
  * For any even child of `currentId`, we add it into `ownerId`'s infinity at the real level
  * computed from TreeNode and recurse.
  */
-export async function processInfinityLevels(
-  ownerId: string,
-  currentId: string
-) {
-  console.log(`\n🔍 processInfinityLevels(): Owner=${ownerId}, Current=${currentId}`);
-
+export async function processInfinityLevels(ownerId: string, currentId: string) {
   const current: any = await User.findOne({ user_id: currentId }).exec();
-  if (!current || !Array.isArray(current.paid_directs) || current.paid_directs.length === 0) {
-    console.log("⚠️ No paid_directs found. Stopping recursion.");
-    return;
-  }
+  if (!current || !Array.isArray(current.paid_directs) || current.paid_directs.length === 0) return;
 
   for (let i = 0; i < current.paid_directs.length; i++) {
     const childId = current.paid_directs[i];
-
     if ((i + 1) % 2 === 0) {
-      console.log(`✅ EVEN Paid Direct #${i + 1} → ${childId}`);
-
-      // compute real tree-based level from owner->child
       const level = await getInfinityLevel(ownerId, childId);
       await addToInfinityTeam(ownerId, childId, level);
-
-      console.log(`🔁 Recursing into child ${childId}`);
       await processInfinityLevels(ownerId, childId);
-    } else {
-      console.log(`⏭️ ODD Paid Direct #${i + 1} → Skipped for deeper level`);
     }
   }
 }
 
 /**
- * Main function to rebuild infinity tree for a user.
+ * Rebuilds owner.infinity_referred_users from owner.referred_users,
+ * keeping only active referrals (and preserving referred_users order).
  *
- * Behavior:
- * - For every paid_direct, we compute the correct level (TreeNode-based) and add accordingly.
- * - Odd/even logic still used to decide whether some directs are processed under sponsor vs owner,
- *   but final placement always uses getInfinityLevel owner-based computation to avoid wrong level assignment.
+ * If you want to include non-active paid/advance users as well,
+ * adjust the `activeSet` check below to include payment flags.
  */
-export async function updateInfinityTeam(userId: string) {
-  console.log(`\n♾️ updateInfinityTeam(): Building Infinity for ${userId}`);
+export async function rebuildInfinityReferredFromReferredUsers(ownerId: string) {
+  const owner: any = await User.findOne({ user_id: ownerId }).exec();
+  if (!owner) return;
 
-  const user: any = await User.findOne({ user_id: userId }).exec();
-  if (!user || !Array.isArray(user.paid_directs) || user.paid_directs.length === 0) {
-    console.log("⚠️ User has no paid_directs → Skip");
+  const referred = Array.isArray(owner.referred_users) ? owner.referred_users.slice() : [];
+  if (referred.length === 0) {
+    // empty out arrays
+    await User.updateOne({ user_id: ownerId }, { $set: { infinity_referred_users: [], infinity_referred_count: 0 } }).exec();
     return;
   }
 
-  // Ensure infinity_users exists
+  // fetch all referred user docs in one query
+  const activeDocs: any[] = await User.find({ user_id: { $in: referred }, user_status: "active" }).lean().exec();
+  const activeSet = new Set(activeDocs.map((r) => idStr(r.user_id)));
+
+  // preserve order from referred_users
+  const finalList: string[] = [];
+  for (const rid of referred) {
+    if (activeSet.has(idStr(rid))) finalList.push(idStr(rid));
+  }
+
+  await User.updateOne({ user_id: ownerId }, { $set: { infinity_referred_users: finalList, infinity_referred_count: finalList.length } }).exec();
+}
+
+/**
+ * Main function to rebuild infinity tree for a user.
+ *
+ * - Rebuilds infinity_referred_users from referred_users (active only) to maintain ordering and correctness.
+ * - Applies odd/even placement:
+ *    odd positions -> owner
+ *    even positions -> sponsor (if exists) else owner
+ * - Preserves paid_directs processing (unchanged)
+ */
+export async function updateInfinityTeam(userId: string) {
+  const user: any = await User.findOne({ user_id: userId }).exec();
+  if (!user) return;
+
+  // ensure infinity_users exists locally
   if (!Array.isArray(user.infinity_users)) user.infinity_users = [];
 
-  if (!user.referBy) {
-    console.log("👑 No sponsor → all paid_directs go to their computed levels under the user");
-    for (const childId of user.paid_directs) {
-      const level = await getInfinityLevel(userId, childId);
-      await addToInfinityTeam(userId, childId, level);
-      await processInfinityLevels(userId, childId);
-    }
-  } else {
-    console.log("👥 Has sponsor → applying odd/even logic but placing using TreeNode level");
-    for (let i = 0; i < user.paid_directs.length; i++) {
-      const childId = user.paid_directs[i];
+  // 0) Rebuild flat referred list from referred_users (active only)
+  await rebuildInfinityReferredFromReferredUsers(userId);
+  // re-fetch owner to get updated infinity_referred_users
+  const owner: any = await User.findOne({ user_id: userId }).exec();
+  const refs: string[] = Array.isArray(owner.infinity_referred_users) ? owner.infinity_referred_users.slice() : [];
 
-      if ((i + 1) % 2 === 1) {
-        console.log(`🔹 ODD direct → compute level under ${userId}:`, childId);
+  // 1) preserve paid_directs logic
+  if (Array.isArray(owner.paid_directs) && owner.paid_directs.length > 0) {
+    if (!owner.referBy) {
+      for (const childId of owner.paid_directs) {
         const level = await getInfinityLevel(userId, childId);
         await addToInfinityTeam(userId, childId, level);
         await processInfinityLevels(userId, childId);
-      } else {
-        console.log(`🔸 EVEN direct → goes to sponsor ${user.referBy}:`, childId);
-        const sponsorLevel = await getInfinityLevel(user.referBy, childId);
-        await addToInfinityTeam(user.referBy, childId, sponsorLevel);
+      }
+    } else {
+      for (let i = 0; i < owner.paid_directs.length; i++) {
+        const childId = owner.paid_directs[i];
+        if ((i + 1) % 2 === 1) {
+          const level = await getInfinityLevel(userId, childId);
+          await addToInfinityTeam(userId, childId, level);
+          await processInfinityLevels(userId, childId);
+        } else {
+          const sponsorLevel = await getInfinityLevel(owner.referBy, childId);
+          await addToInfinityTeam(owner.referBy, childId, sponsorLevel);
+          // ensure owner does not keep the child inside its level arrays
+          await removeReferralFromOwnerLevels(userId, childId);
+        }
       }
     }
   }
 
-  console.log("✅ Infinity build completed for", userId);
+  // 2) Process ordering from infinity_referred_users (odd->owner, even->sponsor)
+  for (let idx = 0; idx < refs.length; idx++) {
+    const childId = refs[idx];
+    if (!childId) continue;
+
+    if ((idx + 1) % 2 === 1) {
+      // odd -> owner
+      await addToInfinityTeam(userId, childId);
+      // also ensure sponsor levels don't incorrectly hold this referral as a result of previous runs? (we keep sponsor as-is)
+    } else {
+      // even -> sponsor if exists, otherwise owner
+      if (owner.referBy) {
+        await addToInfinityTeam(owner.referBy, childId);
+        // remove from owner's level buckets to avoid duplication in infinity_users
+        await removeReferralFromOwnerLevels(userId, childId);
+      } else {
+        await addToInfinityTeam(userId, childId);
+      }
+    }
+  }
+
+  // final counts
+  await updateInfinityReferredCount(userId);
+}
+
+/**
+ * When any user becomes active (by admin or payment), call this to ensure they
+ * are added into their sponsor's infinity and propagate updates to ancestors.
+ */
+export async function addActivatedUserToInfinity(activatedUserId: string) {
+  try {
+    const activatedUser: any = await User.findOne({ user_id: activatedUserId }).exec();
+    if (!activatedUser) return;
+
+    const sponsorId = activatedUser.referBy;
+    if (sponsorId) {
+      // rebuild sponsor's flat list from referred_users (keeps ordering and active filter)
+      await rebuildInfinityReferredFromReferredUsers(sponsorId);
+      // re-run update for sponsor which will perform odd/even placement and remove duplicates from owner levels
+      await updateInfinityTeam(sponsorId);
+    }
+
+    // propagate to ancestors to keep overall tree consistent
+    await propagateInfinityUpdateToAncestors(activatedUserId);
+  } catch (err) {
+    console.error("addActivatedUserToInfinity error:", err);
+  }
 }
 
 /**
  * Rebuild infinity upwards for all ancestors recursively.
  */
 export async function propagateInfinityUpdateToAncestors(startUserId: string) {
-  console.log(`\n📡 propagateInfinityUpdateToAncestors(): Starting from ${startUserId}`);
-
   const current: any = await User.findOne({ user_id: startUserId }).exec();
   if (!current) return;
 
   let ancestorId = current.referBy;
   while (ancestorId) {
-    console.log(`🔼 Rebuilding Infinity for ancestor: ${ancestorId}`);
     await updateInfinityTeam(ancestorId);
-
     const ancestor: any = await User.findOne({ user_id: ancestorId }).exec();
     if (!ancestor) break;
-
     ancestorId = ancestor.referBy;
   }
-
-  console.log("✅ Finished ancestor propagation");
 }
 
 export default {
@@ -319,4 +354,8 @@ export default {
   processInfinityLevels,
   updateInfinityTeam,
   propagateInfinityUpdateToAncestors,
+  addActivatedUserToInfinity,
+  updateInfinityReferredCount,
+  rebuildInfinityReferredFromReferredUsers,
+  removeReferralFromOwnerLevels,
 };

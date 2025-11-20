@@ -81,7 +81,7 @@ export default function RightTeam() {
         setLoading(false);
       }
     },
-    [user?.user_id, query]
+    [user?.user_id, query,usersData]
   );
 
   useEffect(() => {

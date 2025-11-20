@@ -402,8 +402,8 @@ function RegisterContent() {
                   readOnly={isReferByPreset} // only read-only if preset
                   className={`w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200 ${
                     isReferByPreset
-                      ? "bg-gray-100 cursor-not-allowed"
-                      : "bg-white"
+                      ? " cursor-not-allowed"
+                      : ""
                   }`}
                 />
               </div>
@@ -500,7 +500,7 @@ function RegisterContent() {
                 !formik.dirty ||
                 !formik.values.terms
                   ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-[#FFD700] text-black hover:bg-yellow-400"
+                  : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
               }`}
             >
               Register

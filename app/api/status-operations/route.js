@@ -6,6 +6,7 @@ import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { Wallet } from "@/models/wallet";
 import { Alert } from "@/models/alert";
+import { addActivatedUserToInfinity } from "@/services/infinity";
 
 
 export async function PUT(req) {
@@ -120,6 +121,15 @@ export async function PUT(req) {
       date: formattedDate,
     });
 
+    // If activated, ensure added into infinity (flat list + leveled lists) and propagate
+    if (newStatus === "active") {
+      // Best-effort; don't block response on errors
+      try {
+        await addActivatedUserToInfinity(userIdToUpdate);
+      } catch (err) {
+        console.error("Error adding activated user to infinity:", err);
+      }
+    }
 
     // ✅ Include user_id and newStatus in response
     return NextResponse.json({

@@ -81,7 +81,7 @@ export default function LeftTeam() {
         setLoading(false);
       }
     },
-    [user?.user_id]
+    [user?.user_id, query, usersData]
   );
 
   useEffect(() => {

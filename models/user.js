@@ -46,6 +46,7 @@ const UserSchema = new mongoose.Schema(
     paid_directs: { type: [String], default: [] },
     paid_directs_count: { type: Number, default: 0 },
     infinity_referred_users: { type: [String], default: [] },
+    infinity_referred_count: { type: Number, default: 0 },
     infinity_users: [
       {
         level: { type: Number, required: true },
