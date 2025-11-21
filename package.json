@@ -4,12 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "cron": "ts-node-esm -r tsconfig-paths/register cron/cron-runner.ts"
-  },
+  "dev": "next dev --turbopack",
+  "build": "next build",
+  "start": "concurrently --raw \"next start\" \"cd cron-server && node cron.js\"",
+  "lint": "next lint",
+  "cron": "node cron-server/cron.js"
+}
+,
   "dependencies": {
     "@aws-sdk/client-s3": "^3.873.0",
     "@emotion/react": "^11.14.0",
@@ -24,6 +25,7 @@
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.0",
+    "concurrently": "^9.2.1",
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
