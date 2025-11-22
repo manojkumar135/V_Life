@@ -7,8 +7,8 @@ import jwt from "jsonwebtoken";
 const secretKey = process.env.JWT_SECRET as string;
 const secretRefreshKey = process.env.JWT_REFRESH_SECRET as string;
 
-console.log(secretKey, "secretKey in signIn");
-console.log(secretRefreshKey, "secretRefreshKey in signIn");
+// console.log(secretKey, "secretKey in signIn");
+// console.log(secretRefreshKey, "secretRefreshKey in signIn");
 
 export async function POST(request: Request) {
   try {
@@ -64,8 +64,8 @@ export async function POST(request: Request) {
       expiresIn: "7d",
     });
 
-    console.log(accessToken, "accestoken in signIn");
-    console.log(refreshToken, "secretRefreshtoken in signIn");
+    // console.log(accessToken, "accestoken in signIn");
+    // console.log(refreshToken, "secretRefreshtoken in signIn");
 
     // 🔹 Set cookies
     const response = NextResponse.json(
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       path: "/",
     });
 
-    console.log(response, "response in signIn");
+    // console.log(response, "response in signIn");
 
     return response;
   } catch (error: any) {

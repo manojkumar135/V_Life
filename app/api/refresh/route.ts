@@ -16,13 +16,16 @@ interface DecodedUser extends JwtPayload {
 export async function POST(req: Request) {
   try {
     await connectDB();
-    // console.log(req.headers)
+    console.log(req.headers)
 
     const cookieHeader = req.headers.get("cookie");
+    console.log(cookieHeader, "cookieHeader in refresh");
     const refreshToken = cookieHeader
       ?.split(";")
       .find((c) => c.trim().startsWith("refreshToken="))
       ?.split("=")[1];
+
+      console.log(refreshToken, "refreshToken in refresh");
 
     if (!refreshToken) {
       return NextResponse.json(
@@ -67,6 +70,7 @@ export async function POST(req: Request) {
       role: loginUser.role,
     });
 
+    console.log(accessToken, "new accessToken in refresh");
     // ✅ Return fresh login record + new token
     return NextResponse.json(
       {

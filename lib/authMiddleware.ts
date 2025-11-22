@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
 const secretKey = process.env.JWT_SECRET || "" ;
-console.log(secretKey ,"secretKey");
+// console.log(secretKey ,"secretKey");
 
 // Public routes (accessible without login)
 const PUBLIC_PATHS = [
