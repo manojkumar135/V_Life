@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
-const secretKey = process.env.JWT_SECRET || "your-secret-key";
+const secretKey = process.env.JWT_SECRET || "" ;
+console.log(secretKey ,"secretKey");
 
 // Public routes (accessible without login)
 const PUBLIC_PATHS = [
@@ -40,6 +41,7 @@ export function authMiddleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  console.log(accessToken,refreshToken,"tokens in middleware");
   // 3️⃣ No tokens → force login
   if (!accessToken && !refreshToken) {
     url.pathname = "/auth/login";
@@ -50,6 +52,7 @@ export function authMiddleware(req: NextRequest) {
   if (accessToken) {
     try {
       const decoded = jwt.verify(accessToken, secretKey);
+      console.log(decoded, "decoded token");
 
       const requestHeaders = new Headers(req.headers);
       requestHeaders.set("x-user", JSON.stringify(decoded));
