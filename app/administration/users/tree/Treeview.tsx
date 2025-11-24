@@ -81,6 +81,7 @@ const getStatusColor = (status: string, statusNotes?: string) => {
       const { data } = await axios.get(API_URL, {
         params: { user_id: user.user_id },
       });
+      console.log(data, "tree data");
       if (data?.data) {
         setTree(data.data);
         setCurrentRoot(data.data);
