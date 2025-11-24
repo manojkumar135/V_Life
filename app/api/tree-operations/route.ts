@@ -131,7 +131,7 @@ export async function GET(req: Request) {
     }
 
     /** Load login user */
-    const loginUser = await User.findOne({ user_id }).lean();
+const loginUser = await User.findOne({ user_id }).lean<any>();
     if (!loginUser) {
       return NextResponse.json(
         { success: false, message: "User not found" },
@@ -139,7 +139,7 @@ export async function GET(req: Request) {
       );
     }
 
-    const role = loginUser.role || "user";
+const role = loginUser?.role ?? "user";
 
     /** Validate login user node */
     const selfNode = await TreeNode.findOne({ user_id }).lean();

@@ -45,7 +45,12 @@ export default function SideNav({
       label: "Administration",
       match: ["administration"],
     },
-    { href: "/wallet", icon: <FaWallet />, label: "Wallet", match: ["wallet"] },
+    {
+      href: "/wallet",
+      icon: <FaWallet />,
+      label: "Wallet",
+      match: ["wallet", "reports"],
+    },
     {
       href: "/orders",
       icon: <FaBoxesPacking />,
