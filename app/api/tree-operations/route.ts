@@ -4,84 +4,44 @@ import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
 
 /**
- * Collect DOWNLINE ONLY children
+ * Collect DOWNLINE ONLY (binary children recursively)
  */
 function collectDescendants(
   startId: string,
   nodeMap: Map<string, any>,
   collected: Set<string> = new Set()
 ): Set<string> {
-  if (!startId || collected.has(startId)) return collected;
-  collected.add(startId);
-
   const node = nodeMap.get(startId);
   if (!node) return collected;
 
-  // ONLY children allowed (never parent / sponsor)
-  if (node.left) collectDescendants(node.left, nodeMap, collected);
-  if (node.right) collectDescendants(node.right, nodeMap, collected);
+  if (node.left) {
+    collected.add(node.left);
+    collectDescendants(node.left, nodeMap, collected);
+  }
+
+  if (node.right) {
+    collected.add(node.right);
+    collectDescendants(node.right, nodeMap, collected);
+  }
 
   return collected;
 }
 
 /**
- * Safe search ONLY inside downline
- */
-function searchNode(
-  nodeId: string | null,
-  nodeMap: Map<string, any>,
-  searchLower: string,
-  allowedIds: Set<string>
-): string | null {
-  if (!nodeId || !allowedIds.has(nodeId)) return null;
-  const node = nodeMap.get(nodeId);
-  if (!node) return null;
-
-  if (
-    node.user_id.toLowerCase() === searchLower ||
-    (node.name && node.name.toLowerCase().includes(searchLower))
-  ) {
-    return node.user_id;
-  }
-
-  if (node.left) {
-    const found = searchNode(node.left, nodeMap, searchLower, allowedIds);
-    if (found) return found;
-  }
-  if (node.right) {
-    const found = searchNode(node.right, nodeMap, searchLower, allowedIds);
-    if (found) return found;
-  }
-  return null;
-}
-
-/**
- * Build tree DOWNWARD only
+ * Build binary subtree
  */
 function buildTree(
   id: string | null,
   nodeMap: Map<string, any>,
-  userMap: Map<string, any>,
-  allowedIds: Set<string>
+  userMap: Map<string, any>
 ): any {
-  // node rejected if not part of allowed subtree
-  if (!id || !allowedIds.has(id)) return null;
-
+  if (!id) return null;
   const node = nodeMap.get(id);
   const user = userMap.get(id);
 
-  // Recursively build ONLY children inside subtree
-  const left =
-    node.left && allowedIds.has(node.left)
-      ? buildTree(node.left, nodeMap, userMap, allowedIds)
-      : null;
+  const left = node.left ? buildTree(node.left, nodeMap, userMap) : null;
+  const right = node.right ? buildTree(node.right, nodeMap, userMap) : null;
 
-  const right =
-    node.right && allowedIds.has(node.right)
-      ? buildTree(node.right, nodeMap, userMap, allowedIds)
-      : null;
-
-  // count subtree users
   const count = (n: any): number =>
     !n ? 0 : 1 + count(n.left) + count(n.right);
 
@@ -118,10 +78,10 @@ function buildTree(
 export async function GET(req: Request) {
   try {
     await connectDB();
-
     const { searchParams } = new URL(req.url);
-    const user_id = searchParams.get("user_id");
-    const search = searchParams.get("search");
+
+    const user_id = searchParams.get("user_id"); // Logged in user
+    const search = searchParams.get("search"); // Target
 
     if (!user_id) {
       return NextResponse.json(
@@ -130,8 +90,8 @@ export async function GET(req: Request) {
       );
     }
 
-    /** Load login user */
-const loginUser = await User.findOne({ user_id }).lean<any>();
+    /** Validate logged user */
+    const loginUser = await User.findOne({ user_id }).lean();
     if (!loginUser) {
       return NextResponse.json(
         { success: false, message: "User not found" },
@@ -139,89 +99,85 @@ const loginUser = await User.findOne({ user_id }).lean<any>();
       );
     }
 
-const role = loginUser?.role ?? "user";
+    /** Load entire tree once */
+    const allNodes = await TreeNode.find({}).lean();
+    const nodeMap = new Map(allNodes.map((n) => [n.user_id, n]));
 
-    /** Validate login user node */
-    const selfNode = await TreeNode.findOne({ user_id }).lean();
-    if (!selfNode) {
+    /** Validate logged user in tree */
+    if (!nodeMap.has(user_id)) {
       return NextResponse.json(
         { success: false, message: "Tree node not found" },
         { status: 404 }
       );
     }
 
-    /** Fetch whole tree once */
-    const allNodes = await TreeNode.find({}).lean();
-    const nodeMap = new Map(allNodes.map((n) => [n.user_id, n]));
-
-    /**
-     * 🔥 KEY ACCESS CONTROL
-     * Always collect from login user DOWNWARDS ONLY
-     */
+    /** Collect all IDs below root */
     const downlineIds = collectDescendants(user_id, nodeMap);
 
-    /** Load user docs only for allowed nodes */
-    const userDocs = await User.find({
-      user_id: { $in: Array.from(downlineIds) },
-    }).lean();
-    const userMap = new Map(userDocs.map((u) => [u.user_id, u]));
-
-    /** Build tree only from logged user ID */
-    const tree = buildTree(user_id, nodeMap, userMap, downlineIds);
-
-    /** SEARCH */
+    /**
+     * SEARCH CHECK
+     */
     if (search) {
-      const q = search.trim().toLowerCase();
+      const s = search.trim().toLowerCase();
 
-      /** ADMIN → global search */
-      if (role === "admin") {
-        const found = allNodes.find(
-          (n) =>
-            n.user_id.toLowerCase() === q ||
-            (n.name && n.name.toLowerCase().includes(q))
-        );
-
-        if (!found)
-          return NextResponse.json({
-            success: false,
-            message: "User not found",
-          });
-
-        return NextResponse.json({
-          success: true,
-          data: tree,
-          highlight: found.user_id,
-          role,
-        });
+      let isDownline = false;
+      for (const id of downlineIds) {
+        if (id.toLowerCase() === s) {
+          isDownline = true;
+          break;
+        }
       }
 
-      /** USER → downline search only */
-      const highlight = searchNode(user_id, nodeMap, q, downlineIds);
-
-      if (!highlight) {
+      /**
+       * ❗️ STRICT RULE
+       * If NOT found in downline → return error
+       */
+      if (!isDownline) {
         return NextResponse.json({
           success: false,
           message: "User not found in your downline",
         });
       }
 
+      /** Build subtree from search node */
+      const subtreeIds = collectDescendants(search, nodeMap);
+      subtreeIds.add(search);
+
+      const users = await User.find({
+        user_id: { $in: Array.from(subtreeIds) },
+      }).lean();
+
+      const userMap = new Map(users.map((u) => [u.user_id, u]));
+
+      const tree = buildTree(search, nodeMap, userMap);
+
       return NextResponse.json({
         success: true,
+        startFrom: search,
         data: tree,
-        highlight,
-        role,
       });
     }
 
-    /** Default return tree for logged user */
+    /**
+     * NO SEARCH → return root tree
+     */
+    const allowed = new Set([user_id, ...downlineIds]);
+
+    const users = await User.find({
+      user_id: { $in: Array.from(allowed) },
+    }).lean();
+
+    const userMap = new Map(users.map((u) => [u.user_id, u]));
+
+    const tree = buildTree(user_id, nodeMap, userMap);
+
     return NextResponse.json({
       success: true,
-      role,
-      downlineCount: downlineIds.size,
+      startFrom: user_id,
       data: tree,
     });
   } catch (err: any) {
-    console.error("TREE API ERROR:", err);
+    console.error("TREE ERROR:", err);
     return NextResponse.json(
       { success: false, message: err.message || "Server error" },
       { status: 500 }

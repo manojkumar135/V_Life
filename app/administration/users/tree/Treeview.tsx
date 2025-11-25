@@ -117,7 +117,7 @@ const getStatusColor = (status: string, statusNotes?: string) => {
     try {
       setLoading(true);
       const { data } = await axios.get(API_URL, {
-        params: { user_id: search },
+        params: { user_id: user.user_id,search },
       });
 
       if (data?.data) {
