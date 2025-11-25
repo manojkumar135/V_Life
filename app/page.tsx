@@ -14,6 +14,8 @@ import {
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import TermsModal from "@/components/TermsModal/terms";
+import Image from "next/image";
+import Images from "@/constant/Image";
 
 type ModalType = "terms" | "privacy" | "refund" | null;
 
@@ -73,7 +75,7 @@ const MaverickHome = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setIndex((prev) => (prev + 1) % products.length);
-    }, 5000);
+    }, 9000);
     return () => clearInterval(interval);
   }, []);
 
@@ -86,11 +88,14 @@ const MaverickHome = () => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-gray-50 to-white font-sans">
       {/* HEADER */}
-      <header className="w-full fixed top-0 left-0 z-50 bg-white/70 backdrop-blur-md shadow-md">
+      <header className="w-full fixed top-0 left-0 z-50 bg-white/50 backdrop-blur-sm shadow-md">
         <div className="max-w-8xl mx-auto flex justify-between items-center px-3 md:px-5 py-2 lg:py-3">
-          <h1 className="text-xl md:text-3xl font-extrabold tracking-wide">
-            MAVERICK
-          </h1>
+          <Image
+            src={Images.MaverickLogo}
+            alt="Maverick Logo"
+            className="h-10 w-auto md:h-12"
+            priority
+          />
           <div className="space-x-3 md:space-x-6 flex items-center">
             <button
               onClick={() => router.push("/auth/login")}
@@ -100,7 +105,7 @@ const MaverickHome = () => {
             </button>
             <button
               onClick={() => router.push("/auth/register")}
-              className="px-4 py-1.5 max-lg:py-1.5 font-semibold text-sm md:text-base bg-yellow-400 text-black rounded-lg hover:bg-yellow-300 transition-all cursor-pointer"
+              className="px-4 py-1.5 max-lg:py-1.5 font-semibold text-sm md:text-base bg-gradient-to-r from-[#16B8E4] to-[#0C3978] text-white rounded-lg transition-all cursor-pointer"
             >
               Sign Up
             </button>
@@ -108,15 +113,15 @@ const MaverickHome = () => {
         </div>
       </header>
       {/* HERO SECTION */}
-      <section className="flex flex-col justify-center items-center text-center flex-grow px-6 pt-32 max-md:pt-24 max-md:pb-8 pb-12 bg-gradient-to-b from-yellow-100 via-white to-yellow-50 relative overflow-hidden shadow-[0_0_80px_20px_rgba(255,223,93,0.45)]">
+      <section className="flex flex-col justify-center items-center text-center flex-grow px-6 pt-32 max-md:pt-24 max-md:pb-8 pb-12 bg-gradient-to-b from-blue-50 via-white to-gray-50 relative overflow-hidden shadow-[0_0_80px_20px_rgba(62, 199, 253, 0.45)]">
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-4xl lg:text-6xl font-extrabold text-gray-900 leading-tight max-w-xl md:max-w-none"
+          className="text-4xl lg:text-6xl font-semibold text-gray-900 leading-tight max-w-xl md:max-w-none font-sans"
         >
           Welcome to{" "}
-          <span className="bg-gradient-to-r from-yellow-500 to-yellow-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent font-bold">
             Maverick
           </span>
         </motion.h1>
@@ -132,51 +137,12 @@ const MaverickHome = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => router.push("/auth/register")}
-          className="mt-6 md:mt-8 px-6 md:px-8 py-3 bg-yellow-400 text-black font-semibold rounded-full shadow-lg hover:bg-yellow-300 transition flex items-center gap-2"
+          className="mt-6 md:mt-8 px-6 md:px-8 py-3 bg-gradient-to-r from-[#0C3978] to-[#16B8E4] text-white font-semibold rounded-full shadow-lg transition flex items-center gap-2"
         >
           Get Started <FaArrowRight />
         </motion.button>
         <div className="hidden md:block absolute w-[500px] h-[500px] bg-white rounded-full blur-3xl opacity-30 top-[-200px] left-[-100px]" />
         <div className="hidden md:block absolute w-[400px] h-[400px] bg-purple-100 rounded-full blur-3xl opacity-30 bottom-[-100px] right-[-100px]" />
-      </section>
-      {/* FEATURES SECTION */}
-      <section className="px-6 md:px-12 py-15 max-md:py-12 bg-white relative">
-        <h2 className="text-2xl lg:text-4xl font-bold text-center text-gray-700 mb-10 max-md:mb-6">
-          Why Choose <span className="text-yellow-400">Maverick</span>?
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-6xl mx-auto">
-          {[
-            {
-              icon: <FaUsers />,
-              title: "Vibrant Community",
-              desc: "Connect, collaborate, and grow with visionaries from around the globe.",
-            },
-            {
-              icon: <FaMoneyBillWave />,
-              title: "Smart Earnings",
-              desc: "Unlock diverse income opportunities and elevate your financial game.",
-            },
-            {
-              icon: <FaChartLine />,
-              title: "Limitless Growth",
-              desc: "Expand your personal and professional horizons with Maverick’s ecosystem.",
-            },
-          ].map((feature, idx) => (
-            <motion.div
-              key={idx}
-              whileHover={{ y: -8 }}
-              className="bg-gradient-to-b from-gray-50 to-white py-8 max-md:py-6 px-5 rounded-2xl shadow-md hover:shadow-xl border-t-8 border-gray-500 transition text-center"
-            >
-              <div className="text-yellow-400 text-5xl mb-4 flex justify-center">
-                {feature.icon}
-              </div>
-              <p className="text-xl font-semibold text-gray-900 mb-3 text-center">
-                {feature.title}
-              </p>
-              <p className="text-gray-600">{feature.desc}</p>
-            </motion.div>
-          ))}
-        </div>
       </section>
 
       {/* PRODUCTS SHOWCASE */}
@@ -213,6 +179,52 @@ const MaverickHome = () => {
         </div>
       </section>
 
+      {/* FEATURES SECTION */}
+      <section className="px-6 md:px-12 py-15 max-md:py-12 bg-white relative">
+        <h2 className="text-2xl lg:text-4xl font-bold text-center text-gray-700 mb-10 max-md:mb-6">
+          Why Choose{" "}
+          <span className=" bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">
+            Maverick
+          </span>
+          ?
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 max-w-6xl mx-auto">
+          {[
+            {
+              icon: <FaUsers />,
+              title: "Vibrant Community",
+              desc: "Connect, collaborate, and grow with visionaries from around the globe.",
+            },
+            {
+              icon: <FaMoneyBillWave />,
+              title: "Smart Earnings",
+              desc: "Unlock diverse income opportunities and elevate your financial game.",
+            },
+            {
+              icon: <FaChartLine />,
+              title: "Limitless Growth",
+              desc: "Expand your personal and professional horizons with Maverick’s ecosystem.",
+            },
+          ].map((feature, idx) => (
+            <motion.div
+              key={idx}
+              whileHover={{ y: -8 }}
+              className="bg-gradient-to-b from-gray-50 to-white py-8 max-md:py-6 px-5 rounded-2xl shadow-md hover:shadow-xl border-t-8 border-gray-500 transition text-center"
+            >
+              <div className="mb-4 flex justify-center text-blue-500 text-5xl">
+                {feature.icon}
+              </div>
+
+              <p className="text-xl font-semibold text-gray-900 mb-3">
+                {feature.title}
+              </p>
+              <p className="text-gray-600">{feature.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* CALL TO ACTION */}
       <section className="bg-gradient-to-r from-gray-600 to-gray-900 text-white py-12 max-md:py-8 text-center px-6">
         <h2 className="text-2xl md:text-4xl font-bold mb-6">
@@ -224,9 +236,9 @@ const MaverickHome = () => {
         </p>
         <button
           onClick={() => router.push("/auth/register")}
-          className="bg-white text-blue-800 px-8 py-3 max-md:px-6 max-md:py-2 font-semibold rounded-full hover:bg-gray-100 transition transform hover:scale-105"
+          className="bg-white  px-8 py-3 max-md:px-6 max-md:py-2 font-semibold rounded-full hover:bg-gray-100 transition transform hover:scale-105"
         >
-          Join Now
+          <span className="bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Join Now</span>
         </button>
       </section>
 
@@ -286,7 +298,7 @@ const MaverickHome = () => {
       >
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-extrabold text-center text-gray-900 mb-6 max-md:mb-3 max-md:text-left">
-            About <span className="text-yellow-500"> {""}Maverick</span>
+            About <span className="bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent"> {""}Maverick</span>
           </h2>
           <div className="grid grid-cols-1  gap-10">
             <div className="bg-white rounded-2xl max-lg:shadow-none shadow-xl xl:p-6 max-md:py-4  max-lg:border-0 border border-gray-200 hover:shadow-2xl transition-all">
@@ -302,7 +314,7 @@ const MaverickHome = () => {
                 </span>
                 by helping people achieve balance, freedom, financial abundance,
                 and fulfillment. <br /> <br /> At
-                <span className="text-yellow-500 font-bold"> Maverick</span>, we
+                <span className="text-blue-600 font-bold"> Maverick</span>, we
                 empower individuals with a uniquely blended hybrid opportunity
                 that enables them to grow on their own terms.
               </p>

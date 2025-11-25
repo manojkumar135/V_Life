@@ -104,17 +104,17 @@ export default function SideNav({
       {/* Desktop SideNav */}
       <div
         className="hidden md:flex flex-col items-center
-       w-20 bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-500 pt-20 pb-6 
+       w-20 bg-gradient-to-b from-[#0C3978] to-[#16B8E4]  pt-20 pb-6 
        rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative"
       >
         {/* Logo */}
         <div className="absolute left-1/2 -translate-x-1/2 top-4 max-lg:top-6  z-10 ">
           <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden relative">
             <Image
-              src={Images.Maverick}
+              src={Images.MaverickLogo}
               alt="logo"
               fill
-              className="object-cover rounded-full"
+              className="bg-white object-contain"
             />
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function SideNav({
                   className={`p-2 rounded-xl w-12 h-12 flex items-center justify-center cursor-pointer transition-all duration-300 ease-in-out ${
                     isActive
                       ? "bg-white text-black shadow-lg scale-110"
-                      : "text-white hover:text-black hover:scale-105"
+                      : "text-white hover:text-[#C8D0D6] hover:scale-105"
                   }`}
                 >
                   <span className="text-[24px]">{item.icon}</span>
@@ -138,7 +138,7 @@ export default function SideNav({
                 {/* Tooltip */}
                 <span
                   className="absolute left-full top-1/2 -translate-y-1/2 ml-0 px-2 py-1 text-xs 
-                  font-medium text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[400ms]
+                  font-medium text-white bg-gray-700 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[400ms]
                   translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50"
                 >
                   {item.label}
@@ -183,7 +183,7 @@ export default function SideNav({
 
       {/* Mobile SideNav */}
       <div
-        className={`md:hidden fixed top-0 left-0 z-50 h-full w-[200px] rounded-r-xl bg-gradient-to-b from-yellow-500 via-yellow-400 to-yellow-500 p-6 transform transition-transform duration-300 ${
+        className={`md:hidden fixed top-0 left-0 z-50 h-full w-[200px] rounded-r-xl bg-gradient-to-b from-[#0C3978] to-[#16B8E4] p-6 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -196,13 +196,13 @@ export default function SideNav({
         </button>
 
         {/* Logo */}
-        <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center">
+        <div className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center bg-white">
           <Image
-            src={Images.Maverick}
+            src={Images.MaverickLogo}
             alt="logo"
             width={64}
             height={64}
-            className="object-contain rounded-md"
+            className="object-contain  bg-white"
           />
         </div>
 

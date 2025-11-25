@@ -63,15 +63,14 @@ const TimeRemainingCard = () => {
 
   // 🎯 On mount
   useEffect(() => {
-  if (!user?.user_id) return; // wait until user loads
+    if (!user?.user_id) return; // wait until user loads
 
-  fetchTeamData();
-  setSecondsLeft(calculateSecondsLeft());
+    fetchTeamData();
+    setSecondsLeft(calculateSecondsLeft());
 
-  const interval = setInterval(fetchTeamData, 60000);
-  return () => clearInterval(interval);
-}, [user?.user_id]); // 👈 stable dependency (string), not whole user object
-
+    const interval = setInterval(fetchTeamData, 60000);
+    return () => clearInterval(interval);
+  }, [user?.user_id]); // 👈 stable dependency (string), not whole user object
 
   // ⏳ Countdown timer
   useEffect(() => {
@@ -119,8 +118,6 @@ const TimeRemainingCard = () => {
         <p className="text-sm text-gray-600 mt-2 font-semibold">left</p>
       </div>
 
-
-
       {/* Team Counts */}
       {loading ? (
         <p className="text-sm text-gray-500 animate-pulse">Loading...</p>
@@ -128,21 +125,21 @@ const TimeRemainingCard = () => {
         <div className="flex  items-center gap-8 max-md:gap-6 w-full  lg:py-4">
           <div className="flex flex-col items-center px-1 w-1/2">
             <p className="text-sm text-gray-800 font-semibold font-sans">
-              LEFT BV COUNT
+              Organization 1 PV
             </p>
 
             <p className="text-xl font-semibold text-green-600">
-              {teamData.leftTeam}
+              {Number(teamData.leftTeam || 0) * 100}
             </p>
           </div>
 
           <div className="flex flex-col items-center w-1/2">
             <p className="text-sm text-gray-800 font-semibold font-sans">
-              RIGHT BV COUNT
+              Organization 2 PV
             </p>
 
             <p className="text-xl font-semibold text-pink-600">
-              {teamData.rightTeam}
+              {Number(teamData.rightTeam || 0) * 100}
             </p>
           </div>
         </div>
