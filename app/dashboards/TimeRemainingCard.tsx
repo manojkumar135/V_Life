@@ -102,7 +102,7 @@ const TimeRemainingCard = () => {
       className={`relative flex flex-col items-center justify-between  transition-all duration-300 bg-white rounded-2xl shadow-md p-6  border-[1.5px] border-gray-300 ${
         isCritical
           ? "border-red-200 bg-red-50"
-          : "bg-yellow-50 border-yellow-150 "
+          : "bg-blue-50 border-blue-150 "
       }`}
     >
       {/* Countdown */}

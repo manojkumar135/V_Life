@@ -47,7 +47,7 @@ export default function PaymentModal({
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
           amount: order.amount, // in paise
           currency: order.currency,
-          name: "V Life Global",
+          name: "Maverick",
           description: "Payment Transaction",
           order_id: order.id,
           handler: async (response: any) => {
@@ -69,7 +69,7 @@ export default function PaymentModal({
             } catch (err) {
               console.error("❌ Payment verification error", err);
             } finally {
-              onClose();
+              setTimeout(() => onClose(), 10000);
             }
           },
           prefill: {
@@ -77,7 +77,7 @@ export default function PaymentModal({
             email: user?.email || "guest@example.com",
             contact: user?.contact || "9999999999",
           },
-          theme: { color: "#facc15" },
+          theme: { color: "#0C3978" },
           modal: { ondismiss: () => onClose() },
         };
 

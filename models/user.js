@@ -56,8 +56,14 @@ const UserSchema = new mongoose.Schema(
     self_bv: { type: Number, default: 0 },
     direct_bv: { type: Number, default: 0 },
     infinity_bv: { type: Number, default: 0 },
+    left_infinity_bv: { type: Number, default: 0 },
+    right_infinity_bv: { type: Number, default: 0 },
+    cumulative_infinity_bv: { type: Number, default: 0 },
+
     bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
+    pv: { type: Number, default: 0 },
+
     score: { type: Number, default: 0 },
     reward: { type: Number, default: 0 },
     rank: { type: String, required: true, default: "none" },

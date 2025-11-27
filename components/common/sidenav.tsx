@@ -217,7 +217,7 @@ export default function SideNav({
                 className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
                   isActive
                     ? "bg-white text-black"
-                    : "text-white hover:bg-white/10"
+                    : "text-white hover:bg-white/90"
                 }`}
               >
                 <span className="text-[22px] max-md:text-[18px]">
@@ -232,7 +232,7 @@ export default function SideNav({
         {/* Logout (Mobile) */}
         <button
           onClick={() => setIsLogoutOpen(true)}
-          className="mt-10 max-sm:mt-40 flex items-center gap-3 px-3 py-2 rounded-md text-black hover:bg-white/10"
+          className="mt-10 max-sm:mt-40 flex items-center gap-3 px-3 py-2 rounded-md text-black hover:bg-white/60"
         >
           <span className="text-[22px] max-md:text-[22px]">
             <RiLogoutCircleRLine />

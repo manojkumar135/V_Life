@@ -152,14 +152,14 @@ export async function GET(req: Request) {
         if (!userData) continue;
 
         // ✅ Check if user has paid advance (amount >= 10000 and status Completed)
-        const advanceHistory = await History.findOne({
-          user_id: uid,
-          advance: true,
-          amount: { $gte: 10000 },
-          status: "Completed",
-        });
+        // const advanceHistory = await History.findOne({
+        //   user_id: uid,
+        //   advance: true,
+        //   amount: { $gte: 10000 },
+        //   status: "Completed",
+        // });
 
-        if (!advanceHistory) continue; // skip if user hasn't paid advance
+        // if (!advanceHistory) continue; 
 
         // Determine team (left/right/unknown) using tree structure by walking upward
         const targetNode = nodeMapByUser.get(uid) || getNodeFromRef(uid);
