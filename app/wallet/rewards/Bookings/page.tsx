@@ -168,7 +168,10 @@ export default function BookingsPage() {
         {/* Floating Filter Icon */}
         <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
-            className="relative w-12 h-12 rounded-full bg-black text-yellow-400 flex items-center justify-center shadow-lg border border-yellow-400 hover:bg-gradient-to-br hover:from-yellow-400 hover:to-yellow-600 hover:text-black active:translate-y-[2px] transition-all duration-200 cursor-pointer"
+            className="relative w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
+             shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-gray-400 
+             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] 
+             active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
             onClick={() => setShowModal(true)}
           >
             <FiFilter size={22} />

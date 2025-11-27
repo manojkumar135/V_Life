@@ -137,7 +137,7 @@ const ForgotPassword: React.FC = () => {
   const emailValidation = Yup.object({
     email: Yup.string()
       .email("Invalid email address")
-            .transform((val) => (val ? val.toLowerCase() : val))
+      .transform((val) => (val ? val.toLowerCase() : val))
 
       .required("Email is required!"),
   });
@@ -313,13 +313,17 @@ const ForgotPassword: React.FC = () => {
           <Loader />
         </div>
       )}
-      <div className="flex items-center mb-0 mt-5  ml-5 ">
+      <div
+        className="flex items-center mb-0 mt-5  ml-5 cursor-pointer"
+        onClick={() => router.push("/auth/login")}
+      >
         <IoIosArrowBack
-          title="Back To Login"
+          // title="Back To Login"
           size={35}
-          className="mr-3 cursor-pointer top-0 "
-          onClick={() => router.push("/auth/login")}
+          className="mr-3  top-0 "
+          // onClick={() => router.push("/auth/login")}
         />
+        <span>Back</span>
       </div>
       <div className="min-h-[85dvh] flex flex-col xl:flex-row items-center justify-center bg-white p-4 md:p-6">
         {/* ✅ Image at top for mobile/tab, left for desktop */}

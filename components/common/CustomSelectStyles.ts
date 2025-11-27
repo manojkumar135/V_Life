@@ -25,7 +25,7 @@ const customSelectStyles = {
     fontSize: "0.9rem",
     padding: "4px 8px",
     minHeight: "30px",
-    backgroundColor: state.isFocused ? "#FFFFCF" : "white",
+    backgroundColor: state.isFocused ? "#F0F0FF" : "white",
     color: "#374151",
     cursor: "pointer",
     paddingLeft: "1rem",

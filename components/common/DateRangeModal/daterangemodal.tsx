@@ -140,7 +140,7 @@ const DateFilterModal: React.FC<DateFilterModalProps> = ({
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-1 rounded bg-yellow-400 text-black font-semibold hover:bg-yellow-500 cursor-pointer"
+            className="px-4 py-1 rounded bg-[#106187] text-white font-semibold  cursor-pointer"
           >
             Submit
           </button>

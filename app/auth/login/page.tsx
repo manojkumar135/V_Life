@@ -97,7 +97,7 @@ export default function LoginPage() {
     <>
       {/* <Toaster position="top-right" richColors closeButton /> */}
 
-      <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0] -pt-20">
+      <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#106187]/85 -pt-20">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  backdrop-blur-sm">
             <Loader />
@@ -201,7 +201,7 @@ export default function LoginPage() {
     ${
       loading || !formik.values.loginId.trim() || !formik.values.password.trim()
         ? "bg-gray-400 text-white cursor-none"
-        : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+        : "bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
     }`}
               >
                 Login

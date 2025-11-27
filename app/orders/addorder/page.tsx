@@ -526,9 +526,9 @@ const getTotalBV = () =>
         <button
           className="
             relative w-14 h-14 rounded-full 
-            bg-black text-yellow-300 flex items-center justify-center 
+            bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center 
             shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)]
-            border border-yellow-400
+            border border-gray-400
             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)]
             active:translate-y-[2px] active:shadow-[0_2px_4px_rgba(0,0,0,0.3)]
             transition-all duration-200 cursor-pointer

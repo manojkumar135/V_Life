@@ -476,7 +476,7 @@ export default function OrderFormCartSection({
       ${
         isDisabled
           ? "bg-gray-400 text-white cursor-not-allowed"
-          : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+          : "bg-[#106187] text-white cursor-pointer"
       }`}
                     >
                       Place Order
@@ -543,7 +543,7 @@ export default function OrderFormCartSection({
     ${
       isDisabled || isCustomerInfoMissing
         ? "bg-gray-400 text-white cursor-not-allowed"
-        : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+        : "bg-[#106187] text-white cursor-pointer"
     }`}
             >
               Continue to Payment

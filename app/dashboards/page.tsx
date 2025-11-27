@@ -383,7 +383,7 @@ const DashboardPage: React.FC = () => {
             {/* My Business Summary */}
             <div className="bg-gray-50 rounded-2xl shadow-md border border-gray-100">
               <div
-                className="bg-gradient-to-br  from-[#106187]  via-[#106187] to-[#16B8E4]  text-white
+                className="bg-gray-500  text-white
                max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans"
               >
                 MY BUSINESS SUMMARY
@@ -475,7 +475,7 @@ const InfoCard = ({
 }) => (
   <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden h-46">
     <div
-      className="bg-gradient-to-br from-[#106187]  via-[#106187] to-[#16B8E4]
+      className="bg-gray-500
                  text-white text-md text-center font-semibold py-2 font-sans"
     >
       {title}

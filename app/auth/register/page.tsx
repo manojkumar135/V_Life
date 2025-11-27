@@ -166,7 +166,7 @@ function RegisterContent() {
   const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
-    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
+    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden  bg-[#106187]/85">
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
@@ -401,9 +401,7 @@ function RegisterContent() {
                   onBlur={formik.handleBlur}
                   readOnly={isReferByPreset} // only read-only if preset
                   className={`w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200 ${
-                    isReferByPreset
-                      ? " cursor-not-allowed"
-                      : ""
+                    isReferByPreset ? " cursor-not-allowed" : ""
                   }`}
                 />
               </div>
@@ -446,7 +444,8 @@ function RegisterContent() {
                 name="terms"
                 checked={formik.values.terms}
                 onChange={formik.handleChange}
-                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer checked:bg-yellow-500 checked:border-yellow-500 relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:text-black"
+                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer
+                 checked:bg-[#106187] checked:border-[#106187] relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:text-white checked:after:text-white"
               />
               {/* <label htmlFor="terms" className="text-xs text-gray-700">
                 I agree to the{" "}
@@ -500,7 +499,7 @@ function RegisterContent() {
                 !formik.dirty ||
                 !formik.values.terms
                   ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+                  : "bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
               }`}
             >
               Register
