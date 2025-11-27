@@ -24,6 +24,14 @@ interface ProductFormData {
   mrp: number | "";
   dealerPrice: number | "";
   bv: number | "";
+  pv: number | "";
+  hsnCode: string;
+  gst: number | "";
+  cgst: number | "";
+  sgst: number | "";
+  igst: number | "";
+  discount: number | "";
+  productCode: string;
   category: string;
   status: string;
   image: File | string | null;
@@ -41,6 +49,22 @@ const ProductSchema = Yup.object().shape({
   bv: Yup.number()
     .typeError("* BV must be a number")
     .required("* BV is required"),
+  pv: Yup.number()
+    .typeError("* BV must be a number")
+    .required("* BV is required"),
+  gst: Yup.number()
+    .typeError("* BV must be a number")
+    .required("* BV is required"),
+  cgst: Yup.number()
+    .typeError("* BV must be a number")
+    .required("* BV is required"),
+  sgst: Yup.number()
+    .typeError("* BV must be a number")
+    .required("* BV is required"),
+  igst: Yup.number()
+    .typeError("* BV must be a number")
+    .required("* BV is required"),
+
   category: Yup.string().required("* Category is required"),
   status: Yup.string().required("* Status is required"),
   image: Yup.mixed<File | string>()
@@ -69,6 +93,14 @@ export default function EditProductPage() {
     mrp: "",
     dealerPrice: "",
     bv: "",
+    pv: "",
+    hsnCode: "",
+    productCode: "",
+    discount: "",
+    gst: "",
+    cgst: "",
+    sgst: "",
+    igst: "",
     category: "",
     status: "active",
     image: null,
@@ -98,6 +130,15 @@ export default function EditProductPage() {
             mrp: product.mrp || "",
             dealerPrice: product.dealer_price || "",
             bv: product.bv || "",
+            pv: product.pv || "",
+            hsnCode: product.hsn_code || "",
+            productCode: product.product_code || "",
+            discount: product.discount || "",
+            gst: product.gst || "",
+            cgst: product.cgst || "",
+            sgst: product.sgst || "",
+            igst: product.igst || "",
+
             category: product.category || "",
             status: product.status || "active",
             image: product.image || null,
@@ -265,6 +306,84 @@ export default function EditProductPage() {
                     onChange={(e) => setFieldValue("bv", e.target.value)}
                     onBlur={handleBlur}
                     error={touched.bv ? errors.bv : ""}
+                  />
+
+                  <InputField
+                    label="Purchase Volume (PV)"
+                    name="pv"
+                    placeholder="0"
+                    required
+                    value={values.pv}
+                    onChange={(e) => setFieldValue("pv", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.pv ? errors.pv : ""}
+                  />
+
+                  <InputField
+                    label="HSN/SAC code"
+                    name="hsnCode"
+                    placeholder=""
+                    required
+                    value={values.hsnCode}
+                    onChange={(e) => setFieldValue("hsnCode", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.hsnCode ? errors.hsnCode : ""}
+                  />
+
+                  <InputField
+                    label="Product code"
+                    name="productCode"
+                    placeholder=""
+                    required
+                    value={values.productCode}
+                    onChange={(e) =>
+                      setFieldValue("productCode", e.target.value)
+                    }
+                    onBlur={handleBlur}
+                    error={touched.productCode ? errors.productCode : ""}
+                  />
+
+                  <InputField
+                    label="GST (%)"
+                    name="gst"
+                    placeholder="0"
+                    required
+                    value={values.gst}
+                    onChange={(e) => setFieldValue("gst", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.gst ? errors.gst : ""}
+                  />
+                  <InputField
+                    label="CGST (%)"
+                    name="cgst"
+                    placeholder="0"
+                    required
+                    value={values.cgst}
+                    onChange={(e) => setFieldValue("cgst", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.cgst ? errors.cgst : ""}
+                  />
+
+                  <InputField
+                    label="SGST (%)"
+                    name="sgst"
+                    placeholder="0"
+                    required
+                    value={values.sgst}
+                    onChange={(e) => setFieldValue("sgst", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.sgst ? errors.sgst : ""}
+                  />
+
+                  <InputField
+                    label="IGST (%)"
+                    name="igst"
+                    placeholder="0"
+                    required
+                    value={values.igst}
+                    onChange={(e) => setFieldValue("igst", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.igst ? errors.igst : ""}
                   />
 
                   {/* React-Select for Status */}

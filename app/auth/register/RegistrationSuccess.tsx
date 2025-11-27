@@ -23,7 +23,7 @@ export default function RegistrationSuccess() {
       <div className="bg-white w-full max-w-sm rounded-2xl shadow-lg p-4 text-center mx-3">
         {/* Tick Icon */}
         <div className="flex justify-center mb-2 relative">
-          <div className="w-18 h-18 rounded-full bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center shadow-lg">
+          <div className="w-18 h-18 rounded-full bg-gradient-to-tl from-[#0C3978] via-[#106187] to-[#16B8E4] flex items-center justify-center shadow-lg">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -55,7 +55,7 @@ export default function RegistrationSuccess() {
             Your User ID:{" "}
             <span className="text-md font-semibold text-gray-900">
               {userId}
-            </span>
+            </span> 
           </p>
         </div>
 
@@ -100,7 +100,7 @@ export default function RegistrationSuccess() {
         {/* Login Button */}
         <button
           onClick={() => router.push("/auth/login")}
-          className="mt-4 w-full bg-yellow-400 text-gray-900 py-2.5 rounded-xl shadow-md hover:bg-yellow-300 transition-all text-[14px] font-semibold cursor-pointer"
+          className="mt-4 w-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white py-2.5 rounded-xl shadow-md transition-all text-[14px] font-semibold cursor-pointer"
         >
           Go to Login
         </button>

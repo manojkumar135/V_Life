@@ -21,6 +21,7 @@ interface CartItem {
   category: string;
   quantity: number;
   unit_price: number;
+   gst: number;  
   price: number;
   description?: string;
   image?: string;
@@ -64,6 +65,24 @@ export default function OrderFormCartSection({
     expiryDate: "",
     cvv: "",
   });
+
+
+   // 👉 GST PRICE CALCULATION HERE
+  // const getUnitFinalPrice = (item: CartItem) => {
+  //   console.log(item)
+  //   const gstPercent = Number(item.gst || 0);
+  //   const gstAmount = item.dealer_price * (gstPercent / 100);
+  //   return item.dealer_price + gstAmount;
+  // };
+
+
+  // const getItemTotal = (item: CartItem) => {
+  //   return getUnitFinalPrice(item) * item.quantity;
+  // };
+
+  // const cartTotal = () =>
+  //   cart.reduce((sum: number, item: CartItem) => sum + getItemTotal(item), 0);
+
 
   const handleGoToCustomerInfo = () => {
     if (cart.length === 0) {

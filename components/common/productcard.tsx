@@ -16,7 +16,7 @@ interface ProductCardProps {
   image?: string;
   description?: string;
   category?: string;
-  status?: "active" | "inactive"; // new
+  status?: "active" | "inactive";
   onAddToCart: (product: any) => void;
   isInCart?: boolean;
 }
@@ -38,39 +38,55 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const router = useRouter();
   const { user } = useVLife();
 
-  const handleEdit = (_id: string | number) => {
-    router.push(`/products/editproduct/${_id}`);
+  const handleEdit = (id: string | number) => {
+    router.push(`/products/editproduct/${id}`);
+  };
+
+  const handleView = () => {
+    if (status === "active") {
+      router.push(`/products/productdetailview/${_id}`);
+    }
   };
 
   const isDisabled = status !== "active";
 
   return (
-    <div className="border rounded-lg px-3 py-2 flex justify-between items-start">
-      {/* Left side: Image + BV */}
+    <div
+      className={`border rounded-lg px-3 py-2 flex justify-between items-start 
+      ${isDisabled ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}
+      `}
+      onClick={handleView}
+    >
+      {/* LEFT */}
       <div className="flex flex-col justify-between items-center w-25 h-full">
         <img
           src={image}
           alt={name}
           className="w-24 h-25 object-cover rounded-md mb-2 mx-auto"
+          onClick={(e) => e.stopPropagation()} // prevent card click
         />
+
         <div className="flex flex-row self-start justify-between items-center w-full">
           {user?.role === "admin" && (
             <TbShoppingBagEdit
               size={14}
-              className="w-10 h-10 p-1 flex text-gray-800 max-md:text-gray-700 items-center justify-center rounded-md cursor-pointer hover:bg-gray-200"
-              onClick={() => handleEdit(_id)}
+              className="w-10 h-10 p-1 flex text-gray-800 items-center justify-center rounded-md cursor-pointer hover:bg-gray-200"
+              onClick={(e) => {
+                e.stopPropagation(); // 🔥 BLOCK card view
+                handleEdit(_id);
+              }}
             />
           )}
-          <p className="flex-row text-sm mt-2">
+          <p className="text-sm mt-2">
             BV (<span className="font-semibold">{bv}</span>)
           </p>
         </div>
       </div>
 
-      {/* Right side: Name + Description + Price Info + Add to Cart */}
+      {/* RIGHT */}
       <div className="flex-1 ml-2 flex flex-col justify-between max-w-[69%] h-full">
         <div>
-          <p className="font-semibold text-md">{name}</p>
+          <p className="font-semibold text-md capitalize">{name}</p>
           <p
             className="text-gray-600 text-sm max-md:text-xs mt-1 line-clamp-2"
             title={description}
@@ -79,6 +95,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </p>
         </div>
 
+        {/* Prices + cart */}
         <div className="flex flex-col items-end mt-2">
           <div className="text-right">
             <p className="text-sm text-gray-500">
@@ -95,8 +112,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex items-center space-x-2 mt-3 justify-end">
             <SubmitButton
               type="button"
-              onClick={() =>
+              onClick={(e) => {
+                e.stopPropagation(); // 🔥 BLOCK navigation
                 onAddToCart({
+                  _id,
                   product_id,
                   name,
                   mrp,
@@ -105,16 +124,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   image,
                   description,
                   category,
-                })
-              }
+                });
+              }}
               disabled={isDisabled}
-              className={`font-medium py-2 px-4 max-lg:px-3 max-md:text-[0.85rem] max-lg:text-[0.9rem] rounded-md ${
-                isDisabled
-                  ? "!bg-gray-400 !text-white !cursor-not-allowed"
-                  : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
-              }`}
+              className={`font-medium py-2 px-4 rounded-md
+                ${isDisabled ? "!bg-gray-400 !cursor-not-allowed" : "cursor-pointer"}
+              `}
             >
-              {isDisabled ? "UnAvailable" : isInCart ? "Added" : "Add to Cart"}
+              {isDisabled ? "Unavailable" : isInCart ? "Added" : "Add to Cart"}
             </SubmitButton>
           </div>
         </div>

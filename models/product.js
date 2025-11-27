@@ -3,12 +3,23 @@ import mongoose from "mongoose";
 const ProductSchema = new mongoose.Schema(
     {
         product_id: { type: String, required: true, unique: true },
+        product_code: { type: String },
         id: { type: String },
         name: { type: String, required: true },
         description: { type: String },
         mrp: { type: Number, required: true }, // Maximum Retail Price
         dealer_price: { type: Number, required: true }, // Price for dealer/distributor
         bv: { type: Number, required: true }, // Business Volume (used in MLM/commission system)
+        pv: { type: Number },
+        hsn_code: { type: String },
+        gst: { type: Number },
+        cgst: { type: Number },
+        sgst: { type: Number },
+        igst: { type: Number },
+        tax:{ type: Number },
+
+        discount: { type: Number },
+
         image: { type: String }, // Product image URL
         category: { type: String, required: true },
         stock: { type: Number, default: 0 }, // inventory
