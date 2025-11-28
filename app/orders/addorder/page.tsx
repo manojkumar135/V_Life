@@ -560,7 +560,7 @@ export default function AddOrderPage() {
           </div>
 
           {/* Add Product Button */}
-          {user?.role === "admin" && (
+          {user?.role === "superadmin" && (
             <SubmitButton
               onClick={() => router.push("/products/addproduct")}
               className="self-start bg-yellow-400 hover:bg-yellow-500 text-black font-medium py-1.5 px-2 

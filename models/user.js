@@ -60,6 +60,13 @@ const UserSchema = new mongoose.Schema(
     right_infinity_bv: { type: Number, default: 0 },
     cumulative_infinity_bv: { type: Number, default: 0 },
 
+    self_pv: { type: Number, default: 0 },
+    direct_pv: { type: Number, default: 0 },
+    infinity_pv: { type: Number, default: 0 },
+    left_infinity_pv: { type: Number, default: 0 },
+    right_infinity_pv: { type: Number, default: 0 },
+    cumulative_infinity_bv: { type: Number, default: 0 },
+
     bv: { type: Number, default: 0 },
     sv: { type: Number, default: 0 },
     pv: { type: Number, default: 0 },

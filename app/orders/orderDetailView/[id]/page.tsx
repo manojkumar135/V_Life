@@ -131,7 +131,7 @@ export default function OrderDetailView() {
     );
   }
 
-  console.log(order);
+  // console.log(order);
   return (
     <Layout>
       <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-[100%]">
@@ -145,8 +145,9 @@ export default function OrderDetailView() {
             <IoIosArrowBack size={25} />
           </button>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center xl:justify-between xl:w-[80%] gap-1 sm:gap-6 ">
+          <div className="flex flex-col xl:flex-row max-lg:items-start items-center max-lg:justify-start justify-between gap-4 w-full">
+            <div className=" flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between
+             xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5 ">
               <span className="text-sm font-medium text-gray-600">
                 Order ID:{" "}
                 <span className="text-black font-semibold">
@@ -169,7 +170,7 @@ export default function OrderDetailView() {
 
             <SubmitButton
               onClick={() => setShowAddress(true)}
-              className=" text-sm transition-colors duration-200"
+              className=" text-sm transition-colors duration-200 max-lg:items-end max-lg:self-end"
             >
               View Shipping Details
             </SubmitButton>
@@ -190,9 +191,9 @@ export default function OrderDetailView() {
                 <div className="col-span-1 text-center">Quantity</div>
                 <div className="col-span-1 text-right">BV</div>
                 <div className="col-span-1 text-right">PV</div>
-                <div className="col-span-2 text-center">Unit Price</div>
-                <div className="col-span-1 text-right">GST</div>
-                <div className="col-span-2 text-right">Total</div>
+                <div className="col-span-2 text-center">Unit Price(₹)</div>
+                <div className="col-span-1 text-right">GST(₹)</div>
+                <div className="col-span-2 text-right">Total(₹)</div>
               </div>
 
               <div className="space-y-4 lg:scrollbar-custom">

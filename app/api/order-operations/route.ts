@@ -20,6 +20,7 @@ interface OrderItem {
   mrp?: number;
   dealer_price?: number;
   bv?: number;
+  pv?: number;
   description?: string;
   image?: string;
   created_at?: Date;
@@ -75,6 +76,10 @@ export async function POST(request: Request) {
       (sum, item) => sum + (item.bv || 0) * item.quantity,
       0
     );
+    const totalPV = body.items.reduce(
+      (sum, item) => sum + (item.pv || 0) * item.quantity,
+      0
+    );
 
     // -------------------
     // 1️⃣ Create the Order first
@@ -118,10 +123,12 @@ export async function POST(request: Request) {
       // 3️⃣ Update user BV after history
       // -------------------
       user.bv = (user.bv || 0) + totalBV;
+      user.pv = (user.pv || 0) + totalPV;
       await user.save();
 
       // update self_bv (user's own BV)
       user.self_bv = (user.self_bv || 0) + totalBV;
+      user.self_pv = (user.self_pv || 0) + totalPV;
 
       await user.save();
 
@@ -131,7 +138,7 @@ export async function POST(request: Request) {
       if (user.referBy) {
         await User.updateOne(
           { user_id: user.referBy },
-          { $inc: { direct_bv: totalBV } }
+          { $inc: { direct_bv: totalBV,direct_pv: totalPV  } },
         );
       }
 
