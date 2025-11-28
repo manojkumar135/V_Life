@@ -12,6 +12,17 @@ const OrderItemSchema = new mongoose.Schema(
     mrp: { type: Number, required: true },
     dealer_price: { type: Number, required: true },
     bv: { type: Number, required: true },
+    pv: { type: Number },
+    gst: { type: Number },
+    gst_amount: { type: Number },
+    whole_gst: { type: Number },
+    price_with_gst: { type: Number },
+    cgst: { type: Number },
+    sgst: { type: Number },
+    igst: { type: Number },
+    discount: { type: Number },
+    hsn_code: { type: String },
+    product_code: { type: String },
     created_at: { type: Date, default: Date.now },
     description: { type: String },
     image: { type: String },
@@ -49,6 +60,9 @@ const OrderSchema = new mongoose.Schema(
     advance_deducted: { type: Number, default: 0 }, // amount deducted from advance
     is_first_order: { type: Boolean, default: false },
     order_bv: { type: String, required: true }, // total BV for the order
+    order_pv: { type: String, required: true },
+    total_gst: { type: Number, },
+    tax: { type: Number, },
 
     items: [OrderItemSchema],
 

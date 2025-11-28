@@ -16,6 +16,12 @@ interface CartItem {
   image: string;
   description: string;
   bv?: number; // ✅ added bv
+  pv?: number;
+  gst?: number;
+  whole_gst?: number;
+  dealer_price?: number;
+  unit_price?: number;
+  price_with_gst?: number;
 }
 
 interface OrderData {
@@ -73,6 +79,10 @@ export default function OrderDetailView() {
               image: item.image,
               description: item.description,
               bv: item.bv, // ✅ map bv
+              pv: item.pv,
+              whole_gst: item.whole_gst,
+              gst: item.gst,
+              price_with_gst: item.price_with_gst,
             })),
             subtotal: raw.total_amount,
             totalAmount: raw.final_amount ?? raw.amount,
@@ -121,6 +131,7 @@ export default function OrderDetailView() {
     );
   }
 
+  console.log(order);
   return (
     <Layout>
       <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-[100%]">
@@ -175,10 +186,12 @@ export default function OrderDetailView() {
             <>
               {/* Header Row (Desktop) */}
               <div className="hidden lg:grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 xl:px-15">
-                <div className="col-span-5">Product</div>
-                <div className="col-span-2 text-center">Quantity</div>
-                <div className="col-span-1 text-center">BV</div>
-                <div className="col-span-2 text-right">Unit Price</div>
+                <div className="col-span-4">Product</div>
+                <div className="col-span-1 text-center">Quantity</div>
+                <div className="col-span-1 text-right">BV</div>
+                <div className="col-span-1 text-right">PV</div>
+                <div className="col-span-2 text-center">Unit Price</div>
+                <div className="col-span-1 text-right">GST</div>
                 <div className="col-span-2 text-right">Total</div>
               </div>
 
@@ -190,7 +203,7 @@ export default function OrderDetailView() {
                   >
                     {/* Desktop */}
                     <div className="hidden lg:grid grid-cols-12 items-center xl:px-5">
-                      <div className="col-span-5 flex items-center gap-4">
+                      <div className="col-span-4 flex items-center gap-4">
                         <img
                           src={item.image}
                           alt={item.name}
@@ -203,22 +216,34 @@ export default function OrderDetailView() {
                           <p className="text-gray-600 text-xs mt-1 line-clamp-1">
                             {item.description}
                           </p>
-                          <p className="text-gray-500 text-xs mt-1">
-                            ₹ {item.price.toFixed(2)} each
+                          <p className="text-gray-700 text-xs mt-1">
+                            <span className="font-semibold">
+                              ₹ {(item.price || 0).toFixed(2)}
+                            </span>{" "}
+                            each + GST ({item.gst ?? 0}%)
                           </p>
                         </div>
                       </div>
-                      <div className="col-span-2 text-center font-medium">
+                      <div className="col-span-1 text-center font-medium">
                         {item.quantity}
                       </div>
-                      <div className="col-span-1 text-center font-medium">
+                      <div className="col-span-1 text-right font-medium">
                         {item.bv || 0}
                       </div>
-                      <div className="col-span-2 text-right text-gray-700">
+                      <div className="col-span-1 text-right font-medium">
+                        {item.pv || 0}
+                      </div>
+                      <div className="col-span-2 text-center text-gray-700">
                         ₹ {item.price.toFixed(2)}
                       </div>
+                      <div className="col-span-1 text-right text-gray-700">
+                        ₹ {(item.whole_gst || 0).toFixed(2)}
+                      </div>
                       <div className="col-span-2 text-right font-bold text-gray-900">
-                        ₹ {(item.price * item.quantity).toFixed(2)}
+                        ₹{" "}
+                        {((item.price_with_gst || 0) * item.quantity).toFixed(
+                          2
+                        )}
                       </div>
                     </div>
 
@@ -237,12 +262,15 @@ export default function OrderDetailView() {
                           <p className="text-gray-600 text-xs mt-1 line-clamp-1">
                             {item.description}
                           </p>
-                          <p className="text-gray-500 text-xs mt-1">
-                            ₹ {item.price.toFixed(2)} each
+                          <p className="text-gray-700 text-xs mt-1">
+                            <span className="font-semibold">
+                              ₹ {(item.price || 0).toFixed(2)}
+                            </span>{" "}
+                            each + GST ({item.gst ?? 0}%)
                           </p>
                         </div>
                       </div>
-                      <div className="flex justify-between items-center text-sm pl-4">
+                      <div className="flex justify-between items-center text-sm pl-1 pt-2">
                         <p className="text-gray-700">
                           Qty:{" "}
                           <span className="font-medium">{item.quantity}</span>
@@ -252,10 +280,16 @@ export default function OrderDetailView() {
                             BV: <span className="font-medium">{item.bv}</span>
                           </p>
                         )}
-                        {/* ✅ BV */}
-                        <p className="font-bold text-gray-900">
-                          ₹ {(item.price * item.quantity).toFixed(2)}
-                        </p>
+                        {item.pv && (
+                          <p className="text-gray-700">
+                            PV: <span className="font-medium">{item.pv}</span>
+                          </p>
+                        )}
+
+                        <div className=" text-right font-bold text-gray-700">
+                          ₹{" "}
+                          {((item.price_with_gst || 0) * item.quantity).toFixed(2)}
+                        </div>
                       </div>
                     </div>
                   </div>

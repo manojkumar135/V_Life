@@ -73,7 +73,8 @@ export async function GET(request: Request) {
       });
     }
 
-    const products = await Product.find(query).sort({ created_at: -1 });
+    const products = await Product.find(query).sort({ created_at: -1 }).lean().exec();
+    // console.log(products)
 
     return NextResponse.json({ success: true, data: products }, { status: 200 });
   } catch (error: any) {

@@ -23,6 +23,18 @@ export interface CartItem {
   unit_price: number;
   price: number;
   bv: number;
+  pv?: number;
+  gst?: number;
+  gst_amount?: number;
+  whole_gst?: number;
+  price_with_gst?: number;
+  cgst?: number;
+  sgst?: number;
+
+  igst?: number;
+
+  product_code?: string;
+  hsn_code?: string;
 }
 
 export type ThemeType = "light" | "dark" | "system";
@@ -44,7 +56,7 @@ export interface UserType {
   category?: string;
   score?: number;
   referBy?: string;
-  infinity?:string;
+  infinity?: string;
 
   address?: string;
   pincode?: string;
@@ -72,7 +84,7 @@ const defaultUser: UserType = {
   login_id: "",
   user_id: "",
   user_name: "",
-  dob:"",
+  dob: "",
   rank: "",
   role: "",
   mail: "",
@@ -84,13 +96,13 @@ const defaultUser: UserType = {
   theme: "light",
   category: "",
   referBy: "",
-  infinity:"",
-  score:0,
+  infinity: "",
+  score: 0,
 
   address: "",
   pincode: "",
   aadhar: "",
-  pan:"",
+  pan: "",
   intro: false,
   isDeleted: false,
   login_time: "",
@@ -162,6 +174,17 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
         unit_price: item.unit_price,
         price: item.unit_price * item.quantity,
         bv: item.bv,
+        pv: item.pv ?? 0,
+        gst: item.gst ?? 0,
+        gst_amount: item.gst_amount??0,
+  whole_gst: item.whole_gst??0,
+  price_with_gst: item.price_with_gst??0,
+
+        cgst: item.cgst ?? 0,
+        sgst: item.sgst ?? 0,
+        igst: item.igst ?? 0,
+        product_code: item.product_code ?? "",
+        hsn_code: item.hsn_code ?? "",
 
         created_at: new Date().toISOString(),
       }));
@@ -176,7 +199,7 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
       else if (user.login_id) updatePayload.login_id = user.login_id;
       else throw new Error("No user identifier available to update cart");
 
-      // console.log(updatePayload);
+      console.log(updatePayload);
 
       const response = await axios.patch(
         "/api/login-operations",
@@ -189,6 +212,7 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
           id: String(i.id),
           price: i.unit_price * i.quantity,
         }));
+        // console.log(normalized, "context");
 
         setUserState((prev) => ({
           ...prev,

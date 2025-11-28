@@ -202,6 +202,16 @@ export default function EditProductPage() {
           .join(" "),
         image: imageUrl,
         status: values.status,
+         pv: Number(values.pv),
+
+        product_code: values.productCode,
+        hsn_code: values.hsnCode,
+        gst: Number(values.gst),
+        cgst: Number(values.cgst),
+        sgst: Number(values.sgst),
+        igst: Number(values.igst),
+
+        discount: Number(values.discount),
         last_modified_by: user.user_id,
       };
 

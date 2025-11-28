@@ -15,7 +15,17 @@ const OrderItemSchema = new mongoose.Schema(
     price: { type: Number, required: true },        // total = unit_price * qty
 
     bv: { type: Number, required: true },           // business volume
-    pv: { type: Number, },
+    pv: { type: Number ,required: true},
+    gst: { type: Number,required: true },
+    gst_amount: { type: Number },
+    whole_gst: { type: Number },
+    price_with_gst: { type: Number },
+    cgst: { type: Number ,required: true},
+    sgst: { type: Number,required: true },
+    igst: { type: Number,required: true },
+    discount: { type: Number,default:0 },
+    hsn_code: { type: String },
+    product_code: { type: String },
     description: { type: String },
     image: { type: String },
     id: { type: String },                           // frontend item id (if needed)

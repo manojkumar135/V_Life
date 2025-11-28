@@ -29,6 +29,19 @@ interface CartItem {
   mrp: number;
   dealer_price: number;
   bv: number;
+  pv?: number;
+  gst?: number;
+  gst_amount?: number;
+  whole_gst?: number;
+  price_with_gst?: number;
+  cgst?: number;
+  sgst?: number;
+  igst?: number;
+  tax?: number;
+  discount?: number;
+
+  product_code: string;
+  hsn_code: string;
   created_at?: Date;
   created_by?: string;
   last_modified_by?: string;
@@ -53,6 +66,16 @@ interface Product {
   dealer_price: number;
   mrp: number;
   bv: number;
+  pv?: number;
+  gst?: number;
+  cgst?: number;
+  sgst?: number;
+  igst?: number;
+  tax?: number;
+  discount?: number;
+
+  product_code?: string;
+  hsn_code?: string;
   image?: string;
   stock: number;
 }
@@ -66,18 +89,17 @@ export default function AddOrderPage() {
   const { user, setUser, updateUserCart } = useVLife();
   const router = useRouter();
 
-  
-const handlePaymentSuccess = () => {
-  // 1️⃣ Start loader
-  setShowCart(false)
-  setLoading(true);
+  const handlePaymentSuccess = () => {
+    // 1️⃣ Start loader
+    setShowCart(false);
+    setLoading(true);
 
-  // 2️⃣ Wait for 3 seconds, then redirect
-  setTimeout(() => {
-    setLoading(false);
-    router.push("/orders");
-  }, 3000);
-};
+    // 2️⃣ Wait for 3 seconds, then redirect
+    setTimeout(() => {
+      setLoading(false);
+      router.push("/orders");
+    }, 3000);
+  };
 
   // console.log(user);
 
@@ -103,17 +125,38 @@ const handlePaymentSuccess = () => {
     notes: "",
   });
 
+  const calcGSTAmount = (unit: number, gst: number) => (unit * gst) / 100;
+
+  const calcWholeGST = (unit: number, gst: number, qty: number) =>
+    calcGSTAmount(unit, gst) * qty;
+
+  const calcPriceWithGST = (unit: number, gst: number) =>
+    unit + calcGSTAmount(unit, gst);
+
+  const calcTotalGST = (cart: CartItem[]) =>
+    cart.reduce(
+      (sum, item) =>
+        sum + calcWholeGST(item.unit_price, item.gst ?? 0, item.quantity),
+      0
+    );
+
   // Normalize cart from user items
   const normalizeCart = (items: any[]): CartItem[] =>
     (items || []).map((i: any) => {
+      // console.log(i);
       const quantity = Number(i.quantity) || 1;
       const unit_price = Number(i.unit_price) || 0;
+      const gst = Number(i.gst) || 0;
+
       return {
         ...i,
         id: i.id || i.product_id,
         unit_price,
         quantity,
         price: unit_price * quantity,
+        gst_amount: calcGSTAmount(unit_price, gst),
+        whole_gst: calcWholeGST(unit_price, gst, quantity),
+        price_with_gst: calcPriceWithGST(unit_price, gst),
       };
     });
 
@@ -123,12 +166,13 @@ const handlePaymentSuccess = () => {
       try {
         setLoading(true);
         const res = await axios.get("/api/product-operations");
+        // console.log(res.data);
         if (res.data.success && Array.isArray(res.data.data)) {
-          const products: Product[] = res.data.data;
+          const products = res.data.data;
 
           // Create category map
           const categoryMap: Record<string, Product[]> = {};
-          products.forEach((prod) => {
+          products.forEach((prod: any) => {
             const cat = prod.category || "Uncategorized";
             if (!categoryMap[cat]) categoryMap[cat] = [];
             categoryMap[cat].push(prod);
@@ -253,6 +297,7 @@ const handlePaymentSuccess = () => {
   };
 
   const addToCart = async (product: Product) => {
+    // console.log(product);
     const updatedCart = [...cart];
     const productId = product.product_id;
 
@@ -263,6 +308,11 @@ const handlePaymentSuccess = () => {
     if (existingItem) {
       existingItem.quantity += 1;
       existingItem.price = existingItem.unit_price * existingItem.quantity;
+      existingItem.whole_gst = calcWholeGST(
+        existingItem.unit_price,
+        existingItem.gst ?? 0,
+        existingItem.quantity
+      );
     } else {
       updatedCart.push({
         product_id: productId,
@@ -275,8 +325,23 @@ const handlePaymentSuccess = () => {
         mrp: product.mrp,
         dealer_price: product.dealer_price,
         bv: product.bv,
+        pv: product.pv ?? 0,
+        gst: product.gst ?? 0,
+        gst_amount: calcGSTAmount(product.dealer_price, product.gst ?? 0),
+        whole_gst: calcWholeGST(product.dealer_price, product.gst ?? 0, 1),
+        price_with_gst: calcPriceWithGST(
+          product.dealer_price,
+          product.gst ?? 0
+        ),
+
+        cgst: product.cgst ?? 0,
+        sgst: product.sgst ?? 0,
+        igst: product.igst ?? 0,
+
         image: product.image,
         description: product.description,
+        product_code: product.product_code || "",
+        hsn_code: product.hsn_code || "",
       });
     }
 
@@ -288,6 +353,7 @@ const handlePaymentSuccess = () => {
     }
   };
 
+  // console.log(cart);
   const updateQuantity = async (id: number, newQuantity: number) => {
     if (newQuantity < 1) {
       removeFromCart(id);
@@ -300,6 +366,14 @@ const handlePaymentSuccess = () => {
             ...item,
             quantity: newQuantity,
             price: item.unit_price * newQuantity,
+
+            whole_gst: calcWholeGST(
+              item.dealer_price,
+              item.gst ?? 0,
+              newQuantity
+            ),
+            price_with_gst: calcPriceWithGST(item.dealer_price, item.gst ?? 0),
+            gst_amount: calcGSTAmount(item.dealer_price, item.gst ?? 0),
           }
         : item
     );
@@ -323,14 +397,32 @@ const handlePaymentSuccess = () => {
   };
 
   const getTotalPrice = () =>
-    cart.reduce((total, item) => total + item.price, 0);
+    cart.reduce((total, item) => {
+      const base = Number(item.unit_price) || 0;
+      const gst = Number(item.gst) || 0;
 
-const getTotalBV = () =>
-  cart.reduce((total, item) => total + item.bv * item.quantity, 0);
+      const unitWithGst = base + (base * gst) / 100;
+      return total + unitWithGst * item.quantity;
+    }, 0);
+
+  const getPriceWithoutGST = () =>
+    cart.reduce((total, item) => {
+      const base = Number(item.unit_price) || 0;
+      // const gst = Number(item.gst) || 0;
+
+      // const unitWithGst = base + (base * gst) / 100;
+      return total + base * item.quantity;
+    }, 0);
+
+  const getTotalBV = () =>
+    cart.reduce((total, item) => total + item.bv * item.quantity, 0);
+
+  const getTotalPV = () =>
+    cart.reduce((total, item) => total + (item.pv ?? 0) * item.quantity, 0);
 
   const createOrder = async (finalAmount: number, razorpayResponse: any) => {
     try {
-      console.log(cart);
+      // console.log(cart);
       const orderItems = cart.map((item) => ({
         product_id: String(item.id),
         product: String(item.id),
@@ -342,6 +434,17 @@ const getTotalBV = () =>
         mrp: item.mrp,
         dealer_price: item.dealer_price,
         bv: item.bv,
+        pv: item.pv ?? 0,
+        gst: item.gst ?? 0,
+        gst_amount: item.gst_amount ?? 0,
+        whole_gst: item.whole_gst ?? 0,
+        price_with_gst: item.price_with_gst ?? 0,
+        cgst: item.cgst ?? 0,
+        sgst: item.sgst ?? 0,
+        igst: item.igst ?? 0,
+        hsn_code: item.hsn_code ?? "",
+        product_code: item.product_code ?? "",
+
         description: item.description,
         image: item.image,
       }));
@@ -365,6 +468,8 @@ const getTotalBV = () =>
         payment_type: razorpayResponse.method || "razorpay",
         items: orderItems,
         order_bv: getTotalBV(),
+        order_pv: getTotalPV(),
+        total_gst: calcTotalGST(cart),
         order_status: "pending",
         amount: getTotalPrice(),
         total_amount: getTotalPrice(),
@@ -423,6 +528,11 @@ const getTotalBV = () =>
     // Call your createOrder API here
     // await createOrder(finalAmount);
   };
+
+
+
+// console.log(cart,"addorder")
+
 
   const activeCategoryProducts =
     categories.find((cat) => cat.name === activeCategory)?.products || [];
@@ -555,7 +665,7 @@ const getTotalBV = () =>
       {/* Overlay */}
       {showCart && (
         <div
-          className="fixed inset-0 z-40 bg-black/30 transition-opacity duration-300"
+          className="fixed inset-0 z-40 bg-black/40 transition-opacity duration-300"
           onClick={() => setShowCart(false)}
         />
       )}
@@ -566,7 +676,7 @@ const getTotalBV = () =>
           className={`
             absolute bg-white shadow-2xl pointer-events-auto
             w-full h-[90%] rounded-t-2xl bottom-0 transform transition-transform duration-500 ease-out
-            lg:w-[600px] lg:h-full lg:rounded-none lg:top-0 lg:right-0
+            lg:w-[650px] lg:h-full lg:rounded-none lg:top-0 lg:right-0
             ${
               showCart
                 ? "translate-y-0 lg:translate-x-0"
@@ -597,8 +707,7 @@ const getTotalBV = () =>
               handleInputChange={handleInputChange}
               isFirstOrder={isFirstOrder}
               createOrder={createOrder}
-                onPaymentSuccess={handlePaymentSuccess} 
-
+              onPaymentSuccess={handlePaymentSuccess}
             />
           </div>
         </div>

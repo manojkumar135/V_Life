@@ -21,13 +21,14 @@ interface CartItem {
   category: string;
   quantity: number;
   unit_price: number;
-   gst: number;  
+  gst: number;
   price: number;
   description?: string;
   image?: string;
   mrp?: number;
   dealer_price?: number;
   bv?: number;
+  pv?: number;
 }
 
 export default function OrderFormCartSection({
@@ -66,23 +67,20 @@ export default function OrderFormCartSection({
     cvv: "",
   });
 
+  // GST = dealer_price * gst%
+  const calcUnitPriceWithGST = (item: CartItem) => {
+    // console.log(item)
+    const gstRate = Number(item.gst) || 0;
+    const base = Number(item.unit_price) || 0;
+    // console.log(base + (base * gstRate) / 100)
+    return base + (base * gstRate) / 100;
+  };
 
-   // 👉 GST PRICE CALCULATION HERE
-  // const getUnitFinalPrice = (item: CartItem) => {
-  //   console.log(item)
-  //   const gstPercent = Number(item.gst || 0);
-  //   const gstAmount = item.dealer_price * (gstPercent / 100);
-  //   return item.dealer_price + gstAmount;
-  // };
-
-
-  // const getItemTotal = (item: CartItem) => {
-  //   return getUnitFinalPrice(item) * item.quantity;
-  // };
-
-  // const cartTotal = () =>
-  //   cart.reduce((sum: number, item: CartItem) => sum + getItemTotal(item), 0);
-
+  // Total price per item = (price per unit incl GST) × quantity
+  const calcItemTotal = (item: CartItem) => {
+    // console.log(calcUnitPriceWithGST(item) * item.quantity)
+    return calcUnitPriceWithGST(item) * item.quantity;
+  };
 
   const handleGoToCustomerInfo = () => {
     if (cart.length === 0) {
@@ -286,7 +284,7 @@ export default function OrderFormCartSection({
               <>
                 {/* Header Row */}
                 <div className="grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 max-lg:hidden">
-                  <div className="col-span-6">Product</div>
+                  <div className="col-span-6 lg:ml-8">Product</div>
                   <div className="col-span-2 text-center">Quantity</div>
                   <div className="col-span-2 text-right">Price</div>
                 </div>
@@ -304,10 +302,10 @@ export default function OrderFormCartSection({
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-14 h-16 object-cover rounded-lg border-[2px]"
+                            className="w-18 h-18 object-cover rounded-lg  border-gray-600 border-[2px]"
                           />
                           <div className="flex-1 ml-4">
-                            <p className="font-semibold text-black text-sm">
+                            <p className="font-semibold text-black text-sm capitalize">
                               {item.name}
                             </p>
                             <p
@@ -317,7 +315,10 @@ export default function OrderFormCartSection({
                               {item.description}
                             </p>
                             <p className="text-gray-700 text-xs mt-1">
-                              ₹ {item.unit_price.toFixed(2)} each
+                              <span className="font-semibold">
+                                ₹ {item.unit_price.toFixed(2)}
+                              </span>{" "}
+                              each + GST ({item.gst?? 0}%)
                             </p>
                           </div>
                         </div>
@@ -356,7 +357,7 @@ export default function OrderFormCartSection({
                           </div>
 
                           <div className="font-bold text-gray-800 text-right">
-                            ₹ {item.price.toFixed(2)}
+                            ₹ {calcItemTotal(item).toFixed(2)}
                           </div>
 
                           <button
@@ -376,10 +377,10 @@ export default function OrderFormCartSection({
                             <img
                               src={item.image}
                               alt={item.name}
-                              className="w-14 h-16 object-cover rounded-lg border-[2px]"
+                              className="w-16 h-18 object-cover rounded-lg border-[2px]"
                             />
                             <div className="ml-4">
-                              <p className="font-semibold text-black text-sm">
+                              <p className="font-semibold text-black text-sm capitalize">
                                 {item.name}
                               </p>
                               <p
@@ -388,6 +389,12 @@ export default function OrderFormCartSection({
                               >
                                 {item.description}
                               </p>
+                               <p className="text-gray-700 text-xs mt-1">
+                              <span className="font-semibold">
+                                ₹ {item.unit_price.toFixed(2)}
+                              </span>{" "}
+                              each + GST ({item.gst?? 0}%)
+                            </p>
                             </div>
                           </div>
                           <button
@@ -400,9 +407,9 @@ export default function OrderFormCartSection({
                         </div>
 
                         <div className="flex justify-between items-center mt-3 -mb-2">
-                          <p className="text-xs text-gray-800">
+                          {/* <p className="text-xs text-gray-800">
                             ₹ {item.unit_price.toFixed(2)} each
-                          </p>
+                          </p> */}
 
                           <div className="flex items-center rounded-full px-2 py-1 w-fit">
                             <button
@@ -437,7 +444,7 @@ export default function OrderFormCartSection({
                           </div>
 
                           <div className="font-bold text-gray-800">
-                            ₹ {item.price.toFixed(2)}
+                            ₹ {calcItemTotal(item).toFixed(2)}
                           </div>
                         </div>
                       </div>

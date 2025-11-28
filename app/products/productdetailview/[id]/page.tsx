@@ -62,7 +62,7 @@ export default function ProductViewPage() {
   if (!product || loading) {
     return (
       <Layout>
-        <div className="flex justify-center items-center h-[80vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
         </div>
       </Layout>
@@ -70,7 +70,7 @@ export default function ProductViewPage() {
   }
 
   // 🔥 GST applies to dealer price only
-  const totalGST = product.gst + product.cgst + product.sgst + product.igst;
+  const totalGST = product.gst;
 
   const gstValue = (product.dealer_price * totalGST) / 100;
   const finalPrice = product.dealer_price + gstValue;
@@ -78,29 +78,29 @@ export default function ProductViewPage() {
   return (
     <Layout>
       {/* Header */}
-      <div className="flex items-center px-4 md:px-10 mt-4 mb-6">
+      <div className="flex items-center px-4 md:px-5 mt-2 mb-3">
         <IoIosArrowBack
           size={25}
           className="cursor-pointer mr-3"
           onClick={goBack}
         />
-        <h2 className="text-xl font-semibold">Product Details</h2>
+        <p className="text-xl font-semibold">Product Details</p>
       </div>
 
       <div className="px-4 md:px-10 pb-10">
         <div className="bg-white rounded-2xl p-0 max-w-5xl mx-auto">
           <div className="flex flex-col lg:flex-row gap-12">
             {/* IMAGE */}
-            <div className="lg:w-2/5 w-full flex items-start justify-start">
+            <div className="lg:w-1/3 w-full flex items-start justify-center">
               <img
                 src={product.image}
                 alt={product.name}
-                className="w-full max-w-[400px] object-contain rounded-lg"
+                className="w-full max-w-[350px] object-contain rounded-lg lg:mt-10"
               />
             </div>
 
             {/* DETAILS */}
-            <div className="lg:w-3/5 w-full">
+            <div className="lg:w-2/3 w-full px-2">
               <h1 className="max-lg:text-xl text-3xl font-bold capitalize text-gray-800">
                 {product.name}
               </h1>
@@ -117,19 +117,23 @@ export default function ProductViewPage() {
                 <Item label="Purchase Volume (PV)" value={product.pv} />
 
                 {/* PRICE */}
-                <div className="border-t pt-5">
-                  <p className="text-lg font-semibold mb-1 text-gray-900">
-                    Price
-                  </p>
+                <div className="border-t pt-2 flex  lg:flex-row justify-between w-full">
+                  <div>
+                    <p className="text-lg font-semibold mb-1 text-gray-800">
+                      Price
+                    </p>
+                  </div>
 
-                  <p className="max-lg:text-xl text-2xl font-bold text-blue-600">
-                    ₹{finalPrice.toFixed(2)}
-                  </p>
+                  <div className=" text-right">
+                    <p className="max-lg:text-xl text-2xl font-bold text-black">
+                      ₹{finalPrice.toFixed(2)}
+                    </p>
 
-                  <p className="text-xs text-gray-500 mt-1">
-                    Base Dealer Price: ₹{product.dealer_price} + GST {totalGST}%
-                    = ₹{gstValue.toFixed(2)}
-                  </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Base Dealer Price: ₹{product.dealer_price} + ₹
+                      {gstValue.toFixed(2)} (GST {totalGST}%)
+                    </p>
+                  </div>
                 </div>
 
                 {/* STATUS ONLY FOR ADMIN */}
@@ -140,7 +144,7 @@ export default function ProductViewPage() {
                       className={`px-3 py-1 rounded text-white text-sm capitalize ${
                         product.status === "active"
                           ? "bg-green-600"
-                          : "bg-gray-500"
+                          : "bg-red-500"
                       }`}
                     >
                       {product.status}
@@ -149,9 +153,9 @@ export default function ProductViewPage() {
                 )}
               </div>
 
-              <button className="mt-6 w-full bg-[#106187] text-white py-3 rounded-xl text-lg flex items-center justify-center gap-2 hover:bg-blue-700">
+              {/* <button className="mt-6 w-full bg-[#106187] text-white py-3 rounded-xl text-lg flex items-center justify-center gap-2 cursor-pointer">
                 <HiShoppingCart size={25} /> Add to Cart
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -162,7 +166,7 @@ export default function ProductViewPage() {
 
 function Item({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex justify-between text-sm md:text-base">
+    <div className="flex justify-between text-sm md:text-sm">
       <span className="font-semibold text-gray-700">{label}</span>
       <span className="text-gray-600">{value || "-"}</span>
     </div>

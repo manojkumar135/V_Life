@@ -232,7 +232,7 @@ export default function SideNav({
         {/* Logout (Mobile) */}
         <button
           onClick={() => setIsLogoutOpen(true)}
-          className="mt-10 max-sm:mt-40 flex items-center gap-3 px-3 py-2 rounded-md text-black hover:bg-white/60"
+          className="mt-10 max-sm:mt-40 flex items-center gap-3 px-3 py-2 rounded-md text-white hover:bg-white/60"
         >
           <span className="text-[22px] max-md:text-[22px]">
             <RiLogoutCircleRLine />

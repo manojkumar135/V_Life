@@ -13,6 +13,16 @@ interface ProductCardProps {
   mrp?: number;
   dealer_price?: number;
   bv?: number;
+  pv?: number;
+  gst?: number;
+  cgst?: number;
+  sgst?: number;
+  igst?: number;
+  tax?: number;
+  discount?: number;
+
+  product_code?: string;
+  hsn_code?: string;
   image?: string;
   description?: string;
   category?: string;
@@ -28,6 +38,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
   mrp = 0,
   dealer_price = 0,
   bv = 0,
+  pv = 0,
+  gst,
+  cgst,
+  sgst,
+  igst,
+  product_code,
+  hsn_code,
+  discount,
+  tax,
   image = "/placeholder.png",
   description = "",
   category = "",
@@ -43,17 +62,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleView = () => {
-    if (status === "active") {
-      router.push(`/products/productdetailview/${_id}`);
-    }
+          router.push(`/products/productdetailview/${_id}`);
+
+    // if (status === "active") {
+    //   router.push(`/products/productdetailview/${_id}`);
+    // }
   };
 
   const isDisabled = status !== "active";
 
   return (
     <div
-      className={`border rounded-lg px-3 py-2 flex justify-between items-start 
-      ${isDisabled ? "opacity-75 cursor-not-allowed" : "cursor-pointer"}
+      className={`border rounded-lg px-3 py-2 flex justify-between items-start cursor-pointer
+      ${isDisabled ? "opacity-85 " : "cursor-pointer"}
       `}
       onClick={handleView}
     >
@@ -121,6 +142,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   mrp,
                   dealer_price,
                   bv,
+                  pv,
+                  gst,
+                  cgst,
+                  sgst,
+                  igst,
+                  product_code,
+                  hsn_code,
                   image,
                   description,
                   category,
@@ -128,7 +156,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
               }}
               disabled={isDisabled}
               className={`font-medium py-2 px-4 rounded-md
-                ${isDisabled ? "!bg-gray-400 !cursor-not-allowed" : "cursor-pointer"}
+                ${
+                  isDisabled
+                    ? "!bg-gray-400 !cursor-not-allowed"
+                    : "cursor-pointer"
+                }
               `}
             >
               {isDisabled ? "Unavailable" : isInCart ? "Added" : "Add to Cart"}

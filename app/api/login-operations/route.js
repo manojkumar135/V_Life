@@ -127,6 +127,17 @@ export async function PATCH(request) {
         unit_price: item.unit_price,
         price: item.unit_price * item.quantity,
         bv: item.bv,
+        pv: item.pv,
+        gst: item.gst,
+        gst_amount: item.gst_amount ?? 0,
+        whole_gst: item.whole_gst ?? 0,
+        price_with_gst: item.price_with_gst ?? 0,
+        sgst: item.sgst,
+        cgst: item.cgst,
+        igst: item.igst,
+        product_code: item.product_code,
+        hsn_code: item.hsn_code,
+
 
         created_at: item.created_at || new Date(),
         created_by: item.created_by || user_id || "",

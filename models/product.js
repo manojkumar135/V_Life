@@ -12,10 +12,10 @@ const ProductSchema = new mongoose.Schema(
         bv: { type: Number, required: true }, // Business Volume (used in MLM/commission system)
         pv: { type: Number },
         hsn_code: { type: String },
-        gst: { type: Number },
-        cgst: { type: Number },
-        sgst: { type: Number },
-        igst: { type: Number },
+        gst: { type: Number,default:0 },
+        cgst: { type: Number,default:0 },
+        sgst: { type: Number,default:0 },
+        igst: { type: Number,default:0 },
         tax:{ type: Number },
 
         discount: { type: Number },
