@@ -23,7 +23,11 @@ import { FaEye } from "react-icons/fa";
 
 import { handleDownloadPDF } from "@/lib/invoiceDownload";
 import { handlePreviewPDF } from "@/lib/invoicePreview";
-import PdfPreview from "@/components/PDF/PdfPreview"
+import dynamic from "next/dynamic";
+
+const PdfPreview = dynamic(() => import("@/components/PDF/PdfPreview"), {
+  ssr: false,
+});
 
 export default function OrdersPage() {
   const { user } = useVLife();
