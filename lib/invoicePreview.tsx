@@ -1,7 +1,7 @@
+// lib/invoicePreview.tsx
 import axios from "axios";
 import { pdf } from "@react-pdf/renderer";
 import InvoiceTemplate from "@/components/PDF/template";
-import * as pdfjsLib from "pdfjs-dist";
 
 export async function handlePreviewPDF(
   order_id: string,
@@ -11,13 +11,11 @@ export async function handlePreviewPDF(
   try {
     setLoading(true);
 
-    // Set up the worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
     const { data } = await axios.get(`/api/order-operations?id=${order_id}`);
     const order = data?.data?.[0];
     if (!order) throw new Error("Order not found");
 
+    // generate pdf blob
     const blob = await pdf(<InvoiceTemplate data={order} />).toBlob();
     const url = URL.createObjectURL(blob);
 

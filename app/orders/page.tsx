@@ -379,7 +379,8 @@ export default function OrdersPage() {
       {showPreview && previewUrl && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center backdrop-blur-sm">
           <button
-            className="absolute top-5 max-lg:top-2 right-12 max-lg:right-3 text-white bg-black rounded-full w-6 h-6 cursor-pointer border-white border-1 font-bold"
+            className="absolute top-5 max-lg:top-2 right-15 max-lg:right-3 text-white bg-black rounded-full 
+            w-7 h-7 cursor-pointer border-white border-2 font-bold"
             onClick={() => {
               setShowPreview(false);
               URL.revokeObjectURL(previewUrl);
