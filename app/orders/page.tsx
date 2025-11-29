@@ -392,7 +392,7 @@ export default function OrdersPage() {
             ✕
           </button>
 
-         <PdfPreview url={previewUrl} scale={pdfScale} />
+         <PdfPreview url={previewUrl} />
 
         </div>
       )}
