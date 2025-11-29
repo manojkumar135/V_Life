@@ -190,11 +190,11 @@ export default function OrdersPage() {
           <button
             title="Preview Invoice"
             className="text-[#106187] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePreviewPDF(params.row.order_id, setLoading, setPreviewUrl);
-              setShowPreview(true);
-            }}
+           onClick={async (e) => {
+    e.stopPropagation();
+    const url = await handlePreviewPDF(params.row.order_id);
+    window.open(url, "_blank");
+  }}
           >
             <FaEye size={16} />
           </button>
@@ -392,8 +392,11 @@ export default function OrdersPage() {
             ✕
           </button>
 
-         <PdfPreview url={previewUrl} />
-
+          <div className="bg-black w-[85%] h-[85%] max-md:w-[90%] max-md:h-[90%] rounded-lg overflow-hidden">
+            <div className="p-2 w-full h-full bg-black rounded-lg">
+              <PdfPreview url={previewUrl} />
+            </div>
+          </div>
         </div>
       )}
     </Layout>

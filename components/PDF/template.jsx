@@ -206,7 +206,7 @@ export default function InvoiceTemplate({ data }) {
 
 
         <View style={styles.separator} />
-        <Text style={[styles.label, { marginLeft: "1rem", marginTop: "2rem", marginBottom: "3rem" }]}>FROM :</Text>
+        <Text style={[styles.label, { marginLeft: 1, marginTop: 2, marginBottom: 3 }]}>FROM :</Text>
 
         <View style={[styles.companyBlock, { marginLeft: "4rem" }]}>
           <Text>#8/165-111/C, LAKE VIEW ROAD, BC RAMAIAH ST, FIRST LANE, RAJEEVNAGAR, ONGOLE, AP - 523002.</Text>
