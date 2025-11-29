@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
 export default function InvoiceTemplate({ data }) {
   return (
     <Document>
-      <Page size="A4" style={[styles.page, { marginLeft: "2rem", marginRight: "2rem" }]}>
+      <Page size="A4" style={[styles.page, { marginLeft: 1, marginRight: 1 }]}>
         {/* ============ TOP HEADER =============== */}
         <View style={styles.headerBox}>
           {/* Left */}
@@ -191,12 +191,12 @@ export default function InvoiceTemplate({ data }) {
 
           {/* Right */}
           <View style={styles.taxBox}>
-            <Text style={[styles.taxHeading, { marginBottom: "1rem", marginTop: "1rem" }]}>TAX INVOICE</Text>
-            <View style={[styles.taxLine, { marginTop: "1rem" }]}>
+            <Text style={[styles.taxHeading, { marginBottom: 1, marginTop: 1 }]}>TAX INVOICE</Text>
+            <View style={[styles.taxLine, { marginTop: 1 }]}>
               <Text>Invoice No :</Text>
               <Text>{data.order_id || "-"}</Text>
             </View>
-            <View style={[styles.taxLine, { marginTop: "1rem" }]}>
+            <View style={[styles.taxLine, { marginTop: 1 }]}>
               <Text>Invoice Date :</Text>
               <Text>{data.payment_date || "-"}</Text>
             </View>
@@ -208,9 +208,9 @@ export default function InvoiceTemplate({ data }) {
         <View style={styles.separator} />
         <Text style={[styles.label, { marginLeft: 1, marginTop: 2, marginBottom: 3 }]}>FROM :</Text>
 
-        <View style={[styles.companyBlock, { marginLeft: "4rem" }]}>
+        <View style={[styles.companyBlock, { marginLeft: 3 }]}>
           <Text>#8/165-111/C, LAKE VIEW ROAD, BC RAMAIAH ST, FIRST LANE, RAJEEVNAGAR, ONGOLE, AP - 523002.</Text>
-          <View style={[{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: "4rem", marginBottom: "4rem" }]}>
+          <View style={[{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 3, marginBottom: 3 }]}>
             <Text> • Email: support@maverickmoney.com</Text>
             <Text>+91 123456789 </Text>
             <Text>GSTIN : 37AAHCN1274B1ZP</Text>
@@ -222,8 +222,8 @@ export default function InvoiceTemplate({ data }) {
         <View style={styles.addressContainer}>
           {/* LEFT */}
           <View style={styles.colLeft}>
-            <Text style={[styles.sectionTitle, { margin: "2rem" }]}>Shipping Address</Text>
-            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+            <Text style={[styles.sectionTitle, { margin: 2 }]}>Shipping Address</Text>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
               <Text style={styles.label}>USER NAME:</Text>
               <Text>{data.user_name || "-"}</Text>
             </View>
@@ -231,12 +231,12 @@ export default function InvoiceTemplate({ data }) {
             <Text style={styles.label}>ADDRESS:</Text>
             <Text>{data.address || "-"}</Text>
 
-            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
               <Text style={styles.label}>Email:</Text>
               <Text>{data.mail || "-"}</Text>
             </View>
 
-            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
               <Text style={styles.label}>MOBILE NUMBER:</Text>
               <Text>{data.contact || "-"}</Text>
             </View>
@@ -246,21 +246,21 @@ export default function InvoiceTemplate({ data }) {
 
           {/* RIGHT */}
           <View style={styles.colRight}>
-            <Text style={[styles.sectionTitle, { margin: "2rem" }]}>ORDER DETAIL</Text>
-            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+            <Text style={[styles.sectionTitle, { margin: 2 }]}>ORDER DETAIL</Text>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
               <Text style={styles.label}>USER ID:</Text>
               <Text>{data.user_id || "-"}</Text>
             </View>
 
-            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
               <Text style={styles.label}>ORDER NO:</Text>
               <Text>{data.order_id || "-"}</Text>
             </View>
-            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
               <Text style={styles.label}>GST :</Text>
               <Text>{data.gst_no || "-"}</Text>
             </View>
-            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
               <Text style={styles.label}>Order Type: PV OR BV</Text>
               <Text>{data.order_type || "-"}</Text>
             </View>

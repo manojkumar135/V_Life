@@ -2,54 +2,27 @@
 
 import { useEffect, useState } from "react";
 
-export default function PdfPreview({ url }: { url: string }) {
-  const [pages, setPages] = useState<string[]>([]);
+export default function PdfPreview({ url, scale = 0.9 }: { url: string; scale?: number }) {
+    const [ViewerLib, setViewerLib] = useState<any>(null);
 
-  useEffect(() => {
-    if (!url) return;
+    useEffect(() => {
+        (async () => {
+            const core = await import("@react-pdf-viewer/core");
+            await import("@react-pdf-viewer/core/lib/styles/index.css");
+            setViewerLib(core);
+        })();
+    }, []);
 
-    const load = async () => {
-      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf");
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    if (!ViewerLib) return null;
+    const { Worker, Viewer } = ViewerLib;
 
-      const pdf = await pdfjsLib.getDocument(url).promise;
-
-      const imgs: string[] = [];
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 0.9 }); // Good quality
-
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        await page.render({ canvasContext: ctx!, viewport }).promise;
-
-        imgs.push(canvas.toDataURL("image/png"));
-      }
-
-      setPages(imgs);
-    };
-
-    load();
-  }, [url]);
-
-  if (!url) return null;
-
-  return (
-    <div className="flex flex-col gap-4 overflow-auto max-h-[90vh] p-4 bg-black">
-      {pages.map((src, idx) => (
-        <img
-          key={idx}
-          src={src}
-          className="w-full rounded-md shadow-lg"
-          alt={`Page ${idx + 1}`}
-        />
-      ))}
-    </div>
-  );
+    return (
+        <div className="bg-black w-[85%] h-[85%] max-md:w-[90%] max-md:h-[80%] rounded-lg overflow-hidden"> 
+        <div className="p-2 w-full h-full bg-black rounded-lg">
+            <Worker workerUrl="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js">
+                <Viewer fileUrl={url} defaultScale={scale} theme={{ theme: "dark" }} />
+            </Worker>
+        </div>
+        </div>
+    );
 }

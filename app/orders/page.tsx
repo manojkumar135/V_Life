@@ -23,11 +23,7 @@ import { FaEye } from "react-icons/fa";
 
 import { handleDownloadPDF } from "@/lib/invoiceDownload";
 import { handlePreviewPDF } from "@/lib/invoicePreview";
-import dynamic from "next/dynamic";
-
-const PdfPreview = dynamic(() => import("@/components/PDF/PdfPreview"), {
-  ssr: false,
-});
+import PdfPreview from "@/components/PDF/PdfPreview"
 
 export default function OrdersPage() {
   const { user } = useVLife();
@@ -52,8 +48,8 @@ export default function OrdersPage() {
   const [pdfScale, setPdfScale] = useState<number>(1);
 
   useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    setPdfScale(isMobile ? 0.75 : 0.9);
+    const isMobile = window.innerWidth < 700;
+    setPdfScale(isMobile ? 0.56 : 1);
   }, []);
 
   const API_URL = "/api/order-operations"; // Replace with your actual API endpoint
@@ -190,11 +186,11 @@ export default function OrdersPage() {
           <button
             title="Preview Invoice"
             className="text-[#106187] cursor-pointer"
-           onClick={async (e) => {
-    e.stopPropagation();
-    const url = await handlePreviewPDF(params.row.order_id);
-    window.open(url, "_blank");
-  }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePreviewPDF(params.row.order_id, setLoading, setPreviewUrl);
+              setShowPreview(true);
+            }}
           >
             <FaEye size={16} />
           </button>
@@ -381,7 +377,7 @@ export default function OrdersPage() {
       {showPreview && previewUrl && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center backdrop-blur-sm">
           <button
-            className="absolute top-5 max-lg:top-2 right-15 max-lg:right-3 text-white bg-black rounded-full 
+            className="absolute top-5 max-lg:top-5 right-15 max-lg:right-3 text-white bg-black rounded-full 
             w-7 h-7 cursor-pointer border-white border-2 font-bold"
             onClick={() => {
               setShowPreview(false);
@@ -392,11 +388,8 @@ export default function OrdersPage() {
             ✕
           </button>
 
-          <div className="bg-black w-[85%] h-[85%] max-md:w-[90%] max-md:h-[90%] rounded-lg overflow-hidden">
-            <div className="p-2 w-full h-full bg-black rounded-lg">
-              <PdfPreview url={previewUrl} />
-            </div>
-          </div>
+         <PdfPreview url={previewUrl} scale={pdfScale} />
+
         </div>
       )}
     </Layout>
