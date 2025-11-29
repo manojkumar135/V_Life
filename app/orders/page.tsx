@@ -19,7 +19,13 @@ import { FiFilter } from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { handleDownload } from "@/utils/handleDownload";
 import { FaDownload } from "react-icons/fa";
+import { FaEye } from "react-icons/fa";
+
 import { handleDownloadPDF } from "@/lib/invoiceDownload";
+import { handlePreviewPDF } from "@/lib/invoicePreview";
+
+import { Worker, Viewer } from "@react-pdf-viewer/core";
+import "@react-pdf-viewer/core/lib/styles/index.css";
 
 export default function OrdersPage() {
   const { user } = useVLife();
@@ -38,6 +44,15 @@ export default function OrdersPage() {
   const [showModal, setShowModal] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
+
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [pdfScale, setPdfScale] = useState<number>(1);
+
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    setPdfScale(isMobile ? 0.75 : 0.9);
+  }, []);
 
   const API_URL = "/api/order-operations"; // Replace with your actual API endpoint
 
@@ -161,30 +176,84 @@ export default function OrdersPage() {
       ),
     },
     { field: "payment", headerName: "Status", flex: 1 },
+    {
+      field: "download",
+      headerName: "Invoice",
+      flex: 0.8,
+      // sortable: false,
+      // filterable: false,
+      renderCell: (params: GridRenderCellParams) => (
+        <div className="flex max-lg:gap-8 max-lg:min-w-[150px] gap-8 xl:items-center xl:justify-center mt-2">
+          {/* Preview Icon */}
+          <button
+            title="Preview Invoice"
+            className="text-[#106187] cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePreviewPDF(params.row.order_id, setLoading, setPreviewUrl);
+              setShowPreview(true);
+            }}
+          >
+            <FaEye size={16} />
+          </button>
+          {/* Download */}
+          <button
+            title="Download Invoice"
+            className="text-[#106187] cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownloadPDF(params.row.order_id, setLoading);
+            }}
+          >
+            <FaDownload size={15} />
+          </button>
+        </div>
+      ),
+    },
 
-    ...(user?.role === "admin"
-      ? [
-          {
-            field: "download",
-            headerName: "Invoice",
-            flex: 1,
-            sortable: false,
-            filterable: false,
-            renderCell: (params: GridRenderCellParams) => (
-              <button
-                title="Download Invoice"
-                className="text-blue-600 hover:text-blue-800 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDownloadPDF(params.row.order_id, setLoading);
-                }}
-              >
-                <FaDownload size={15} />
-              </button>
-            ),
-          },
-        ]
-      : []),
+    // ...(user?.role === "admin"
+    //   ? [
+    //       {
+    //         field: "download",
+    //         headerName: "Invoice",
+    //         flex: 1,
+    //         sortable: false,
+    //         filterable: false,
+    //         renderCell: (params: GridRenderCellParams) => (
+    //           <div className="flex gap-8 items-center justify-center mt-2">
+    //             {/* Download */}
+    //             <button
+    //               title="Download Invoice"
+    //               className="text-[#106187] cursor-pointer"
+    //               onClick={(e) => {
+    //                 e.stopPropagation();
+    //                 handleDownloadPDF(params.row.order_id, setLoading);
+    //               }}
+    //             >
+    //               <FaDownload size={15} />
+    //             </button>
+
+    //             {/* Preview Icon */}
+    //             <button
+    //               title="Preview Invoice"
+    //               className="text-[#106187] cursor-pointer"
+    //               onClick={(e) => {
+    //                 e.stopPropagation();
+    //                 handlePreviewPDF(
+    //                   params.row.order_id,
+    //                   setLoading,
+    //                   setPreviewUrl
+    //                 );
+    //                 setShowPreview(true);
+    //               }}
+    //             >
+    //               <FaEye size={16} />
+    //             </button>
+    //           </div>
+    //         ),
+    //       },
+    //     ]
+    //   : []),
   ].filter(Boolean) as GridColDef[]; // 👈 removes false and fixes typing
 
   const handlePageChange = useCallback(
@@ -305,6 +374,36 @@ export default function OrdersPage() {
           }}
         />
       </div>
+
+      {/* ==================== PDF PREVIEW MODAL ===================== */}
+      {showPreview && previewUrl && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center backdrop-blur-sm">
+          <button
+            className="absolute top-5 max-lg:top-2 right-12 max-lg:right-3 text-white bg-black rounded-full w-6 h-6 cursor-pointer border-white border-1 font-bold"
+            onClick={() => {
+              setShowPreview(false);
+              URL.revokeObjectURL(previewUrl);
+              setPreviewUrl(null);
+            }}
+          >
+            ✕
+          </button>
+
+          <div className="bg-black w-[85%] h-[85%] max-md:w-[90%] max-md:h-[90%] rounded-lg overflow-hidden">
+            <div className="p-3 max-lg:p-0 w-full h-full bg-black rounded-lg">
+              <Worker workerUrl="//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js">
+                <Viewer
+                  fileUrl={previewUrl}
+                  defaultScale={pdfScale}
+                  theme={{
+                    theme: "dark",
+                  }}
+                />
+              </Worker>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

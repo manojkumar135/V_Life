@@ -12,98 +12,155 @@ import {
 Font.register({
   family: "Roboto",
   fonts: [
-    { src: "/fonts/Roboto/Roboto-Regular.ttf", fontWeight: "normal" },
+    { src: "/fonts/Roboto/Roboto-Regular.ttf" },
     { src: "/fonts/Roboto/Roboto-Bold.ttf", fontWeight: "bold" },
   ],
 });
 
+const BORDER = "0.7 solid #000";
+
 const styles = StyleSheet.create({
   page: {
-    padding: 30,
-    fontSize: 10,
-    color: "#111",
-    backgroundColor: "#fff",
+    padding: 20,
+    fontSize: 9,
     fontFamily: "Roboto",
+    color: "#000",
   },
-  header: {
+
+  //------------------ HEADER ------------------
+  headerBox: {
+    marginTop: 2,
     flexDirection: "row",
     justifyContent: "space-between",
-    borderBottom: "2 solid gray", // yellow-500
-    paddingBottom: 10,
-    marginBottom: 20,
+    alignItems: "flex-end"
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#black", // yellow-500
+
+  headerLeft: {
+    flexDirection: "column",
+    width: "50%",
   },
   logo: {
-    width: 60,
-    height: 60,
+    width: 120,
+    height: 50,
+    marginRight: 8,
+    marginLeft: 10,
   },
-  section: {
-    marginBottom: 20,
+  companyBlock: {
+    flexDirection: "column",
+    marginBottom: 10,
   },
-  bold: {
+  companyTitle: {
+    fontSize: 12,
     fontWeight: "bold",
   },
-  light: {
-    color: "#555",
-    fontSize: 10,
-    marginBottom: 2,
-  },
-  table: {
-    display: 'table',
-    width: 'auto',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: '#2E2E2E',
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-    marginBottom: 20,
-    marginTop: 20,
-    borderRadius: 1,
+
+  //------------------ TAX BOX ------------------
+  taxBox: {
+    width: "30%",
+    border: BORDER,
+    padding: 4,
+    paddingRight: 5,
+    paddingLeft: 5,
+    height: 48,
 
   },
+  taxHeading: {
+    textAlign: "center",
+    fontWeight: "bold",
+    marginBottom: 3,
+  },
+  taxLine: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  separator: {
+    borderBottom: BORDER,
+    marginVertical: 6,
+  },
+
+  //------------------ ADDRESS BLOCK ------------------
+  addressContainer: {
+    flexDirection: "row",
+    border: BORDER,
+  },
+  colLeft: {
+    width: "70%",
+    borderRight: BORDER,
+    padding: 4,
+  },
+  colRight: {
+    width: "30%",
+    padding: 4,
+  },
+  sectionTitle: {
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 3,
+  },
+  label: {
+    fontWeight: "bold",
+    paddingLeft: 2,
+    paddingRight: 2
+
+  },
+
+  section: { marginBottom: 20, }, bold: { fontWeight: "bold", }, light: { color: "#555", fontSize: 10, marginBottom: 2, },
+
+  //------------------ TABLE ------------------
+  table: { display: 'table', width: 'auto', borderStyle: 'solid', borderWidth: 1, borderColor: '#2E2E2E', borderRightWidth: 0, borderBottomWidth: 0, marginBottom: 20, marginTop: 20, borderRadius: 1, },
   row: {
     flexDirection: "row",
   },
-  col: {
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: '#2E2E2E',
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-    padding: 5,
-  },
+  col: { borderStyle: 'solid', borderWidth: 1, borderColor: '#2E2E2E', borderLeftWidth: 0, borderTopWidth: 0, padding: 5, },
   colHeader: {
-    backgroundColor: "#facc15", // yellow
+    backgroundColor: "#facc15",// yellow
     color: "#000",
     fontWeight: "bold",
     textAlign: "center",
   },
-  col1: { width: "10%" },
-  col2: { width: "40%" },
-  col3: { width: "15%" },
-  col4: { width: "15%" },
-  col5: { width: "20%" },
-  totalBlock: {
-    alignItems: "flex-end",
-    marginTop: 10,
-    borderTop: "1 solid #ccc",
-    paddingTop: 10,
+
+  cell: {
+    border: BORDER,
+    padding: 3,
+    textAlign: "center",
   },
-  totalRow: {
+  headCell: {
+    fontWeight: "bold",
+  },
+  //------------------ COL WIDTHS ------------------
+  cNo: { width: "3%" },
+  cCode: { width: "8%" },
+  cName: { width: "20%" },
+  cHSN: { width: "10%" },
+  cQty: { width: "5%" },
+  cPrice: { width: "15%" },
+  cDisc: { width: "9%" },
+  cTaxable: { width: "10%" },
+  cGST: { width: "5%" },
+  cTotal: { width: "15%" },
+
+  //------------------ TOTAL BOX ------------------
+  totalsSection: {
+    width: "55%",
+    alignSelf: "flex-end",
+    marginTop: 10,
+    border: BORDER,
+    padding: 6,
+  },
+  totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    width: "40%",
-    fontSize: 10,
     marginBottom: 4,
   },
-  deduction: {
-    color: "red",
-    fontSize: 10,
+  totalsBottomBorder: {
+    borderBottom: BORDER,
+    paddingBottom: 3,
+    marginBottom: 4,
   },
+
+  deduction: { color: "red", fontSize: 10, },
+
+  //------------------ FOOTER ------------------
   footer: {
     position: "absolute",
     bottom: 30,
@@ -117,98 +174,155 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function InvoiceTemplate({ order }) {
+export default function InvoiceTemplate({ data }) {
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>INVOICE</Text>
-            <Text style={[styles.light, { fontSize: 9 }]}>Order ID: {order.order_id}</Text>
-            <Text style={[styles.light, { fontSize: 9 }]}>Date: {order.payment_date}</Text>
+      <Page size="A4" style={[styles.page, { marginLeft: "2rem", marginRight: "2rem" }]}>
+        {/* ============ TOP HEADER =============== */}
+        <View style={styles.headerBox}>
+          {/* Left */}
+          <View style={styles.headerLeft}>
+            <Image
+              src={"https://res.cloudinary.com/dtb4vozhy/image/upload/v1764400245/maverick-logo_sddrui.png"}
+              style={styles.logo}
+            />
+
           </View>
 
-          <Image
-            style={styles.logo}
-            src={
-              "https://res.cloudinary.com/dtb4vozhy/image/upload/v1758524457/ChatGPT_Image_Sep_22_2025_12_30_38_PM_fujdkc.png"
-            }
-          />
+          {/* Right */}
+          <View style={styles.taxBox}>
+            <Text style={[styles.taxHeading, { marginBottom: "1rem", marginTop: "1rem" }]}>TAX INVOICE</Text>
+            <View style={[styles.taxLine, { marginTop: "1rem" }]}>
+              <Text>Invoice No :</Text>
+              <Text>{data.order_id || "-"}</Text>
+            </View>
+            <View style={[styles.taxLine, { marginTop: "1rem" }]}>
+              <Text>Invoice Date :</Text>
+              <Text>{data.payment_date || "-"}</Text>
+            </View>
+          </View>
         </View>
 
-        {/* Bill To */}
-        <View style={styles.section}>
-          <Text style={styles.bold}>BILL TO:</Text>
-          <Text style={styles.light}>{order.user_name}</Text>
-          <Text style={styles.light}>{order.mail}</Text>
-          <Text style={styles.light}>{order.contact}</Text>
-          <Text style={styles.light}>{order.address}</Text>
+
+
+        <View style={styles.separator} />
+        <Text style={[styles.label, { marginLeft: "1rem", marginTop: "2rem", marginBottom: "3rem" }]}>FROM :</Text>
+
+        <View style={[styles.companyBlock, { marginLeft: "4rem" }]}>
+          <Text>#8/165-111/C, LAKE VIEW ROAD, BC RAMAIAH ST, FIRST LANE, RAJEEVNAGAR, ONGOLE, AP - 523002.</Text>
+          <View style={[{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: "4rem", marginBottom: "4rem" }]}>
+            <Text> • Email: support@maverickmoney.com</Text>
+            <Text>+91 123456789 </Text>
+            <Text>GSTIN : 37AAHCN1274B1ZP</Text>
+          </View>
+
         </View>
 
-        {/* Items Table */}
+        {/* ================= ADDRESS TABLE ================= */}
+        <View style={styles.addressContainer}>
+          {/* LEFT */}
+          <View style={styles.colLeft}>
+            <Text style={[styles.sectionTitle, { margin: "2rem" }]}>Shipping Address</Text>
+            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+              <Text style={styles.label}>USER NAME:</Text>
+              <Text>{data.user_name || "-"}</Text>
+            </View>
+
+            <Text style={styles.label}>ADDRESS:</Text>
+            <Text>{data.address || "-"}</Text>
+
+            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+              <Text style={styles.label}>Email:</Text>
+              <Text>{data.mail || "-"}</Text>
+            </View>
+
+            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+              <Text style={styles.label}>MOBILE NUMBER:</Text>
+              <Text>{data.contact || "-"}</Text>
+            </View>
+
+
+          </View>
+
+          {/* RIGHT */}
+          <View style={styles.colRight}>
+            <Text style={[styles.sectionTitle, { margin: "2rem" }]}>ORDER DETAIL</Text>
+            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+              <Text style={styles.label}>USER ID:</Text>
+              <Text>{data.user_id || "-"}</Text>
+            </View>
+
+            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+              <Text style={styles.label}>ORDER NO:</Text>
+              <Text>{data.order_id || "-"}</Text>
+            </View>
+            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+              <Text style={styles.label}>GST :</Text>
+              <Text>{data.gst_no || "-"}</Text>
+            </View>
+            <View style={[{ display: "flex", flexDirection: "row", margin: "2rem" }]}>
+              <Text style={styles.label}>Order Type: PV OR BV</Text>
+              <Text>{data.order_type || "-"}</Text>
+            </View>
+
+
+          </View>
+        </View>
+
+        {/* ================= PRODUCT TABLE ================= */}
         <View style={styles.table}>
-          {/* Header row */}
           <View style={styles.row}>
-            {["S.No", "Item", "Qty", "Unit Price", "Total"].map((h, i) => (
-              <Text
-                key={i}
-                style={[
-                  styles.col,
-                  styles.colHeader,
-                  i === 0 && styles.col1,
-                  i === 1 && styles.col2,
-                  i === 2 && styles.col3,
-                  i === 3 && styles.col4,
-                  i === 4 && styles.col5,
-                ]}
-              >
-                {h}
-              </Text>
-            ))}
+            <Text style={[styles.cell, styles.headCell, styles.cNo]}>S. No</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cCode]}>Product Code</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cName]}>Product Name</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cHSN]}>HSN/SAC Code</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cQty]}>QTY</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cPrice]}>PRICE</Text>
+            {/* <Text style={[styles.cell, styles.headCell, styles.cDisc]}>Discount/Offer</Text> */}
+            <Text style={[styles.cell, styles.headCell, styles.cTaxable]}>Taxable Amount</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cGST]}>CGST %</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cGST]}>SGST %</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cGST]}>IGST %</Text>
+            <Text style={[styles.cell, styles.headCell, styles.cTotal]}>TOTAL</Text>
           </View>
-          {/* Items */}
-          {order.items.map((item, idx) => (
-            <View key={idx} style={styles.row}>
-              <Text style={[styles.col, styles.col1, { textAlign: "center" }]}>
-                {idx + 1}
-              </Text>
-              <Text style={[styles.col, styles.col2]}>{item.name}</Text>
-              <Text style={[styles.col, styles.col3, { textAlign: "center" }]}>
-                {item.quantity}
-              </Text>
-              <Text style={[styles.col, styles.col4, { textAlign: "right" }]}>
-                {`\u20B9 ${item.unit_price.toFixed(2)}`}
-              </Text>
-              <Text style={[styles.col, styles.col5, { textAlign: "right" }]}>
-                {`\u20B9 ${item.price.toFixed(2)}`}
-              </Text>
+
+          {data.items.map((item, index) => (
+            <View key={index} style={styles.row}>
+              <Text style={[styles.cell, styles.cNo]}>{index + 1}</Text>
+              <Text style={[styles.cell, styles.cCode]}>{item.product_code || item.product_id || ""}</Text>
+              <Text style={[styles.cell, styles.cName, { textTransform: "capitalize" }]}>{item.name || ""}</Text>
+              <Text style={[styles.cell, styles.cHSN]}>{item.hsn_code || ""}</Text>
+              <Text style={[styles.cell, styles.cQty]}>{item.quantity || ""}</Text>
+              <Text style={[styles.cell, styles.cPrice, { textAlign: "right" }]}> {`\u20B9 ${item.dealer_price.toFixed(2)}`}</Text>
+              {/* <Text style={[styles.cell, styles.cDisc]}>{item.discount || "-"}</Text> */}
+              <Text style={[styles.cell, styles.cTaxable, { textAlign: "right" }]}>{`\u20B9 ${item.whole_gst.toFixed(2)}`}</Text>
+              <Text style={[styles.cell, styles.cGST, { textAlign: "right" }]}>{item.cgst || "0"}</Text>
+              <Text style={[styles.cell, styles.cGST, { textAlign: "right" }]}>{item.sgst || "0"}</Text>
+              <Text style={[styles.cell, styles.cGST, { textAlign: "right" }]}>{item.igst || "0"}</Text>
+              <Text style={[styles.cell, styles.cTotal, { textAlign: "right" }]}>{`\u20B9 ${(item.gst * item.dealer_price).toFixed(2)}`}</Text>
             </View>
           ))}
         </View>
 
-        {/* Totals */}
-        <View style={styles.totalBlock}>
-          <View style={styles.totalRow}>
-            <Text>Subtotal:</Text>
-            <Text>{`\u20B9 ${order.amount.toFixed(2)}`}</Text>
+        {/* ================= TOTALS BOX ================= */}
+        <View style={styles.totalsSection}>
+          <View style={[styles.totalsRow, styles.totalsBottomBorder, { textAlign: "right" }]}>
+            <Text>Total Amount Before Tax</Text>
+            <Text>{`\u20B9 ${(data.total_amount - data.total_gst).toFixed(2)}`}</Text>
+          </View>
+          <View style={[styles.totalsRow, styles.totalsBottomBorder, { textAlign: "right" }]}>
+            <Text>Add GST</Text>
+            <Text>{data.total_gst}</Text>
+          </View>
+          <View style={[styles.totalsRow, styles.totalsBottomBorder, { textAlign: "right" }]}>
+            <Text>Grand Total</Text>
+            <Text>{data.total_amount}</Text>
           </View>
 
-          {order.is_first_order && (
-            <View style={styles.totalRow}>
-              <Text>Advance Deducted:</Text>
-              <Text style={styles.deduction}>
-                {`- \u20B9 ${order.advance_deducted.toFixed(2)}`}
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.totalRow}>
-            <Text style={{ fontWeight: "bold" }}>Total Amount:</Text>
-            <Text style={{ fontWeight: "bold" }}>
-              {`\u20B9 ${order.final_amount.toFixed(2)}`}
-            </Text>
-          </View>
+          {/* <View>
+            <Text style={styles.label}>Total Amount in Words:</Text>
+            <Text>{data.total_words}</Text>
+          </View> */}
         </View>
 
         {/* Footer */}

@@ -138,7 +138,7 @@ export async function POST(request: Request) {
       if (user.referBy) {
         await User.updateOne(
           { user_id: user.referBy },
-          { $inc: { direct_bv: totalBV,direct_pv: totalPV  } },
+          { $inc: { direct_bv: totalBV, direct_pv: totalPV } }
         );
       }
 

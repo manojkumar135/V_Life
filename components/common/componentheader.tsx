@@ -117,7 +117,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
             </h3>
             <button
               type="button"
-              className={`p-1 rounded-full hover:bg-yellow-300 ${
+              className={`p-1 rounded-full hover:bg-blue-300 ${
                 currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
               }`}
               onClick={onPrev}
@@ -127,7 +127,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
             </button>
             <button
               type="button"
-              className={`p-1 rounded-full hover:bg-yellow-300 ${
+              className={`p-1 rounded-full hover:bg-blue-300 ${
                 currentPage === totalPages
                   ? "opacity-50 cursor-not-allowed"
                   : ""

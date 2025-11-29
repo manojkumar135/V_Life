@@ -359,6 +359,7 @@ export default function Table<T extends Row>({
             border: 0,
             zIndex: 1,
             position: "relative",
+            
 
             "& .MuiDataGrid-iconButtonContainer .MuiSvgIcon-root": {
               color: "#ffffff", // white dots
@@ -443,7 +444,7 @@ export default function Table<T extends Row>({
               // },
               '& .MuiDataGrid-columnHeader:not([data-field="__check__"]), & .MuiDataGrid-cell:not([data-field="__check__"])':
                 {
-                  minWidth: "150px !important",
+                  minWidth: "180px !important",
                   maxWidth: "280px !important",
                 },
               '& [data-field="__check__"]': {

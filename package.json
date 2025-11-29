@@ -4,13 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-  "dev": "next dev --turbopack",
-  "build": "next build",
-  "start": "concurrently --raw \"next start\" \"cd cron-server && node cron.js\"",
-  "lint": "next lint",
-  "cron": "node cron-server/cron.js"
-}
-,
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "concurrently --raw \"next start\" \"cd cron-server && node cron.js\"",
+    "lint": "next lint",
+    "cron": "node cron-server/cron.js"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.873.0",
     "@emotion/react": "^11.14.0",
@@ -20,6 +19,8 @@
     "@mui/icons-material": "^7.2.0",
     "@mui/material": "^7.2.0",
     "@mui/x-data-grid": "^8.9.1",
+    "@react-pdf-viewer/core": "^3.12.0",
+    "@react-pdf-viewer/default-layout": "^3.12.0",
     "@react-pdf/renderer": "^4.3.0",
     "antd": "^5.27.6",
     "axios": "^1.11.0",
@@ -39,6 +40,7 @@
     "next": "15.4.2",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.5",
+    "pdfjs-dist": "^3.11.174",
     "razorpay": "^2.9.6",
     "react": "19.1.0",
     "react-burger-menu": "^3.1.0",

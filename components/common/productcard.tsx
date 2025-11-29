@@ -62,7 +62,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleView = () => {
-          router.push(`/products/productdetailview/${_id}`);
+    router.push(`/products/productdetailview/${_id}`);
 
     // if (status === "active") {
     //   router.push(`/products/productdetailview/${_id}`);
@@ -87,20 +87,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
           onClick={(e) => e.stopPropagation()} // prevent card click
         />
 
-        <div className="flex flex-row self-start justify-between items-center w-full">
+        <div className="flex flex-row self-start justify-start items-center w-full min-w-[120px] ">
           {user?.role === "admin" && (
             <TbShoppingBagEdit
-              size={14}
-              className="w-10 h-10 p-1 flex text-gray-800 items-center justify-center rounded-md cursor-pointer hover:bg-gray-200"
+              size={15}
+              className="w-10 h-10 p-0 flex text-gray-800 items-center justify-center rounded-md cursor-pointer hover:bg-gray-200"
               onClick={(e) => {
                 e.stopPropagation(); // 🔥 BLOCK card view
                 handleEdit(_id);
               }}
             />
           )}
-          <p className="text-sm mt-2">
-            BV (<span className="font-semibold">{bv}</span>)
-          </p>
+          <div className="flex flex-col px-2">
+            <p className="text-xs mt-2 ">
+              BV (<span className="font-semibold">{bv}</span>)
+            </p>
+            <p className="text-xs mt-2">
+              PV (<span className="font-semibold">{pv}</span>)
+            </p>
+          </div>
         </div>
       </div>
 
