@@ -23,9 +23,7 @@ import { FaEye } from "react-icons/fa";
 
 import { handleDownloadPDF } from "@/lib/invoiceDownload";
 import { handlePreviewPDF } from "@/lib/invoicePreview";
-
-import { Worker, Viewer } from "@react-pdf-viewer/core";
-import "@react-pdf-viewer/core/lib/styles/index.css";
+import PdfPreview from "@/components/PDF/PdfPreview"
 
 export default function OrdersPage() {
   const { user } = useVLife();
@@ -390,19 +388,8 @@ export default function OrdersPage() {
             ✕
           </button>
 
-          <div className="bg-black w-[85%] h-[85%] max-md:w-[90%] max-md:h-[90%] rounded-lg overflow-hidden">
-            <div className="p-3 max-lg:p-0 w-full h-full bg-black rounded-lg">
-              <Worker workerUrl="//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js">
-                <Viewer
-                  fileUrl={previewUrl}
-                  defaultScale={pdfScale}
-                  theme={{
-                    theme: "dark",
-                  }}
-                />
-              </Worker>
-            </div>
-          </div>
+         <PdfPreview url={previewUrl} scale={pdfScale} />
+
         </div>
       )}
     </Layout>
