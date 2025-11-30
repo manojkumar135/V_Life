@@ -67,7 +67,8 @@ export default function PayAdvancePage() {
           </button>
           <button
             onClick={handlePayNow}
-            className="bg-yellow-400 hover:bg-yellow-300 text-black font-semibold py-2 px-6 rounded-lg transition-colors duration-200 cursor-pointer"
+            className="bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white
+             font-semibold py-2 px-6 rounded-lg transition-colors duration-200 cursor-pointer"
           >
             Pay ₹{ADVANCE_AMOUNT.toLocaleString()}
           </button>

@@ -58,7 +58,10 @@ export default function SideNav({
       match: ["orders", "products"], // 👈 include both
     },
     {
-      href: "/historys",
+      href:
+        user?.role === "user"
+          ? "/historys"
+          : "/historys/adminhistory",
       icon: <FaHistory />,
       label: "History",
       match: ["history"],

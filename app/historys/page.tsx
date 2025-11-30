@@ -141,7 +141,7 @@ export default function TransactionHistory() {
     user?.role === "admin" && {
       field: "user_id",
       headerName: "User ID",
-      flex: 1,
+      flex: 0.8,
     },
     user?.role === "admin" && {
       field: "user_name",
@@ -193,7 +193,7 @@ export default function TransactionHistory() {
     {
       field: "transaction_type",
       headerName: "Status",
-      flex: 0.6,
+      flex: 0.8,
       renderCell: (params: GridRenderCellParams<any, string>) => {
         const type = String(params.value ?? "").toLowerCase();
         const isUser = user?.role === "user";
@@ -235,7 +235,7 @@ export default function TransactionHistory() {
     onPageChange: () => {},
   });
 
-  const onBack = () => router.push("/wallet");
+  const onBack = () => router.push("/historys/adminhistory");
   const handlePayAdvance = () => router.push("/historys/payAdvance");
 
   return (
@@ -266,6 +266,7 @@ export default function TransactionHistory() {
           title="History"
           search={query}
           setSearch={setQuery}
+          showBack={user.role!=="user"}
           showAddButton={!advancePaid}
           addLabel="Make Payment"
           onAdd={handlePayAdvance}

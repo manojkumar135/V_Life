@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end"
+    alignItems: "flex-end",
   },
 
   headerLeft: {
@@ -45,24 +45,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginLeft: 10,
   },
-  companyBlock: {
-    flexDirection: "column",
-    marginBottom: 10,
-  },
-  companyTitle: {
-    fontSize: 12,
-    fontWeight: "bold",
-  },
 
   //------------------ TAX BOX ------------------
   taxBox: {
-    width: "30%",
+    width: "28%",
     border: BORDER,
     padding: 4,
     paddingRight: 5,
     paddingLeft: 5,
     height: 48,
-
   },
   taxHeading: {
     textAlign: "center",
@@ -73,6 +64,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
   },
+
   separator: {
     borderBottom: BORDER,
     marginVertical: 6,
@@ -82,6 +74,7 @@ const styles = StyleSheet.create({
   addressContainer: {
     flexDirection: "row",
     border: BORDER,
+    // height:100,
   },
   colLeft: {
     width: "70%",
@@ -96,55 +89,62 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 3,
+    fontSize: 10,
   },
   label: {
     fontWeight: "bold",
-    paddingLeft: 2,
-    paddingRight: 2
-
+    marginLeft: 2,
+    marginRight: 2,
   },
 
-  section: { marginBottom: 20, }, bold: { fontWeight: "bold", }, light: { color: "#555", fontSize: 10, marginBottom: 2, },
-
-  //------------------ TABLE ------------------
-  table: { display: 'table', width: 'auto', borderStyle: 'solid', borderWidth: 1, borderColor: '#2E2E2E', borderRightWidth: 0, borderBottomWidth: 0, marginBottom: 20, marginTop: 20, borderRadius: 1, },
+  //------------------ NEW TABLE STYLES ------------------
+  table: {
+    display: "table",
+    width: "auto",
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderColor: "#2E2E2E",
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    marginTop: 18,
+    marginBottom: 15,
+    borderRadius: 2,
+  },
   row: {
     flexDirection: "row",
   },
-  col: { borderStyle: 'solid', borderWidth: 1, borderColor: '#2E2E2E', borderLeftWidth: 0, borderTopWidth: 0, padding: 5, },
-  colHeader: {
-    backgroundColor: "#facc15",// yellow
-    color: "#000",
+  col: {
+    borderStyle: "solid",
+    borderWidth: 1,
+    borderColor: "#2E2E2E",
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    padding: 5,
+    fontSize: 8.5,
+  },
+  headerCol: {
+    // backgroundColor: "#facc15",
     fontWeight: "bold",
     textAlign: "center",
   },
 
-  cell: {
-    border: BORDER,
-    padding: 3,
-    textAlign: "center",
-  },
-  headCell: {
-    fontWeight: "bold",
-  },
-  //------------------ COL WIDTHS ------------------
-  cNo: { width: "3%" },
-  cCode: { width: "8%" },
+  //------------------ WIDTH MAP ------------------
+  cNo: { width: "4%" },
+  cCode: { width: "10%" },
   cName: { width: "20%" },
   cHSN: { width: "10%" },
   cQty: { width: "5%" },
-  cPrice: { width: "15%" },
-  cDisc: { width: "9%" },
+  cPrice: { width: "12%" },
   cTaxable: { width: "10%" },
-  cGST: { width: "5%" },
+  cGST: { width: "6%" },
   cTotal: { width: "15%" },
 
-  //------------------ TOTAL BOX ------------------
+  //------------------ TOTAL BLOCK ------------------
   totalsSection: {
     width: "55%",
     alignSelf: "flex-end",
     marginTop: 10,
-    border: BORDER,
+    // border: BORDER,
     padding: 6,
   },
   totalsRow: {
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  deduction: { color: "red", fontSize: 10, },
+  deduction: { color: "red", fontSize: 9 },
 
   //------------------ FOOTER ------------------
   footer: {
@@ -178,158 +178,154 @@ export default function InvoiceTemplate({ data }) {
   return (
     <Document>
       <Page size="A4" style={[styles.page, { marginLeft: 1, marginRight: 1 }]}>
-        {/* ============ TOP HEADER =============== */}
+
+        {/* ---------- HEADER ---------- */}
         <View style={styles.headerBox}>
-          {/* Left */}
           <View style={styles.headerLeft}>
             <Image
-              src={"https://res.cloudinary.com/dtb4vozhy/image/upload/v1764400245/maverick-logo_sddrui.png"}
+              src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1764400245/maverick-logo_sddrui.png"
               style={styles.logo}
             />
-
           </View>
 
-          {/* Right */}
           <View style={styles.taxBox}>
-            <Text style={[styles.taxHeading, { marginBottom: 1, marginTop: 1 }]}>TAX INVOICE</Text>
-            <View style={[styles.taxLine, { marginTop: 1 }]}>
+            <Text style={styles.taxHeading}>TAX INVOICE</Text>
+            <View style={[styles.taxLine, { marginTop: 2 }]}>
               <Text>Invoice No :</Text>
               <Text>{data.order_id || "-"}</Text>
             </View>
-            <View style={[styles.taxLine, { marginTop: 1 }]}>
+            <View style={[styles.taxLine, { marginTop: 2 }]}>
               <Text>Invoice Date :</Text>
               <Text>{data.payment_date || "-"}</Text>
             </View>
           </View>
         </View>
 
-
-
         <View style={styles.separator} />
-        <Text style={[styles.label, { marginLeft: 1, marginTop: 2, marginBottom: 3 }]}>FROM :</Text>
 
-        <View style={[styles.companyBlock, { marginLeft: 3 }]}>
+        <Text style={[styles.label, { marginTop: 2 }]}>FROM :</Text>
+
+        <View style={{ marginLeft: 3 }}>
           <Text>#8/165-111/C, LAKE VIEW ROAD, BC RAMAIAH ST, FIRST LANE, RAJEEVNAGAR, ONGOLE, AP - 523002.</Text>
-          <View style={[{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 3, marginBottom: 3 }]}>
-            <Text> • Email: support@maverickmoney.com</Text>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 5, marginBottom: 5 }}>
+            <Text>• Email: support@maverickmoney.com</Text>
             <Text>+91 123456789 </Text>
             <Text>GSTIN : 37AAHCN1274B1ZP</Text>
           </View>
-
         </View>
 
         {/* ================= ADDRESS TABLE ================= */}
         <View style={styles.addressContainer}>
           {/* LEFT */}
           <View style={styles.colLeft}>
-            <Text style={[styles.sectionTitle, { margin: 2 }]}>Shipping Address</Text>
-            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
-              <Text style={styles.label}>USER NAME:</Text>
+            <Text style={[styles.sectionTitle, { margin: 5, }]}>SHIPPING ADDRESS</Text>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
+              <Text style={styles.label}>USER NAME  :</Text>
               <Text>{data.user_name || "-"}</Text>
             </View>
-
-            <Text style={styles.label}>ADDRESS:</Text>
-            <Text>{data.address || "-"}</Text>
-
-            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
-              <Text style={styles.label}>Email:</Text>
-              <Text>{data.mail || "-"}</Text>
+            <View style={[{ display: "flex", marginLeft: 5 }]}>
+              <Text style={styles.label}>ADDRESS  :</Text>
+              <Text style={{ margin: 5, marginLeft: 10,textTransform: "capitalize",fontSize:9,marginBottom:30 }}>{data.address || "-"}</Text>
             </View>
 
-            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
-              <Text style={styles.label}>MOBILE NUMBER:</Text>
-              <Text>{data.contact || "-"}</Text>
-            </View>
-
-
+            <View style={[{ display: "flex", flexDirection: "row", marginTop: 5, marginLeft: 5 }]}>
+              <Text style={styles.label}>Email  :</Text>
+              <Text>{data.mail || "-"}</Text> </View>
+            <View style={[{ display: "flex", flexDirection: "row", marginTop: 5, marginLeft: 5 }]}>
+              <Text style={styles.label}>Contact  :</Text>
+              <Text>{data.contact || "-"}</Text> </View>
           </View>
-
           {/* RIGHT */}
           <View style={styles.colRight}>
-            <Text style={[styles.sectionTitle, { margin: 2 }]}>ORDER DETAIL</Text>
-            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
-              <Text style={styles.label}>USER ID:</Text>
-              <Text>{data.user_id || "-"}</Text>
+            <Text style={[styles.sectionTitle, { margin: 5 }]}>ORDER DETAILS</Text>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
+              <Text style={styles.label}>USER ID  :</Text> <Text>{data.user_id || "-"}</Text>
+            </View> <View style={[{ display : "flex", flexDirection: "row", margin: 5 }]}>
+              <Text style={styles.label}>ORDER NO  :</Text> <Text>{data.order_id || "-"}</Text>
+            </View> <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
+              <Text style={styles.label}>GST :</Text> <Text>{data.gst_no || "-"}</Text>
             </View>
-
-            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
-              <Text style={styles.label}>ORDER NO:</Text>
-              <Text>{data.order_id || "-"}</Text>
+            <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
+              <Text style={styles.label}>Order Type  : PV OR BV</Text> <Text>{data.order_type || "-"}</Text>
             </View>
-            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
-              <Text style={styles.label}>GST :</Text>
-              <Text>{data.gst_no || "-"}</Text>
-            </View>
-            <View style={[{ display: "flex", flexDirection: "row", margin: 2 }]}>
-              <Text style={styles.label}>Order Type: PV OR BV</Text>
-              <Text>{data.order_type || "-"}</Text>
-            </View>
-
-
           </View>
         </View>
 
-        {/* ================= PRODUCT TABLE ================= */}
+        {/* ---------- PRODUCT TABLE ---------- */}
         <View style={styles.table}>
           <View style={styles.row}>
-            <Text style={[styles.cell, styles.headCell, styles.cNo]}>S. No</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cCode]}>Product Code</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cName]}>Product Name</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cHSN]}>HSN/SAC Code</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cQty]}>QTY</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cPrice]}>PRICE</Text>
-            {/* <Text style={[styles.cell, styles.headCell, styles.cDisc]}>Discount/Offer</Text> */}
-            <Text style={[styles.cell, styles.headCell, styles.cTaxable]}>Taxable Amount</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cGST]}>CGST %</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cGST]}>SGST %</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cGST]}>IGST %</Text>
-            <Text style={[styles.cell, styles.headCell, styles.cTotal]}>TOTAL</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cNo]}>S. No</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cCode]}>Product Code</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cName]}>Product Name</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cHSN]}>HSN/SAC code</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cQty]}>Qty</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cPrice]}>Unit Price (₹)</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cTaxable]}>Taxable Amount </Text>
+            <Text style={[styles.col, styles.headerCol, styles.cGST]}>CGST (%)</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cGST]}>SGST (%)</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cGST]}>IGST (%)</Text>
+            <Text style={[styles.col, styles.headerCol, styles.cTotal]}>Total (₹)</Text>
           </View>
 
-          {data.items.map((item, index) => (
-            <View key={index} style={styles.row}>
-              <Text style={[styles.cell, styles.cNo]}>{index + 1}</Text>
-              <Text style={[styles.cell, styles.cCode]}>{item.product_code || item.product_id || ""}</Text>
-              <Text style={[styles.cell, styles.cName, { textTransform: "capitalize" }]}>{item.name || ""}</Text>
-              <Text style={[styles.cell, styles.cHSN]}>{item.hsn_code || ""}</Text>
-              <Text style={[styles.cell, styles.cQty]}>{item.quantity || ""}</Text>
-              <Text style={[styles.cell, styles.cPrice, { textAlign: "right" }]}> {`\u20B9 ${item.dealer_price.toFixed(2)}`}</Text>
-              {/* <Text style={[styles.cell, styles.cDisc]}>{item.discount || "-"}</Text> */}
-              <Text style={[styles.cell, styles.cTaxable, { textAlign: "right" }]}>{`\u20B9 ${item.whole_gst.toFixed(2)}`}</Text>
-              <Text style={[styles.cell, styles.cGST, { textAlign: "right" }]}>{item.cgst || "0"}</Text>
-              <Text style={[styles.cell, styles.cGST, { textAlign: "right" }]}>{item.sgst || "0"}</Text>
-              <Text style={[styles.cell, styles.cGST, { textAlign: "right" }]}>{item.igst || "0"}</Text>
-              <Text style={[styles.cell, styles.cTotal, { textAlign: "right" }]}>{`\u20B9 ${(item.gst * item.dealer_price).toFixed(2)}`}</Text>
-            </View>
-          ))}
+          {data.items.map((item, index) => {
+            const total = (item.gst * item.dealer_price).toFixed(2);
+
+            return (
+              <View key={index} style={styles.row}>
+                <Text style={[styles.col, styles.cNo, { textAlign: "right" }]}>{index + 1}</Text>
+                <Text style={[styles.col, styles.cCode, { textAlign: "center" }]}>{item.product_code || ""}</Text>
+                <Text style={[styles.col, styles.cName, { textTransform: "capitalize" }]}>{item.name}</Text>
+                <Text style={[styles.col, styles.cHSN, { textAlign: "center" }]}>{item.hsn_code || ""}</Text>
+                <Text style={[styles.col, styles.cQty, { textAlign: "center" }]}>{item.quantity}</Text>
+                <Text style={[styles.col, styles.cPrice, { textAlign: "right" }]}>{`\u20B9 ${item.dealer_price.toFixed(2)}`}</Text>
+                <Text style={[styles.col, styles.cTaxable, { textAlign: "right" }]}>{`\u20B9 ${item.whole_gst.toFixed(2)}`}</Text>
+                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.cgst.toFixed(1) || "0"}</Text>
+                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.sgst.toFixed(1) || "0"}</Text>
+                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.igst.toFixed(1) || "0"}</Text>
+                <Text style={[styles.col, styles.cTotal, { textAlign: "right" }]}>{`\u20B9 ${((item.dealer_price + item.gst_amount) * item.quantity).toFixed(2)}`}</Text>
+              </View>
+            );
+          })}
         </View>
 
-        {/* ================= TOTALS BOX ================= */}
+        {/* ---------- TOTAL SECTION ---------- */}
         <View style={styles.totalsSection}>
-          <View style={[styles.totalsRow, styles.totalsBottomBorder, { textAlign: "right" }]}>
-            <Text>Total Amount Before Tax</Text>
+          <View style={[styles.totalsRow]}>
+            <Text>Total Before Tax</Text>
             <Text>{`\u20B9 ${(data.total_amount - data.total_gst).toFixed(2)}`}</Text>
           </View>
-          <View style={[styles.totalsRow, styles.totalsBottomBorder, { textAlign: "right" }]}>
+
+
+
+          <View style={[styles.totalsRow,]}>
             <Text>Add GST</Text>
-            <Text>{data.total_gst}</Text>
-          </View>
-          <View style={[styles.totalsRow, styles.totalsBottomBorder, { textAlign: "right" }]}>
-            <Text>Grand Total</Text>
-            <Text>{data.total_amount}</Text>
+            <Text>{`\u20B9 ${data.total_gst.toFixed(2)}`}</Text>
           </View>
 
-          {/* <View>
-            <Text style={styles.label}>Total Amount in Words:</Text>
-            <Text>{data.total_words}</Text>
-          </View> */}
+          {/* ---- ADVANCE DEDUCTED ---- */}
+          {data.is_first_order && (
+            <View style={[styles.totalsRow]}>
+              <Text>Advance Deducted:</Text>
+              <Text style={styles.deduction}>
+                {`- \u20B9 ${data.advance_deducted.toFixed(2)}`}
+              </Text>
+            </View>
+          )}
+          <View style={[styles.totalsBottomBorder]}>
+
+          </View>
+
+          <View style={[styles.totalsRow]}>
+            <Text style={{ fontWeight: "bold", fontSize: 10 }}>Grand Total</Text>
+            <Text style={{ fontWeight: "bold", fontSize: 10 }}>{`\u20B9 ${data.final_amount.toFixed(2)}`}</Text>
+          </View>
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text>Thank you for your purchase!</Text>
           <Text>This is a system-generated invoice. No signature required.</Text>
         </View>
+
       </Page>
     </Document>
   );

@@ -551,7 +551,7 @@ export async function GET(request) {
 
     const histories = await History.find(finalQuery).sort({
       // date:-1,
-      last_modified_at: -1,
+      // last_modified_at: -1,
       created_at: -1,
     });
 
