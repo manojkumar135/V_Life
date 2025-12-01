@@ -338,7 +338,7 @@ const BinaryTreeNode: React.FC<Props> = ({
             <span>{node.bv ?? 0}</span>
           </div>
           <div className="flex">
-            <strong className="w-20">SV:</strong>
+            <strong className="w-20">PV:</strong>
             <span>{node.sv ?? 0}</span>
           </div>
           {node.infinityLeft != null && (

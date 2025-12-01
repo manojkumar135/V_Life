@@ -10,6 +10,9 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { Alert } from "@/models/alert";
 
+import { getTotalPayout } from "@/services/totalpayout";
+import { checkIs5StarRank, updateClub } from "@/services/getrank";
+
 /**
  * Helper - format date as DD-MM-YYYY
  */
@@ -323,6 +326,38 @@ export async function runDirectSalesBonus() {
           last_modified_at: now,
         });
 
+        const isFiveStar = await checkIs5StarRank(node.user_id);
+        const totalPayout = await getTotalPayout(node.user_id);
+
+        // ⭐⭐ Only run updateClub if BOTH are true
+        if (isFiveStar && totalPayout >= 100000) {
+          const updatedClub = await updateClub(
+            node.user_id,
+            totalPayout,
+            isFiveStar
+          );
+
+          if (updatedClub) {
+            await Alert.create({
+              user_id: node.user_id,
+              title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+              description: `Congrats! Welcome to the ${updatedClub.newClub} Club`,
+              priority: "high",
+              read: false,
+              link: "/dashboards",
+
+              user_name: node.name,
+              user_contact: node.contact,
+              user_email: node.mail,
+              user_status: node.status || "active",
+              related_id: payout.payout_id,
+
+              role: "user",
+              date: formattedDate,
+              created_at: now,
+            });
+          }
+        }
         // Create History record if payout created
         if (payout) {
           totalPayouts++;

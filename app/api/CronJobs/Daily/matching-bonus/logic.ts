@@ -7,6 +7,8 @@ import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { Alert } from "@/models/alert";
+import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
+import { checkIs5StarRank, updateClub } from "@/services/getrank";
 
 function formatDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, "0");
@@ -202,7 +204,6 @@ function getTeamUserIdsFromMap(
     if (currentNode.right) queue.push(currentNode.right);
   }
 
-
   return result;
 }
 
@@ -223,11 +224,7 @@ export async function getUserTeamsAndHistories() {
   console.log(
     `[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`
   );
-  console.log(
-    `[Matching Bonus] historiesInWindow count: ${historiesInWindow}`
-  );
-
-  
+  console.log(`[Matching Bonus] historiesInWindow count: ${historiesInWindow}`);
 
   const treeNodes = (await TreeNode.find({}).lean()) as any[];
   const allNodesMap = new Map<string, any>(
@@ -277,7 +274,7 @@ export async function getUserTeamsAndHistories() {
       right_histories: rightHistories,
     });
   }
-// console.log(result, "Matching Bonus Result");
+  // console.log(result, "Matching Bonus Result");
   return result;
 }
 
@@ -286,7 +283,6 @@ export async function runMatchingBonus() {
   try {
     await connectDB();
     const teamsAndHistories = await getUserTeamsAndHistories();
-    
 
     let totalPayouts = 0;
 
@@ -310,16 +306,43 @@ export async function runMatchingBonus() {
       const wallet = (await Wallet.findOne({
         user_id: u.user_id,
       }).lean()) as any;
+      const user = (await User.findOne({ user_id: u.user_id }).lean()) as any;
+
       const walletId = wallet ? wallet.wallet_id : null;
 
-      let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
-      if (!wallet || !wallet.pan_verified) payoutStatus = "OnHold";
+     
 
+      const previousPayout = await getTotalPayout(u.user_id);
       const totalAmount = 5000;
-      const withdrawAmount = totalAmount * 0.8;
-      const rewardAmount = totalAmount * 0.1;
-      const tdsAmount = totalAmount * 0.05;
-      const adminCharge = totalAmount * 0.05;
+      const afterThis = previousPayout + totalAmount;
+
+       // Default payout status
+      let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+
+      
+    if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
+      payoutStatus = "OnHold";
+    }
+
+      // Percentages
+      let withdrawAmount = 0;
+      let rewardAmount = 0;
+      let tdsAmount = 0;
+      let adminCharge = 0;
+
+      if (wallet && wallet.pan_verified) {
+        // PAN Verified
+        withdrawAmount = totalAmount * 0.8;
+        rewardAmount = totalAmount * 0.1;
+        tdsAmount = totalAmount * 0.02;
+        adminCharge = totalAmount * 0.08;
+      } else {
+        // PAN Not Verified OR No wallet
+        withdrawAmount = totalAmount * 0.65;
+        rewardAmount = totalAmount * 0.1;
+        tdsAmount = totalAmount * 0.2;
+        adminCharge = totalAmount * 0.05;
+      }
 
       const payout = await DailyPayout.create({
         transaction_id: payout_id,
@@ -362,6 +385,39 @@ export async function runMatchingBonus() {
         last_modified_by: "system",
         last_modified_at: now,
       });
+
+      const isFiveStar = await checkIs5StarRank(u.user_id);
+      const totalPayout = await getTotalPayout(u.user_id);
+
+      // ⭐⭐ Only run updateClub if BOTH are true
+      if (isFiveStar && totalPayout >= 100000) {
+        const updatedClub = await updateClub(
+          u.user_id,
+          totalPayout,
+          isFiveStar
+        );
+
+        if (updatedClub) {
+          await Alert.create({
+            user_id: u.user_id,
+            title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+            description: `Congrats! Welcome to the ${updatedClub.newClub} Club`,
+            priority: "high",
+            read: false,
+            link: "/dashboards",
+
+            user_name: u.name,
+            user_contact: u.contact,
+            user_email: u.mail,
+            user_status: u.status || "active",
+            related_id: payout.payout_id,
+
+            role: "user",
+            date: formattedDate,
+            created_at: now,
+          });
+        }
+      }
 
       if (payout) {
         totalPayouts++;
@@ -434,22 +490,22 @@ export async function runMatchingBonus() {
       console.log(
         `[Matching Bonus] Payout created for ${u.user_id} status=${payout?.status} histories marked: ${historyIds.length}`
       );
-      if (totalPayouts > 0) {
-        await Alert.create({
-          role: "admin",
-          title: "Matching Bonus Payouts Released",
-          description: `${totalPayouts} user payout(s) have been successfully released today.`,
-          priority: "high",
-          read: false,
-          link: "/wallet/payout/daily",
+    }
+    if (totalPayouts > 0) {
+      await Alert.create({
+        role: "admin",
+        title: "Matching Bonus Payouts Released",
+        description: `${totalPayouts} user payout(s) have been successfully released today.`,
+        priority: "high",
+        read: false,
+        link: "/wallet/payout/daily",
 
-          date: formatDate(new Date()),
-          created_at: new Date(),
-        });
-        console.log(
-          `[Matching Bonus] Admin alert created for ${totalPayouts} payouts`
-        );
-      }
+        date: formatDate(new Date()),
+        created_at: new Date(),
+      });
+      console.log(
+        `[Matching Bonus] Admin alert created for ${totalPayouts} payouts`
+      );
     }
   } catch (err) {
     console.error("[Matching Bonus] Error:", err);

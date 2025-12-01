@@ -55,6 +55,7 @@ export async function GET(request: Request) {
     const totalPayout =
       (dailyPayoutSum[0]?.total || 0) + (weeklyPayoutSum[0]?.total || 0);
 
+
     // 🎁 3️⃣ Reward Amount (sum of reward_amount field from both)
     const [dailyReward, weeklyReward] = await Promise.all([
       DailyPayout.aggregate([
@@ -136,3 +137,20 @@ export async function GET(request: Request) {
     );
   }
 }
+
+// export async function getTotalPayout(user_id: string) {
+//   await connectDB();
+
+//   const [daily, weekly] = await Promise.all([
+//     DailyPayout.aggregate([
+//       { $match: { user_id } },
+//       { $group: { _id: null, total: { $sum: "$amount" } } },
+//     ]),
+//     WeeklyPayout.aggregate([
+//       { $match: { user_id } },
+//       { $group: { _id: null, total: { $sum: "$amount" } } },
+//     ]),
+//   ]);
+
+//   return (daily[0]?.total || 0) + (weekly[0]?.total || 0);
+// }

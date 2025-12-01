@@ -71,7 +71,6 @@ async function getUserTeam(rootUserId, targetUserId) {
   return "any";
 }
 
-
 // -------------------------------------------------------------
 // UTIL: Update rank across all collections
 // -------------------------------------------------------------
@@ -91,10 +90,33 @@ async function updateUserRank(userId, rankLevel, qualifiedUsers) {
     { upsert: true }
   );
 
-  await User.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
-  await Login.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
-  await TreeNode.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
-  await Wallet.updateOne({ user_id: userId }, { $set: { rank: String(rankLevel) } });
+  const clubValue = "Star";
+
+
+  await User.updateOne({ user_id: userId }, {
+    $set: {
+      rank: String(rankLevel), club: clubValue,
+      last_modified_at: new Date(),
+    }
+  });
+  await Login.updateOne({ user_id: userId }, {
+    $set: {
+      rank: String(rankLevel), club: clubValue,
+      last_modified_at: new Date(),
+    }
+  });
+  await TreeNode.updateOne({ user_id: userId }, {
+    $set: {
+      rank: String(rankLevel), club: clubValue,
+      last_modified_at: new Date(),
+    }
+  });
+  await Wallet.updateOne({ user_id: userId }, {
+    $set: {
+      rank: String(rankLevel), club: clubValue,
+      last_modified_at: new Date(),
+    }
+  });
 }
 
 // -------------------------------------------------------------
@@ -321,7 +343,7 @@ export async function POST(request) {
 
 
         const refBefore = await User.findOne({ user_id: referrerId });
-        console.log("✅ Updated paid_directs for referrer:", refBefore?.paid_directs,refBefore?.infinity_referred_users);
+        console.log("✅ Updated paid_directs for referrer:", refBefore?.paid_directs, refBefore?.infinity_referred_users);
 
         // 2️⃣ Update Infinity team (referrer + upper chain)
         console.log("\n🚀 Calling updateInfinityTeam for:", referrerId);
