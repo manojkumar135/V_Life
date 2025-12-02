@@ -1,6 +1,11 @@
 import { User } from "@/models/user";
 import { Rank } from "@/models/rank";
 import { connectDB } from "@/lib/mongodb";
+import { Login } from "@/models/login";
+import TreeNode from "@/models/tree";
+import mongoose from "mongoose";
+
+
 
 // ============================
 // 🔐 TYPE DEFINITIONS
@@ -76,63 +81,112 @@ export async function updateClub(
 ) {
   await connectDB();
 
-  const user = await User.findOne({ user_id });
-  if (!user) return null;
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const currentRank = user.rank;
-  const currentClub = user.club;
+  try {
+    const user = await User.findOne({ user_id }).session(session);
+    if (!user) return null;
 
-  let newRank = currentRank;
-  let newClub = currentClub;
+    const currentRank = user.rank;
+    const currentClub = user.club;
 
-  // 1️⃣ User must be 5-star to assign Executive/Director
-  if (!isFiveStar && currentRank !== "5") {
-    return null; // STOP
-  }
+    let newRank = currentRank;
+    let newClub = currentClub;
 
-  // 2️⃣ Director Club logic (overrides Executive)
-  if (totalPayout >= 50_00_00_000) {
-    newRank = "Royal Crown Diamond";
-    newClub = "Director";
-  } else if (totalPayout >= 25_00_00_000) {
-    newRank = "Crown Diamond";
-    newClub = "Director";
-  } else if (totalPayout >= 10_00_00_000) {
-    newRank = "Black Diamond";
-    newClub = "Director";
-  } else if (totalPayout >= 5_00_00_000) {
-    newRank = "Blue Diamond";
-    newClub = "Director";
-  } else if (totalPayout >= 1_00_00_000) {
-    newRank = "Diamond";
-    newClub = "Director";
-  }
+    /** -------------------------
+     *   BASE CONDITIONS
+     --------------------------*/
 
-  // 3️⃣ Executive Club — only after 5-Star
-  else if (totalPayout >= 1_00_000) {
-    newClub = "Executive";
-
-    if (totalPayout >= 50_00_000) newRank = "Platinum";
-    else if (totalPayout >= 25_00_000) newRank = "Emerald";
-    else if (totalPayout >= 10_00_000) newRank = "Gold";
-    else if (totalPayout >= 5_00_000) newRank = "Silver";
-    else newRank = "Bronze";
-  }
-
-  // 4️⃣ If no change
-  if (newRank === currentRank && newClub === currentClub) return null;
-
-  // 5️⃣ Update
-  await User.updateOne(
-    { user_id },
-    {
-      $set: {
-        rank: newRank,
-        club: newClub,
-        last_modified_at: new Date(),
-      },
+    // Must be 5-star to start club system
+    if (!isFiveStar && currentRank !== "5") {
+      return null;
     }
-  );
 
-  return { newRank, newClub };
+    /** -------------------------
+     *  DIRECTOR CLUB (Top)
+     --------------------------*/
+    if (totalPayout >= 50_00_00_000) {
+      newRank = "Royal Crown Diamond";
+      newClub = "Director";
+    } else if (totalPayout >= 25_00_00_000) {
+      newRank = "Crown Diamond";
+      newClub = "Director";
+    } else if (totalPayout >= 10_00_00_000) {
+      newRank = "Black Diamond";
+      newClub = "Director";
+    } else if (totalPayout >= 5_00_00_000) {
+      newRank = "Blue Diamond";
+      newClub = "Director";
+    } else if (totalPayout >= 1_00_00_000) {
+      newRank = "Diamond";
+      newClub = "Director";
+    }
+
+    /** -------------------------
+     *  EXECUTIVE CLUB
+     --------------------------*/
+    else if (totalPayout >= 1_00_000) {
+      newClub = "Executive";
+
+      if (totalPayout >= 50_00_000) newRank = "Platinum";
+      else if (totalPayout >= 25_00_000) newRank = "Emerald";
+      else if (totalPayout >= 10_00_000) newRank = "Gold";
+      else if (totalPayout >= 5_00_000) newRank = "Silver";
+      else newRank = "Bronze";
+    }
+
+    /** -------------------------
+     *  NO CHANGE — EXIT
+     --------------------------*/
+    if (newRank === currentRank && newClub === currentClub) {
+      await session.abortTransaction();
+      session.endSession();
+      return null;
+    }
+
+    const updateFields = {
+      rank: newRank,
+      club: newClub,
+      last_modified_at: new Date(),
+    };
+
+    /** -------------------------
+     *  UPDATE ALL THREE
+     --------------------------*/
+
+    await User.updateOne(
+      { user_id },
+      { $set: updateFields },
+      { session }
+    );
+
+    await Login.updateOne(
+      { user_id },
+      { $set: { rank: newRank, Club: newClub } },
+      { session }
+    );
+
+    await TreeNode.updateOne(
+      { user_id },
+      {
+        $set: {
+          rank: newRank,
+          Club: newClub,
+          last_modified_at: new Date(),
+        },
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return { newRank, newClub };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("updateClub error:", error);
+    throw error;
+  }
 }

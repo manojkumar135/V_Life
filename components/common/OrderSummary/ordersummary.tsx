@@ -318,7 +318,7 @@ export default function OrderFormCartSection({
                               <span className="font-semibold">
                                 ₹ {item.unit_price.toFixed(2)}
                               </span>{" "}
-                              each + GST ({item.gst?? 0}%)
+                              each + GST ({item.gst ?? 0}%)
                             </p>
                           </div>
                         </div>
@@ -389,12 +389,12 @@ export default function OrderFormCartSection({
                               >
                                 {item.description}
                               </p>
-                               <p className="text-gray-700 text-xs mt-1">
-                              <span className="font-semibold">
-                                ₹ {item.unit_price.toFixed(2)}
-                              </span>{" "}
-                              each + GST ({item.gst?? 0}%)
-                            </p>
+                              <p className="text-gray-700 text-xs mt-1">
+                                <span className="font-semibold">
+                                  ₹ {item.unit_price.toFixed(2)}
+                                </span>{" "}
+                                each + GST ({item.gst ?? 0}%)
+                              </p>
                             </div>
                           </div>
                           <button
@@ -589,8 +589,9 @@ export default function OrderFormCartSection({
           }}
           onSuccess={async (res) => {
             console.log("✅ Payment successful:", res);
-            await createOrder(finalAmount, res);
             setShowPayment(false);
+
+            await createOrder(finalAmount, res);
             if (onPaymentSuccess) {
               onPaymentSuccess();
             }

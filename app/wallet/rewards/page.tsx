@@ -25,6 +25,7 @@ export default function RewardsPage() {
   const [address, setAddress] = useState<string>("");
 
   const router = useRouter();
+  // console.log(user)
 
   // ✅ Fetch rewards
   useEffect(() => {
@@ -255,10 +256,10 @@ export default function RewardsPage() {
                     </div>
 
                     <div className="px-4 py-3 flex flex-col gap-2">
-                      <p className="text-lg font-bold text-black mt-2">
+                      <p className="text-lg font-bold text-black mt-1">
                         {reward.title}
                       </p>
-                      <p className="text-gray-600 text-sm line-clamp-3">
+                      <p className="text-gray-600 text-sm line-clamp-1">
                         {reward.description}
                       </p>
                       <p className="mt-1 font-semibold text-black text-sm sm:text-base">
@@ -269,7 +270,7 @@ export default function RewardsPage() {
                         points
                       </p>
 
-                      <div className="flex items-center justify-between mt-2 gap-2">
+                      <div className="flex items-center justify-between mt-1 gap-2">
                         {isSelected ? (
                           <div className="flex items-center rounded-full px-2 py-1 w-fit border border-gray-300">
                             <button
@@ -340,14 +341,14 @@ export default function RewardsPage() {
                                 ${
                                   !isActive || scoreLeft < reward.points_required
                                     ? "bg-gray-400 text-white cursor-not-allowed"
-                                    : "bg-yellow-400 text-black hover:bg-yellow-500 cursor-pointer"
+                                    : "bg-[#106187] text-white cursor-pointer"
                                 }`}
                             >
                               Redeem
                             </button>
                           ) : (
                             <SubmitButton
-                              className="!px-3 !py-1.5 bg-yellow-400 text-black font-semibold rounded-md hover:bg-yellow-500 transition-all duration-200 cursor-pointer"
+                              className="!px-3 !py-1.5   font-semibold rounded-md  transition-all duration-200 cursor-pointer"
                               onClick={() => handleSelect(reward)}
                               disabled={!isActive}
                             >
@@ -368,13 +369,13 @@ export default function RewardsPage() {
         {Object.keys(selected).length > 0 && (
           <>
             <div
-              className="fixed bottom-8 right-8 z-50 bg-black rounded-full p-3 flex items-center justify-center cursor-pointer hover:scale-106 transition-all duration-300 animate-pulseGlow"
+              className="fixed bottom-8 right-8 z-50 bg-gradient-to-tr from-[#0C3978] via-[#106187] to-[#16B8E4] rounded-full p-3 flex items-center justify-center cursor-pointer hover:scale-106 transition-all duration-300 animate-pulseGlow"
               onClick={() => setShowModal(true)}
               title="Book Selected Rewards"
             >
               <LiaGiftsSolid
                 size={36}
-                className="text-[#FFD700] animate-goldShine animate-pulseGlow"
+                className="text-white animate-goldShine animate-pulseGlow"
               />
             </div>
 
@@ -443,7 +444,7 @@ export default function RewardsPage() {
                         {qty} × {reward?.points_required} pts
                       </p>
                     </div>
-                    <p className="font-bold text-yellow-600 text-sm sm:text-base">
+                    <p className="font-bold text-blue-600 text-sm sm:text-base">
                       {reward?.points_required * qty} pts
                     </p>
                   </div>
@@ -460,7 +461,7 @@ export default function RewardsPage() {
                 rows={2}
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black-400"
                 placeholder="Enter delivery address"
                 required
               />
@@ -495,7 +496,7 @@ export default function RewardsPage() {
                 className={`w-1/2 sm:w-auto px-5 py-2 rounded-md font-semibold transition-all duration-200 ${
                   !address || address === "No address available"
                     ? "bg-gray-400 text-white cursor-not-allowed"
-                    : "bg-yellow-400 text-black hover:bg-yellow-300 cursor-pointer"
+                    : "bg-[#106187] text-white cursor-pointer"
                 }`}
               >
                 Book Now

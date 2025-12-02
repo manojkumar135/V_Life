@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken } from "@/utils/auth/token";
 import { connectDB } from "@/lib/mongodb"; 
-import { Login } from "@/models/login"; // 👈 switched to Login model
+import { Login } from "@/models/login";
+import { User } from "@/models/user"; // ⭐ get User model
 
 export const dynamic = "force-dynamic";
 
 interface DecodedUser extends JwtPayload {
-  id?: string;       // if _id stored in token
-  user_id?: string;  // if custom user_id stored in token
+  id?: string;
+  user_id?: string;
   role: string;
   user_name?: string;
 }
@@ -16,16 +17,13 @@ interface DecodedUser extends JwtPayload {
 export async function POST(req: Request) {
   try {
     await connectDB();
-    // console.log(req.headers)
 
     const cookieHeader = req.headers.get("cookie");
-    // console.log(cookieHeader, "cookieHeader in refresh");
+
     const refreshToken = cookieHeader
       ?.split(";")
       .find((c) => c.trim().startsWith("refreshToken="))
       ?.split("=")[1];
-
-      // console.log(refreshToken, "refreshToken in refresh");
 
     if (!refreshToken) {
       return NextResponse.json(
@@ -47,13 +45,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔍 Find user from Login collection
+    // 🔍 Find user in Login collection
     const loginUser = await Login.findOne({
-      $or: [
-        { _id: decoded.id },
-        { user_id: decoded.user_id }
-      ]
-    }).select("-password"); // 🚫 exclude password
+      $or: [{ _id: decoded.id }, { user_id: decoded.user_id }]
+    }).select("-password");
 
     if (!loginUser) {
       return NextResponse.json(
@@ -61,6 +56,21 @@ export async function POST(req: Request) {
         { status: 404 }
       );
     }
+
+   // ⭐ Fetch only important attributes (score, rank, club)
+    const userData = await User.findOne(
+      { user_id: loginUser.user_id },
+      { score: 1, rank: 1, club: 1, _id: 0 }
+    ).lean<{ score: number; rank: string; club: string }>();
+
+    // Convert login doc to plain object
+    const loginObj = loginUser.toObject();
+
+    // ⭐ Overwrite / add values directly from User model
+    loginObj.score = userData?.score ?? 0;
+    loginObj.rank = userData?.rank ?? loginObj.rank ?? "none";
+    loginObj.club = userData?.club ?? loginObj.club ?? "none";
+
 
     // 🎟 Generate new short-lived access token
     const accessToken = generateAccessToken({
@@ -70,13 +80,11 @@ export async function POST(req: Request) {
       role: loginUser.role,
     });
 
-    // console.log(accessToken, "new accessToken in refresh");
-    // ✅ Return fresh login record + new token
     return NextResponse.json(
       {
         success: true,
         accessToken,
-        user: loginUser,
+        user: loginObj,
       },
       { status: 200 }
     );

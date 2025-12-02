@@ -332,16 +332,16 @@ export async function runMatchingBonus() {
 
       if (wallet && wallet.pan_verified) {
         // PAN Verified
-        withdrawAmount = totalAmount * 0.8;
-        rewardAmount = totalAmount * 0.1;
-        tdsAmount = totalAmount * 0.02;
-        adminCharge = totalAmount * 0.08;
+        withdrawAmount = Number((totalAmount * 0.8).toFixed(2));
+        rewardAmount = Number((totalAmount * 0.1).toFixed(2));
+        tdsAmount = Number((totalAmount * 0.02).toFixed(2));
+        adminCharge = Number((totalAmount * 0.08).toFixed(2));
       } else {
         // PAN Not Verified OR No wallet
-        withdrawAmount = totalAmount * 0.65;
-        rewardAmount = totalAmount * 0.1;
-        tdsAmount = totalAmount * 0.2;
-        adminCharge = totalAmount * 0.05;
+        withdrawAmount =  Number((totalAmount * 0.65).toFixed(2));
+        rewardAmount =  Number((totalAmount * 0.1).toFixed(2));
+        tdsAmount =  Number((totalAmount * 0.2).toFixed(2));
+        adminCharge = Number((totalAmount * 0.05).toFixed(2));;
       }
 
       const payout = await DailyPayout.create({

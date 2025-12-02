@@ -119,6 +119,8 @@ const VLifeContext = createContext<VLifeContextType | undefined>(undefined);
 export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<UserType>(defaultUser);
 
+  // console.log("User in context:", user);
+
   // ✅ Load theme from localStorage or user
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") as ThemeType | null;
@@ -176,9 +178,9 @@ export const VLifeContextProvider = ({ children }: { children: ReactNode }) => {
         bv: item.bv,
         pv: item.pv ?? 0,
         gst: item.gst ?? 0,
-        gst_amount: item.gst_amount??0,
-  whole_gst: item.whole_gst??0,
-  price_with_gst: item.price_with_gst??0,
+        gst_amount: item.gst_amount ?? 0,
+        whole_gst: item.whole_gst ?? 0,
+        price_with_gst: item.price_with_gst ?? 0,
 
         cgst: item.cgst ?? 0,
         sgst: item.sgst ?? 0,

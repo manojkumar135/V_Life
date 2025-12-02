@@ -47,6 +47,7 @@ export default function LoginPage() {
           values
         ); // <-- use POST
 
+        // console.log("Login response:", res.data.data.score);
         if (res.data.success) {
           setUser({
             login_id: res.data.data.login_id,
@@ -58,6 +59,7 @@ export default function LoginPage() {
             status: res.data.data.status,
             theme: res.data.data.theme,
             wallet_id: res.data.data.wallet_id,
+            score: res.data.data.score,
           });
           // ✅ Pass theme string directly
           // if (res.data.data.theme) {

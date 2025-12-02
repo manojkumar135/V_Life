@@ -10,7 +10,7 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { Alert } from "@/models/alert";
 
-import { getTotalPayout } from "@/services/totalpayout";
+import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { checkIs5StarRank, updateClub } from "@/services/getrank";
 
 /**
@@ -269,25 +269,43 @@ export async function runDirectSalesBonus() {
           );
           continue;
         }
-
-        const withdrawAmount = Number((totalAmount * 0.8).toFixed(2)); // 80%
-        const rewardAmount = Number((totalAmount * 0.1).toFixed(2)); // 10%
-        const tdsAmount = Number((totalAmount * 0.05).toFixed(2)); // 5%
-        const adminCharge = Number((totalAmount * 0.05).toFixed(2)); // 5%
+        const previousPayout = await getTotalPayout(referBy);
+        const afterThis = previousPayout + totalAmount;
 
         const now = new Date();
         const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
         const formattedDate = formatDate(now);
 
         // Find referBy's wallet
-        const wallet = await Wallet.findOne({ user_id: referBy });
+        const wallet = (await Wallet.findOne({
+          user_id: referBy,
+        }).lean()) as any;
+        const user = (await User.findOne({ user_id: referBy }).lean()) as any;
         const walletId = wallet ? wallet.wallet_id : null;
 
         let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
-        if (!wallet || !wallet.pan_verified) {
+
+        if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
           payoutStatus = "OnHold";
+        }
+
+        let withdrawAmount = 0;
+        let rewardAmount = 0;
+        let tdsAmount = 0;
+        let adminCharge = 0;
+
+        if (wallet && wallet.pan_verified) {
+          // PAN Verified
+          withdrawAmount = Number((totalAmount * 0.8).toFixed(2));
+          rewardAmount = Number((totalAmount * 0.1).toFixed(2));
+          tdsAmount = Number((totalAmount * 0.02).toFixed(2));
+          adminCharge = Number((totalAmount * 0.08).toFixed(2));
         } else {
-          payoutStatus = "Pending";
+          // PAN Not Verified OR No wallet
+          withdrawAmount = Number((totalAmount * 0.65).toFixed(2));
+          rewardAmount = Number((totalAmount * 0.1).toFixed(2));
+          tdsAmount = Number((totalAmount * 0.2).toFixed(2));
+          adminCharge = Number((totalAmount * 0.05).toFixed(2));
         }
 
         // Create DailyPayout for referBy

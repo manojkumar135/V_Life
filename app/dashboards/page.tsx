@@ -51,10 +51,30 @@ const rankImages: Record<string, string> = {
   3: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367549/ChatGPT_Image_Oct_20_2025_09_21_04_PM_fpgj0v.png",
   4: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367566/ChatGPT_Image_Oct_20_2025_09_26_35_PM_bbl4go.png",
   5: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367581/ChatGPT_Image_Oct_20_2025_09_30_19_PM_ixcuyj.png",
+  Bronze:
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764656253/Untitled_design_6_fwn8o6.png",
+  Sliver:
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664375/Untitled_design_7_pyar1u.png",
+  Gold: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664414/Untitled_design_8_vh0npp.png",
+  Emerald:
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664466/Untitled_design_9_n46vye.png",
+  Platinum:
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664632/Untitled_design_10_gvft4o.png",
+  Diamond:
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664884/Untitled_design_11_m1wixb.png",
+  "Blue Diamond":
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664916/Untitled_design_12_opwh7d.png",
+  "Black Diamond":
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764665001/Untitled_design_13_mkxup3.png",
+  "Crown Diamond":
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764665045/Untitled_design_14_kyqgsj.png",
+  "Royal Crown Diamond":
+    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764665085/Untitled_design_15_kfpqqa.png",
 };
 
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
+  console.log(user);
   const user_id = user?.user_id || "";
   const router = useRouter();
 
@@ -98,7 +118,7 @@ const DashboardPage: React.FC = () => {
           `/api/dashboard-operations/purchase-count?user_id=${user_id}`
         );
 
-        console.log("Dashboard Summary Response:", res.data);
+        // console.log("Dashboard Summary Response:", res.data);
         if (res.data.success) {
           setSummary(res.data.data);
         } else {
@@ -345,7 +365,7 @@ const DashboardPage: React.FC = () => {
                         <span className="text-black text-lg font-extrabold">
                           {user.rank}
                         </span>{" "}
-                        STAR
+                        {!isNaN(Number(user.rank)) && "STAR"}
                       </>
                     ) : (
                       <>

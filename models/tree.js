@@ -15,6 +15,8 @@ const TreeNodeSchema = new Schema(
     activated_date: { type: String },
 
     rank: { type: String, default: "none" },
+    Club: { type: String, default: "none" },
+
     contact: { type: String, },
     mail: { type: String, },
     address: { type: String },

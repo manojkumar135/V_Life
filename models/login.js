@@ -1,3 +1,4 @@
+import { Club } from "lucide-react";
 import mongoose from "mongoose";
 
 // Reusable OrderItemSchema
@@ -48,6 +49,7 @@ const LoginSchema = new mongoose.Schema(
     gender: { type: String },
     dob: { type: String, required: true },
     rank: { type: String, default: "none" },
+    Club: { type: String, default: "none" },
 
     role: { type: String },
     role_id: { type: String },

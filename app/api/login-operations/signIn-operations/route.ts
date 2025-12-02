@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Login } from "@/models/login";
+import { User } from "@/models/user"; // ⭐ Import User model
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 const secretKey = process.env.JWT_SECRET as string;
 const secretRefreshKey = process.env.JWT_REFRESH_SECRET as string;
-
-// console.log(secretKey, "secretKey in signIn");
-// console.log(secretRefreshKey, "secretRefreshKey in signIn");
 
 export async function POST(request: Request) {
   try {
@@ -26,20 +24,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // 🔹 Find user with password for validation
-    const user = await Login.findOne({
+    // 🔹 Find Login Record
+    const loginRecord = await Login.findOne({
       $or: [{ login_id: loginId }, { user_id: loginId }, { contact: loginId }],
     });
 
-    if (!user) {
+    if (!loginRecord) {
       return NextResponse.json(
         { success: false, message: "Invalid User ID or Contact" },
         { status: 404 }
       );
     }
 
-    // 🔹 Check password
-    const isMatch = await bcrypt.compare(password, user.password);
+    // 🔹 Compare password
+    const isMatch = await bcrypt.compare(password, loginRecord.password);
     if (!isMatch) {
       return NextResponse.json(
         { success: false, message: "Incorrect password" },
@@ -47,16 +45,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // 🔹 Remove password before sending user back
-    const userObj = user.toObject();
+    // Convert login doc to object
+    const userObj = loginRecord.toObject();
     delete userObj.password;
 
-    // 🔹 Generate tokens
+    // ⭐ Fetch only score, rank and club from User
+const userData = await User.findOne(
+  { user_id: loginRecord.user_id },
+  { score: 1, rank: 1, club: 1, _id: 0 }
+).lean<{ score: number; rank: string; club: string }>();
+
+// ⭐ Overwrite or attach values from User
+userObj.score = userData?.score ?? 0;
+userObj.rank = userData?.rank ?? userObj.rank ?? "none";
+userObj.club = userData?.club ?? userObj.club ?? "none";
+
+
+    // 🔹 Generate Tokens
     const payload = {
-      id: user._id,
-      userId: user.user_id,
-      role: user.role,
-      loginId: user.login_id,
+      id: loginRecord._id,
+      userId: loginRecord.user_id,
+      role: loginRecord.role,
+      loginId: loginRecord.login_id,
     };
 
     const accessToken = jwt.sign(payload, secretKey, { expiresIn: "15m" });
@@ -64,34 +74,29 @@ export async function POST(request: Request) {
       expiresIn: "7d",
     });
 
-    // console.log(accessToken, "accestoken in signIn");
-    // console.log(refreshToken, "secretRefreshtoken in signIn");
-
-    // 🔹 Set cookies
+    // console.log(userObj)
+    // 🔹 Create Response
     const response = NextResponse.json(
       { success: true, message: "Login successful", data: userObj },
       { status: 200 }
     );
 
+    // Set Cookies
     response.cookies.set("accessToken", accessToken, {
       httpOnly: true,
-      // secure: process.env.NODE_ENV === "production",
       secure: false,
       sameSite: "strict",
-      maxAge: 60 * 15, // 15 min
+      maxAge: 60 * 15,
       path: "/",
     });
 
     response.cookies.set("refreshToken", refreshToken, {
       httpOnly: true,
-      // secure: process.env.NODE_ENV === "production",
       secure: false,
       sameSite: "strict",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7,
       path: "/",
     });
-
-    // console.log(response, "response in signIn");
 
     return response;
   } catch (error: any) {

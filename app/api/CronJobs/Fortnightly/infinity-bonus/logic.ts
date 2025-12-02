@@ -5,7 +5,7 @@ import { Wallet } from "@/models/wallet";
 import { History } from "@/models/history";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { Alert } from "@/models/alert";
-import { getTotalPayout } from "@/services/totalpayout";
+import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { checkIs5StarRank, updateClub } from "@/services/getrank";
 
 // ---------------- Helper Functions ----------------
@@ -125,24 +125,37 @@ export async function runInfinityBonus() {
       const bonusPercentage = rankPercentages[rank] || 0;
       const wallet = await Wallet.findOne({ user_id: sponsor.user_id });
 
-      let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
-      if (!wallet || !wallet.pan_verified) payoutStatus = "OnHold";
-
-      // if (!wallet) {
-      //   console.log(
-      //     `⚠️ No wallet found for ${sponsor.user_id}, skipping Infinity Bonus.`
-      //   );
-      //   continue;
-      // }
-
       const now = new Date();
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
       const bonusAmount = payout.amount * bonusPercentage;
 
-      const withdrawAmount = bonusAmount * 0.8;
-      const rewardAmount = bonusAmount * 0.1;
-      const tdsAmount = bonusAmount * 0.05;
-      const adminCharge = bonusAmount * 0.05;
+      const previousPayout = await getTotalPayout(sponsor.user_id);
+      const afterThis = previousPayout + bonusAmount;
+
+      let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+
+      if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
+        payoutStatus = "OnHold";
+      }
+
+      let withdrawAmount = 0;
+      let rewardAmount = 0;
+      let tdsAmount = 0;
+      let adminCharge = 0;
+
+      if (wallet && wallet.pan_verified) {
+        // PAN Verified
+        withdrawAmount = Number((bonusAmount * 0.8).toFixed(2));
+        rewardAmount = Number((bonusAmount * 0.1).toFixed(2));
+        tdsAmount = Number((bonusAmount * 0.02).toFixed(2));
+        adminCharge = Number((bonusAmount * 0.08).toFixed(2));
+      } else {
+        // PAN Not Verified OR No wallet
+        withdrawAmount = Number((bonusAmount * 0.65).toFixed(2));
+        rewardAmount = Number((bonusAmount * 0.1).toFixed(2));
+        tdsAmount = Number((bonusAmount * 0.2).toFixed(2));
+        adminCharge = Number((bonusAmount * 0.05).toFixed(2));
+      }
 
       // ✅ Dynamic Infinity Bonus Title
       const infinityTitleMap: Record<string, string> = {

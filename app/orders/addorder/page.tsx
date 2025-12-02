@@ -98,7 +98,7 @@ export default function AddOrderPage() {
     setTimeout(() => {
       setLoading(false);
       router.push("/orders");
-    }, 3000);
+    }, 2000);
   };
 
   // console.log(user);
