@@ -266,7 +266,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
         >
           <button
             onClick={handleCopy}
-            className="px-1 rounded-full hover:bg-gray-100 flex items-center justify-center cursor-pointer"
+            className="relative inline-flex items-center justify-center cursor-pointer"
           >
             {user?.profile ? (
               <img
@@ -277,6 +277,10 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             ) : (
               <HiUserCircle className="w-10 h-10 max-md:w-8 max-md:h-8 text-black" />
             )}
+
+            {/* <span className="absolute -bottom-1 bg-gray-800 text-white text-[11px] px-2 rounded-md capitalize">
+              {user?.role}
+            </span> */}
           </button>
 
           {/* Tooltip */}

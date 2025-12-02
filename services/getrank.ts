@@ -5,8 +5,6 @@ import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import mongoose from "mongoose";
 
-
-
 // ============================
 // 🔐 TYPE DEFINITIONS
 // ============================
@@ -121,12 +119,11 @@ export async function updateClub(
     } else if (totalPayout >= 1_00_00_000) {
       newRank = "Diamond";
       newClub = "Director";
-    }
+    } else if (totalPayout >= 1_00_000) {
 
     /** -------------------------
      *  EXECUTIVE CLUB
      --------------------------*/
-    else if (totalPayout >= 1_00_000) {
       newClub = "Executive";
 
       if (totalPayout >= 50_00_000) newRank = "Platinum";
@@ -155,11 +152,7 @@ export async function updateClub(
      *  UPDATE ALL THREE
      --------------------------*/
 
-    await User.updateOne(
-      { user_id },
-      { $set: updateFields },
-      { session }
-    );
+    await User.updateOne({ user_id }, { $set: updateFields }, { session });
 
     await Login.updateOne(
       { user_id },

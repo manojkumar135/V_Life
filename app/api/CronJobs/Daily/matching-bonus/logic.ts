@@ -310,19 +310,16 @@ export async function runMatchingBonus() {
 
       const walletId = wallet ? wallet.wallet_id : null;
 
-     
-
       const previousPayout = await getTotalPayout(u.user_id);
       const totalAmount = 5000;
       const afterThis = previousPayout + totalAmount;
 
-       // Default payout status
+      // Default payout status
       let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
 
-      
-    if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
-      payoutStatus = "OnHold";
-    }
+      if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
+        payoutStatus = "OnHold";
+      }
 
       // Percentages
       let withdrawAmount = 0;
@@ -338,10 +335,10 @@ export async function runMatchingBonus() {
         adminCharge = Number((totalAmount * 0.08).toFixed(2));
       } else {
         // PAN Not Verified OR No wallet
-        withdrawAmount =  Number((totalAmount * 0.65).toFixed(2));
-        rewardAmount =  Number((totalAmount * 0.1).toFixed(2));
-        tdsAmount =  Number((totalAmount * 0.2).toFixed(2));
-        adminCharge = Number((totalAmount * 0.05).toFixed(2));;
+        withdrawAmount = Number((totalAmount * 0.65).toFixed(2));
+        rewardAmount = Number((totalAmount * 0.1).toFixed(2));
+        tdsAmount = Number((totalAmount * 0.2).toFixed(2));
+        adminCharge = Number((totalAmount * 0.05).toFixed(2));
       }
 
       const payout = await DailyPayout.create({
@@ -351,6 +348,8 @@ export async function runMatchingBonus() {
         user_name: u.name,
         rank: wallet?.rank,
         wallet_id: walletId,
+        pan_verified: wallet?.pan_verified || false,
+
         name: "Matching Bonus",
         title: "Matching Bonus",
         account_holder_name: wallet?.account_holder_name || "",

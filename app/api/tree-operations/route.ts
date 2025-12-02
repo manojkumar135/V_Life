@@ -62,7 +62,7 @@ function buildTree(
     /** BUSINESS DATA */
     rank: user?.rank || "none",
     bv: user?.bv || 0,
-    sv: user?.sv || 0,
+    pv: user?.pv || 0,
     referrals: user?.referred_users?.length || 0,
     status_notes: user?.status_notes || "",
 

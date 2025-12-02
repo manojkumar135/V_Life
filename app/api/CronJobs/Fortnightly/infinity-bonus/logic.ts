@@ -172,6 +172,8 @@ export async function runInfinityBonus() {
         user_name: sponsor.user_name,
         rank: sponsor?.rank || "none",
         wallet_id: wallet ? wallet.wallet_id : "",
+        pan_verified: wallet?.pan_verified || false,
+
         name: infinityTitle,
         title: infinityTitle,
         account_holder_name: wallet?.account_holder_name || "",

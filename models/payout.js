@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { TbDualScreen } from "react-icons/tb";
 
 const payoutSchema = new mongoose.Schema({
   transaction_id: { type: String, },
@@ -8,6 +7,7 @@ const payoutSchema = new mongoose.Schema({
   user_id: { type: String, required: true },
   user_name: { type: String, required: true },
   rank: { type: String },
+  pan_verified: { type: Boolean, default: false },
 
 
   name: { type: String, default: "Matching Bonus" },
@@ -19,7 +19,7 @@ const payoutSchema = new mongoose.Schema({
   date: { type: String, required: true },
   time: { type: String, required: true },
   available_balance: { type: Number },
-  amount: { type: Number, required: true, default: 5000 },
+  amount: { type: Number, required: true, },
   totalamount: { type: Number },
   withdraw_amount: { type: Number, default: 0 },
   reward_amount: { type: Number, default: 0 },

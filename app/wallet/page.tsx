@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { FaGift } from "react-icons/fa6";
 import { VscGraph } from "react-icons/vsc";
 import { useVLife } from "@/store/context";
+import { FaPercent } from "react-icons/fa";
 
 const page = () => {
   const router = useRouter();
@@ -35,6 +36,18 @@ const page = () => {
             <Banknote size={32} />
             <span className="mt-2 text-lg font-semibold">Payouts</span>
           </div>
+
+          {/* TDS Table */}
+          {user.role === "admin" && (
+            <div
+              onClick={() => router.push("/tds")}
+              className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            >
+              <FaPercent size={26} />
+              <span className="mt-2 text-lg font-semibold">TDS Table</span>
+            </div>
+          )}
+
           {/* Rewards Card */}
           <div
             onClick={() => router.push("/wallet/rewards")}

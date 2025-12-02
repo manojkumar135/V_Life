@@ -134,7 +134,7 @@ export default function WalletsPage() {
           </div>
         )}
         <HeaderWithActions
-          title="Wallets"
+          title={user.role === "admin" ? "Wallets" : "Wallet"}
           search={query}
           setSearch={setQuery}
           showAddButton={

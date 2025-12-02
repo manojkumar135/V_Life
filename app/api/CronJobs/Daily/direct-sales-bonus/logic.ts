@@ -316,6 +316,7 @@ export async function runDirectSalesBonus() {
           user_id: referBy,
           user_name: node?.name || "",
           rank: wallet?.rank,
+          pan_verified: wallet?.pan_verified || false,
           wallet_id: walletId,
           name: "Direct Sales Bonus",
           title: "Direct Sales Bonus",
