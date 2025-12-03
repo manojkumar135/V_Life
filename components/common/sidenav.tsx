@@ -49,7 +49,7 @@ export default function SideNav({
       href: "/wallet",
       icon: <FaWallet />,
       label: "Wallet",
-      match: ["wallet", "reports"],
+      match: ["wallet", "reports","/tds"],
     },
     {
       href: "/orders",

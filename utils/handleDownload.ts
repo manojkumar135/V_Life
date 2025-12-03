@@ -51,54 +51,54 @@ export async function handleDownload<T extends object>({
       return;
     }
 
-   if (format === "xlsx") {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet("Sheet1");
+    if (format === "xlsx") {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sheet1");
 
-  // Filter + format headers
-  const allHeaders = Object.keys(rows[0] as T);
-  const headers = allHeaders.filter((h) => !excludeHeaders.includes(h));
-  const formattedHeaders = headers.map(formatHeader);
+      // Filter + format headers
+      const allHeaders = Object.keys(rows[0] as T);
+      const headers = allHeaders.filter((h) => !excludeHeaders.includes(h));
+      const formattedHeaders = headers.map(formatHeader);
 
-  // Add header row
-  const headerRow = worksheet.addRow(formattedHeaders);
+      // Add header row
+      const headerRow = worksheet.addRow(formattedHeaders);
 
-  // Style header
-  headerRow.eachCell((cell) => {
-    cell.fill = {
-      type: "pattern",
-      pattern: "solid",
-      fgColor: { argb: "FADC00" }, // mustard yellow
-    };
-    cell.font = { bold: true, color: { argb: "000000" } };
-    cell.alignment = { horizontal: "center", vertical: "middle" };
-  });
+      // Style header
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "106187" },
+        };
+        cell.font = { bold: true, color: { argb: "ffffff" } };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+      });
 
-  // Add data rows
-  rows.forEach((row) => {
-    worksheet.addRow(headers.map((field) => (row as any)[field] ?? ""));
-  });
+      // Add data rows
+      rows.forEach((row) => {
+        worksheet.addRow(headers.map((field) => (row as any)[field] ?? ""));
+      });
 
-  // Auto column widths
-  worksheet.columns.forEach((col) => {
-    if (!col) return;
-    let maxLength = 0;
-    col.eachCell?.({ includeEmpty: true }, (cell) => {
-      maxLength = Math.max(maxLength, cell.value?.toString().length || 0);
-    });
-  col.width = Math.max(20, maxLength + 2); 
-  });
+      // Auto column widths
+      worksheet.columns.forEach((col) => {
+        if (!col) return;
+        let maxLength = 0;
+        col.eachCell?.({ includeEmpty: true }, (cell) => {
+          maxLength = Math.max(maxLength, cell.value?.toString().length || 0);
+        });
+        col.width = Math.max(20, maxLength + 2);
+      });
 
-  // Write and save
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  saveAs(blob, `${fileName}.xlsx`);
+      // Write and save
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, `${fileName}.xlsx`);
 
-  ShowToast.success("File downloaded successfully ✅");
-  return;
-}
+      ShowToast.success("File downloaded successfully ✅");
+      return;
+    }
 
     // Fallback CSV
     const allHeaders = Object.keys(rows[0] as T);
@@ -108,7 +108,9 @@ export async function handleDownload<T extends object>({
     const csvRows = [
       formattedHeaders.join(","),
       ...rows.map((row) =>
-        headers.map((field) => JSON.stringify((row as any)[field] ?? "")).join(",")
+        headers
+          .map((field) => JSON.stringify((row as any)[field] ?? ""))
+          .join(",")
       ),
     ];
     const content = csvRows.join("\n");
@@ -124,7 +126,3 @@ export async function handleDownload<T extends object>({
     onFinish?.();
   }
 }
-
-    
-
-

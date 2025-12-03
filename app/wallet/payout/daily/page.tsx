@@ -108,9 +108,10 @@ export default function DailyPayoutPage() {
   const columns: GridColDef[] = [
     { field: "payout_id", headerName: "Transaction ID", flex: 1 },
     { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
-    { field: "user_id", headerName: "User ID", flex: 1 },
-    ...(user?.role === "admin"
+    // { field: "user_id", headerName: "User ID", flex: 1 },
+    ...(user?.role !== "user"
       ? [
+        { field: "user_id", headerName: "User ID", flex: 1 },
           {
             field: "rank",
             headerName: "Rank",
@@ -205,7 +206,7 @@ export default function DailyPayoutPage() {
   return (
     <Layout>
       <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
-        {loading && (
+        {(loading || downloading) && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center
            bg-black/40 backdrop-blur-sm"

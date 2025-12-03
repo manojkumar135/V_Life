@@ -47,6 +47,9 @@ export default function TransactionHistory() {
       excludeHeaders: [
         "_id",
         "__v",
+        "available_balance",
+        "ischecked",
+        "advance",
         "created_at",
         "created_by",
         "last_modified_by",
@@ -266,7 +269,7 @@ export default function TransactionHistory() {
           title="History"
           search={query}
           setSearch={setQuery}
-          showBack={user.role!=="user"}
+          showBack={user.role !== "user"}
           showAddButton={!advancePaid}
           addLabel="Make Payment"
           onAdd={handlePayAdvance}

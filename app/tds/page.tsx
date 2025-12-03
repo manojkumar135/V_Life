@@ -15,101 +15,169 @@ import { FiFilter } from "react-icons/fi";
 import { GridColDef } from "@mui/x-data-grid";
 import { handleDownload } from "@/utils/handleDownload";
 
-export default function DailyPayoutPage() {
+export default function TDS() {
   const { user } = useVLife();
   const router = useRouter();
   const { query, setQuery, debouncedQuery } = useSearch();
 
-  const [withdrawData, setWithdrawData] = useState<any[]>([]);
+  const [tdsData, setTDSData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const [dateFilter, setDateFilter] = useState<any>(null);
-  const [showModal, setShowModal] = useState(true);
-  const [downloading, setDownloading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
+    const [downloading, setDownloading] = useState(false);
+  
 
   const API_URL = "/api/tds-operations";
 
-  const handleDownloadClick = () => {
-    handleDownload<any>({
-      rows: selectedRows,
-      fileName: "TDS Reports",
-      format: "xlsx",
-      onFinish: () => setDownloading(false),
-    });
-  };
+  /** ===========================
+   *  DOWNLOAD XLSX
+   ============================*/
+ 
 
-  // FETCH TDS DATA
-  const fetchWithdrawals = useCallback(async () => {
+   const handleDownloadClick = () => {
+      handleDownload<any>({
+        rows: selectedRows, // or selected rows if you want selection-based export
+        fileName: "TDS Reports",
+        format: "xlsx",
+        excludeHeaders: [
+          "_id",
+          "__v",
+          "created_at",
+          "last_modified_at",
+          "is_checked",
+          "left_users",
+          "right_users",
+          "created_by",
+          "last_modified_by"
+        ],
+        onFinish: () => setDownloading(false),
+      });
+    };
+
+  /** ===========================
+   *  FETCH DATA
+   ============================*/
+  const fetchTDS = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL);
 
-      console.log("Fetched TDS:", data);
+      const params: any = {
+        role: user?.role,
+        search: debouncedQuery,
+      };
 
-      const items = data.data || [];
-      setWithdrawData(items);
-      setTotalItems(items.length);
+      if (dateFilter?.type === "on") params.date = dateFilter.date;
+      if (dateFilter?.type === "range") {
+        params.from = dateFilter.from;
+        params.to = dateFilter.to;
+      }
+
+      const { data } = await axios.get(API_URL, { params });
+      console.log("TDS Data:", data);
+
+      setTDSData(data.data || []);
+      setTotalItems(data.data?.length || 0);
     } catch (error) {
-      console.error("Error fetching TDS:", error);
+      console.error(error);
       ShowToast.error("Failed to load TDS report");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [debouncedQuery, dateFilter, user?.role]);
 
   useEffect(() => {
-    fetchWithdrawals();
+    fetchTDS();
     goToPage(1);
-  }, []);
+  }, [debouncedQuery, dateFilter]);
 
-  // ================================
-  // 🚨 UPDATED TDS COLUMNS
-  // ================================
+  /** ===========================
+   *  TABLE COLUMNS
+   ============================*/
   const columns: GridColDef[] = [
     { field: "user_id", headerName: "User ID", flex: 1 },
-    { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
-    { field: "month", headerName: "Month", flex: 1 },
+
+    {
+      field: "wallet_id",
+      headerName: "Wallet ID",
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? (
+          <span className="font-semibold">{params.value}</span>
+        ) : (
+          <span className="text-gray-400">—</span>
+        ),
+    },
+
+    { field: "year", headerName: "Year", flex: 0.7 },
+    { field: "month_name", headerName: "Month", flex: 1 },
+
     {
       field: "tds_type",
-      headerName: "TDS Category",
-      flex: 1,
+      headerName: "TDS Type",
+      flex: 0.7,
       renderCell: (params) => (
-        <span className={params.value === "PAN" ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+        <span
+          className={
+            params.value === "PAN"
+              ? "text-green-600 font-semibold"
+              : "text-red-600 font-semibold"
+          }
+        >
           {params.value}
         </span>
       ),
     },
+
+    {
+      field: "pan_number",
+      headerName: "PAN Number",
+      flex: 1,
+      renderCell: (params) =>
+        params.value ? (
+          <span className="text-green-700 font-medium">{params.value}</span>
+        ) : (
+          <span className="text-gray-500">—</span>
+        ),
+    },
+
     {
       field: "total_amount",
-      headerName: "Total Earnings (₹)",
+      headerName: "Total Amount (₹)",
       flex: 1,
       align: "right",
       renderCell: (params) => (
-        <span className="pr-4">₹ {Number(params.value).toFixed(2)}</span>
+        <span className="pr-4">
+          ₹ {Number(params.value || 0).toFixed(2)}
+        </span>
       ),
     },
+
     {
       field: "tds_amount",
-      headerName: "TDS Amount (₹)",
+      headerName: "TDS (₹)",
       flex: 1,
       align: "right",
       renderCell: (params) => (
         <span className="pr-4 text-red-600 font-semibold">
-          ₹ {Number(params.value).toFixed(2)}
+          ₹ {Number(params.value || 0).toFixed(2)}
         </span>
       ),
     },
+
     {
       field: "count",
-      headerName: "No. of Payouts",
-      flex: 1,
+      headerName: "Payouts",
+      flex: 0.8,
       align: "center",
     },
   ];
 
-  // Pagination
+  /** ===========================
+   *  PAGINATION
+   ============================*/
   const {
     currentPage,
     totalPages,
@@ -121,13 +189,15 @@ export default function DailyPayoutPage() {
   } = usePagination({
     totalItems,
     itemsPerPage: 12,
-    onPageChange: () => {},
   });
 
+  /** ===========================
+   *  UI
+   ============================*/
   return (
     <Layout>
       <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
-        {loading && (
+        {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
@@ -138,9 +208,9 @@ export default function DailyPayoutPage() {
           search={query}
           setSearch={setQuery}
           showBack
+          onBack={() => router.push("/wallet")}
+          showMoreOptions
           onMore={handleDownloadClick}
-          showMoreOptions={user?.role === "admin"}
-          addLabel="Add Payout"
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -149,13 +219,12 @@ export default function DailyPayoutPage() {
           endItem={endItem}
           onNext={nextPage}
           onPrev={prevPage}
-          onBack={() => router.push("/wallet")}
         />
 
-        {/* Floating Filter Icon */}
-        <div title="Filter" className="fixed bottom-5 right-6 z-10">
+        {/* Filter Button */}
+        <div className="fixed bottom-5 right-6 z-10">
           <button
-            className="relative w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center shadow-lg"
+            className="w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center shadow-lg"
             onClick={() => setShowModal(true)}
           >
             <FiFilter size={20} />
@@ -164,13 +233,13 @@ export default function DailyPayoutPage() {
 
         <Table
           columns={columns}
-          rows={withdrawData}
+          rows={tdsData}
           currentPage={currentPage}
           setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
           checkboxSelection
-          onRowClick={(row) => console.log("Row clicked:", row)}
+          onRowClick={(row) => console.log(row)}
           setSelectedRows={setSelectedRows}
         />
 
