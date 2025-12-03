@@ -39,6 +39,16 @@ interface DashboardSummary {
   daysAfterActivation: number;
 }
 
+interface CycleStats {
+  daysAfterActivation: number;
+  matches: number;
+  matchingBonus: number;
+  cycleIndex: number;
+  cycleStart: string;
+  cycleEnd: string;
+  daysPassed: number;
+}
+
 interface LinkButtonProps {
   text: string;
   onClick: () => void;
@@ -74,7 +84,7 @@ const rankImages: Record<string, string> = {
 
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
-  console.log(user);
+  // console.log(user);
   const user_id = user?.user_id || "";
   const router = useRouter();
 
@@ -82,6 +92,7 @@ const DashboardPage: React.FC = () => {
 
   const [showAlert, setShowAlert] = useState(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [cycles, setCycles] = useState<CycleStats | null>(null);
   const [amountSummary, setAmountSummary] = useState({
     income: 0,
     purchases: 0,
@@ -150,6 +161,21 @@ const DashboardPage: React.FC = () => {
     };
     fetchAmountSummary();
   }, [user_id]);
+
+  useEffect(() => {
+    if (!user_id) return;
+    (async () => {
+      try {
+        const res = await axios.get(`/api/get-cycles?user_id=${user_id}`);
+        if (res.data.success) setCycles(res.data.data);
+      } catch (err) {
+        console.error("Cycle API error:", err);
+        setCycles(null);
+      }
+    })();
+  }, [user_id]);
+
+  console.log("Cycles Data:", cycles);
 
   /* ------------ Maverick Link Actions ------------ */
   const handleCopyLink = async (position: "left" | "right") => {
@@ -424,7 +450,7 @@ const DashboardPage: React.FC = () => {
                 <DashBox
                   icon={<FaUser />}
                   title="Matching Pairs"
-                  value={summary?.matches?.toString() || "0"}
+                  value={cycles?.matches?.toString() || "0"}
                 />
 
                 {/* <DashBox
@@ -436,7 +462,7 @@ const DashboardPage: React.FC = () => {
                   icon={<MdOutlineCheckCircle />}
                   title="Days from Activation"
                   value={`${
-                    summary?.daysAfterActivation?.toString() || "0"
+                    cycles?.daysPassed?.toString() || "0"
                   } days`}
                 />
 
