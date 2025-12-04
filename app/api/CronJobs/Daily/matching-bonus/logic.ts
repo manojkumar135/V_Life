@@ -349,6 +349,10 @@ export async function runMatchingBonus() {
         rank: wallet?.rank,
         wallet_id: walletId,
         pan_verified: wallet?.pan_verified || false,
+        mail: u.mail || "",
+        contact: u.contact || "",
+        user_status: u.status || "active",
+
 
         name: "Matching Bonus",
         title: "Matching Bonus",
@@ -425,6 +429,12 @@ export async function runMatchingBonus() {
           wallet_id: payout.wallet_id,
           user_id: payout.user_id,
           user_name: payout.user_name,
+          rank: payout.rank,
+          pan_verified: payout.pan_verified,
+          mail: payout.mail,
+          contact: payout.contact,
+          user_status: payout.user_status,
+          
           account_holder_name: payout.account_holder_name,
           bank_name: payout.bank_name,
           account_number: payout.account_number,

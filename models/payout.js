@@ -6,7 +6,10 @@ const payoutSchema = new mongoose.Schema({
   wallet_id: { type: String },
   user_id: { type: String, required: true },
   user_name: { type: String, required: true },
+  contact: { type: String },
+  mail: { type: String },
   rank: { type: String },
+  user_status: { type: String },
   pan_verified: { type: Boolean, default: false },
 
 

@@ -76,7 +76,7 @@ export default function TDS() {
       }
 
       const { data } = await axios.get(API_URL, { params });
-      console.log("TDS Data:", data);
+      // console.log("TDS Data:", data);
 
       setTDSData(data.data || []);
       setTotalItems(data.data?.length || 0);
@@ -89,20 +89,26 @@ export default function TDS() {
   }, [debouncedQuery, dateFilter, user?.role]);
 
   useEffect(() => {
-    fetchTDS();
+  fetchTDS();
+}, [debouncedQuery, dateFilter, fetchTDS]);
+
+useEffect(() => {
+  if (tdsData.length > 0) {
     goToPage(1);
-  }, [debouncedQuery, dateFilter]);
+  }
+}, [tdsData]);
 
   /** ===========================
    *  TABLE COLUMNS
    ============================*/
   const columns: GridColDef[] = [
-    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_id", headerName: "User ID", flex: 0.7 },
+    { field: "user_name", headerName: "Name", flex: 1 },
 
     {
       field: "wallet_id",
       headerName: "Wallet ID",
-      flex: 1,
+      flex: 0.7,
       renderCell: (params) =>
         params.value ? (
           <span className="font-semibold">{params.value}</span>
@@ -111,8 +117,8 @@ export default function TDS() {
         ),
     },
 
-    { field: "year", headerName: "Year", flex: 0.7 },
-    { field: "month_name", headerName: "Month", flex: 1 },
+    { field: "year", headerName: "Year", flex: 0.5 },
+    { field: "month_name", headerName: "Month", flex: 0.7 },
 
     {
       field: "tds_type",
@@ -170,7 +176,7 @@ export default function TDS() {
     {
       field: "count",
       headerName: "Payouts",
-      flex: 0.8,
+      flex: 0.7,
       align: "center",
     },
   ];

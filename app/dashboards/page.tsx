@@ -175,7 +175,7 @@ const DashboardPage: React.FC = () => {
     })();
   }, [user_id]);
 
-  console.log("Cycles Data:", cycles);
+  // console.log("Cycles Data:", cycles);
 
   /* ------------ Maverick Link Actions ------------ */
   const handleCopyLink = async (position: "left" | "right") => {

@@ -21,17 +21,28 @@ export async function GET(req: Request) {
       {
         $match: {
           ...(user_id && { user_id }),
-          ...(search && { user_id: { $regex: search, $options: "i" } }),
+         ...(search && {
+      $or: [
+        { user_id: { $regex: search, $options: "i" } },
+        { user_name: { $regex: search, $options: "i" } },
+        { contact: { $regex: search, $options: "i" } },
+        { wallet_id: { $regex: search, $options: "i" } },
+        { pan_number: { $regex: search, $options: "i" } },
+      ],
+    }),
           ...(date && { created_at: new Date(date) }),
-          ...(from && to && {
-            created_at: { $gte: new Date(from), $lte: new Date(to) },
-          }),
+          ...(from &&
+            to && {
+              created_at: { $gte: new Date(from), $lte: new Date(to) },
+            }),
         },
       },
       {
         $group: {
           _id: {
             user_id: "$user_id",
+            user_name: "$user_name",
+            contact: "$contact",
             year: { $year: "$created_at" },
             month: { $month: "$created_at" },
             pan_verified: "$pan_verified",
@@ -57,12 +68,15 @@ export async function GET(req: Request) {
     const map = new Map();
 
     for (const row of merged) {
-      const { user_id, year, month, pan_verified } = row._id;
+      const { user_id, user_name, contact, year, month, pan_verified } =
+        row._id;
       const key = `${user_id}-${year}-${month}-${pan_verified}`;
 
       if (!map.has(key)) {
         map.set(key, {
           user_id,
+          user_name,
+          contact,
           year,
           month,
           pan_verified,
@@ -84,18 +98,35 @@ export async function GET(req: Request) {
     // Attach wallet only once per user
     // ----------------------------------------------------
     const monthNames = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
 
     const result: any[] = [];
 
     for (const rec of dataMerged) {
-      const wallet = (await Wallet.findOne({ user_id: rec.user_id }).lean()) as any;
+      const wallet = (await Wallet.findOne({
+        user_id: rec.user_id,
+      }).lean()) as any;
+      // console.log(rec);
 
       result.push({
-        _id: `${rec.user_id}-${rec.year}-${rec.month}-${rec.pan_verified ? "PAN" : "NONPAN"}`,
+        _id: `${rec.user_id}-${rec.year}-${rec.month}-${
+          rec.pan_verified ? "PAN" : "NONPAN"
+        }`,
         user_id: rec.user_id,
+        user_name: rec.user_name,
+        contact: rec.contact,
         year: rec.year,
         month: rec.month,
         month_name: monthNames[rec.month - 1],

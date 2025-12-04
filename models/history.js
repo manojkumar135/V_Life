@@ -7,6 +7,10 @@ const HistorySchema = new mongoose.Schema(
     user_id: { type: String, required: true },   // can be linked to User schema
     user_name: { type: String, required: true },
     gender: { type: String },
+    contact: { type: String, },
+    mail: { type: String, },
+    user_status: { type: String, },
+    pan_verified: { type: Boolean, default: false },
 
     rank: { type: String },
 
