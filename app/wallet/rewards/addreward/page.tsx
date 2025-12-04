@@ -4,6 +4,7 @@ import Layout from "@/layout/Layout";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 import InputField from "@/components/InputFields/inputtype1";
+import SelectField from "@/components/InputFields/selectinput";
 import TextareaField from "@/components/InputFields/textareainput";
 import FileInput from "@/components/InputFields/fileinput";
 import SubmitButton from "@/components/common/submitbutton";
@@ -17,10 +18,30 @@ import { useVLife } from "@/store/context";
 // ✅ Validation Schema
 const validationSchema = Yup.object({
   title: Yup.string().required("* Title is required"),
-  pointsRequired: Yup.number()
-    .min(1, "* Points Required must be at least 1")
-    .required("* Points Required is required"),
+  type: Yup.string()
+    .oneOf(["score", "matching"])
+    .required("* Reward type is required"),
+
+  pointsRequired: Yup.number().when("type", {
+    is: "score",
+    then: (schema) =>
+      schema
+        .min(1, "* Points Required must be at least 1")
+        .required("* Points Required is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+
+  matchesRequired: Yup.number().when("type", {
+    is: "matching",
+    then: (schema) =>
+      schema
+        .min(1, "* Matches Required must be at least 1")
+        .required("* Matches Required is required"),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+
   description: Yup.string().optional(),
+
   image: Yup.mixed<File>()
     .required("* Reward image is required")
     .test(
@@ -47,7 +68,6 @@ export default function AddRewardPage() {
       ShowToast.error(res.data.message || "File upload failed");
       return null;
     } catch (error) {
-      console.error("File upload error:", error);
       ShowToast.error("Failed to upload file");
       return null;
     }
@@ -57,7 +77,9 @@ export default function AddRewardPage() {
     initialValues: {
       title: "",
       description: "",
+      type: "score" as "score" | "matching",
       pointsRequired: 0,
+      matchesRequired: 0,
       image: null as File | null,
       created_by: user?.user_id || "admin",
     },
@@ -74,14 +96,20 @@ export default function AddRewardPage() {
           }
         }
 
-        const payload = {
+        const payload: any = {
           title: values.title,
           description: values.description,
-          points_required: values.pointsRequired,
+          type: values.type,
           image: imageUrl,
           status: "active",
           created_by: user?.user_id || "admin",
         };
+
+        if (values.type === "score") {
+          payload.points_required = values.pointsRequired;
+        } else {
+          payload.matches_required = values.matchesRequired;
+        }
 
         const res = await axios.post("/api/rewards-operations", payload);
         if (res.data.success) {
@@ -121,7 +149,7 @@ export default function AddRewardPage() {
           </h2>
         </div>
 
-        {/* Form Card */}
+        {/* Form */}
         <div className="rounded-xl p-6 bg-white">
           <form onSubmit={formik.handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -136,23 +164,66 @@ export default function AddRewardPage() {
                 required
                 error={formik.touched.title ? formik.errors.title : undefined}
               />
-              <InputField
-                label="Points Required"
-                name="pointsRequired"
-                type="number"
-                placeholder="Points Required"
-                value={formik.values.pointsRequired}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
+
+              {/* Reward Type */}
+              <SelectField
+                label="Reward Type"
+                name="type"
                 required
-                min={10}
+                options={[
+                  { value: "score", label: "Score Based" },
+                  { value: "matching", label: "Matching Based (60-Day Cycle)" },
+                ]}
+                value={formik.values.type}
+                 controlPaddingLeft="0px"
+                onChange={(opt) => formik.setFieldValue("type", opt?.value)}
+                onBlur={formik.handleBlur}
                 error={
-                  formik.touched.pointsRequired
-                    ? formik.errors.pointsRequired
-                    : undefined
+                  formik.touched.type ? (formik.errors.type as string) : ""
                 }
               />
-              {/* ✅ Replaced Image URL input with FileInput */}
+
+              {/* Points Required */}
+              {formik.values.type === "score" && (
+                <InputField
+                  label="Points Required"
+                  name="pointsRequired"
+                  type="number"
+                  placeholder="Points Required"
+                  value={formik.values.pointsRequired}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  required
+                  min={1}
+                  error={
+                    formik.touched.pointsRequired
+                      ? formik.errors.pointsRequired
+                      : undefined
+                  }
+                />
+              )}
+
+              {/* Matches Required */}
+              {formik.values.type === "matching" && (
+                <InputField
+                  label="Matches Required (per ticket)"
+                  name="matchesRequired"
+                  type="number"
+                  placeholder="e.g. Goa: 30, Dubai: 60"
+                  value={formik.values.matchesRequired}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  required
+                  min={1}
+                  error={
+                    formik.touched.matchesRequired
+                      ? (formik.errors.matchesRequired as any)
+                      : undefined
+                  }
+                />
+              )}
+
+              {/* Image Upload */}
               <FileInput
                 label="Upload Reward Image"
                 name="image"
@@ -176,7 +247,6 @@ export default function AddRewardPage() {
               value={formik.values.description}
               onChange={formik.handleChange}
               className="h-24"
-              required
             />
 
             <div className="flex justify-end">

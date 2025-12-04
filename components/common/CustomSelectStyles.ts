@@ -38,7 +38,7 @@ const customSelectStyles = {
   singleValue: (provided: any) => ({
     ...provided,
     color: "#374151", // <-- FIXED normal dark text
-    fontSize: "1rem",
+    fontSize: "0.9rem",
   }),
 };
 
