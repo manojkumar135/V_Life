@@ -86,8 +86,7 @@ export default function DirectTeam() {
     if (!user?.user_id) return;
     fetchUsers(debouncedQuery);
 
-        goToPage(1);
-
+    goToPage(1);
   }, [debouncedQuery, user?.user_id]);
 
   // Edit user
@@ -137,7 +136,16 @@ export default function DirectTeam() {
     { field: "mail", headerName: "Email", flex: 1.5 },
     { field: "team", headerName: "Team", flex: 1 },
 
-    { field: "rank", headerName: "Rank", flex: 1, },
+    {
+      field: "rank",
+      headerName: "Rank",
+      flex: 1,
+      renderCell: (params: any) => {
+  return params.value && params.value !== "none"
+    ? `${params.value} Star`
+    : "-";
+}
+    },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 
@@ -155,12 +163,19 @@ export default function DirectTeam() {
     // optional server pagination
   }, [query]);
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
-    usePagination({
-      totalItems,
-      itemsPerPage: 12,
-      onPageChange: handlePageChange,
-    });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({
+    totalItems,
+    itemsPerPage: 12,
+    onPageChange: handlePageChange,
+  });
 
   const handleAddUser = () => {
     router.push("/administration/users/adduser?team=left");
@@ -183,8 +198,7 @@ export default function DirectTeam() {
             // addLabel="+ ADD USER"
             // showAddButton
             showBack
-                      onBack={onBack}
-
+            onBack={onBack}
             // onAdd={handleAddUser}
             onMore={handleDownloadClick} // ✅ Now Download
             showPagination
@@ -200,7 +214,7 @@ export default function DirectTeam() {
           <Table
             columns={columns}
             rows={usersData}
-             currentPage={currentPage}
+            currentPage={currentPage}
             setCurrentPage={goToPage}
             rowIdField="_id"
             pageSize={12}

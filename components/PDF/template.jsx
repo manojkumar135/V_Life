@@ -192,11 +192,11 @@ export default function InvoiceTemplate({ data }) {
             <Text style={styles.taxHeading}>TAX INVOICE</Text>
             <View style={[styles.taxLine, { marginTop: 2 }]}>
               <Text>Invoice No :</Text>
-              <Text>{data.order_id || "-"}</Text>
+              <Text>{data.order_id || "N/A"}</Text>
             </View>
             <View style={[styles.taxLine, { marginTop: 2 }]}>
               <Text>Invoice Date :</Text>
-              <Text>{data.payment_date || "-"}</Text>
+              <Text>{data.payment_date || "N/A"}</Text>
             </View>
           </View>
         </View>
@@ -221,32 +221,33 @@ export default function InvoiceTemplate({ data }) {
             <Text style={[styles.sectionTitle, { margin: 5, }]}>SHIPPING ADDRESS</Text>
             <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
               <Text style={styles.label}>USER NAME  :</Text>
-              <Text>{data.user_name || "-"}</Text>
+              <Text>{data.user_name || "N/A"}</Text>
             </View>
             <View style={[{ display: "flex", marginLeft: 5 }]}>
               <Text style={styles.label}>ADDRESS  :</Text>
-              <Text style={{ margin: 5, marginLeft: 10,textTransform: "capitalize",fontSize:9,marginBottom:30 }}>{data.address || "-"}</Text>
+              <Text style={{ margin: 5, marginLeft: 10, textTransform: "capitalize", fontSize: 9, marginBottom: 30 }}>{data.address || "N/A"}</Text>
             </View>
 
             <View style={[{ display: "flex", flexDirection: "row", marginTop: 5, marginLeft: 5 }]}>
               <Text style={styles.label}>Email  :</Text>
-              <Text>{data.mail || "-"}</Text> </View>
+              <Text>{data.mail || "N/A"}</Text> </View>
             <View style={[{ display: "flex", flexDirection: "row", marginTop: 5, marginLeft: 5 }]}>
               <Text style={styles.label}>Contact  :</Text>
-              <Text>{data.contact || "-"}</Text> </View>
+              <Text>{data.contact || "N/A"}</Text> </View>
           </View>
           {/* RIGHT */}
           <View style={styles.colRight}>
             <Text style={[styles.sectionTitle, { margin: 5 }]}>ORDER DETAILS</Text>
             <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
-              <Text style={styles.label}>USER ID  :</Text> <Text>{data.user_id || "-"}</Text>
-            </View> <View style={[{ display : "flex", flexDirection: "row", margin: 5 }]}>
-              <Text style={styles.label}>ORDER NO  :</Text> <Text>{data.order_id || "-"}</Text>
+              <Text style={styles.label}>USER ID  :</Text> <Text>{data.user_id || "N/A"}</Text>
             </View> <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
-              <Text style={styles.label}>GST :</Text> <Text>{data.gst_no || "-"}</Text>
+              <Text style={styles.label}>ORDER NO  :</Text> <Text>{data.order_id || "N/A"}</Text>
+            </View> <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
+              <Text style={styles.label}>GST :</Text> <Text>{data.gst_no || "N/A"}</Text>
             </View>
             <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
-              <Text style={styles.label}>Order Type  : PV OR BV</Text> <Text>{data.order_type || "-"}</Text>
+              <Text style={styles.label}>Order Type  : PV OR BV</Text>
+              {/* <Text>{data.order_type || "N/A"}</Text> */}
             </View>
           </View>
         </View>
@@ -279,9 +280,9 @@ export default function InvoiceTemplate({ data }) {
                 <Text style={[styles.col, styles.cQty, { textAlign: "center" }]}>{item.quantity}</Text>
                 <Text style={[styles.col, styles.cPrice, { textAlign: "right" }]}>{`\u20B9 ${item.dealer_price.toFixed(2)}`}</Text>
                 <Text style={[styles.col, styles.cTaxable, { textAlign: "right" }]}>{`\u20B9 ${item.whole_gst.toFixed(2)}`}</Text>
+                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.igst.toFixed(1) || "0"}</Text>
                 <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.cgst.toFixed(1) || "0"}</Text>
                 <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.sgst.toFixed(1) || "0"}</Text>
-                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.igst.toFixed(1) || "0"}</Text>
                 <Text style={[styles.col, styles.cTotal, { textAlign: "right" }]}>{`\u20B9 ${((item.dealer_price + item.gst_amount) * item.quantity).toFixed(2)}`}</Text>
               </View>
             );

@@ -159,7 +159,16 @@ export default function LeftTeam() {
     { field: "user_name", headerName: "User Name", flex: 1 },
     { field: "contact", headerName: "Contact", flex: 1 },
     { field: "mail", headerName: "Email", flex: 2 },
-    { field: "rank", headerName: "Rank", flex: 1 },
+   {
+      field: "rank",
+      headerName: "Rank",
+      flex: 1,
+      renderCell: (params: any) => {
+  return params.value && params.value !== "none"
+    ? `${params.value} Star`
+    : "-";
+}
+    },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 

@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useFormik } from "formik";
+import Image from "next/image";
+
 import * as Yup from "yup";
 import Select from "react-select";
 import axios from "axios";
@@ -20,6 +22,7 @@ import TermsModal from "@/components/TermsModal/terms";
 import customSelectStyles from "@/components/common/CustomSelectStyles";
 
 import CryptoJS from "crypto-js";
+import Images from "@/constant/Image";
 
 export const dynamic = "force-dynamic";
 
@@ -176,9 +179,16 @@ function RegisterContent() {
       {/* Form Section */}
       <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6">
         <div className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200 max-md:mt-10">
-          <p className="text-[1.4rem] font-bold text-black mb-5 xl:mb-3">
+          <Image
+            src={Images.MaverickLogo}
+            alt="Logo"
+            width={150}
+            height={80}
+            className="mb-5 border-0 border-black"
+          />
+          {/* <p className="text-[1.4rem] font-bold text-black mb-5 xl:mb-3">
             SIGN UP
-          </p>
+          </p> */}
 
           <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
             {/* Name */}

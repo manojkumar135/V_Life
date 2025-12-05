@@ -65,9 +65,23 @@ export default function BookingsPage() {
         };
 
         const { data } = await axios.get(API_URL, { params });
+        console.log("Fetched bookings data:", data);
 
         if (data?.success) {
-          const bookings = data.data || [];
+          const bookings = (data.data || []).map((b: any) => {
+            const isMatching = b.type === "matching";
+
+            return {
+              ...b,
+              used: isMatching
+                ? `${b.total_matches_used ?? 0} Matches`
+                : `${b.total_score_used ?? 0} Score`,
+              remain: isMatching
+                ? `${b.remaining_matches ?? 0} Matches`
+                : `${b.remaining_score ?? 0} Score`,
+            };
+          });
+
           setBookingsData(bookings);
           setTotalItems(bookings.length);
         } else {
@@ -107,8 +121,10 @@ export default function BookingsPage() {
   };
 
   // 🔹 Columns
+  // 🔹 Smart columns to show type-based used/remaining values
   const columns: GridColDef[] = [
     { field: "booking_id", headerName: "Booking ID", flex: 1 },
+
     user?.role === "admin" && {
       field: "user_id",
       headerName: "User ID",
@@ -129,10 +145,31 @@ export default function BookingsPage() {
       headerName: "Rank",
       flex: 1,
     },
-    { field: "total_score_used", headerName: "Score Used", flex: 1 },
-    { field: "remaining_score", headerName: "Remain", flex: 1 },
+
+    {
+      field: "type",
+      headerName: "Type",
+      flex: 0.8,
+      renderCell: (params: any) => {
+        const type = params?.row?.type;
+        return type ? type.charAt(0).toUpperCase() + type.slice(1) : "-";
+      },
+    },
+
+    {
+      field: "used",
+      headerName: "Used",
+      flex: 0.8,
+    },
+
+    {
+      field: "remain",
+      headerName: "Remain",
+      flex: 0.8,
+    },
+
     { field: "date", headerName: "Booking Date", flex: 1 },
-    { field: "status", headerName: "Status", flex: 1 },
+    { field: "status", headerName: "Status", flex: 0.7 },
   ].filter(Boolean) as GridColDef[];
 
   // 🔹 Pagination
@@ -141,12 +178,19 @@ export default function BookingsPage() {
     [query]
   );
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
-    usePagination({
-      totalItems,
-      itemsPerPage: 12,
-      onPageChange: handlePageChange,
-    });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({
+    totalItems,
+    itemsPerPage: 12,
+    onPageChange: handlePageChange,
+  });
 
   const handleRowClick = (row: any) => {
     handleEdit(row._id);
@@ -202,8 +246,8 @@ export default function BookingsPage() {
         <Table
           columns={columns}
           rows={bookingsData}
-           currentPage={currentPage}
-            setCurrentPage={goToPage}
+          currentPage={currentPage}
+          setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
           onRowClick={handleRowClick}

@@ -35,6 +35,7 @@ const BookingSchema = new mongoose.Schema({
     type: [RewardItemSchema],
     required: true,
   },
+  type:{ type: String, required: true },
   total_score_used: { type: Number, default: 0 },
   remaining_score: { type: Number, default: 0 },
 

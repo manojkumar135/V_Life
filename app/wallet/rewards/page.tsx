@@ -66,6 +66,40 @@ export default function RewardsPage() {
   }, [user?.user_id]);
 
   useEffect(() => {
+  const fetchBookingUsedMatches = async () => {
+    if (!user?.user_id || matchStats.cycleIndex === undefined) return;
+    
+    try {
+      const res = await axios.get("/api/booking-operations", {
+        params: { user_id: user?.user_id, type: "matching" }
+      });
+
+      if (res.data.success) {
+        const bookings = res.data.data || [];
+
+        // Count matches used in same cycle only
+        const usedMatches = bookings.reduce((total: number, b: any) => {
+          return b.cycleIndex === matchStats.cycleIndex
+            ? total + (b.total_matches_used || 0)
+            : total;
+        }, 0);
+
+        // Update UI to show actual remaining matches
+        setMatchStats((prev) => ({
+          ...prev,
+          matches: (prev.matches || 0) - usedMatches
+        }));
+      }
+    } catch (err) {
+      console.error("Match usage calculation failed:", err);
+    }
+  };
+
+  fetchBookingUsedMatches();
+}, [user?.user_id, matchStats.cycleIndex]);
+
+
+  useEffect(() => {
     const fetchRewards = async () => {
       try {
         const res = await axios.get("/api/rewards-operations");
@@ -241,6 +275,8 @@ export default function RewardsPage() {
       address,
       description: "",
       rewards: rewardsArray,
+
+      type: bookingType, // 🆕 ADD THIS LINE
 
       // Score values
       total_score_used,
@@ -426,12 +462,12 @@ export default function RewardsPage() {
                     className="border border-gray-300 rounded-xl shadow-md bg-white hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col w-full max-w-sm mx-auto"
                   >
                     {/* Image */}
-                    <div className="relative w-full h-36">
+                    <div className="relative w-full h-42">
                       <Image
                         src={reward.image || "/default.jpg"}
                         alt={reward.title}
                         fill
-                        className="object-cover rounded-t-xl border-b border-gray-300"
+                        className="object-cover rounded-xl border-3 border-white shadow"
                       />
                       {!isActive && user?.role === "admin" && (
                         <span className="absolute top-2 right-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">

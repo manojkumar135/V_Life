@@ -66,7 +66,10 @@ export default function OrdersPage() {
       excludeHeaders: [
         "_id",
         "__v",
+        "referBy",
+        "infinity",
         "created_at",
+        "bonus_checked",
         "last_modified_at",
         "items", // items array may not be needed in export
       ],

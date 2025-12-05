@@ -42,19 +42,18 @@ export async function GET(request: Request) {
     const user_id = searchParams.get("user_id");
     const status = searchParams.get("status");
     const search = searchParams.get("search");
-    const role = searchParams.get("role"); // 👈 role param
+    const role = searchParams.get("role");
+    const bookingType = searchParams.get("type"); // 🆕 added
 
-    // 🔹 Single booking fetch
+    // 🔹 Fetch Single Booking
     if (id || booking_id) {
       const lookupId = id || booking_id;
       let booking;
 
       if (lookupId && mongoose.Types.ObjectId.isValid(lookupId)) {
-        booking = await Booking.findById(lookupId).populate("rewards.reward_id");
+        booking = await Booking.findById(lookupId);
       } else {
-        booking = await Booking.findOne({ booking_id: lookupId }).populate(
-          "rewards.reward_id"
-        );
+        booking = await Booking.findOne({ booking_id: lookupId });
       }
 
       if (!booking) {
@@ -64,13 +63,16 @@ export async function GET(request: Request) {
         );
       }
 
-      return NextResponse.json({ success: true, data: booking }, { status: 200 });
+      return NextResponse.json(
+        { success: true, data: booking },
+        { status: 200 }
+      );
     }
 
-    // 🔹 Build filter query
+    // 🔹 Build Multiple Filter Query
     const query: any = {};
 
-    // Only filter by user if NOT admin
+    if (bookingType) query.type = bookingType; // 🆕 filter by type
     if (role !== "admin" && user_id) query.user_id = user_id;
     if (status) query.status = status;
 
@@ -83,19 +85,17 @@ export async function GET(request: Request) {
       ];
     }
 
-    // 🔹 Admin gets all bookings
     let bookings;
     if (role === "admin") {
-      bookings = await Booking.find({})
-        .populate("rewards.reward_id")
-        .sort({ booked_at: -1 });
+      bookings = await Booking.find({}).sort({ booked_at: -1 });
     } else {
-      bookings = await Booking.find(query)
-        .populate("rewards.reward_id")
-        .sort({ booked_at: -1 });
+      bookings = await Booking.find(query).sort({ booked_at: -1 });
     }
 
-    return NextResponse.json({ success: true, data: bookings }, { status: 200 });
+    return NextResponse.json(
+      { success: true, data: bookings },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("GET Booking Error:", error);
     return NextResponse.json(
@@ -104,7 +104,6 @@ export async function GET(request: Request) {
     );
   }
 }
-
 
 // ✅ PUT — Full update (replace fields)
 export async function PUT(request: Request) {
@@ -140,7 +139,10 @@ export async function PUT(request: Request) {
       );
     }
 
-    return NextResponse.json({ success: true, data: updatedBooking }, { status: 200 });
+    return NextResponse.json(
+      { success: true, data: updatedBooking },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("PUT Booking Error:", error);
     return NextResponse.json(
@@ -171,7 +173,9 @@ export async function PATCH(request: Request) {
 
     let updatedBooking;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedBooking = await Booking.findByIdAndUpdate(updateId, rest, { new: true });
+      updatedBooking = await Booking.findByIdAndUpdate(updateId, rest, {
+        new: true,
+      });
     } else {
       updatedBooking = await Booking.findOneAndUpdate(
         { booking_id: updateId },

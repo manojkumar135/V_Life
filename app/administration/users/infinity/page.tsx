@@ -137,7 +137,16 @@ export default function InfinityTeam() {
     { field: "mail", headerName: "Email", flex: 1.5 },
     { field: "team", headerName: "Team", flex: 1 },
     { field: "level", headerName: "Level", flex: 1 },
-    { field: "rank", headerName: "Rank", flex: 1 },
+    {
+      field: "rank",
+      headerName: "Rank",
+      flex: 1,
+      renderCell: (params: any) => {
+  return params.value && params.value !== "none"
+    ? `${params.value} Star`
+    : "-";
+}
+    },
 
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
