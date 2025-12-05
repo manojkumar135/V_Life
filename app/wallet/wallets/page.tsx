@@ -86,7 +86,14 @@ export default function WalletsPage() {
       ? [
           { field: "user_id", headerName: "User ID", flex: 1 },
           { field: "user_name", headerName: "User Name", flex: 1.2 },
-          // { field: "rank", headerName: "Rank", flex: 0.5,valueGetter: (params:any) => Number(params.row.rank) }
+          // { field: "rank", headerName: "Rank", flex: 0.5,
+          //             renderCell: (params: any) => {
+          //   return params.value && params.value !== "none"
+          //     ? `${params.value} Star`
+          //     : "-"
+          // }
+
+          // }
         ]
       : []),
     { field: "bank_name", headerName: "Bank Name", flex: 1.6 },

@@ -116,6 +116,11 @@ export default function DailyPayoutPage() {
             field: "rank",
             headerName: "Rank",
             flex: 1,
+             renderCell: (params: any) => {
+  return params.value && params.value !== "none"
+    ? `${params.value} Star`
+    : "-"
+}
           },
         ]
       : []),
