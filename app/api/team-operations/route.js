@@ -56,7 +56,10 @@ export async function GET(req) {
 
     if (search) {
       // Split by comma and trim spaces
-      const searchTerms = search.split(",").map((s) => s.trim()).filter(Boolean);
+      const searchTerms = search
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
 
       // Build OR conditions for each search term across all fields
       query.$or = searchTerms.flatMap((term) => {
@@ -74,13 +77,47 @@ export async function GET(req) {
           { district: regex },
           { locality: regex },
           { user_status: regex },
-          { status_notes: regex }
+          { status_notes: regex },
         ];
       });
     }
 
     // 5️⃣ Fetch user details from User table with filtering in DB
     const users = await User.find(query).sort({ created_at: -1 }).lean();
+
+    // 6️⃣ Add BV calculations to each user
+    for (const user of users) {
+      const leftUsers = user.infinity_left_users || [];
+      const rightUsers = user.infinity_right_users || [];
+
+      // Fetch only required users and only self_bv field for performance
+      const leftUserDocs = await User.find(
+        { user_id: { $in: leftUsers } },
+        { self_bv: 1 }
+      ).lean();
+
+      const rightUserDocs = await User.find(
+        { user_id: { $in: rightUsers } },
+        { self_bv: 1 }
+      ).lean();
+
+      const leftBV = leftUserDocs.reduce(
+        (sum, u) => sum + (u.self_bv || 0),
+        0
+      );
+      const rightBV = rightUserDocs.reduce(
+        (sum, u) => sum + (u.self_bv || 0),
+        0
+      );
+
+      const cumulativeBV =
+        leftBV > 0 && rightBV > 0 ? Math.min(leftBV, rightBV) : 0;
+
+      // Add to result object
+      user.leftBV = leftBV;
+      user.rightBV = rightBV;
+      user.cumulativeBV = cumulativeBV;
+    }
 
     return NextResponse.json({
       data: users,

@@ -86,8 +86,7 @@ export default function InfinityTeam() {
     if (!user?.user_id) return;
     fetchUsers(debouncedQuery);
 
-        goToPage(1);
-
+    goToPage(1);
   }, [debouncedQuery, user?.user_id]);
 
   // Edit user
@@ -130,47 +129,51 @@ export default function InfinityTeam() {
     }
   };
 
-  const allColumns = [
+  // assume logged-in user role
+  const currentUserRole = user?.role; // e.g. "admin"
+
+  const columns = [
     { field: "user_id", headerName: "User ID", flex: 1 },
     { field: "user_name", headerName: "User Name", flex: 1 },
-    { field: "contact", headerName: "Contact", flex: 1 },
-    { field: "mail", headerName: "Email", flex: 1.5 },
+
+    ...(currentUserRole === "admin"
+      ? [
+          { field: "contact", headerName: "Contact", flex: 1 },
+          { field: "mail", headerName: "Email", flex: 1.5 },
+        ]
+      : []),
+
     { field: "team", headerName: "Team", flex: 1 },
     { field: "level", headerName: "Level", flex: 1 },
+
     {
       field: "rank",
       headerName: "Rank",
       flex: 1,
-      renderCell: (params: any) => {
-  return params.value && params.value !== "none"
-    ? `${params.value} Star`
-    : "-";
-}
+      renderCell: (params: any) =>
+        params.value && params.value !== "none" ? `${params.value} Star` : "-",
     },
 
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 
-  // assume logged-in user role
-  const currentUserRole = user?.role; // e.g. "admin"
-
-  const columns =
-    currentUserRole === "admin"
-      ? allColumns
-      : allColumns.filter(
-          (col) => col.field !== "contact" && col.field !== "mail"
-        );
-
   const handlePageChange = useCallback(() => {
     // optional server pagination
   }, [query]);
 
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem,goToPage } =
-    usePagination({
-      totalItems,
-      itemsPerPage: 12,
-      onPageChange: handlePageChange,
-    });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({
+    totalItems,
+    itemsPerPage: 12,
+    onPageChange: handlePageChange,
+  });
 
   const handleAddUser = () => {
     router.push("/administration/users/adduser?team=left");
@@ -209,7 +212,7 @@ export default function InfinityTeam() {
           <Table
             columns={columns}
             rows={usersData}
-             currentPage={currentPage}
+            currentPage={currentPage}
             setCurrentPage={goToPage}
             rowIdField="_id"
             pageSize={12}
