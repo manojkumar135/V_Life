@@ -81,7 +81,7 @@ export default function RightTeam() {
         setLoading(false);
       }
     },
-    [user?.user_id, query,usersData]
+    [user?.user_id, query, usersData]
   );
 
   useEffect(() => {
@@ -152,31 +152,32 @@ export default function RightTeam() {
   };
 
   // assume logged-in user role
-const currentUserRole = user?.role; // e.g. "admin"
+  const currentUserRole = user?.role; // e.g. "admin"
 
-const columns = [
-  { field: "user_id", headerName: "User ID", flex: 1 },
-  { field: "user_name", headerName: "User Name", flex: 1 },
+  const columns = [
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_name", headerName: "User Name", flex: 1 },
 
-  ...(currentUserRole === "admin"
-    ? [
-        { field: "contact", headerName: "Contact", flex: 1 },
-        { field: "mail", headerName: "Email", flex: 1.5 },
-      ]
-    : []),
+    ...(currentUserRole === "admin"
+      ? [
+          { field: "contact", headerName: "Contact", flex: 1 },
+          { field: "mail", headerName: "Email", flex: 1.5 },
+          { field: "leftBV", headerName: "BV 1", flex: 1 },
+          { field: "rightBV", headerName: "BV 2", flex: 1 },
+          { field: "cumulativeBV ", headerName: "Cumulative", flex: 1 },
+        ]
+      : []),
 
-  {
-    field: "rank",
-    headerName: "Rank",
-    flex: 1,
-    renderCell: (params: any) =>
-      params.value && params.value !== "none"
-        ? `${params.value} Star`
-        : "-",
-  },
+    {
+      field: "rank",
+      headerName: "Rank",
+      flex: 1,
+      renderCell: (params: any) =>
+        params.value && params.value !== "none" ? `${params.value} Star` : "-",
+    },
 
-  { field: "user_status", headerName: "Status", flex: 1 },
-];
+    { field: "user_status", headerName: "Status", flex: 1 },
+  ];
 
   const handlePageChange = useCallback(
     (page: number, offset: number, limit: number) => {
