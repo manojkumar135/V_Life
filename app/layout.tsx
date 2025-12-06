@@ -36,7 +36,7 @@ export default async function RootLayout({
       >
         <VLifeContextProvider>
           <Toaster position="top-right" richColors closeButton />
-          <Layout>{children}</Layout>
+          {children}
         </VLifeContextProvider>
       </body>
     </html>
