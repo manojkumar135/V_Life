@@ -1,18 +1,15 @@
-// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { VLifeContextProvider } from "@/store/context";
-import { headers } from "next/headers";
 import { checkAuth } from "@/lib/checkAuth";
-// import Layout from "@/layout/Layout";
+import Layout from "@/layout/Layout";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -25,17 +22,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const headerStore = await headers();
-
-  // 🔥 Always gives correct route path
   const pathname = headerStore.get("x-matched-path") || "/";
 
-  const result = await checkAuth(pathname);
+  const redirectPath = await checkAuth(pathname);
 
-  if (result instanceof Response) {
-    return result; // redirect if unauthorized
-  }
+  if (redirectPath) redirect(redirectPath);
 
-  // Everything allowed → render UI layout
   return (
     <html lang="en">
       <body
@@ -44,7 +36,7 @@ export default async function RootLayout({
       >
         <VLifeContextProvider>
           <Toaster position="top-right" richColors closeButton />
-          {children}
+          <Layout>{children}</Layout>
         </VLifeContextProvider>
       </body>
     </html>

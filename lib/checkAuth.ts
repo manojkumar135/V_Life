@@ -1,11 +1,8 @@
-// lib/checkAuth.ts
-import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
 const secretKey = process.env.JWT_SECRET || "";
 
-// Public routes (no auth required)
 const PUBLIC_PATHS = [
   "/",
   "/auth/login",
@@ -20,10 +17,8 @@ const PUBLIC_PATHS = [
   "/api/success",
 ];
 
-export async function checkAuth(pathname: string) {
+export async function checkAuth(pathname: string): Promise<string | null> {
   const cookieStore = await cookies();
-  const url = new URL(pathname, "http://localhost");
-
   const accessToken = cookieStore.get("accessToken")?.value;
   const refreshToken = cookieStore.get("refreshToken")?.value;
 
@@ -31,40 +26,27 @@ export async function checkAuth(pathname: string) {
     pathname.startsWith(path)
   );
 
-  // Logged-in user trying to access /auth/login → redirect dashboard
   if ((accessToken || refreshToken) && pathname.startsWith("/auth/login")) {
-    url.pathname = "/dashboards";
-    return NextResponse.redirect(url);
+    return "/dashboards"; // redirect
   }
 
-  // Public route → allow as-is
   if (isPublic) return null;
 
-  // No tokens → redirect login
   if (!accessToken && !refreshToken) {
-    url.pathname = "/auth/login";
-    return NextResponse.redirect(url);
+    return "/auth/login"; // redirect
   }
 
-  // Access token exists → verify
   if (accessToken) {
     try {
       jwt.verify(accessToken, secretKey);
-      return null; // allow UI render
+      return null; // allow
     } catch {
-      // If invalid but refreshToken exists → allow refresh flow
-      if (refreshToken) return null;
-
-      // Force login
-      url.pathname = "/auth/login";
-      return NextResponse.redirect(url);
+      if (refreshToken) return null; // allow refresh flow
+      return "/auth/login";
     }
   }
 
-  // Only refresh token → allow refresh flow
   if (refreshToken) return null;
 
-  // Fallback: force login
-  url.pathname = "/auth/login";
-  return NextResponse.redirect(url);
+  return "/auth/login";
 }
