@@ -65,7 +65,6 @@ const Page = () => {
       setExpanded(isExpanded ? panel : false);
     };
 
-  const referralLink = "https://VLifeGlobal……………";
   const [previewOpen, setPreviewOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
@@ -91,10 +90,18 @@ const Page = () => {
     validationSchema: profileSchema,
     onSubmit: async (values) => {
       setLoading(true);
+
+      const formattedValues = {
+        ...values,
+        userName: toTitleCase(values.userName),
+        address: toTitleCase(values.address),
+        // locality: toTitleCase(values.locality),
+      };
+
       try {
         const res = await axios.patch("/api/users-operations", {
           user_id: user.user_id, // ✅ important
-          ...values,
+          ...formattedValues,
         });
 
         if (res.data.success) {
@@ -227,11 +234,6 @@ const Page = () => {
     }
   }, [user]);
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    ShowToast.success("Referral link copied to clipboard!");
-  };
-
   return (
     <>
       {loading && (
@@ -351,7 +353,7 @@ const Page = () => {
                   label="D.No / Street"
                   name="address"
                   placeholder="D.NO : 123, left street"
-                  value={toTitleCase(formik.values.address)}
+                  value={formik.values.address}
                   onChange={formik.handleChange}
                   onBlur={formik.handleBlur}
                   error={
@@ -417,7 +419,9 @@ const Page = () => {
                   label="Locality"
                   name="locality"
                   value={formik.values.locality}
-                  onChange={formik.handleChange}
+                  onChange={(selected) =>
+                    formik.setFieldValue("locality", selected?.value || "")
+                  }
                   onBlur={formik.handleBlur}
                   options={localityOptions}
                   error={
