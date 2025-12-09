@@ -55,6 +55,7 @@ export default function LoginPage() {
             user_name: res.data.data.user_name,
             role: res.data.data.role,
             mail: res.data.data.mail,
+            gender: res.data.data.gender,
             contact: res.data.data.contact,
             status: res.data.data.status,
             theme: res.data.data.theme,

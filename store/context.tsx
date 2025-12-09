@@ -44,6 +44,8 @@ export interface UserType {
   user_id: string;
   user_name: string;
   dob: string;
+  gender?: string;
+  blood?: string;
   rank: string;
   role: string;
   mail: string;
@@ -84,6 +86,8 @@ const defaultUser: UserType = {
   login_id: "",
   user_id: "",
   user_name: "",
+  gender: "",
+  blood: "",
   dob: "",
   rank: "",
   role: "",

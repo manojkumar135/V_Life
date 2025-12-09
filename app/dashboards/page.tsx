@@ -25,6 +25,7 @@ import { MdOutlineCheckCircle } from "react-icons/md";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { MdOutlineAttachMoney } from "react-icons/md";
 import { FaPercent } from "react-icons/fa";
+import { CiEdit } from "react-icons/ci";
 
 interface DashboardSummary {
   user_id: string;
@@ -201,7 +202,7 @@ const DashboardPage: React.FC = () => {
     // Copy URL to clipboard
     await navigator.clipboard.writeText(link);
 
-    const orgName = position === "left" ? "Organization 1" : "Organization 2";
+    const orgName = position === "left" ? "Left Team" : "Right Team";
     showToast.success(`Copied ${orgName} link to share`);
   };
 
@@ -257,10 +258,19 @@ const DashboardPage: React.FC = () => {
             {/* Profile Card */}
             <div
               className="bg-white
- rounded-2xl shadow-md p-6 max-md:p-3 border-[1.5px] border-gray-300"
+ rounded-2xl shadow-md p-6 max-md:p-3 border-[1.5px] border-gray-300 relative"
             >
+                <div
+                    onClick={() => router.push("/settings")}
+                    className="absolute bottom-2 right-5 flex items-center gap-1 cursor-pointer
+             text-black hover:text-blue-700 text-xs md:text-sm"
+                  >
+                    <CiEdit className="w-4 h-4 md:w-5 md:h-5" />
+                    <span>Edit</span>
+                  </div>
               <div className="flex flex-col md:flex-row justify-center  lg:flex-col items-center text-center">
                 <div className="w-24 h-24 mb-4 md:w-28 md:h-28 border-0 border-gray-600 rounded-full flex items-center justify-center bg-white shadow-lg md:mr-12 lg:mr-0">
+                
                   <img
                     src={
                       user.profile ||
@@ -335,6 +345,13 @@ const DashboardPage: React.FC = () => {
                     </span>
                     <span className="w-3 mx-1 text-center">:</span>
                     <span>{user?.activated_date || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="font-semibold w-25 text-left ">
+                      Blood Group
+                    </span>
+                    <span className="w-3 mx-1 text-center">:</span>
+                    <span>{user?.blood || "N/A"}</span>
                   </div>
                   {/* <div className="flex items-center">
                     <span className="font-semibold w-27 text-left ">
@@ -415,11 +432,11 @@ const DashboardPage: React.FC = () => {
               {/* --- Maverick Links --- */}
               <InfoCard title="Maverick Links">
                 <LinkButton
-                  text="JOIN ORGANISATION 1"
+                  text="JOIN LEFT TEAM"
                   onClick={() => handleCopyLink("left")}
                 />
                 <LinkButton
-                  text="JOIN ORGANISATION 2"
+                  text="JOIN RIGHT TEAM"
                   onClick={() => handleCopyLink("right")}
                 />
                 <LinkButton text="SHOPPING LINK" onClick={handleShopping} />
@@ -461,9 +478,7 @@ const DashboardPage: React.FC = () => {
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Days from Activation"
-                  value={`${
-                    cycles?.daysPassed?.toString() || "0"
-                  } days`}
+                  value={`${cycles?.daysPassed?.toString() || "0"} days`}
                 />
 
                 <DashBox

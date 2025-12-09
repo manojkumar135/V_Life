@@ -112,7 +112,7 @@ export async function POST(req: Request) {
       user_name,
       user_id,
       link,
-      position === "left" ? "Organization 1" : "Organization 2"
+      position === "left" ? "Left Team" : "Right Team"
     );
 
     // Send mail

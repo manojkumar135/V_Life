@@ -39,6 +39,14 @@ const UserSchema = new mongoose.Schema(
     status_notes: { type: String },
     user_status: { type: String, default: "inactive" },
 
+    gst:{type:String},
+    blood:{type:String},
+    landmark:{type:String},
+    nominee_name:{type:String},
+    nominee_relation:{type:String},
+    nominee_dob:{type:String},
+    alternate_contact:{type:String},
+
     // 🔗 Referral / Upline
     referBy: { type: String },
     infinity: { type: String },

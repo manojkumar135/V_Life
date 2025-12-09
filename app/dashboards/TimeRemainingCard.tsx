@@ -106,7 +106,7 @@ const TimeRemainingCard = () => {
       }`}
     >
       {/* Countdown */}
-      <div className=" mx-auto  flex items-center gap-1 w-full justify-center py-3 max-md:pt-0 max-lg:mb-3">
+      <div className=" mx-auto  flex items-center gap-1 w-full justify-center py-2 max-md:pt-0 max-lg:mb-3">
         <FaRegClock className="text-gray-700" size={25} />
         <p
           className={`max-md:text-xl text-3xl font-semibold ml-1 ${
@@ -122,10 +122,10 @@ const TimeRemainingCard = () => {
       {loading ? (
         <p className="text-sm text-gray-500 animate-pulse">Loading...</p>
       ) : (
-        <div className="flex  items-center gap-8 max-md:gap-6 w-full  lg:py-4">
+        <div className="flex  items-center gap-8 max-md:gap-6 w-full  lg:py-2">
           <div className="flex flex-col items-center px-1 w-1/2">
             <p className="text-sm text-gray-800 font-semibold font-sans">
-              Organization 1 PV
+              Left Team PV
             </p>
 
             <p className="text-xl font-semibold text-green-600">
@@ -135,7 +135,7 @@ const TimeRemainingCard = () => {
 
           <div className="flex flex-col items-center w-1/2">
             <p className="text-sm text-gray-800 font-semibold font-sans">
-              Organization 2 PV
+              Right Team PV
             </p>
 
             <p className="text-xl font-semibold text-pink-600">

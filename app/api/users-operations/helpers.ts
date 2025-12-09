@@ -449,7 +449,7 @@ async function createTreeNode(
 export async function createUserAndLogin(
   body: CreateUserInput
 ): Promise<CreatedResult> {
-  const { mail, contact, user_name, referBy, team, parent } = body;
+  const { mail, contact, user_name, referBy, team, parent,gender } = body;
 
   if (!mail || !contact || !user_name || !referBy || !team)
     throw new Error("Required fields missing");
@@ -523,6 +523,7 @@ export async function createUserAndLogin(
     user_name: body.user_name,
     mail: body.mail,
     contact: body.contact,
+    gender: body.gender,
     password: hashedPassword,
     status: "inactive",
   });

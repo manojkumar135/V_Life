@@ -26,24 +26,6 @@ const Page = () => {
           />
         )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {/* Left Team Card */}
-          <div
-            onClick={() => router.push("/administration/users/left")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
-          >
-            <Users size={32} className="transform scale-x-[-1]" />
-            <span className="mt-2 text-lg font-semibold">Organization 1</span>
-          </div>
-
-          {/* Right Team Card */}
-          <div
-            onClick={() => router.push("/administration/users/right")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
-          >
-            <Users size={32} />
-            <span className="mt-2 text-lg font-semibold">Organization 2</span>
-          </div>
-
           {/* Tree View Card */}
           <div
             onClick={() => router.push(`/administration/users/tree`)}
@@ -53,6 +35,25 @@ const Page = () => {
             <span className="mt-2 text-lg font-semibold">Tree View</span>
           </div>
 
+          {/* Left Team Card */}
+          <div
+            onClick={() => router.push("/administration/users/left")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <Users size={32} className="transform scale-x-[-1]" />
+            <span className="mt-2 text-lg font-semibold">Left Team</span>
+          </div>
+
+          {/* Right Team Card */}
+          <div
+            onClick={() => router.push("/administration/users/right")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <Users size={32} />
+            <span className="mt-2 text-lg font-semibold">Right Team</span>
+          </div>
+
+          
           {/* Direct Team Card */}
           <div
             onClick={() => router.push("/administration/users/direct")}

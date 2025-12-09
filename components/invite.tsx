@@ -66,7 +66,7 @@ export default function InvitePage() {
             onClick={() => sendInvite("left")}
             className="flex justify-center items-center gap-2 max-md:text-[12px]  "
           >
-            Organization 1 <IoIosSend  size={20} />
+            Left Team <IoIosSend  size={20} />
           </SubmitButton>
 
           {/* Right Team Invite */}
@@ -74,7 +74,7 @@ export default function InvitePage() {
             onClick={() => sendInvite("right")}
             className="flex justify-center items-center gap-2 max-md:text-[12px] "
           >
-            Organization 2 <IoIosSend  size={20} />
+            Right Team <IoIosSend  size={20} />
           </SubmitButton>
         </div>
       </div>

@@ -12,6 +12,8 @@ import { FiMail } from "react-icons/fi";
 import { FaUser, FaPhone, FaUsers } from "react-icons/fa";
 import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
+import { FaTransgender } from "react-icons/fa";
+
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -27,8 +29,14 @@ import Images from "@/constant/Image";
 export const dynamic = "force-dynamic";
 
 const teams = [
-  { value: "left", label: "Organization 1" },
-  { value: "right", label: "Organization 2" },
+  { value: "left", label: "Left Team" },
+  { value: "right", label: "Right Team" },
+];
+
+const gender = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "others", label: "Others" },
 ];
 
 function RegisterContent() {
@@ -63,6 +71,7 @@ function RegisterContent() {
       team: "",
       parent: "",
       terms: false,
+      gender: "",
     },
     validationSchema: Yup.object({
       user_name: Yup.string()
@@ -91,6 +100,7 @@ function RegisterContent() {
         }),
       referBy: Yup.string().required("* Referral ID is required"),
       team: Yup.string().required("* Team is required"),
+      gender: Yup.string().required("* Gender is required"),
     }),
     onSubmit: async (values) => {
       setLoading(true);
@@ -212,148 +222,181 @@ function RegisterContent() {
               </span>
             </div>
 
-            {/* DOB */}
-            <div>
-              <div className="relative" inputMode="none">
-                <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
-                <DatePicker
-                  selected={
-                    formik.values.dob ? new Date(formik.values.dob) : null
-                  }
-                  onChange={(date: Date | null) => {
-                    formik.setFieldValue(
-                      "dob",
-                      date ? date.toISOString().split("T")[0] : ""
-                    );
-                  }}
-                  onBlur={() => formik.setFieldTouched("dob", true)}
-                  dateFormat="dd-MM-yyyy"
-                  placeholderText="Date of Birth"
-                  maxDate={new Date()}
-                  showYearDropdown
-                  showMonthDropdown
-                  scrollableYearDropdown
-                  yearDropdownItemNumber={100}
-                  popperPlacement="bottom-start"
-                  popperClassName="z-[9999]"
-                  onKeyDown={(e) => e.preventDefault()}
-                  shouldCloseOnSelect
-                  calendarClassName="custom-datepicker-calendar"
-                  className={`w-full pl-10 pr-4 py-1 rounded-md border ${
-                    formik.touched.dob && formik.errors.dob
-                      ? "border-red-500"
-                      : "border-gray-400"
-                  } focus:ring-2 focus:ring-gray-200`}
-                  renderCustomHeader={({
-                    date,
-                    changeYear,
-                    changeMonth,
-                    decreaseMonth,
-                    increaseMonth,
-                    prevMonthButtonDisabled,
-                    nextMonthButtonDisabled,
-                  }) => {
-                    const currentYear = new Date().getFullYear();
-                    const years = Array.from(
-                      { length: 101 },
-                      (_, i) => currentYear - i
-                    ); // Descending years
-                    const monthOptions = Array.from({ length: 12 }).map(
-                      (_, m) => ({
-                        value: m,
-                        label: new Date(0, m).toLocaleString("default", {
-                          month: "long",
-                        }),
-                      })
-                    );
-                    const yearOptions = years.map((y) => ({
-                      value: y,
-                      label: y.toString(),
-                    }));
+            {/* DOB + Gender Row */}
+            <div className="grid grid-cols-1 xl:grid-cols-7 gap-3">
+              {/* DOB */}
+              <div className="xl:col-span-4">
+                <div className="relative" inputMode="none">
+                  <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
+                  <DatePicker
+                    selected={
+                      formik.values.dob ? new Date(formik.values.dob) : null
+                    }
+                    onChange={(date: Date | null) => {
+                      if (!date) return formik.setFieldValue("dob", "");
 
-                    const selectedMonth = monthOptions.find(
-                      (m) => m.value === date.getMonth()
-                    );
-                    const selectedYear = yearOptions.find(
-                      (y) => y.value === date.getFullYear()
-                    );
+                      const localDate = new Date(
+                        date.getTime() - date.getTimezoneOffset() * 60000
+                      )
+                        .toISOString()
+                        .split("T")[0];
 
-                    return (
-                      <div className="flex items-center justify-center gap-2 px-2 py-1 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={decreaseMonth}
-                          disabled={prevMonthButtonDisabled}
-                          className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
-                        >
-                          ‹
-                        </button>
-                        <div className="min-w-[100px] xl:min-w-[120px]">
-                          <Select
-                            options={monthOptions}
-                            value={selectedMonth}
-                            onChange={(selected) =>
-                              selected && changeMonth(selected.value)
-                            }
-                            styles={{
-                              control: (base) => ({
-                                ...base,
-                                minHeight: "34px",
-                                fontSize: "0.85rem",
-                              }),
-                              menu: (base) => ({
-                                ...base,
-                                zIndex: 9999,
-                                fontSize: "0.85rem",
-                              }),
-                            }}
-                            menuPortalTarget={document.body}
-                            menuPosition="fixed"
-                          />
+                      formik.setFieldValue("dob", localDate);
+                    }}
+                    onBlur={() => formik.setFieldTouched("dob", true)}
+                    dateFormat="dd-MM-yyyy"
+                    placeholderText="Date of Birth"
+                    maxDate={new Date()}
+                    showYearDropdown
+                    showMonthDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    popperPlacement="bottom-start"
+                    popperClassName="z-[999] xl:w-[350px]"
+                    onKeyDown={(e) => e.preventDefault()}
+                    shouldCloseOnSelect
+                    calendarClassName="custom-datepicker-calendar"
+                    className={`w-full pl-10 pr-4 py-1 rounded-md border ${
+                      formik.touched.dob && formik.errors.dob
+                        ? "border-red-500"
+                        : "border-gray-400"
+                    } focus:ring-2 focus:ring-gray-200`}
+                    renderCustomHeader={({
+                      date,
+                      changeYear,
+                      changeMonth,
+                      decreaseMonth,
+                      increaseMonth,
+                      prevMonthButtonDisabled,
+                      nextMonthButtonDisabled,
+                    }) => {
+                      const currentYear = new Date().getFullYear();
+                      const years = Array.from(
+                        { length: 101 },
+                        (_, i) => currentYear - i
+                      );
+                      const monthOptions = Array.from({ length: 12 }).map(
+                        (_, m) => ({
+                          value: m,
+                          label: new Date(0, m).toLocaleString("default", {
+                            month: "long",
+                          }),
+                        })
+                      );
+                      const yearOptions = years.map((y) => ({
+                        value: y,
+                        label: y.toString(),
+                      }));
+
+                      return (
+                        <div className="flex items-center justify-between w-full px-2 py-1">
+                          <button
+                            type="button"
+                            onClick={decreaseMonth}
+                            disabled={prevMonthButtonDisabled}
+                            className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
+                          >
+                            ‹
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            <div className="min-w-[100px]">
+                              <Select
+                                options={monthOptions}
+                                value={monthOptions.find(
+                                  (m) => m.value === date.getMonth()
+                                )}
+                                onChange={(selected) =>
+                                  selected && changeMonth(selected.value)
+                                }
+                                styles={{
+                                  control: (base) => ({
+                                    ...base,
+                                    minHeight: "34px",
+                                    fontSize: "0.85rem",
+                                  }),
+                                  menu: (base) => ({ ...base, zIndex: 9999 }),
+                                }}
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                              />
+                            </div>
+
+                            <div className="min-w-[80px]">
+                              <Select
+                                options={yearOptions}
+                                value={yearOptions.find(
+                                  (y) => y.value === date.getFullYear()
+                                )}
+                                onChange={(selected) =>
+                                  selected && changeYear(selected.value)
+                                }
+                                styles={{
+                                  control: (base) => ({
+                                    ...base,
+                                    minHeight: "34px",
+                                    fontSize: "0.85rem",
+                                  }),
+                                  menu: (base) => ({ ...base, zIndex: 9999 }),
+                                }}
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={increaseMonth}
+                            disabled={nextMonthButtonDisabled}
+                            className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
+                          >
+                            ›
+                          </button>
                         </div>
-                        <div className="min-w-[80px] xl:min-w-[100px] ">
-                          <Select
-                            options={yearOptions}
-                            value={selectedYear}
-                            onChange={(selected) =>
-                              selected && changeYear(selected.value)
-                            }
-                            styles={{
-                              control: (base) => ({
-                                ...base,
-                                minHeight: "34px",
-                                fontSize: "0.85rem",
-                              }),
-                              menu: (base) => ({
-                                ...base,
-                                zIndex: 9999,
-                                // maxHeight: "200px",
-                                fontSize: "0.85rem",
-                                overflowY: "auto",
-                              }),
-                            }}
-                            menuPortalTarget={document.body}
-                            menuPosition="fixed"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={increaseMonth}
-                          disabled={nextMonthButtonDisabled}
-                          className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
-                        >
-                          ›
-                        </button>
-                      </div>
-                    );
-                  }}
-                />
+                      );
+                    }}
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.dob && formik.errors.dob
+                    ? formik.errors.dob
+                    : "\u00A0"}
+                </span>
               </div>
-              <span className="text-red-500 text-xs mt-1 block">
-                {formik.touched.dob && formik.errors.dob
-                  ? formik.errors.dob
-                  : "\u00A0"}
-              </span>
+
+              {/* Gender */}
+              <div className="xl:col-span-3">
+                <div className="relative">
+                  <FaTransgender className="absolute left-3 top-2.5 text-gray-500" />
+                  <Select
+                    options={gender}
+                    name="gender"
+                    value={gender.find((t) => t.value === formik.values.gender)}
+                    onChange={(opt) =>
+                      formik.setFieldValue("gender", opt?.value || "")
+                    }
+                    onBlur={() => formik.setFieldTouched("gender", true)}
+                    styles={{
+                      ...customSelectStyles,
+                      control: (base, state) => ({
+                        ...customSelectStyles.control?.(base, state),
+                        height: "34px", // 👈 3/7 Height
+                        minHeight: "34px",
+                        paddingLeft: "20px", // icon space alignment
+                      }),
+                    }}
+                    // isDisabled={isTeamPreset}
+                    placeholder="Gender"
+                    className="w-auto"
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.gender && formik.errors.gender
+                    ? formik.errors.gender
+                    : "\u00A0"}
+                </span>
+              </div>
             </div>
 
             {/* Email */}
@@ -436,7 +479,7 @@ function RegisterContent() {
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
                   isDisabled={isTeamPreset}
-                  placeholder="Select Organization"
+                  placeholder="Select Team"
                   className="w-full"
                 />
               </div>
@@ -455,7 +498,9 @@ function RegisterContent() {
                 checked={formik.values.terms}
                 onChange={formik.handleChange}
                 className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer
-                 checked:bg-[#106187] checked:border-[#106187] relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:text-white checked:after:text-white"
+                 checked:bg-[#106187] checked:border-[#106187] relative checked:before:content-['✔'] checked:before:absolute 
+                 checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem]
+                  checked:before:text-white checked:after:text-white"
               />
               {/* <label htmlFor="terms" className="text-xs text-gray-700">
                 I agree to the{" "}

@@ -2,6 +2,8 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Image from "next/image";
+
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import Select from "react-select";
@@ -11,6 +13,7 @@ import { FaUser, FaPhone, FaUsers } from "react-icons/fa";
 import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
 import { IoIosArrowBack } from "react-icons/io";
+import { FaTransgender } from "react-icons/fa";
 
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import DatePicker from "react-datepicker";
@@ -21,23 +24,30 @@ import Loader from "@/components/common/loader";
 import TermsModal from "@/components/TermsModal/terms";
 import customSelectStyles from "@/components/common/CustomSelectStyles";
 
+import Images from "@/constant/Image";
+
 export const dynamic = "force-dynamic";
 
 const teams = [
-  { value: "left", label: "Organization 1" },
-  { value: "right", label: "Organization 2" },
+  { value: "left", label: "Left Team" },
+  { value: "right", label: "Right Team" },
+];
+
+const gender = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
 ];
 
 function RegisterContent() {
   const [loading, setLoading] = useState(false);
   // const [isTermsOpen, setIsTermsOpen] = useState(false);
-   const [modalType, setModalType] = useState<
-      "terms" | "privacy" | "refund" | null
-    >(null);
-  
-    const openModal = (type: "terms" | "privacy" | "refund") =>
-      setModalType(type);
-    const closeModal = () => setModalType(null);
+  const [modalType, setModalType] = useState<
+    "terms" | "privacy" | "refund" | null
+  >(null);
+
+  const openModal = (type: "terms" | "privacy" | "refund") =>
+    setModalType(type);
+  const closeModal = () => setModalType(null);
 
   const router = useRouter();
   const params = useSearchParams();
@@ -54,6 +64,7 @@ function RegisterContent() {
       team: "",
       parent: "",
       terms: false,
+      gender: "",
     },
     validationSchema: Yup.object({
       user_name: Yup.string()
@@ -82,6 +93,7 @@ function RegisterContent() {
         }),
       referBy: Yup.string().required("* Referral ID is required"),
       team: Yup.string().required("* Team is required"),
+      gender: Yup.string().required("* Gender is required"),
     }),
     onSubmit: async (values) => {
       setLoading(true);
@@ -116,7 +128,7 @@ function RegisterContent() {
   const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
-    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#FFFDD0]">
+    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden  bg-[#106187]/85">
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
@@ -127,14 +139,22 @@ function RegisterContent() {
         className="absolute top-4 left-4  flex items-center gap-2 cursor-pointer z-30"
         onClick={() => router.back()}
       >
-        <IoIosArrowBack size={28} className="text-black" />
-        <p className="font-medium text-black">Back</p>
+        <IoIosArrowBack size={28} className="text-white" />
+        <p className="font-semibold text-white">Back</p>
       </div>
 
       {/* Form Section */}
       <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6 max-md:mt-8">
         <div className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200 max-md:mt-10">
-          <p className="text-[1.5rem] font-bold text-black mb-5">SIGN UP</p>
+          <Image
+            src={Images.MaverickLogo}
+            alt="Logo"
+            width={150}
+            height={80}
+            className="mb-5 border-0 border-black"
+          />
+
+          {/* <p className="text-[1.5rem] font-bold text-black mb-5">SIGN UP</p> */}
 
           <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
             {/* Name */}
@@ -158,148 +178,181 @@ function RegisterContent() {
               </span>
             </div>
 
-            {/* DOB */}
-            <div>
-              <div className="relative" inputMode="none">
-                <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
-                <DatePicker
-                  selected={
-                    formik.values.dob ? new Date(formik.values.dob) : null
-                  }
-                  onChange={(date: Date | null) => {
-                    formik.setFieldValue(
-                      "dob",
-                      date ? date.toISOString().split("T")[0] : ""
-                    );
-                  }}
-                  onBlur={() => formik.setFieldTouched("dob", true)}
-                  dateFormat="dd-MM-yyyy"
-                  placeholderText="Date of Birth"
-                  maxDate={new Date()}
-                  showYearDropdown
-                  showMonthDropdown
-                  scrollableYearDropdown
-                  yearDropdownItemNumber={100}
-                  popperPlacement="bottom-start"
-                  popperClassName="z-[9999]"
-                  onKeyDown={(e) => e.preventDefault()}
-                  shouldCloseOnSelect
-                  calendarClassName="custom-datepicker-calendar"
-                  className={`w-full pl-10 pr-4 py-1 rounded-md border ${
-                    formik.touched.dob && formik.errors.dob
-                      ? "border-red-500"
-                      : "border-gray-400"
-                  } focus:ring-2 focus:ring-gray-200`}
-                  renderCustomHeader={({
-                    date,
-                    changeYear,
-                    changeMonth,
-                    decreaseMonth,
-                    increaseMonth,
-                    prevMonthButtonDisabled,
-                    nextMonthButtonDisabled,
-                  }) => {
-                    const currentYear = new Date().getFullYear();
-                    const years = Array.from(
-                      { length: 101 },
-                      (_, i) => currentYear - i
-                    ); // Descending years
-                    const monthOptions = Array.from({ length: 12 }).map(
-                      (_, m) => ({
-                        value: m,
-                        label: new Date(0, m).toLocaleString("default", {
-                          month: "long",
-                        }),
-                      })
-                    );
-                    const yearOptions = years.map((y) => ({
-                      value: y,
-                      label: y.toString(),
-                    }));
+            {/* DOB + Gender Row */}
+            <div className="grid grid-cols-1 xl:grid-cols-7 gap-3">
+              {/* DOB */}
+              <div className="xl:col-span-4">
+                <div className="relative" inputMode="none">
+                  <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
+                  <DatePicker
+                    selected={
+                      formik.values.dob ? new Date(formik.values.dob) : null
+                    }
+                    onChange={(date: Date | null) => {
+                      if (!date) return formik.setFieldValue("dob", "");
 
-                    const selectedMonth = monthOptions.find(
-                      (m) => m.value === date.getMonth()
-                    );
-                    const selectedYear = yearOptions.find(
-                      (y) => y.value === date.getFullYear()
-                    );
+                      const localDate = new Date(
+                        date.getTime() - date.getTimezoneOffset() * 60000
+                      )
+                        .toISOString()
+                        .split("T")[0];
 
-                    return (
-                      <div className="flex items-center justify-center gap-2 px-2 py-1 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={decreaseMonth}
-                          disabled={prevMonthButtonDisabled}
-                          className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
-                        >
-                          ‹
-                        </button>
-                        <div className="min-w-[100px] xl:min-w-[120px]">
-                          <Select
-                            options={monthOptions}
-                            value={selectedMonth}
-                            onChange={(selected) =>
-                              selected && changeMonth(selected.value)
-                            }
-                            styles={{
-                              control: (base) => ({
-                                ...base,
-                                minHeight: "34px",
-                                fontSize: "0.85rem",
-                              }),
-                              menu: (base) => ({
-                                ...base,
-                                zIndex: 9999,
-                                fontSize: "0.85rem",
-                              }),
-                            }}
-                            menuPortalTarget={document.body}
-                            menuPosition="fixed"
-                          />
+                      formik.setFieldValue("dob", localDate);
+                    }}
+                    onBlur={() => formik.setFieldTouched("dob", true)}
+                    dateFormat="dd-MM-yyyy"
+                    placeholderText="Date of Birth"
+                    maxDate={new Date()}
+                    showYearDropdown
+                    showMonthDropdown
+                    scrollableYearDropdown
+                    yearDropdownItemNumber={100}
+                    popperPlacement="bottom-start"
+                    popperClassName="z-[999] xl:w-[350px]"
+                    onKeyDown={(e) => e.preventDefault()}
+                    shouldCloseOnSelect
+                    calendarClassName="custom-datepicker-calendar"
+                    className={`w-full pl-10 pr-4 py-1 rounded-md border ${
+                      formik.touched.dob && formik.errors.dob
+                        ? "border-red-500"
+                        : "border-gray-400"
+                    } focus:ring-2 focus:ring-gray-200`}
+                    renderCustomHeader={({
+                      date,
+                      changeYear,
+                      changeMonth,
+                      decreaseMonth,
+                      increaseMonth,
+                      prevMonthButtonDisabled,
+                      nextMonthButtonDisabled,
+                    }) => {
+                      const currentYear = new Date().getFullYear();
+                      const years = Array.from(
+                        { length: 101 },
+                        (_, i) => currentYear - i
+                      );
+                      const monthOptions = Array.from({ length: 12 }).map(
+                        (_, m) => ({
+                          value: m,
+                          label: new Date(0, m).toLocaleString("default", {
+                            month: "long",
+                          }),
+                        })
+                      );
+                      const yearOptions = years.map((y) => ({
+                        value: y,
+                        label: y.toString(),
+                      }));
+
+                      return (
+                        <div className="flex items-center justify-between w-full px-2 py-1">
+                          <button
+                            type="button"
+                            onClick={decreaseMonth}
+                            disabled={prevMonthButtonDisabled}
+                            className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
+                          >
+                            ‹
+                          </button>
+
+                          <div className="flex items-center gap-2">
+                            <div className="min-w-[100px]">
+                              <Select
+                                options={monthOptions}
+                                value={monthOptions.find(
+                                  (m) => m.value === date.getMonth()
+                                )}
+                                onChange={(selected) =>
+                                  selected && changeMonth(selected.value)
+                                }
+                                styles={{
+                                  control: (base) => ({
+                                    ...base,
+                                    minHeight: "34px",
+                                    fontSize: "0.85rem",
+                                  }),
+                                  menu: (base) => ({ ...base, zIndex: 9999 }),
+                                }}
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                              />
+                            </div>
+
+                            <div className="min-w-[80px]">
+                              <Select
+                                options={yearOptions}
+                                value={yearOptions.find(
+                                  (y) => y.value === date.getFullYear()
+                                )}
+                                onChange={(selected) =>
+                                  selected && changeYear(selected.value)
+                                }
+                                styles={{
+                                  control: (base) => ({
+                                    ...base,
+                                    minHeight: "34px",
+                                    fontSize: "0.85rem",
+                                  }),
+                                  menu: (base) => ({ ...base, zIndex: 9999 }),
+                                }}
+                                menuPortalTarget={document.body}
+                                menuPosition="fixed"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={increaseMonth}
+                            disabled={nextMonthButtonDisabled}
+                            className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
+                          >
+                            ›
+                          </button>
                         </div>
-                        <div className="min-w-[80px] xl:min-w-[100px] ">
-                          <Select
-                            options={yearOptions}
-                            value={selectedYear}
-                            onChange={(selected) =>
-                              selected && changeYear(selected.value)
-                            }
-                            styles={{
-                              control: (base) => ({
-                                ...base,
-                                minHeight: "34px",
-                                fontSize: "0.85rem",
-                              }),
-                              menu: (base) => ({
-                                ...base,
-                                zIndex: 9999,
-                                // maxHeight: "200px",
-                                fontSize: "0.85rem",
-                                overflowY: "auto",
-                              }),
-                            }}
-                            menuPortalTarget={document.body}
-                            menuPosition="fixed"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={increaseMonth}
-                          disabled={nextMonthButtonDisabled}
-                          className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
-                        >
-                          ›
-                        </button>
-                      </div>
-                    );
-                  }}
-                />
+                      );
+                    }}
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.dob && formik.errors.dob
+                    ? formik.errors.dob
+                    : "\u00A0"}
+                </span>
               </div>
-              <span className="text-red-500 text-xs mt-1 block">
-                {formik.touched.dob && formik.errors.dob
-                  ? formik.errors.dob
-                  : "\u00A0"}
-              </span>
+
+              {/* Gender */}
+              <div className="xl:col-span-3">
+                <div className="relative">
+                  <FaTransgender className="absolute left-3 top-2.5 text-gray-500" />
+                  <Select
+                    options={gender}
+                    name="gender"
+                    value={gender.find((t) => t.value === formik.values.gender)}
+                    onChange={(opt) =>
+                      formik.setFieldValue("gender", opt?.value || "")
+                    }
+                    onBlur={() => formik.setFieldTouched("gender", true)}
+                    styles={{
+                      ...customSelectStyles,
+                      control: (base, state) => ({
+                        ...customSelectStyles.control?.(base, state),
+                        height: "34px", // 👈 3/7 Height
+                        minHeight: "34px",
+                        paddingLeft: "20px", // icon space alignment
+                      }),
+                    }}
+                    // isDisabled={isTeamPreset}
+                    placeholder="Gender"
+                    className="w-auto"
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.gender && formik.errors.gender
+                    ? formik.errors.gender
+                    : "\u00A0"}
+                </span>
+              </div>
             </div>
 
             {/* Email */}
@@ -378,7 +431,7 @@ function RegisterContent() {
                   }
                   onBlur={() => formik.setFieldTouched("team", true)}
                   styles={customSelectStyles}
-                  placeholder="Select Organization"
+                  placeholder="Select Team"
                   className="w-full"
                 />
               </div>
@@ -396,7 +449,10 @@ function RegisterContent() {
                 name="terms"
                 checked={formik.values.terms}
                 onChange={formik.handleChange}
-                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer checked:bg-yellow-500 checked:border-yellow-500 relative checked:before:content-['✔'] checked:before:absolute checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem] checked:before:text-black"
+                className="h-4 w-4 border border-gray-400 rounded bg-white appearance-none cursor-pointer
+                 checked:bg-[#106187] checked:border-[#106187] relative checked:before:content-['✔'] checked:before:absolute 
+                 checked:before:top-[1px] checked:before:left-1/2 checked:before:-translate-x-1/2 checked:before:text-[0.75rem]
+                  checked:before:text-white checked:after:text-white"
               />
               <label htmlFor="terms" className="text-xs text-gray-700">
                 I agree to the{" "}
@@ -404,14 +460,14 @@ function RegisterContent() {
                   className="text-blue-600 cursor-pointer"
                   onClick={() => openModal("terms")}
                 >
-                  Terms 
+                  Terms
                 </span>
                 ,{" "}
                 <span
                   className="text-blue-600 cursor-pointer"
                   onClick={() => openModal("privacy")}
                 >
-                  Privacy 
+                  Privacy
                 </span>{" "}
                 and{" "}
                 <span
@@ -438,7 +494,7 @@ function RegisterContent() {
                 !formik.dirty ||
                 !formik.values.terms
                   ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-[#FFD700] text-black hover:bg-yellow-400 cursor-pointer"
+                  : "bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
               }`}
             >
               Register
