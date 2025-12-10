@@ -3,9 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
 
-/**
- * Collect DOWNLINE ONLY (binary children recursively)
- */
+/** Collect DOWNLINE ONLY (binary children recursively) */
 function collectDescendants(
   startId: string,
   nodeMap: Map<string, any>,
@@ -18,7 +16,6 @@ function collectDescendants(
     collected.add(node.left);
     collectDescendants(node.left, nodeMap, collected);
   }
-
   if (node.right) {
     collected.add(node.right);
     collectDescendants(node.right, nodeMap, collected);
@@ -27,9 +24,24 @@ function collectDescendants(
   return collected;
 }
 
-/**
- * Build binary subtree
- */
+/** Pre-calculate infinity PV/BV in userMap */
+function calculateInfinityValues(userMap: Map<string, any>) {
+  for (const [id, user] of userMap) {
+    const leftUsers = user.infinity_left_users || [];
+    const rightUsers = user.infinity_right_users || [];
+
+    const leftDocs = leftUsers.map((uId: string) => userMap.get(uId));
+    const rightDocs = rightUsers.map((uId: string) => userMap.get(uId));
+
+    user.leftBV = leftDocs.reduce((s: number, u: { bv?: number } | undefined) => s + (u?.bv || 0), 0);
+    user.rightBV = rightDocs.reduce((s: number, u: { bv?: number } | undefined) => s + (u?.bv || 0), 0);
+
+    user.leftPV = leftDocs.reduce((s: number, u: { pv?: number } | undefined) => s + (u?.pv || 0), 0);
+    user.rightPV = rightDocs.reduce((s: number, u: { pv?: number } | undefined) => s + (u?.pv || 0), 0);
+  }
+}
+
+/** Build binary subtree */
 function buildTree(
   id: string | null,
   nodeMap: Map<string, any>,
@@ -52,24 +64,26 @@ function buildTree(
     mail: node.mail || "",
     user_status: node.status || "inactive",
 
-    /** INFO ONLY — NO TREE TRAVERSAL */
     parent: node.parent || "",
     referBy: user?.referBy || "",
     infinity: user?.infinity ?? "none",
     infinityLeft: user?.infinty_left_count || 0,
     infinityRight: user?.infinty_right_count || 0,
 
-    /** BUSINESS DATA */
     rank: user?.rank || "none",
     bv: user?.bv || 0,
     pv: user?.pv || 0,
     referrals: user?.referred_users?.length || 0,
     status_notes: user?.status_notes || "",
 
-    /** TREE CHILDREN */
+    /** 💥 Infinity values added here */
+    leftBV: user?.leftBV ?? 0,
+    rightBV: user?.rightBV ?? 0,
+    leftPV: user?.leftPV ?? 0,
+    rightPV: user?.rightPV ?? 0,
+
     left,
     right,
-
     leftCount: count(left),
     rightCount: count(right),
   };
@@ -80,75 +94,49 @@ export async function GET(req: Request) {
     await connectDB();
     const { searchParams } = new URL(req.url);
 
-    const user_id = searchParams.get("user_id"); // Logged in user
-    const search = searchParams.get("search"); // Target
+    const user_id = searchParams.get("user_id");
+    const search = searchParams.get("search");
 
-    if (!user_id) {
-      return NextResponse.json(
-        { success: false, message: "Missing user_id" },
-        { status: 400 }
-      );
-    }
+    if (!user_id)
+      return NextResponse.json({ success: false, message: "Missing user_id" });
 
-    /** Validate logged user */
     const loginUser = await User.findOne({ user_id }).lean();
-    if (!loginUser) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
-      );
-    }
+    if (!loginUser)
+      return NextResponse.json({ success: false, message: "User not found" });
 
-    /** Load entire tree once */
     const allNodes = await TreeNode.find({}).lean();
     const nodeMap = new Map(allNodes.map((n) => [n.user_id, n]));
 
-    /** Validate logged user in tree */
-    if (!nodeMap.has(user_id)) {
-      return NextResponse.json(
-        { success: false, message: "Tree node not found" },
-        { status: 404 }
-      );
-    }
+    if (!nodeMap.has(user_id))
+      return NextResponse.json({
+        success: false,
+        message: "Tree node not found",
+      });
 
-    /** Collect all IDs below root */
     const downlineIds = collectDescendants(user_id, nodeMap);
 
-    /**
-     * SEARCH CHECK
-     */
+    /** SEARCH CASE */
     if (search) {
       const s = search.trim().toLowerCase();
+      const match = Array.from(downlineIds).find(
+        (id) => id.toLowerCase() === s
+      );
 
-      let isDownline = false;
-      for (const id of downlineIds) {
-        if (id.toLowerCase() === s) {
-          isDownline = true;
-          break;
-        }
-      }
-
-      /**
-       * ❗️ STRICT RULE
-       * If NOT found in downline → return error
-       */
-      if (!isDownline) {
+      if (!match)
         return NextResponse.json({
           success: false,
-          message: "User not found in your downline",
+          message: "User not in your downline",
         });
-      }
 
-      /** Build subtree from search node */
       const subtreeIds = collectDescendants(search, nodeMap);
       subtreeIds.add(search);
 
       const users = await User.find({
         user_id: { $in: Array.from(subtreeIds) },
       }).lean();
-
       const userMap = new Map(users.map((u) => [u.user_id, u]));
 
+      calculateInfinityValues(userMap);
       const tree = buildTree(search, nodeMap, userMap);
 
       return NextResponse.json({
@@ -158,17 +146,15 @@ export async function GET(req: Request) {
       });
     }
 
-    /**
-     * NO SEARCH → return root tree
-     */
-    const allowed = new Set([user_id, ...downlineIds]);
+    /** ROOT CASE */
+    const allowedIds = new Set([user_id, ...downlineIds]);
 
     const users = await User.find({
-      user_id: { $in: Array.from(allowed) },
+      user_id: { $in: Array.from(allowedIds) },
     }).lean();
-
     const userMap = new Map(users.map((u) => [u.user_id, u]));
 
+    calculateInfinityValues(userMap);
     const tree = buildTree(user_id, nodeMap, userMap);
 
     return NextResponse.json({
@@ -178,9 +164,6 @@ export async function GET(req: Request) {
     });
   } catch (err: any) {
     console.error("TREE ERROR:", err);
-    return NextResponse.json(
-      { success: false, message: err.message || "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: err.message });
   }
 }

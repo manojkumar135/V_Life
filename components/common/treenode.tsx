@@ -13,7 +13,7 @@ export interface TreeNode {
   user_id: string;
   name: string;
   user_status: string;
-  status_notes?: string; 
+  status_notes?: string;
 
   rank?: string;
   contact?: string;
@@ -27,7 +27,7 @@ export interface TreeNode {
   referrals?: string;
   bv?: string;
   sv?: string;
-leftBV?: number;
+  leftBV?: number;
   rightBV?: number;
   leftPV?: number;
   rightPV?: number;
@@ -38,7 +38,7 @@ leftBV?: number;
 
 interface Props {
   node: TreeNode;
-getColor: (status: string, statusNotes?: string) => string;
+  getColor: (status: string, statusNotes?: string) => string;
   highlightedId?: string | null;
   level?: number;
   maxLevel?: number;
@@ -125,15 +125,21 @@ const BinaryTreeNode: React.FC<Props> = ({
     );
   };
 
-  // ✅ Tooltip hover logic
-  const handleMouseEnter = () => {
-    if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    setHovered(true);
-  };
+ // Hover Delay Timer
+const hoverDelayRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleMouseLeave = () => {
-    hoverTimeoutRef.current = setTimeout(() => setHovered(false), 100);
-  };
+const handleMouseEnter = () => {
+  if (hoverDelayRef.current) clearTimeout(hoverDelayRef.current);
+  hoverDelayRef.current = setTimeout(() => {
+    setHovered(true);
+  }, 500); // 500ms delay
+};
+
+const handleMouseLeave = () => {
+  if (hoverDelayRef.current) clearTimeout(hoverDelayRef.current);
+  setHovered(false);
+};
+
 
   // ---------------- Improved tooltip positioning ----------------
   useEffect(() => {
@@ -231,14 +237,14 @@ const BinaryTreeNode: React.FC<Props> = ({
       <div
         ref={nodeRef}
         className="flex flex-col items-center relative cursor-pointer"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
       >
         <FaUserCircle
           className={`${getColor(node.user_status, node.status_notes)} ${
             isHighlighted ? "ring-4 ring-blue-700 rounded-full" : "mt-1"
           } cursor-pointer transition-transform active:scale-90`}
           size={35}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           onDoubleClick={() => {
             if (node.user_id !== user?.user_id) {
               handleStatusClick(node.user_id, node.user_status, node);
@@ -264,6 +270,13 @@ const BinaryTreeNode: React.FC<Props> = ({
           ref={tooltipRef}
           className="fixed z-50 bg-white border shadow-md rounded-md p-2 text-xs w-60 max-w-[90vw] space-y-1 transition-opacity duration-200"
           style={{ top: tooltipPos.top, left: tooltipPos.left }}
+          onMouseEnter={() => {
+            if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+            setHovered(true);
+          }}
+          onMouseLeave={() => {
+            hoverTimeoutRef.current = setTimeout(() => setHovered(false), 100);
+          }}
         >
           <div className="flex">
             <strong className="w-20">ID:</strong>
@@ -275,7 +288,12 @@ const BinaryTreeNode: React.FC<Props> = ({
           </div>
           <div className="flex">
             <strong className="w-20">Status:</strong>
-            <span className={`${getColor(node.user_status,node.status_notes)} capitalize`}>
+            <span
+              className={`${getColor(
+                node.user_status,
+                node.status_notes
+              )} capitalize`}
+            >
               {node.user_status}
             </span>
           </div>
@@ -337,18 +355,6 @@ const BinaryTreeNode: React.FC<Props> = ({
             <strong className="w-20">Right Team:</strong>
             <span>{node.rightCount ?? 0}</span>
           </div>
-          <div className="flex">
-            <strong className="w-20">BV:</strong>
-            <span>{node.bv ?? 0}</span>
-          </div>
-          <div className="flex">
-            <strong className="w-20">PV:</strong>
-            <span>{node.sv ?? 0}</span>
-          </div>
-          <div className="flex">
-            <strong className="w-20">Left BV:</strong>
-            <span>{node.leftBV ?? 0}</span>
-          </div>
           {node.infinityLeft != null && (
             <div className="flex">
               <strong className="w-20">Left Infinity:</strong>
@@ -361,6 +367,31 @@ const BinaryTreeNode: React.FC<Props> = ({
               <span>{node.infinityRight ?? 0}</span>
             </div>
           )}
+          <div className="flex">
+            <strong className="w-20">BV:</strong>
+            <span>{node.bv ?? 0}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">PV:</strong>
+            <span>{node.sv ?? 0}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">Left BV:</strong>
+            <span>{node.leftBV ?? 0}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">Right BV:</strong>
+            <span>{node.rightBV ?? 0}</span>
+          </div>
+            <div className="flex">
+            <strong className="w-20">Left BV:</strong>
+            <span>{node.leftPV ?? 0}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">Right PV:</strong>
+            <span>{node.rightPV ?? 0}</span>
+          </div>
+          
         </div>
       )}
 
