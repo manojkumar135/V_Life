@@ -96,7 +96,7 @@ const OTPInput: React.FC<OTPInputProps> = ({
           ref={(el) => {
             if (el) inputRefs.current[index] = el;
           }}
-          className="w-8 h-8 text-center text-lg font-medium border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white"
+          className="w-8 h-8 text-center text-lg font-medium border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         />
       ))}
     </div>
@@ -119,6 +119,8 @@ const ForgotPassword: React.FC = () => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
+          setOtp(new Array(6).fill(""));
+
           return 0;
         }
         return prev - 1;
@@ -364,7 +366,7 @@ const ForgotPassword: React.FC = () => {
                   <SubmitButton
                     type="submit"
                     disabled={emailFormik.isSubmitting || loading}
-                    className="w-[95%]"
+                    className="w-[95%] bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
                   >
                     {loading ? "Sending..." : "Send OTP"}
                   </SubmitButton>
@@ -407,7 +409,7 @@ const ForgotPassword: React.FC = () => {
                       <button
                         onClick={resendOTP}
                         disabled={loading}
-                        className="text-yellow-600 hover:text-yellow-700 font-medium disabled:opacity-50"
+                        className="text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50 cursor-pointer"
                       >
                         Resend OTP
                       </button>

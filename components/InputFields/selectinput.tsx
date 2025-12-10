@@ -50,7 +50,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
     ...CustomSelectStyles,
     control: (provided: any, state: any) => ({
       ...CustomSelectStyles.control(provided, state),
-      paddingLeft: controlPaddingLeft || "1.8rem", // use prop if provided
+      paddingLeft: controlPaddingLeft || "0rem", // use prop if provided
       height: controlHeight || "2.25rem",
       marginTop: controlMarginTop || "0px",
     }),

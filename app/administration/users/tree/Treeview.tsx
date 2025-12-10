@@ -39,40 +39,66 @@ export default function TreeView({ id, newuser }: TreeViewProps) {
   const [search, setSearch] = useState("");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [responsiveMaxLevel, setResponsiveMaxLevel] = useState(4);
 
   const API_URL = "/api/tree-operations";
 
-const getStatusColor = (status: string, statusNotes?: string) => {
-  // Access user role
-  const { user } = useVLife();
+  const getStatusColor = (status: string, statusNotes?: string) => {
+    // Access user role
+    const { user } = useVLife();
 
-  // Normalize input
-  const normalizedStatus = status?.toLowerCase() || "";
-  const normalizedNotes = statusNotes?.toLowerCase() || "";
+    // Normalize input
+    const normalizedStatus = status?.toLowerCase() || "";
+    const normalizedNotes = statusNotes?.toLowerCase() || "";
 
-  // 🟠⚫ Only visible for admin
-  if (user?.role === "admin") {
-    if (normalizedStatus === "active" && normalizedNotes === "activated by admin") {
-      return "text-orange-500"; // Orange for admin
+    // 🟠⚫ Only visible for admin
+    if (user?.role === "admin") {
+      if (
+        normalizedStatus === "active" &&
+        normalizedNotes === "activated by admin"
+      ) {
+        return "text-orange-500"; // Orange for admin
+      }
+      if (
+        normalizedStatus === "inactive" &&
+        normalizedNotes === "deactivated by admin"
+      ) {
+        return "text-black"; // Black for admin
+      }
     }
-    if (normalizedStatus === "inactive" && normalizedNotes === "deactivated by admin") {
-      return "text-black"; // Black for admin
+
+    // ✅ Default for all users
+    switch (normalizedStatus) {
+      case "active":
+        return "text-green-600";
+      case "inactive":
+        return "text-red-600";
+      case "pending":
+        return "text-yellow-500";
+      default:
+        return "text-gray-600";
     }
-  }
+  };
 
-  // ✅ Default for all users
-  switch (normalizedStatus) {
-    case "active":
-      return "text-green-600";
-    case "inactive":
-      return "text-red-600";
-    case "pending":
-      return "text-yellow-500";
-    default:
-      return "text-gray-600";
-  }
-};
+  // Detect viewport width once and on resize
+  useEffect(() => {
+    const updateLevel = () => {
+      const width = window.innerWidth;
 
+      // 👉 Mobile & Tablets → Show 3 levels
+      if (width < 1024) {
+        // < 1024px means md & sm
+        setResponsiveMaxLevel(3);
+      } else {
+        setResponsiveMaxLevel(4);
+      }
+    };
+
+    updateLevel();
+    window.addEventListener("resize", updateLevel);
+
+    return () => window.removeEventListener("resize", updateLevel);
+  }, []);
 
   // fetch full tree for the logged in user
   const fetchTree = useCallback(async () => {
@@ -117,7 +143,7 @@ const getStatusColor = (status: string, statusNotes?: string) => {
     try {
       setLoading(true);
       const { data } = await axios.get(API_URL, {
-        params: { user_id: user.user_id,search },
+        params: { user_id: user.user_id, search },
       });
 
       if (data?.data) {
@@ -190,8 +216,7 @@ const getStatusColor = (status: string, statusNotes?: string) => {
         // const res2 = await axios.get(`/api/tree-operations?user_id=${parentId}`);
         // const grandParentId = res2?.data?.data?.parent;
         // targetId = grandParentId || parentId || user.user_id;
-        targetId =  parentId || user.user_id;
-
+        targetId = parentId || user.user_id;
       }
 
       const res3 = await axios.get(API_URL, { params: { user_id: targetId } });
@@ -215,7 +240,9 @@ const getStatusColor = (status: string, statusNotes?: string) => {
   const handleUserClick = async (userId: string) => {
     try {
       setLoading(true);
-      const { data } = await axios.get(API_URL, { params: { user_id: userId } });
+      const { data } = await axios.get(API_URL, {
+        params: { user_id: userId },
+      });
       if (data?.data) {
         setCurrentRoot(data.data);
         setHighlightedId(userId);
@@ -250,7 +277,7 @@ const getStatusColor = (status: string, statusNotes?: string) => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by User ID ..."
-              className="border px-2 py-1 rounded-md w-64 max-md:w-58"
+              className="border px-2 py-1 rounded-md w-64 max-sm:w-48 max-md:w-58"
             />
             <SubmitButton
               type="button"
@@ -267,23 +294,27 @@ const getStatusColor = (status: string, statusNotes?: string) => {
             >
               <LuRefreshCw
                 size={25}
-                className={`cursor-pointer ${isRefreshing ? "animate-spin" : ""}`}
+                className={`cursor-pointer ${
+                  isRefreshing ? "animate-spin" : ""
+                }`}
               />
             </button>
           </div>
         </div>
 
         <div className="flex-1 max-lg:flex overflow-x-auto pt-5">
-          <div className="flex justify-center min-w-[950px] lg:min-w-[900px] xl:min-w-[1000px] max-md:ml-[5%] max-lg:ml-[10%]">
+          <div className="flex justify-center min-w-[400px] lg:min-w-[700px] xl:min-w-[1000px] max-md:ml-[7vw] max-lg:ml-[10vw]">
             {currentRoot ? (
               <BinaryTreeNode
                 node={currentRoot}
                 getColor={getStatusColor}
                 highlightedId={highlightedId}
                 level={1}
-                maxLevel={4}
+                maxLevel={responsiveMaxLevel}
                 onUserClick={handleUserClick}
-                refreshTree={(userId?: string) => handleRefreshFromParent(userId)}
+                refreshTree={(userId?: string) =>
+                  handleRefreshFromParent(userId)
+                }
               />
             ) : (
               <p>Loading tree...</p>

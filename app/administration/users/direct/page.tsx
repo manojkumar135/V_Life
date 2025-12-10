@@ -130,34 +130,32 @@ export default function DirectTeam() {
   };
 
   // assume logged-in user role
-const currentUserRole = user?.role; // e.g. "admin"
+  const currentUserRole = user?.role; // e.g. "admin"
 
-const columns = [
-  { field: "user_id", headerName: "User ID", flex: 1 },
-  { field: "user_name", headerName: "User Name", flex: 1 },
+  const columns = [
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_name", headerName: "User Name", flex: 1 },
 
-  ...(currentUserRole === "admin"
-    ? [
-        { field: "contact", headerName: "Contact", flex: 1 },
-        { field: "mail", headerName: "Email", flex: 1.5 },
-      ]
-    : []),
+    ...(currentUserRole === "admin"
+      ? [
+          { field: "contact", headerName: "Contact", flex: 1 },
+          { field: "mail", headerName: "Email", flex: 1.5 },
+        ]
+      : []),
 
-  { field: "team", headerName: "Team", flex: 1 },
+    { field: "team", headerName: "Team", flex: 1 },
+    { field: "bv", headerName: "BV", flex: 1 },
 
-  {
-    field: "rank",
-    headerName: "Rank",
-    flex: 1,
-    renderCell: (params: any) =>
-      params.value && params.value !== "none"
-        ? `${params.value} Star`
-        : "-",
-  },
+    {
+      field: "rank",
+      headerName: "Rank",
+      flex: 1,
+      renderCell: (params: any) =>
+        params.value && params.value !== "none" ? `${params.value} Star` : "-",
+    },
 
-  { field: "user_status", headerName: "Status", flex: 1 },
-];
-
+    { field: "user_status", headerName: "Status", flex: 1 },
+  ];
 
   const handlePageChange = useCallback(() => {
     // optional server pagination

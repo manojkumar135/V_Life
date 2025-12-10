@@ -27,6 +27,10 @@ export interface TreeNode {
   referrals?: string;
   bv?: string;
   sv?: string;
+leftBV?: number;
+  rightBV?: number;
+  leftPV?: number;
+  rightPV?: number;
   infinityLeft?: number;
   infinityRight?: number;
   infinity?: string;
@@ -340,6 +344,10 @@ const BinaryTreeNode: React.FC<Props> = ({
           <div className="flex">
             <strong className="w-20">PV:</strong>
             <span>{node.sv ?? 0}</span>
+          </div>
+          <div className="flex">
+            <strong className="w-20">Left BV:</strong>
+            <span>{node.leftBV ?? 0}</span>
           </div>
           {node.infinityLeft != null && (
             <div className="flex">

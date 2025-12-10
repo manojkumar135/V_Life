@@ -133,28 +133,33 @@ export default function InfinityTeam() {
   const currentUserRole = user?.role; // e.g. "admin"
 
   const columns = [
-    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_id", headerName: "User ID", flex: 0.7 },
     { field: "user_name", headerName: "User Name", flex: 1 },
 
     ...(currentUserRole === "admin"
       ? [
-          { field: "contact", headerName: "Contact", flex: 1 },
+          { field: "contact", headerName: "Contact", flex: 0.8 },
           { field: "mail", headerName: "Email", flex: 1.5 },
         ]
       : []),
+          { field: "referBy", headerName: "Sponsor", flex: 0.8 },
 
-    { field: "team", headerName: "Team", flex: 1 },
-    { field: "level", headerName: "Level", flex: 1 },
+
+    { field: "team", headerName: "Team", flex: 0.6 },
+    { field: "level", headerName: "Level", flex: 0.6 },
 
     {
       field: "rank",
       headerName: "Rank",
-      flex: 1,
+      flex: 0.8,
       renderCell: (params: any) =>
         params.value && params.value !== "none" ? `${params.value} Star` : "-",
     },
+    { field: "bv", headerName: "BV", flex: 0.6 },
+        { field: "cumulativeBV", headerName: "C.BV", flex: 0.6 },
 
-    { field: "user_status", headerName: "Status", flex: 1 },
+
+    { field: "user_status", headerName: "Status", flex: 0.6 },
   ];
 
   const handlePageChange = useCallback(() => {

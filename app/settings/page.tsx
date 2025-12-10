@@ -12,15 +12,14 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Image from "next/image";
 import Images from "@/constant/Image";
 import { FiEdit2 } from "react-icons/fi";
-import InputField from "@/components/InputFields/inputtype1";
-import SubmitButton from "@/components/common/submitbutton";
-import SelectField from "@/components/InputFields/selectinput";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
 import ChangePasswordForm from "@/components/changePasswordForm";
 import ShowToast from "@/components/common/Toast/toast";
 import { toTitleCase } from "@/utils/convertString";
 import InviteForm from "@/components/invite";
+import ProfileSection from "@/components/profile";
+import OfficeDetails from "@/components/office";
 
 // Validation Schema
 const profileSchema = Yup.object().shape({
@@ -120,12 +119,6 @@ const Page = () => {
     },
   });
 
-  const localityOptions = postOfficeData.map((item) => ({
-    label: item.Name,
-    value: item.Name,
-  }));
-
-  // Unified File Upload Handler
   // Unified File Upload Handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -295,201 +288,59 @@ const Page = () => {
             onChange={handleFileUpload}
           />
 
-          {/* Form starts here */}
-          <form onSubmit={formik.handleSubmit}>
-            {/* Profile Section */}
-            <section className="mb-10 mx-5 max-md:mx-0">
-              <h3 className="text-xl max-md:text-lg font-bold text-gray-800 mb-5">
-                Profile
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                <InputField
-                  label="User Name"
-                  name="userName"
-                  type="text"
-                  placeholder="User Name"
-                  value={toTitleCase(formik.values.userName)}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={
-                    formik.touched.userName ? formik.errors.userName : undefined
-                  }
-                  required
-                />
-                <InputField
-                  label="Contact"
-                  name="phone"
-                  type="tel"
-                  minLength={10}
-                  maxLength={10}
-                  placeholder="1234567890"
-                  value={formik.values.phone}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.phone ? formik.errors.phone : undefined}
-                  required
-                />
-                <InputField
-                  label="Email"
-                  name="email"
-                  type="email"
-                  placeholder="123@gmail.com"
-                  value={formik.values.email}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.email ? formik.errors.email : undefined}
-                  required
-                />
-              </div>
-            </section>
-
-            {/* Shipping Section */}
-            <section className="mb-10 mx-5 max-md:mx-0">
-              <h3 className="text-xl max-md:text-lg font-bold text-gray-800 mb-5">
-                Address
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                <InputField
-                  label="D.No / Street"
-                  name="address"
-                  placeholder="D.NO : 123, left street"
-                  value={formik.values.address}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={
-                    formik.touched.address ? formik.errors.address : undefined
-                  }
-                  required
-                />
-                <InputField
-                  label="Pincode"
-                  name="pincode"
-                  placeholder="123456"
-                  value={formik.values.pincode}
-                  onChange={(e) => {
-                    // Only allow numbers
-                    const value = e.target.value.replace(/\D/g, "");
-                    if (value.length <= 6) {
-                      formik.handleChange(e);
-                    }
-                  }}
-                  onBlur={formik.handleBlur}
-                  error={
-                    formik.touched.pincode ? formik.errors.pincode : undefined
-                  }
-                  required
-                  disabled={loading}
-                />
-                <InputField
-                  label="Country"
-                  name="country"
-                  placeholder="India"
-                  value={formik.values.country}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={
-                    formik.touched.country ? formik.errors.country : undefined
-                  }
-                  required
-                  disabled={loading}
-                />
-                <InputField
-                  label="State"
-                  name="state"
-                  placeholder="Uttar Pradesh"
-                  value={formik.values.state}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.state ? formik.errors.state : undefined}
-                  required
-                  disabled={loading}
-                />
-                <InputField
-                  label="District"
-                  name="city"
-                  placeholder="Noida"
-                  value={formik.values.city}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  error={formik.touched.city ? formik.errors.city : undefined}
-                  required
-                  disabled={loading}
-                />
-                <SelectField
-                  label="Locality"
-                  name="locality"
-                  value={formik.values.locality}
-                  onChange={(selected) =>
-                    formik.setFieldValue("locality", selected?.value || "")
-                  }
-                  onBlur={formik.handleBlur}
-                  options={localityOptions}
-                  error={
-                    formik.touched.locality ? formik.errors.locality : undefined
-                  }
-                  required
-                  disabled={loading || postOfficeData.length === 0}
-                  controlPaddingLeft="0px"
-                />
-              </div>
-            </section>
-
-            {/* Submit Button */}
-            <div className="flex justify-end px-5 mb-10">
-              <SubmitButton
-                type="submit"
-                disabled={formik.isSubmitting || loading}
-              >
-                {formik.isSubmitting ? "Saving..." : "Save Changes"}
-              </SubmitButton>
-            </div>
-          </form>
+          <div className="mb-8">
+            <ProfileSection />
+          </div>
 
           {/* Accordion Sections */}
-          {["Change Password", "Invite", "Support"].map((section) => (
-            <Accordion
-              key={section}
-              expanded={expanded === section}
-              onChange={handleAccordionChange(section)}
-              className="mb-4 bg-[#f7f7f7] shadow-sm rounded-md"
-            >
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography
-                  variant="subtitle1"
-                  fontSize={expanded === section ? "1.2rem" : "1rem"}
-                  fontWeight={expanded === section ? "bold" : "normal"}
-                  className="text-base"
-                >
-                  {section}
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                {section === "Change Password" ? (
-                  <ChangePasswordForm onSuccess={() => setExpanded(false)} />
-                ) : section === "Activate / Re-Activate ID" ? (
-                  <p className="text-gray-600 text-sm">
-                    Content for "{section}" goes here.
-                  </p>
-                ) : section === "Invite" ? (
-                  <InviteForm />
-                ) : section === "Support" ? (
-                  <p className="text-gray-600 text-sm">
-                    For support, please contact us at{" "}
-                    <a
-                      href="mailto:maverick@gmail.com"
-                      className="text-blue-600 hover:underline"
-                    >
-                      maverick@gmail.com
-                    </a>
-                  </p>
-                ) : (
-                  <p className="text-gray-600 text-sm">
-                    Content for "{section}" goes here.
-                  </p>
-                )}
-              </AccordionDetails>
-            </Accordion>
-          ))}
+          {(() => {
+            const sections: string[] = [];
+
+            if (user?.role === "admin") {
+              sections.push("Office Address");
+            }
+
+            sections.push("Change Password", "Invite", "Support");
+
+            return sections.map((section) => (
+              <Accordion
+                key={section}
+                expanded={expanded === section}
+                onChange={handleAccordionChange(section)}
+                className="mb-4 bg-[#f7f7f7] shadow-sm rounded-md"
+              >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography
+                    variant="subtitle1"
+                    fontSize={expanded === section ? "1.2rem" : "1rem"}
+                    fontWeight={expanded === section ? "bold" : "normal"}
+                    className="text-base"
+                  >
+                    {section}
+                  </Typography>
+                </AccordionSummary>
+
+                <AccordionDetails>
+                  {section === "Office Address" && <OfficeDetails />}
+                  {section === "Change Password" && (
+                    <ChangePasswordForm onSuccess={() => setExpanded(false)} />
+                  )}
+                  {section === "Invite" && <InviteForm />}
+                  {section === "Support" && (
+                    <p className="text-gray-600 text-sm">
+                      For support, please contact us at{" "}
+                      <a
+                        href="mailto:maverick@gmail.com"
+                        className="text-blue-600 hover:underline"
+                      >
+                        maverick@gmail.com
+                      </a>
+                    </p>
+                  )}
+                </AccordionDetails>
+              </Accordion>
+            ));
+          })()}
         </div>
 
         {/* Fullscreen Preview */}

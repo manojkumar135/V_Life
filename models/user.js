@@ -19,6 +19,8 @@ const UserSchema = new mongoose.Schema(
 
     mail: { type: String, required: true },
     contact: { type: String, required: true },
+    alternate_contact: { type: String },
+
     address: { type: String },
     pincode: { type: String },
     country: { type: String },
@@ -39,13 +41,16 @@ const UserSchema = new mongoose.Schema(
     status_notes: { type: String },
     user_status: { type: String, default: "inactive" },
 
-    gst:{type:String},
-    blood:{type:String},
-    landmark:{type:String},
-    nominee_name:{type:String},
-    nominee_relation:{type:String},
-    nominee_dob:{type:String},
-    alternate_contact:{type:String},
+    gst: { type: String },
+    blood: { type: String },
+    landmark: { type: String },
+    nominee_name: { type: String },
+    nominee_relation: { type: String },
+    nominee_dob: { type: String },
+    nominee_gender: { type: String },
+    nominee_contact: { type: String },
+    nominee_aadhar: { type: String },
+
 
     // 🔗 Referral / Upline
     referBy: { type: String },

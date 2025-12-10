@@ -59,8 +59,18 @@ export interface UserType {
   score?: number;
   referBy?: string;
   infinity?: string;
+  gst?: string;
+  country?: string;
+  state?: string;
+  district?:string;
+  nominee_name?:string;
+  nominee_contact?:string;
+  nominee_relation?:string;
+  alternate_contact?:string;
+
 
   address?: string;
+  landmark?: string;
   pincode?: string;
   aadhar?: string;
   pan?: string;
@@ -88,6 +98,7 @@ const defaultUser: UserType = {
   user_name: "",
   gender: "",
   blood: "",
+  gst:"",
   dob: "",
   rank: "",
   role: "",

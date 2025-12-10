@@ -19,7 +19,7 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
     const { newUser, newLogin } = await createUserAndLogin(body);
-    return NextResponse.json({ success: true, message: "User created successfully",userId: newUser.user_id, user: newUser, login: newLogin }, { status: 201 });
+    return NextResponse.json({ success: true, message: "User created successfully", userId: newUser.user_id, user: newUser, login: newLogin }, { status: 201 });
   } catch (error) {
     console.error("❌ Error creating user:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
@@ -205,6 +205,8 @@ export async function PATCH(request) {
     if (updates.last_name) loginUpdates.last_name = updates.last_name;
     if (updates.phone) loginUpdates.contact = updates.phone;
     if (updates.email) loginUpdates.mail = updates.email;
+    if (updates.gender) loginUpdates.gender = updates.gender;
+
     if (updates.address) loginUpdates.address = updates.address;
     if (updates.pincode) loginUpdates.pincode = updates.pincode;
     if (updates.locality) loginUpdates.locality = updates.locality;
@@ -223,6 +225,8 @@ export async function PATCH(request) {
     if (updates.userName) treeUpdates.name = updates.userName;
     if (updates.phone) treeUpdates.contact = updates.phone;
     if (updates.email) treeUpdates.mail = updates.email;
+    if (updates.gender) treeUpdates.gender = updates.gender;
+
     if (updates.address) treeUpdates.address = updates.address;
     if (updates.locality) treeUpdates.locality = updates.locality;
     if (updates.pincode) treeUpdates.pincode = updates.pincode;

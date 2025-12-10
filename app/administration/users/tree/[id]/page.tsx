@@ -36,6 +36,7 @@ export default function TreeView() {
   const [loading, setLoading] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [responsiveMaxLevel, setResponsiveMaxLevel] = useState(4);
 
   const [currentRoot, setCurrentRoot] = useState<TreeNode | null>(null);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -274,6 +275,25 @@ export default function TreeView() {
     }
   };
 
+  useEffect(() => {
+    const updateLevel = () => {
+      const width = window.innerWidth;
+
+      // 👉 Mobile & Tablets → Show 3 levels
+      if (width < 1024) {
+        // < 1024px means md & sm
+        setResponsiveMaxLevel(3);
+      } else {
+        setResponsiveMaxLevel(4);
+      }
+    };
+
+    updateLevel();
+    window.addEventListener("resize", updateLevel);
+
+    return () => window.removeEventListener("resize", updateLevel);
+  }, []);
+
   return (
     <Layout>
       {loading && (
@@ -297,7 +317,7 @@ export default function TreeView() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Search by User ID..."
-              className="border px-2 py-1 rounded-md w-64 max-md:w-58"
+              className="border px-2 py-1 rounded-md w-64  max-sm:w-48 max-md:w-58"
               onKeyDown={(e) => {
                 if (e.key === "Enter") setSearchQuery(inputValue);
               }}
@@ -326,14 +346,14 @@ export default function TreeView() {
 
         {/* Tree View */}
         <div className="flex-1 max-lg:flex overflow-x-auto pt-5">
-          <div className="flex justify-center min-w-[950px] lg:min-w-[900px] xl:min-w-[1000px] max-md:ml-[5%] max-lg:ml-[10%]">
+          <div className="flex justify-center min-w-[400px] lg:min-w-[700px] xl:min-w-[1000px] max-md:ml-[7vw] max-lg:ml-[10vw]">
             {currentRoot ? (
               <BinaryTreeNode
                 node={currentRoot}
                 getColor={getStatusColor}
                 highlightedId={highlightedId}
                 level={1}
-                maxLevel={4}
+                maxLevel={responsiveMaxLevel}
                 onUserClick={handleUserClick}
                 refreshTree={(userId?: string) =>
                   handleRefreshFromParent(userId)

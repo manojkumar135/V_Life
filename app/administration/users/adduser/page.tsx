@@ -45,6 +45,8 @@ const validationSchema = Yup.object().shape({
       }
       return false;
     }),
+  gender: Yup.string().required("Gender is required"),
+
   // address: Yup.string().required("Address is required"),
   // city: Yup.string().required("City is required"),
   // state: Yup.string().required("State is required"),
@@ -67,14 +69,28 @@ function AddUserFormContent() {
     initialValues: {
       fullName: "",
       dob: "",
-      email: "",
       contact: "",
+      alternate: "",
+
+      email: "",
+      gender: "",
+      bloodGroup: "",
+      landmark: "",
+      gstNumber: "",
+
       address: "",
       city: "",
       state: "",
       country: "",
       pincode: "",
       locality: "",
+
+      nomineeName: "",
+      nomineeRelation: "",
+      nomineeContact: "",
+      nomineeGender: "",
+      nomineeDOB: "",
+      nomineeAadhar: "",
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }) => {
@@ -85,17 +101,28 @@ function AddUserFormContent() {
           dob: values.dob,
           mail: values.email,
           contact: values.contact,
+          gender: values.gender,
+          blood: values.bloodGroup,
+          gst: values.gstNumber,
+
           address: values.address,
+          landmark: values.landmark,
+
           pincode: values.pincode,
           country: values.country,
           state: values.state,
           district: values.city,
           locality: values.locality,
-          created_by: "",
+          created_by: user.user_id,
           role: "user",
           user_status: "inactive",
           referBy: user.user_id,
           team: team || "right",
+
+          nominee_name: values.nomineeName,
+          nominee_relation: values.nomineeRelation,
+          nominee_contact: values.nomineeContact,
+          alternate_contact: values.nomineeContact,
         });
 
         if (res.data.success) {
@@ -197,120 +224,261 @@ function AddUserFormContent() {
           className="rounded-xl p-5 max-sm:p-3 bg-white space-y-4"
         >
           {/* Form Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            <InputField
-              label="Full Name"
-              name="fullName"
-              value={formik.values.fullName}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={
-                formik.touched.fullName ? formik.errors.fullName : undefined
-              }
-              required
-            />
-            <InputField
-              label="Email"
-              name="email"
-              type="email"
-              value={formik.values.email}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.email ? formik.errors.email : undefined}
-              required
-            />
-            <InputField
-              label="Contact"
-              name="contact"
-              value={formik.values.contact}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.contact ? formik.errors.contact : undefined}
-              required
-            />
-            <DateField
-              label="Date of Birth"
-              name="dob"
-              value={formik.values.dob}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              min="1900-01-01"
-              max={new Date().toISOString().split("T")[0]} // ✅ restricts to today
-              required
-              error={formik.touched.dob ? formik.errors.dob : ""}
-            />
+          {/* USER DETAILS SECTION */}
+          <div className=" rounded-xl p-2  ">
+            <p className="text-md font-semibold mb-4 capitalize">
+              USER DETAILS
+            </p>
 
-            <InputField
-              label="D.No & Street"
-              name="address"
-              value={formik.values.address}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.address ? formik.errors.address : undefined}
-              // required
-            />
-            <InputField
-              label="Pincode"
-              name="pincode"
-              value={formik.values.pincode}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.pincode ? formik.errors.pincode : undefined}
-              // required
-              disabled={loading}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <InputField
+                label="Full Name"
+                name="fullName"
+                value={formik.values.fullName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.fullName ? formik.errors.fullName : undefined
+                }
+                required
+              />
 
-            <InputField
-              label="Country"
-              name="country"
-              value={formik.values.country}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.country ? formik.errors.country : undefined}
-              // required
-              disabled={loading}
-            />
-            <InputField
-              label="State"
-              name="state"
-              value={formik.values.state}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.state ? formik.errors.state : undefined}
-              // required
-              disabled={loading}
-            />
-            <InputField
-              label="District"
-              name="city"
-              value={formik.values.city}
-              onChange={formik.handleChange}
-              onBlur={formik.handleBlur}
-              error={formik.touched.city ? formik.errors.city : undefined}
-              // required
-              disabled={loading}
-            />
+              <InputField
+                label="Email"
+                name="email"
+                type="email"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.email ? formik.errors.email : undefined}
+                required
+              />
 
-            <SelectField
-              label="Locality"
-              name="locality"
-              value={formik.values.locality}
-              onChange={(e: any) =>
-                formik.setFieldValue(
-                  "locality",
-                  e.target?.value || e?.value || ""
-                )
-              }
-              onBlur={formik.handleBlur}
-              options={localityOptions}
-              error={
-                formik.touched.locality ? formik.errors.locality : undefined
-              }
-              // required
-              disabled={loading || postOfficeData.length === 0}
+              <InputField
+                label="Contact"
+                name="contact"
+                value={formik.values.contact}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.contact ? formik.errors.contact : undefined
+                }
+                required
+              />
+
+              <DateField
+                label="Date of Birth"
+                name="dob"
+                value={formik.values.dob}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                min="1900-01-01"
+                max={new Date().toISOString().split("T")[0]}
+                error={formik.touched.dob ? formik.errors.dob : ""}
+                required
+              />
+
+              <SelectField
+                label="Gender"
+                name="gender"
+                value={formik.values.gender}
+                onChange={(e: any) =>
+                  formik.setFieldValue(
+                    "gender",
+                    e.target?.value || e?.value || ""
+                  )
+                }
+                onBlur={formik.handleBlur}
+                options={[
+                  { value: "male", label: "Male" },
+                  { value: "female", label: "Female" },
+                  { value: "others", label: "Others" },
+                ]}
+                error={formik.touched.gender ? formik.errors.gender : undefined}
                 controlPaddingLeft="0px"
+                required
+              />
 
-            />
+              <SelectField
+                label="Blood Group"
+                name="bloodGroup"
+                value={formik.values.bloodGroup}
+                onChange={(e: any) =>
+                  formik.setFieldValue(
+                    "bloodGroup",
+                    e.target?.value || e?.value || ""
+                  )
+                }
+                onBlur={formik.handleBlur}
+                options={[
+                  { value: "A+", label: "A+" },
+                  { value: "A-", label: "A-" },
+                  { value: "B+", label: "B+" },
+                  { value: "B-", label: "B-" },
+                  { value: "O+", label: "O+" },
+                  { value: "O-", label: "O-" },
+                  { value: "AB+", label: "AB+" },
+                  { value: "AB-", label: "AB-" },
+                ]}
+                error={
+                  formik.touched.bloodGroup
+                    ? formik.errors.bloodGroup
+                    : undefined
+                }
+                controlPaddingLeft="0px"
+              />
+
+              <InputField
+                label="GST Number"
+                name="gstNumber"
+                value={formik.values.gstNumber}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.gstNumber ? formik.errors.gstNumber : undefined
+                }
+              />
+            </div>
+          </div>
+
+          {/* ADDRESS DETAILS SECTION */}
+          <div className=" rounded-xl p-2  ">
+            <p className="text-md font-semibold mb-4 capitalize">ADDRESS</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <InputField
+                label="D.No & Street"
+                name="address"
+                value={formik.values.address}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.address ? formik.errors.address : undefined
+                }
+              />
+
+              <InputField
+                label="Landmark"
+                name="landmark"
+                value={formik.values.landmark}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.landmark ? formik.errors.landmark : undefined
+                }
+              />
+
+              <InputField
+                label="Pincode"
+                name="pincode"
+                value={formik.values.pincode}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.pincode ? formik.errors.pincode : undefined
+                }
+                disabled={loading}
+              />
+
+              <InputField
+                label="Country"
+                name="country"
+                value={formik.values.country}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.country ? formik.errors.country : undefined
+                }
+                disabled={loading}
+              />
+
+              <InputField
+                label="State"
+                name="state"
+                value={formik.values.state}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.state ? formik.errors.state : undefined}
+                disabled={loading}
+              />
+
+              <InputField
+                label="District"
+                name="city"
+                value={formik.values.city}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.city ? formik.errors.city : undefined}
+                disabled={loading}
+              />
+
+              <SelectField
+                label="Locality"
+                name="locality"
+                value={formik.values.locality}
+                onChange={(e: any) =>
+                  formik.setFieldValue(
+                    "locality",
+                    e.target?.value || e?.value || ""
+                  )
+                }
+                onBlur={formik.handleBlur}
+                options={localityOptions}
+                error={
+                  formik.touched.locality ? formik.errors.locality : undefined
+                }
+                disabled={loading || postOfficeData.length === 0}
+                controlPaddingLeft="0px"
+              />
+            </div>
+          </div>
+
+          {/* NOMINEE DETAILS SECTION */}
+          <div className=" rounded-xl p-2  ">
+            <p className="text-md font-semibold mb-4 capitalize">
+              NOMINEE DETAILS
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <InputField
+                label="Nominee Name (with Surname)"
+                name="nomineeName"
+                value={formik.values.nomineeName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.nomineeName
+                    ? formik.errors.nomineeName
+                    : undefined
+                }
+              />
+
+              <InputField
+                label="Nominee Relation"
+                name="nomineeRelation"
+                value={formik.values.nomineeRelation}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.nomineeRelation
+                    ? formik.errors.nomineeRelation
+                    : undefined
+                }
+              />
+
+              <InputField
+                label="Alternate Contact"
+                name="nomineeContact"
+                value={formik.values.nomineeContact}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={
+                  formik.touched.nomineeContact
+                    ? formik.errors.nomineeContact
+                    : undefined
+                }
+              />
+            </div>
           </div>
 
           {/* Submit Button */}

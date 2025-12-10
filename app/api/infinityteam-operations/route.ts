@@ -1,3 +1,4 @@
+// import { infinity } from '@/services/infinity';
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
@@ -24,6 +25,8 @@ export interface UserType {
   rank?: string;
   user_status?: string;
   infinity_users?: InfinityLevel[];
+  infinity_left_users?: string[];
+  infinity_right_users?: string[];
 }
 
 export interface TreeNodeType {
@@ -68,23 +71,18 @@ export async function GET(req: Request) {
       if (node._id) nodeMapById.set(String(node._id), node);
     });
 
-    // helper: resolve a reference (could be user_id string OR ObjectId string) -> user_id
     function resolveUserIdFromRef(ref: any): string | undefined {
       if (!ref) return undefined;
       const s = String(ref);
-      // if direct user_id present in user map
       if (nodeMapByUser.has(s)) return s;
-      // if it's an _id reference
       const byId = nodeMapById.get(s);
       if (byId && byId.user_id) return byId.user_id;
-      // fallback: try to find node whose _id matches this ref
       for (const n of nodeMapByUser.values()) {
         if (String(n._id) === s) return n.user_id;
       }
       return undefined;
     }
 
-    // helper: find node object from either user_id or _id ref
     function getNodeFromRef(ref: any): TreeNodeType | undefined {
       if (!ref) return undefined;
       const s = String(ref);
@@ -93,21 +91,16 @@ export async function GET(req: Request) {
       return undefined;
     }
 
-    // helper: determine left/right/unknown for target under root
     function determineTeamUnderRoot(
       rootNode: TreeNodeType | undefined,
       targetNode: TreeNodeType | undefined
     ): "left" | "right" | "unknown" {
       if (!rootNode || !targetNode) return "unknown";
-
-      // walk upward from targetNode until we reach rootNode (or run out)
       let current: TreeNodeType | undefined = targetNode;
       while (current && current.parent) {
         const parentUserId = resolveUserIdFromRef(current.parent);
         if (!parentUserId) break;
-
         if (parentUserId === rootNode.user_id) {
-          // current is direct child under rootNode
           const directChildUserId = current.user_id;
           const leftUserId = resolveUserIdFromRef(rootNode.left);
           const rightUserId = resolveUserIdFromRef(rootNode.right);
@@ -115,19 +108,14 @@ export async function GET(req: Request) {
           if (rightUserId && rightUserId === directChildUserId) return "right";
           return "unknown";
         }
-
-        // move up
         current = getNodeFromRef(parentUserId);
       }
-
       return "unknown";
     }
 
-    // prepare root node object (by user or by _id)
     const rootNode =
       nodeMapByUser.get(rootId) ||
       (() => {
-        // try id lookup
         for (const n of nodeMapByUser.values()) {
           if (String(n._id) === rootId) return n;
         }
@@ -135,7 +123,14 @@ export async function GET(req: Request) {
       })();
 
     // 3️⃣ Process infinity levels
-    const results: (UserType & { level: number; team: string })[] = [];
+    const results: (UserType & {
+      level: number;
+      team: string;
+      leftBV: number;
+      rightBV: number;
+      cumulativeBV: number;
+    })[] = [];
+
     const seenUserIds = new Set<string>();
 
     for (const levelObj of rootUser.infinity_users) {
@@ -143,7 +138,7 @@ export async function GET(req: Request) {
 
       for (const uid of users) {
         if (!uid) continue;
-        if (seenUserIds.has(uid)) continue; // skip duplicates
+        if (seenUserIds.has(uid)) continue;
         seenUserIds.add(uid);
 
         const userData = await User.findOne({ user_id: uid })
@@ -151,28 +146,47 @@ export async function GET(req: Request) {
           .lean<UserType>();
         if (!userData) continue;
 
-        // ✅ Check if user has paid advance (amount >= 10000 and status Completed)
-        // const advanceHistory = await History.findOne({
-        //   user_id: uid,
-        //   advance: true,
-        //   amount: { $gte: 10000 },
-        //   status: "Completed",
-        // });
-
-        // if (!advanceHistory) continue; 
-
-        // Determine team (left/right/unknown) using tree structure by walking upward
         const targetNode = nodeMapByUser.get(uid) || getNodeFromRef(uid);
         const team = determineTeamUnderRoot(rootNode, targetNode);
+
+        // 🔥 Cumulative BV calculation added
+        const leftUsers = userData.infinity_left_users || [];
+        const rightUsers = userData.infinity_right_users || [];
+
+        const leftUserDocs = await User.find(
+          { user_id: { $in: leftUsers } },
+          { self_bv: 1 }
+        ).lean();
+
+        const rightUserDocs = await User.find(
+          { user_id: { $in: rightUsers } },
+          { self_bv: 1 }
+        ).lean();
+
+        const leftBV = leftUserDocs.reduce(
+          (sum, u) => sum + (u.self_bv || 0),
+          0
+        );
+        const rightBV = rightUserDocs.reduce(
+          (sum, u) => sum + (u.self_bv || 0),
+          0
+        );
+
+        const cumulativeBV =
+          leftBV > 0 && rightBV > 0 ? Math.min(leftBV, rightBV) : 0;
 
         results.push({
           ...userData,
           level,
           team,
+          leftBV,
+          rightBV,
+          cumulativeBV,
         });
       }
     }
-    // 🔍 4️⃣ Apply Search (without touching previous logic)
+
+    // 🔍 4️⃣ Apply Search (unchanged)
     let finalResults = results;
 
     if (search) {
@@ -196,7 +210,6 @@ export async function GET(req: Request) {
           item.locality,
           item.user_status,
           item.rank,
-
           String(item.level),
           item.team,
         ]
