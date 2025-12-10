@@ -146,15 +146,15 @@ export async function runInfinityBonus() {
       if (wallet && wallet.pan_verified) {
         // PAN Verified
         withdrawAmount = Number((bonusAmount * 0.8).toFixed(2));
-        rewardAmount = Number((bonusAmount * 0.1).toFixed(2));
+        rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
         tdsAmount = Number((bonusAmount * 0.02).toFixed(2));
-        adminCharge = Number((bonusAmount * 0.08).toFixed(2));
+        adminCharge = Number((bonusAmount * 0.1).toFixed(2));
       } else {
         // PAN Not Verified OR No wallet
-        withdrawAmount = Number((bonusAmount * 0.65).toFixed(2));
-        rewardAmount = Number((bonusAmount * 0.1).toFixed(2));
+        withdrawAmount = Number((bonusAmount * 0.62).toFixed(2));
+        rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
         tdsAmount = Number((bonusAmount * 0.2).toFixed(2));
-        adminCharge = Number((bonusAmount * 0.05).toFixed(2));
+        adminCharge = Number((bonusAmount * 0.1).toFixed(2));
       }
 
       // ✅ Dynamic Infinity Bonus Title

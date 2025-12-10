@@ -297,15 +297,15 @@ export async function runDirectSalesBonus() {
         if (wallet && wallet.pan_verified) {
           // PAN Verified
           withdrawAmount = Number((totalAmount * 0.8).toFixed(2));
-          rewardAmount = Number((totalAmount * 0.1).toFixed(2));
+          rewardAmount = Number((totalAmount * 0.08).toFixed(2));
           tdsAmount = Number((totalAmount * 0.02).toFixed(2));
-          adminCharge = Number((totalAmount * 0.08).toFixed(2));
+          adminCharge = Number((totalAmount * 0.1).toFixed(2));
         } else {
           // PAN Not Verified OR No wallet
-          withdrawAmount = Number((totalAmount * 0.65).toFixed(2));
-          rewardAmount = Number((totalAmount * 0.1).toFixed(2));
+          withdrawAmount = Number((totalAmount * 0.62).toFixed(2));
+          rewardAmount = Number((totalAmount * 0.08).toFixed(2));
           tdsAmount = Number((totalAmount * 0.2).toFixed(2));
-          adminCharge = Number((totalAmount * 0.05).toFixed(2));
+          adminCharge = Number((totalAmount * 0.1).toFixed(2));
         }
 
         // Create DailyPayout for referBy
