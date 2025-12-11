@@ -18,6 +18,8 @@ const WalletSchema = new mongoose.Schema(
     bank_name: { type: String, required: true },
     account_number: { type: String, required: true },
     ifsc_code: { type: String, required: true },
+    cheque: { type: String },
+    bank_book:{type:String},
 
     // Aadhaar + PAN
     aadhar_number: { type: String },
@@ -29,6 +31,10 @@ const WalletSchema = new mongoose.Schema(
     aadhar_seeding: { type: String },
 
     aadhar_file: { type: String },
+    aadhar_front: { type: String },
+    aadhar_back: { type: String },
+    gst_number:{type:String},
+
     pan_file: { type: String },
     is_verified: { type: String, default: "No" },
     verified_at: { type: Date },

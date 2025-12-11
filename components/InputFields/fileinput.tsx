@@ -117,12 +117,16 @@ const FileInput: React.FC<FileInputProps> = ({
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between sm:flex-1 w-full gap-2">
+            <div className="flex items-center justify-between sm:flex-1 w-full gap-2"
+                            onClick={() => inputRef.current?.click()}
+
+            >
               <span
                 className="flex text-gray-800 truncate cursor-pointer bg-gray-200 px-3 rounded"
                 onClick={() => inputRef.current?.click()}
               >
                 No file chosen
+
               </span>
 
               <button

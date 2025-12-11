@@ -206,6 +206,7 @@ export async function PATCH(request) {
     if (updates.phone) loginUpdates.contact = updates.phone;
     if (updates.email) loginUpdates.mail = updates.email;
     if (updates.gender) loginUpdates.gender = updates.gender;
+    if (updates.blood) loginUpdates.blood = updates.blood;
 
     if (updates.address) loginUpdates.address = updates.address;
     if (updates.pincode) loginUpdates.pincode = updates.pincode;
@@ -226,6 +227,7 @@ export async function PATCH(request) {
     if (updates.phone) treeUpdates.contact = updates.phone;
     if (updates.email) treeUpdates.mail = updates.email;
     if (updates.gender) treeUpdates.gender = updates.gender;
+    if (updates.blood) treeUpdates.blood = updates.blood;
 
     if (updates.address) treeUpdates.address = updates.address;
     if (updates.locality) treeUpdates.locality = updates.locality;

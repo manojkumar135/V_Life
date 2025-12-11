@@ -187,8 +187,12 @@ function RegisterContent() {
       )}
 
       {/* Form Section */}
-      <div className="w-1/2 max-lg:w-full max-xl:w-3/5 flex flex-col justify-center items-center lg:items-end overflow-y-auto max-lg:py-6">
-        <div className="w-[70%] max-md:w-[90%] max-lg:w-[60%] xl:w-[70%] flex flex-col justify-center items-center py-6 px-8 bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200 max-md:mt-10">
+      <div className="w-full flex flex-col justify-center items-center py-10">
+        <div
+          className="w-[90%] max-sm:w-[92%] md:w-[70%] lg:w-[60%] xl:w-[60%] 
+     flex flex-col justify-center items-center py-4 px-10 max-md:px-6
+     bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200"
+        >
           <Image
             src={Images.MaverickLogo}
             alt="Logo"
@@ -201,31 +205,30 @@ function RegisterContent() {
           </p> */}
 
           <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
-            {/* Name */}
-            <div>
-              <div className="relative">
-                <FaUser className="absolute left-3 top-2 text-gray-500" />
-                <input
-                  type="text"
-                  name="user_name"
-                  placeholder="Full Name"
-                  value={formik.values.user_name}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-5 gap-y-2">
+              {/* Name */}
+              <div>
+                <div className="relative">
+                  <FaUser className="absolute left-3 top-2 text-gray-500" />
+                  <input
+                    type="text"
+                    name="user_name"
+                    placeholder="Full Name"
+                    value={formik.values.user_name}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 mb-1 block">
+                  {formik.touched.user_name && formik.errors.user_name
+                    ? formik.errors.user_name
+                    : "\u00A0"}
+                </span>
               </div>
-              <span className="text-red-500 text-xs mt-1 block">
-                {formik.touched.user_name && formik.errors.user_name
-                  ? formik.errors.user_name
-                  : "\u00A0"}
-              </span>
-            </div>
 
-            {/* DOB + Gender Row */}
-            <div className="grid grid-cols-1 xl:grid-cols-7 gap-3">
               {/* DOB */}
-              <div className="xl:col-span-4">
+              <div>
                 <div className="relative" inputMode="none">
                   <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
                   <DatePicker
@@ -366,7 +369,7 @@ function RegisterContent() {
               </div>
 
               {/* Gender */}
-              <div className="xl:col-span-3">
+              <div>
                 <div className="relative">
                   <FaTransgender className="absolute left-3 top-2.5 text-gray-500" />
                   <Select
@@ -397,97 +400,97 @@ function RegisterContent() {
                     : "\u00A0"}
                 </span>
               </div>
-            </div>
 
-            {/* Email */}
-            <div>
-              <div className="relative">
-                <FiMail className="absolute left-3 top-2 text-gray-500" />
-                <input
-                  type="email"
-                  name="mail"
-                  placeholder="Email"
-                  value={formik.values.mail}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
-                />
+              {/* Email */}
+              <div>
+                <div className="relative">
+                  <FiMail className="absolute left-3 top-2 text-gray-500" />
+                  <input
+                    type="email"
+                    name="mail"
+                    placeholder="Email"
+                    value={formik.values.mail}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.mail && formik.errors.mail
+                    ? formik.errors.mail
+                    : "\u00A0"}
+                </span>
               </div>
-              <span className="text-red-500 text-xs mt-1 block">
-                {formik.touched.mail && formik.errors.mail
-                  ? formik.errors.mail
-                  : "\u00A0"}
-              </span>
-            </div>
 
-            {/* Contact */}
-            <div>
-              <div className="relative">
-                <FaPhone className="absolute left-3 top-2 text-gray-500" />
-                <input
-                  type="text"
-                  name="contact"
-                  placeholder="Contact Number"
-                  value={formik.values.contact}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
-                />
+              {/* Contact */}
+              <div>
+                <div className="relative">
+                  <FaPhone className="absolute left-3 top-2 text-gray-500" />
+                  <input
+                    type="text"
+                    name="contact"
+                    placeholder="Contact Number"
+                    value={formik.values.contact}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.contact && formik.errors.contact
+                    ? formik.errors.contact
+                    : "\u00A0"}
+                </span>
               </div>
-              <span className="text-red-500 text-xs mt-1 block">
-                {formik.touched.contact && formik.errors.contact
-                  ? formik.errors.contact
-                  : "\u00A0"}
-              </span>
-            </div>
 
-            {/* Referral */}
-            <div>
-              <div className="relative">
-                <IoIosLink className="absolute left-3 top-2 text-gray-500" />
-                <input
-                  type="text"
-                  name="referBy"
-                  placeholder="Referral ID"
-                  value={formik.values.referBy}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  readOnly={isReferByPreset} // only read-only if preset
-                  className={`w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200 ${
-                    isReferByPreset ? " cursor-not-allowed" : ""
-                  }`}
-                />
+              {/* Referral */}
+              <div className="col-span-1">
+                <div className="relative">
+                  <IoIosLink className="absolute left-3 top-2 text-gray-500" />
+                  <input
+                    type="text"
+                    name="referBy"
+                    placeholder="Referral ID"
+                    value={formik.values.referBy}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    readOnly={isReferByPreset} // only read-only if preset
+                    className={`w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200 ${
+                      isReferByPreset ? " cursor-not-allowed" : ""
+                    }`}
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.referBy && formik.errors.referBy
+                    ? formik.errors.referBy
+                    : "\u00A0"}
+                </span>
               </div>
-              <span className="text-red-500 text-xs mt-1 block">
-                {formik.touched.referBy && formik.errors.referBy
-                  ? formik.errors.referBy
-                  : "\u00A0"}
-              </span>
-            </div>
 
-            {/* Team */}
-            <div>
-              <div className="relative">
-                <FaUsers className="absolute left-3 top-2.5 text-gray-500" />
-                <Select
-                  options={teams}
-                  name="team"
-                  value={teams.find((t) => t.value === formik.values.team)}
-                  onChange={(opt) =>
-                    formik.setFieldValue("team", opt?.value || "")
-                  }
-                  onBlur={() => formik.setFieldTouched("team", true)}
-                  styles={customSelectStyles}
-                  isDisabled={isTeamPreset}
-                  placeholder="Select Team"
-                  className="w-full"
-                />
+              {/* Team */}
+              <div className="col-span-1">
+                <div className="relative">
+                  <FaUsers className="absolute left-3 top-2.5 text-gray-500" />
+                  <Select
+                    options={teams}
+                    name="team"
+                    value={teams.find((t) => t.value === formik.values.team)}
+                    onChange={(opt) =>
+                      formik.setFieldValue("team", opt?.value || "")
+                    }
+                    onBlur={() => formik.setFieldTouched("team", true)}
+                    styles={customSelectStyles}
+                    isDisabled={isTeamPreset}
+                    placeholder="Select Team"
+                    className="w-full"
+                  />
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.team && formik.errors.team
+                    ? formik.errors.team
+                    : "\u00A0"}
+                </span>
               </div>
-              <span className="text-red-500 text-xs mt-1 block">
-                {formik.touched.team && formik.errors.team
-                  ? formik.errors.team
-                  : "\u00A0"}
-              </span>
             </div>
 
             {/* Terms */}
@@ -575,7 +578,7 @@ function RegisterContent() {
 
       <TermsModal isOpen={!!modalType} type={modalType} onClose={closeModal} />
 
-      {/* Right Illustration */}
+      {/* Right Illustration
       <div className="w-1/2 max-xl:w-2/5 flex items-center justify-center p-1 max-lg:hidden">
         <DotLottieReact
           src="https://lottie.host/b80db1a0-c452-4ff8-847a-eed370430e0e/DePiYXvQ6y.lottie"
@@ -583,7 +586,7 @@ function RegisterContent() {
           autoplay
           style={{ width: "70%", height: "78%" }}
         />
-      </div>
+      </div> */}
     </div>
   );
 }

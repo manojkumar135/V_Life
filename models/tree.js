@@ -9,6 +9,7 @@ const TreeNodeSchema = new Schema(
     name: { type: String, required: true },
     dob: { type: String, },
     gender: { type: String },
+    blood: { type: String },
 
     status: { type: String, default: "inactive" }, // active, inactive, suspended
     status_notes: { type: String, },

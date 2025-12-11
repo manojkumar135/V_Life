@@ -48,6 +48,7 @@ interface CycleStats {
   cycleStart: string;
   cycleEnd: string;
   daysPassed: number;
+  remainingDays: number;
 }
 
 interface LinkButtonProps {
@@ -99,6 +100,8 @@ const DashboardPage: React.FC = () => {
     purchases: 0,
     tax: 0,
   });
+
+  console.log(cycles);
 
   useEffect(() => {
     const checkAdvancePayment = async () => {
@@ -260,17 +263,16 @@ const DashboardPage: React.FC = () => {
               className="bg-white
  rounded-2xl shadow-md p-6 max-md:p-3 border-[1.5px] border-gray-300 relative"
             >
-                <div
-                    onClick={() => router.push("/settings")}
-                    className="absolute bottom-2 right-5 flex items-center gap-1 cursor-pointer
+              <div
+                onClick={() => router.push("/settings")}
+                className="absolute bottom-2 right-5 flex items-center gap-1 cursor-pointer
              text-black hover:text-blue-700 text-xs md:text-sm"
-                  >
-                    <CiEdit className="w-4 h-4 md:w-5 md:h-5" />
-                    <span>Edit</span>
-                  </div>
+              >
+                <CiEdit className="w-4 h-4 md:w-5 md:h-5" />
+                <span>Edit</span>
+              </div>
               <div className="flex flex-col md:flex-row justify-center  lg:flex-col items-center text-center">
                 <div className="w-24 h-24 mb-4 md:w-28 md:h-28 border-0 border-gray-600 rounded-full flex items-center justify-center bg-white shadow-lg md:mr-12 lg:mr-0">
-                
                   <img
                     src={
                       user.profile ||
@@ -465,9 +467,13 @@ const DashboardPage: React.FC = () => {
                   value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
-                  icon={<FaUser />}
-                  title="Matching Pairs"
-                  value={cycles?.matches?.toString() || "0"}
+                  icon={<MdOutlineCheckCircle />}
+                  title={`Matching pairs (${
+                    cycles?.matches?.toString() || "0"
+                  }) `}
+                  value={`${
+                    cycles?.remainingDays?.toString() || "0"
+                  } days left`}
                 />
 
                 {/* <DashBox
@@ -476,7 +482,7 @@ const DashboardPage: React.FC = () => {
                   value={summary?.purchaseCount?.toString() || "0"}
                 /> */}
                 <DashBox
-                  icon={<MdOutlineCheckCircle />}
+                  icon={<FaUser />}
                   title="Days from Activation"
                   value={`${cycles?.daysPassed?.toString() || "0"} days`}
                 />
@@ -488,7 +494,7 @@ const DashboardPage: React.FC = () => {
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
-                  title="Infinity Bonus"
+                  title="Infinity Matching Bonus"
                   value={`₹ ${summary?.infinityBonus?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
@@ -588,7 +594,7 @@ const DashBox = ({
   value: string;
 }) => (
   <div className=" text-black bg-white rounded-xl p-3 text-center flex flex-col items-center justify-center shadow-[0_4px_10px_rgba(255, 218, 68, 0.2)] border-[1.5px] border-gray-500 hover:scale-[1.01] transition-transform duration-150">
-    <div className="text-2xl mb-2 text-yellow-400">{icon}</div>
+    <div className="text-2xl mb-2 text-[#106187]">{icon}</div>
     <p className="text-xs font-medium">{title}</p>
     <p className="text-md font-semibold mt-1">{value}</p>
   </div>

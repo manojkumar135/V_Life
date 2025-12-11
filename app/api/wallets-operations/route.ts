@@ -138,6 +138,7 @@ export async function POST(request: Request) {
       login.wallet_id = wallet_id || login.wallet_id || "";
       login.aadhar = aadhar_number || login.aadhar || "";
       login.pan = pan_number || login.pan || "";
+      login.gst = body.gst_number || login.gst || "";
       await login.save();
     }
 
@@ -220,6 +221,7 @@ export async function PUT(request: Request) {
     wallet.wallet_id = wallet_id || wallet.wallet_id || "";
     wallet.aadhar_number = aadhar_number || wallet.aadhar_number || "";
     wallet.pan_number = pan_number || wallet.pan_number || "";
+    wallet.gst_number = updates.gst_number || wallet.gst_number || "";
     await wallet.save();
 
     // ✅ Always sync Login
@@ -228,6 +230,7 @@ export async function PUT(request: Request) {
       login.wallet_id = wallet.wallet_id;
       login.aadhar = wallet.aadhar_number;
       login.pan = wallet.pan_number;
+      login.gst = wallet.gst_number || login.gst || "";
       await login.save();
     }
 
@@ -313,6 +316,8 @@ export async function PATCH(request: Request) {
     wallet.wallet_id = wallet_id || wallet.wallet_id || "";
     wallet.aadhar_number = aadhar_number || wallet.aadhar_number || "";
     wallet.pan_number = pan_number || wallet.pan_number || "";
+    wallet.gst_number = updates.gst_number || wallet.gst_number || "";
+
     await wallet.save();
 
     // ✅ Always sync Login
@@ -321,6 +326,8 @@ export async function PATCH(request: Request) {
       login.wallet_id = wallet.wallet_id;
       login.aadhar = wallet.aadhar_number;
       login.pan = wallet.pan_number;
+      login.gst = wallet.gst_number || login.gst || "";
+
       await login.save();
     }
 
