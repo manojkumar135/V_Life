@@ -13,6 +13,7 @@ import { FaUser, FaPhone, FaUsers } from "react-icons/fa";
 import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
 import { FaTransgender } from "react-icons/fa";
+import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import DatePicker from "react-datepicker";
@@ -45,6 +46,9 @@ function RegisterContent() {
   const [loading, setLoading] = useState(false);
   // const [isTermsOpen, setIsTermsOpen] = useState(false);
 
+  const [panVerified, setPanVerified] = useState(false);
+  const [panChecking, setPanChecking] = useState(false);
+
   const [isReferByPreset, setIsReferByPreset] = useState(false);
   const [isTeamPreset, setIsTeamPreset] = useState(false);
 
@@ -72,6 +76,8 @@ function RegisterContent() {
       parent: "",
       terms: false,
       gender: "",
+      pan: "",
+      panVerified: false,
     },
     validationSchema: Yup.object({
       user_name: Yup.string()
@@ -101,6 +107,9 @@ function RegisterContent() {
       referBy: Yup.string().required("* Referral ID is required"),
       team: Yup.string().required("* Team is required"),
       gender: Yup.string().required("* Gender is required"),
+      panNumber: Yup.string()
+        .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "* PAN must be 10 characters")
+        .required("* PAN Number is required"),
     }),
     onSubmit: async (values) => {
       setLoading(true);
@@ -176,6 +185,50 @@ function RegisterContent() {
     setIsInitialSet(true);
   }, [params, isInitialSet]);
 
+  // PAN duplicate check
+  const checkPanDuplicate = async (pan: string) => {
+    try {
+      setPanChecking(true);
+      const res = await axios.get(`/api/users-operations?pan=${pan}`);
+
+      if (res.data.exists) {
+        ShowToast.error("PAN already exists!");
+        setPanVerified(false);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setPanChecking(false);
+    }
+  };
+
+  // PAN verification logic
+  const verifyPan = async () => {
+    try {
+      setPanChecking(true);
+
+      const res = await axios.post("/api/pancheck-operations", {
+        pan_number: formik.values.pan,
+      });
+
+      const panData = res.data?.data?.data;
+
+      if (res.data.success && panData?.status === "valid") {
+        setPanVerified(true);
+        ShowToast.success("PAN Verified!");
+      } else {
+        setPanVerified(false);
+        ShowToast.error("Invalid PAN Number");
+      }
+    } catch (err) {
+      console.error(err);
+      ShowToast.error("PAN verification failed");
+      setPanVerified(false);
+    } finally {
+      setPanChecking(false);
+    }
+  };
+
   const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
@@ -190,22 +243,28 @@ function RegisterContent() {
       <div className="w-full flex flex-col justify-center items-center py-10">
         <div
           className="w-[90%] max-sm:w-[92%] md:w-[70%] lg:w-[60%] xl:w-[60%] 
-     flex flex-col justify-center items-center py-4 px-10 max-md:px-6
+     flex flex-col justify-center items-center py-4 px-8 max-md:px-6
      bg-[#fffff0] rounded-3xl shadow-lg border border-gray-200"
         >
           <Image
             src={Images.MaverickLogo}
             alt="Logo"
-            width={150}
-            height={80}
-            className="mb-5 border-0 border-black"
+            width={180}
+            height={100}
+            className="
+    mb-5 border-0 
+    w-[180px]        
+    max-md:w-[120px] 
+    max-sm:w-[120px] 
+  "
           />
+
           {/* <p className="text-[1.4rem] font-bold text-black mb-5 xl:mb-3">
             SIGN UP
           </p> */}
 
           <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-5 gap-y-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-5 gap-y-2 mb-3">
               {/* Name */}
               <div>
                 <div className="relative">
@@ -220,7 +279,7 @@ function RegisterContent() {
                     className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
                   />
                 </div>
-                <span className="text-red-500 text-xs mt-1 mb-1 block">
+                <span className="text-red-500 text-xs mt-1 mb-1 max-md:mt-[1px] max-md:mb-[0.6px] block">
                   {formik.touched.user_name && formik.errors.user_name
                     ? formik.errors.user_name
                     : "\u00A0"}
@@ -491,7 +550,61 @@ function RegisterContent() {
                     : "\u00A0"}
                 </span>
               </div>
+              {/* PAN Number */}
+              <div className="col-span-1 flex flex-col">
+                <div className="relative">
+                  {/* Verified Badge */}
+                  <RiVerifiedBadgeFill
+                    className={`absolute right-3 top-2.5 text-green-600 text-xl transition-opacity ${
+                      panVerified ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+
+                  <input
+                    type="text"
+                    name="pan"
+                    maxLength={10}
+                    placeholder="PAN Number (Optional)"
+                    value={formik.values.pan || ""}
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase();
+                      formik.setFieldValue("pan", value);
+                      setPanVerified(false);
+
+                      if (value.length === 10) checkPanDuplicate(value);
+                    }}
+                    className="w-full pl-3 pr-24 py-1 rounded-md border border-gray-400 uppercase"
+                  />
+
+                  {/* Verify button */}
+                  {formik.values.pan?.length === 10 &&
+                    !panVerified &&
+                    !panChecking && (
+                      <button
+                        type="button"
+                        onClick={verifyPan}
+                        className="absolute right-2 top-[3px] text-xs bg-[#106187] text-white px-2 py-[2px] rounded"
+                      >
+                        Verify
+                      </button>
+                    )}
+
+                  {/* Checking... */}
+                  {panChecking && (
+                    <span className="absolute right-3 top-[10px] text-[10px] text-gray-500">
+                      Checking...
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
+
+               {/* PAN Note */}
+            <p className="text-[0.75rem] text-gray-600 -mt-3 mb-8">
+              <strong>Note:</strong> If PAN is verified, TDS will be{" "}
+              <strong>2%</strong>. If not verified, TDS will be{" "}
+              <strong>20%</strong>.
+            </p>
 
             {/* Terms */}
             <div className="flex items-center space-x-2 ">
@@ -595,8 +708,8 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-screen text-lg font-semibold">
-          Loading registration form...
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
         </div>
       }
     >
