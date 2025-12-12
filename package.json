@@ -40,6 +40,7 @@
     "next": "^16.0.7",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.5",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^3.11.174",
     "razorpay": "^2.9.6",
     "react": "^19.2.1",
