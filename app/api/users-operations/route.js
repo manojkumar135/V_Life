@@ -7,6 +7,8 @@ import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
+import { Wallet } from "@/models/wallet";
+
 
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { createUserAndLogin } from "./helpers";
@@ -19,6 +21,38 @@ export async function POST(request) {
     await connectDB();
     const body = await request.json();
     const { newUser, newLogin } = await createUserAndLogin(body);
+
+let newWallet = null;
+
+    if (body.pan && body.pancheck === true) {
+      const wallet_id = await generateUniqueCustomId("WAL");
+
+      newWallet = await Wallet.create({
+        wallet_id,
+        user_id: newUser.user_id,
+        user_name: newUser.user_name,
+        contact: newUser.contact,
+        mail: newUser.mail,
+        gender: newUser.gender,
+        rank: newUser.rank || "",
+        user_status: "Active",
+        activated_date: new Date(),
+
+        // PAN details
+        pan_number: body.pan,
+        pan_verified: "Yes",
+
+        // Wallet defaults
+        balance: 0,
+        total_earnings: 0,
+        total_withdrawn: 0,
+        wallet_status: "Active",
+
+        created_by: newUser.user_id,
+      });
+    }
+
+
     return NextResponse.json({ success: true, message: "User created successfully", userId: newUser.user_id, user: newUser, login: newLogin }, { status: 201 });
   } catch (error) {
     console.error("❌ Error creating user:", error);

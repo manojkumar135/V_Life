@@ -1,23 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
-// Convert ISO date (YYYY-MM-DD) to DD/MM/YYYY
 const formatDOB = (isoDate: string) => {
   const date = new Date(isoDate);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${day}/${month}/${year}`;
+  return `${String(date.getDate()).padStart(2, "0")}/${String(
+    date.getMonth() + 1
+  ).padStart(2, "0")}/${date.getFullYear()}`;
 };
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { pan_number, pan_name, pan_dob } = body;
+    const { pan_number, pan_name, pan_dob } = await request.json();
 
-    if (!pan_number || !pan_name || !pan_dob) {
+    // console.log(pan_number,"pan number")
+
+    if (!pan_number) {
       return NextResponse.json(
-        { success: false, message: "PAN number, name, and DOB are required" },
+        { success: false, message: "PAN number is required" },
         { status: 400 }
       );
     }
@@ -27,12 +26,12 @@ export async function POST(request: NextRequest) {
 
     if (!KEY_ID || !SECRET_KEY) {
       return NextResponse.json(
-        { success: false, message: "PAN API keys not configured" },
+        { success: false, message: "PAN API keys missing" },
         { status: 500 }
       );
     }
 
-    // Step 1: Get access token
+    // 1️⃣ FETCH TOKEN
     const authRes = await axios.post(
       "https://api.sandbox.co.in/authenticate",
       {},
@@ -45,53 +44,60 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    const accessToken = authRes.data?.access_token;
-    if (!accessToken) {
+    const token = authRes.data?.access_token;
+    if (!token) {
       return NextResponse.json(
-        { success: false, message: "Failed to get access token" },
+        { success: false, message: "Token generation failed" },
         { status: 500 }
       );
     }
 
-    // Step 2: Call PAN verification API
-    const formattedDob = formatDOB(pan_dob);
+    // 2️⃣ SELECT MODE
+    let url = "";
+    let payload: any = {};
 
-    // console.log(formattedDob)
+    if (pan_name && pan_dob) {
+      url = "https://api.sandbox.co.in/kyc/pan/verify";
 
-    const payload = {
-      "@entity": "in.co.sandbox.kyc.pan_verification.request",
-      pan: pan_number,
-      name_as_per_pan: pan_name,
-      date_of_birth: formattedDob,
-      consent: "Y",
-      reason: "for onboarding customer",
-    };
+      payload = {
+        "@entity": "in.co.sandbox.kyc.pan_verification.request",
+        pan: pan_number,
+        name_as_per_pan: pan_name,
+        date_of_birth: formatDOB(pan_dob),
+        consent: "Y",
+        reason: "for onboarding customer",
+      };
+    } else {
+      url = "https://api.sandbox.co.in/kyc/pan";
 
-    const panRes = await axios.post(
-      "https://api.sandbox.co.in/kyc/pan/verify",
-      payload,
-      {
-        headers: {
-          Authorization: `${accessToken}`,
-          "X-API-KEY": KEY_ID,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+      payload = {
+        "@entity": "in.co.sandbox.kyc.pan.request",
+        pan: pan_number,
+        consent: "Y",
+        reason: "for onboarding customer",
+      };
+    }
 
-    const panData = panRes.data;
+    // 3️⃣ CALL PAN API
+    const panRes = await axios.post(url, payload, {
+      headers: {
+        Authorization: `Bearer ${token}`, // 🔥 FIXED
+        "X-API-KEY": KEY_ID,
+        "Content-Type": "application/json",
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      data: panData,
-      message: "PAN verification completed",
+      data: panRes.data,
+      mode: pan_name && pan_dob ? "with_details" : "basic",
     });
   } catch (error: any) {
-    console.error("PAN verification error:", error.response?.data || error.message);
+    console.error("PAN verification error FULL:", error?.response?.data);
     return NextResponse.json(
       {
         success: false,
-        message: error.response?.data?.message || "PAN verification failed",
+        message: error?.response?.data?.message || "PAN verification failed",
       },
       { status: 500 }
     );

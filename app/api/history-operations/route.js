@@ -571,11 +571,25 @@ export async function GET(request) {
     const finalQuery =
       conditions.length > 0 ? { $and: [baseQuery, ...conditions] } : baseQuery;
 
-    const histories = await History.find(finalQuery).sort({
+    let histories = await History.find(finalQuery).sort({
       // date:-1,
       // last_modified_at: -1,
       created_at: -1,
     });
+
+    if (role === "user") {
+  histories = histories.filter((h) => {
+    const details = String(h.details || "").trim();
+
+    // Exact match: "Order Payment"
+    if (details === "Order Payment") return false;
+
+    // Starts with: "Order Payment (...)"
+    if (details.startsWith("Order Payment (")) return false;
+
+    return true; // keep everything else
+  });
+}
 
     return NextResponse.json({ success: true, data: histories }, { status: 200 });
   } catch (error) {

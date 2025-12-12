@@ -14,6 +14,7 @@ import { IoIosLink } from "react-icons/io";
 import { IoCalendarOutline } from "react-icons/io5";
 import { FaTransgender } from "react-icons/fa";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
+import { FaIdCard } from "react-icons/fa";
 
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import DatePicker from "react-datepicker";
@@ -77,7 +78,7 @@ function RegisterContent() {
       terms: false,
       gender: "",
       pan: "",
-      panVerified: false,
+      pancheck: false,
     },
     validationSchema: Yup.object({
       user_name: Yup.string()
@@ -107,9 +108,16 @@ function RegisterContent() {
       referBy: Yup.string().required("* Referral ID is required"),
       team: Yup.string().required("* Team is required"),
       gender: Yup.string().required("* Gender is required"),
-      panNumber: Yup.string()
-        .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "* PAN must be 10 characters")
-        .required("* PAN Number is required"),
+      pan: Yup.string()
+        .trim()
+        .max(10, "* PAN must be exactly 10 characters")
+        .test("valid-pan", "* Invalid PAN format (ABCDE1234F)", (value) => {
+          if (!value) return true; // optional
+          if (value.length < 10) return true; // do NOT validate
+          return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value); // only validate when length = 10
+        })
+        .nullable()
+        .notRequired(),
     }),
     onSubmit: async (values) => {
       setLoading(true);
@@ -189,14 +197,18 @@ function RegisterContent() {
   const checkPanDuplicate = async (pan: string) => {
     try {
       setPanChecking(true);
-      const res = await axios.get(`/api/users-operations?pan=${pan}`);
+
+      const res = await axios.get(`/api/panfind-operations?pan=${pan}`);
 
       if (res.data.exists) {
-        ShowToast.error("PAN already exists!");
         setPanVerified(false);
+        return true; // PAN EXISTS ❌
       }
+
+      return false; // PAN available ✔
     } catch (err) {
       console.error(err);
+      return false;
     } finally {
       setPanChecking(false);
     }
@@ -215,19 +227,28 @@ function RegisterContent() {
 
       if (res.data.success && panData?.status === "valid") {
         setPanVerified(true);
+        formik.setFieldValue("pancheck", true); // <-- update formik field
         ShowToast.success("PAN Verified!");
       } else {
         setPanVerified(false);
+        formik.setFieldValue("pancheck", false); // <-- update formik field
         ShowToast.error("Invalid PAN Number");
       }
     } catch (err) {
       console.error(err);
       ShowToast.error("PAN verification failed");
       setPanVerified(false);
+      formik.setFieldValue("pancheck", false);
     } finally {
       setPanChecking(false);
     }
   };
+
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleNavigateToLogin = () => router.push("/auth/login");
 
@@ -239,7 +260,6 @@ function RegisterContent() {
         </div>
       )}
 
-      {/* Form Section */}
       <div className="w-full flex flex-col justify-center items-center py-10">
         <div
           className="w-[90%] max-sm:w-[92%] md:w-[70%] lg:w-[60%] xl:w-[60%] 
@@ -263,6 +283,8 @@ function RegisterContent() {
             SIGN UP
           </p> */}
 
+
+          {/* Form Section */}
           <form onSubmit={formik.handleSubmit} className="w-full space-y-2">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-5 gap-y-2 mb-3">
               {/* Name */}
@@ -431,27 +453,31 @@ function RegisterContent() {
               <div>
                 <div className="relative">
                   <FaTransgender className="absolute left-3 top-2.5 text-gray-500" />
-                  <Select
-                    options={gender}
-                    name="gender"
-                    value={gender.find((t) => t.value === formik.values.gender)}
-                    onChange={(opt) =>
-                      formik.setFieldValue("gender", opt?.value || "")
-                    }
-                    onBlur={() => formik.setFieldTouched("gender", true)}
-                    styles={{
-                      ...customSelectStyles,
-                      control: (base, state) => ({
-                        ...customSelectStyles.control?.(base, state),
-                        height: "34px", // 👈 3/7 Height
-                        minHeight: "34px",
-                        paddingLeft: "20px", // icon space alignment
-                      }),
-                    }}
-                    // isDisabled={isTeamPreset}
-                    placeholder="Gender"
-                    className="w-auto"
-                  />
+                  {isClient && (
+                    <Select
+                      options={gender}
+                      name="gender"
+                      value={gender.find(
+                        (t) => t.value === formik.values.gender
+                      )}
+                      onChange={(opt) =>
+                        formik.setFieldValue("gender", opt?.value || "")
+                      }
+                      onBlur={() => formik.setFieldTouched("gender", true)}
+                      styles={{
+                        ...customSelectStyles,
+                        control: (base, state) => ({
+                          ...customSelectStyles.control?.(base, state),
+                          height: "34px", // 👈 3/7 Height
+                          minHeight: "34px",
+                          paddingLeft: "20px", // icon space alignment
+                        }),
+                      }}
+                      // isDisabled={isTeamPreset}
+                      placeholder="Gender"
+                      className="w-auto"
+                    />
+                  )}
                 </div>
                 <span className="text-red-500 text-xs mt-1 block">
                   {formik.touched.gender && formik.errors.gender
@@ -530,19 +556,29 @@ function RegisterContent() {
               <div className="col-span-1">
                 <div className="relative">
                   <FaUsers className="absolute left-3 top-2.5 text-gray-500" />
-                  <Select
-                    options={teams}
-                    name="team"
-                    value={teams.find((t) => t.value === formik.values.team)}
-                    onChange={(opt) =>
-                      formik.setFieldValue("team", opt?.value || "")
-                    }
-                    onBlur={() => formik.setFieldTouched("team", true)}
-                    styles={customSelectStyles}
-                    isDisabled={isTeamPreset}
-                    placeholder="Select Team"
-                    className="w-full"
-                  />
+                  {isClient && (
+                    <Select
+                      options={teams}
+                      name="team"
+                      value={teams.find((t) => t.value === formik.values.team)}
+                      onChange={(opt) =>
+                        formik.setFieldValue("team", opt?.value || "")
+                      }
+                      onBlur={() => formik.setFieldTouched("team", true)}
+                      styles={{
+                        ...customSelectStyles,
+                        control: (base, state) => ({
+                          ...customSelectStyles.control?.(base, state),
+                          height: "34px", // 👈 3/7 Height
+                          minHeight: "34px",
+                          paddingLeft: "20px", // icon space alignment
+                        }),
+                      }}
+                      isDisabled={isTeamPreset}
+                      placeholder="Select Team"
+                      className="w-full"
+                    />
+                  )}
                 </div>
                 <span className="text-red-500 text-xs mt-1 block">
                   {formik.touched.team && formik.errors.team
@@ -550,56 +586,101 @@ function RegisterContent() {
                     : "\u00A0"}
                 </span>
               </div>
+
               {/* PAN Number */}
               <div className="col-span-1 flex flex-col">
                 <div className="relative">
-                  {/* Verified Badge */}
-                  <RiVerifiedBadgeFill
-                    className={`absolute right-3 top-2.5 text-green-600 text-xl transition-opacity ${
-                      panVerified ? "opacity-100" : "opacity-0"
-                    }`}
-                  />
+                  {/* Left Icon */}
+                  <FaIdCard className="absolute left-3 top-2.5 text-gray-500" />
 
+                  {/* PAN Input */}
                   <input
                     type="text"
                     name="pan"
                     maxLength={10}
                     placeholder="PAN Number (Optional)"
-                    value={formik.values.pan || ""}
-                    onChange={(e) => {
+                    value={formik.values.pan.toUpperCase() || ""}
+                    onChange={async (e) => {
                       const value = e.target.value.toUpperCase();
+
                       formik.setFieldValue("pan", value);
                       setPanVerified(false);
 
-                      if (value.length === 10) checkPanDuplicate(value);
+                      // 👉 1️⃣ If typing and < 10 chars → NO ERROR, NO CHECK
+                      if (value.length < 10) {
+                        formik.setFieldError("pan", "");
+                        return;
+                      }
+
+                      // 👉 2️⃣ If > 10 chars → show error
+                      if (value.length > 10) {
+                        formik.setFieldError(
+                          "pan",
+                          "PAN must be exactly 10 characters"
+                        );
+                        return;
+                      }
+
+                      // 👉 3️⃣ If length === 10 but wrong format → show error
+                      if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value)) {
+                        formik.setFieldError(
+                          "pan",
+                          "Invalid PAN format (ABCDE1234F)"
+                        );
+                        return;
+                      }
+
+                      // 👉 4️⃣ Valid format → clear error & check duplicate
+                      formik.setFieldError("pan", "");
+
+                      const exists = await checkPanDuplicate(value);
+                      if (exists) {
+                        formik.setFieldError("pan", "PAN already exists");
+                        return;
+                      }
                     }}
-                    className="w-full pl-3 pr-24 py-1 rounded-md border border-gray-400 uppercase"
+                    className="w-full pl-10 pr-20 py-1 rounded-md border border-gray-400"
                   />
 
-                  {/* Verify button */}
-                  {formik.values.pan?.length === 10 &&
+                  {formik.values.pan.length === 10 &&
+                    /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(formik.values.pan) &&
+                    !panChecking &&
                     !panVerified &&
-                    !panChecking && (
+                    !formik.errors.pan && (
                       <button
                         type="button"
                         onClick={verifyPan}
-                        className="absolute right-2 top-[3px] text-xs bg-[#106187] text-white px-2 py-[2px] rounded"
+                        className="
+            absolute right-1 top-1
+            bg-[#106187] text-white 
+            px-3 rounded 
+            h-[26px] flex items-center text-sm cursor-pointer
+          "
                       >
                         Verify
                       </button>
                     )}
 
-                  {/* Checking... */}
                   {panChecking && (
                     <span className="absolute right-3 top-[10px] text-[10px] text-gray-500">
                       Checking...
                     </span>
                   )}
+
+                  {panVerified && !panChecking && (
+                    <RiVerifiedBadgeFill className="absolute right-3 top-1 text-green-600 text-xl" />
+                  )}
                 </div>
+
+                {/* PAN Error */}
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.errors.pan || "\u00A0"}
+                </span>
               </div>
+              
             </div>
 
-               {/* PAN Note */}
+            {/* PAN Note */}
             <p className="text-[0.75rem] text-gray-600 -mt-3 mb-8">
               <strong>Note:</strong> If PAN is verified, TDS will be{" "}
               <strong>2%</strong>. If not verified, TDS will be{" "}

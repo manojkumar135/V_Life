@@ -33,7 +33,7 @@ export default function SideNav({
     {
       href: "/dashboards",
       icon: <LuLayoutDashboard />,
-      label: "Dashboard",
+      label: "My Profile",
       match: ["dashboard"],
     },
     {
@@ -42,35 +42,32 @@ export default function SideNav({
           ? "/administration"
           : "/administration/users",
       icon: <IoPeople />,
-      label: "Administration",
+      label: "My Team",
       match: ["administration"],
     },
     {
       href: "/wallet",
       icon: <FaWallet />,
-      label: "Wallet",
-      match: ["wallet", "reports","/tds"],
+      label: "My Wallet",
+      match: ["wallet", "reports", "/tds"],
     },
     {
       href: "/orders",
       icon: <FaBoxesPacking />,
-      label: "Orders",
+      label: "My Orders",
       match: ["orders", "products"], // 👈 include both
     },
     {
-      href:
-        user?.role === "user"
-          ? "/historys"
-          : "/historys/adminhistory",
+      href: user?.role === "user" ? "/historys" : "/historys/adminhistory",
       icon: <FaHistory />,
-      label: "History",
+      label: "My Payments",
       match: ["history"],
     },
     {
       href: "/settings",
       icon: <IoSettings />,
       label: "Settings",
-      match: ["settings"],
+      match: ["settings", "welcomeletter"],
     },
   ];
 

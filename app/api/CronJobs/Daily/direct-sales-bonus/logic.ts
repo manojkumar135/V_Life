@@ -285,7 +285,18 @@ export async function runDirectSalesBonus() {
 
         let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
 
-        if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
+        // 1️⃣ If wallet not created → Hold
+        if (!wallet) {
+          payoutStatus = "OnHold";
+        }
+
+        // 2️⃣ If wallet exists but bank details missing → Hold
+        else if (!wallet.account_number) {
+          payoutStatus = "OnHold";
+        }
+
+        // 3️⃣ Apply PV-based hold rules
+        else if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
           payoutStatus = "OnHold";
         }
 

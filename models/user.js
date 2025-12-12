@@ -1,5 +1,6 @@
 // import { group } from "console";
 import mongoose from "mongoose";
+import { boolean } from "yup";
 // import { title } from "process";
 
 const BonusHistorySchema = new mongoose.Schema({
@@ -50,6 +51,8 @@ const UserSchema = new mongoose.Schema(
     nominee_gender: { type: String },
     nominee_contact: { type: String },
     nominee_aadhar: { type: String },
+    pan: { type: String },
+    pancheck: { type: String },
 
 
     // 🔗 Referral / Upline

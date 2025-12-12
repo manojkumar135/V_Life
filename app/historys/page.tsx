@@ -193,7 +193,7 @@ export default function TransactionHistory() {
       },
     },
 
-    {
+    user?.role === "admin" && {
       field: "transaction_type",
       headerName: "Status",
       flex: 0.8,

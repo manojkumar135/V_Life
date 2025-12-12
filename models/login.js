@@ -67,6 +67,7 @@ const LoginSchema = new mongoose.Schema(
     wallet_id: { type: String },
     aadhar: { type: String },
     pan: { type: String },
+    pancheck: { type: String },
     first_name: { type: String },
     last_name: { type: String },
     referBy: { type: String },

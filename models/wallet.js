@@ -14,16 +14,16 @@ const WalletSchema = new mongoose.Schema(
     activated_date: { type: String },
 
 
-    account_holder_name: { type: String, required: true },
-    bank_name: { type: String, required: true },
-    account_number: { type: String, required: true },
-    ifsc_code: { type: String, required: true },
+    account_holder_name: { type: String, },
+    bank_name: { type: String,  },
+    account_number: { type: String,  },
+    ifsc_code: { type: String,},
     cheque: { type: String },
     bank_book:{type:String},
 
     // Aadhaar + PAN
     aadhar_number: { type: String },
-    pan_number: { type: String },
+    pan_number: { type: String,required: true },
     pan_name: { type: String },
     pan_dob: { type: String },
     pan_verified: { type: String },

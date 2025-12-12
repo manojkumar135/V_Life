@@ -314,10 +314,20 @@ export async function runMatchingBonus() {
       const totalAmount = 5000;
       const afterThis = previousPayout + totalAmount;
 
-      // Default payout status
       let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
 
-      if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
+      // 1️⃣ If wallet not created → Hold
+      if (!wallet) {
+        payoutStatus = "OnHold";
+      }
+
+      // 2️⃣ If wallet exists but bank details missing → Hold
+      else if (!wallet.account_number) {
+        payoutStatus = "OnHold";
+      }
+
+      // 3️⃣ Apply PV-based hold rules
+      else if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
         payoutStatus = "OnHold";
       }
 
@@ -352,7 +362,6 @@ export async function runMatchingBonus() {
         mail: u.mail || "",
         contact: u.contact || "",
         user_status: u.status || "active",
-
 
         name: "Matching Bonus",
         title: "Matching Bonus",
@@ -434,7 +443,7 @@ export async function runMatchingBonus() {
           mail: payout.mail,
           contact: payout.contact,
           user_status: payout.user_status,
-          
+
           account_holder_name: payout.account_holder_name,
           bank_name: payout.bank_name,
           account_number: payout.account_number,
