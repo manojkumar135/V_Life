@@ -20,7 +20,7 @@ const AlertBox: React.FC<AlertBoxProps> = ({
   buttonAction,
   onClose,
   visible,
-  bgColor = "bg-red-500",
+  bgColor = "bg-red-600",
 }) => {
   const router = useRouter();
 
@@ -29,7 +29,7 @@ const AlertBox: React.FC<AlertBoxProps> = ({
   return (
     <div className="fixed bottom-2 right-4 z-20 transition-transform duration-500 ease-in-out transform translate-x-0 ">
       <div
-        className={`${bgColor} text-white shadow-lg rounded-lg p-4 w-68 relative`}
+        className={`${bgColor} text-white shadow-lg rounded-lg p-4 w-68 lg:w-85 relative`}
       >
         <button
           onClick={onClose}
@@ -42,7 +42,7 @@ const AlertBox: React.FC<AlertBoxProps> = ({
         {buttonLabel && (
           <button
             onClick={buttonAction || (() => router.push("/"))}
-            className="mt-3 w-full bg-yellow-400 hover:bg-yellow-300 text-black font-semibold py-2 px-4 rounded-lg cursor-pointer"
+            className="mt-3 w-full bg-yellow-400 text-black font-semibold py-2 px-4 rounded-lg cursor-pointer"
           >
             {buttonLabel}
           </button>

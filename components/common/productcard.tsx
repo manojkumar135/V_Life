@@ -91,7 +91,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {user?.role === "admin" && (
             <TbShoppingBagEdit
               size={15}
-              className="w-10 h-10 p-0 flex text-gray-800 items-center justify-center rounded-md cursor-pointer hover:bg-gray-200"
+              className="w-10 h-10 max-md:w-9 max-md:h-9  p-0 flex text-gray-800 items-center justify-center rounded-md cursor-pointer hover:bg-gray-200"
               onClick={(e) => {
                 e.stopPropagation(); // 🔥 BLOCK card view
                 handleEdit(_id);

@@ -192,11 +192,11 @@ export default function InvoiceTemplate({ data }) {
             <Text style={styles.taxHeading}>TAX INVOICE</Text>
             <View style={[styles.taxLine, { marginTop: 2 }]}>
               <Text>Invoice No :</Text>
-              <Text>{data.order_id || "N/A"}</Text>
+              <Text>{data.order.order_id || "N/A"}</Text>
             </View>
             <View style={[styles.taxLine, { marginTop: 2 }]}>
               <Text>Invoice Date :</Text>
-              <Text>{data.payment_date || "N/A"}</Text>
+              <Text>{data.order.payment_date || "N/A"}</Text>
             </View>
           </View>
         </View>
@@ -206,13 +206,39 @@ export default function InvoiceTemplate({ data }) {
         <Text style={[styles.label, { marginTop: 2 }]}>FROM :</Text>
 
         <View style={{ marginLeft: 3 }}>
-          <Text>#8/165-111/C, LAKE VIEW ROAD, BC RAMAIAH ST, FIRST LANE, RAJEEVNAGAR, ONGOLE, AP - 523002.</Text>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 5, marginBottom: 5 }}>
-            <Text>• Email: support@maverickmoney.com</Text>
-            <Text>+91 123456789 </Text>
-            <Text>GSTIN : 37AAHCN1274B1ZP</Text>
+          {/* Address */}
+          <Text>
+            {data.office?.office_street}
+            {data.office?.office_landmark ? `, ${data.office.office_locality}` : ""}
+            {data.office?.office_city ? `, ${data.office.office_state}` : ""}
+            {data.office?.office_country ? ` - ${data.office.office_pincode}` : ""}
+          </Text>
+
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginTop: 5,
+              marginBottom: 5,
+            }}
+          >
+            {/* Email */}
+            <Text>
+              • Email: {data.office?.office_email || "—"}
+            </Text>
+
+            {/* Phone */}
+            <Text>
+              {data.office?.office_contact || office?.phone || "—"}
+            </Text>
+
+            {/* GST */}
+            <Text>
+              GSTIN : {data.office?.office_gst_number || "—"}
+            </Text>
           </View>
         </View>
+
 
         {/* ================= ADDRESS TABLE ================= */}
         <View style={styles.addressContainer}>
@@ -221,7 +247,7 @@ export default function InvoiceTemplate({ data }) {
             <Text style={[styles.sectionTitle, { margin: 5, }]}>SHIPPING ADDRESS</Text>
             <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
               <Text style={styles.label}>USER NAME  :</Text>
-              <Text>{data.user_name || "N/A"}</Text>
+              <Text>{data.order.user_name || "N/A"}</Text>
             </View>
             <View style={[{ display: "flex", marginLeft: 5 }]}>
               <Text style={styles.label}>ADDRESS  :</Text>
@@ -230,24 +256,24 @@ export default function InvoiceTemplate({ data }) {
 
             <View style={[{ display: "flex", flexDirection: "row", marginTop: 5, marginLeft: 5 }]}>
               <Text style={styles.label}>Email  :</Text>
-              <Text>{data.mail || "N/A"}</Text> </View>
+              <Text>{data.order.mail || "N/A"}</Text> </View>
             <View style={[{ display: "flex", flexDirection: "row", marginTop: 5, marginLeft: 5 }]}>
               <Text style={styles.label}>Contact  :</Text>
-              <Text>{data.contact || "N/A"}</Text> </View>
+              <Text>{data.order.contact || "N/A"}</Text> </View>
           </View>
           {/* RIGHT */}
           <View style={styles.colRight}>
             <Text style={[styles.sectionTitle, { margin: 5 }]}>ORDER DETAILS</Text>
             <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
-              <Text style={styles.label}>USER ID  :</Text> <Text>{data.user_id || "N/A"}</Text>
+              <Text style={styles.label}>USER ID  :</Text> <Text>{data.order.user_id || "N/A"}</Text>
             </View> <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
-              <Text style={styles.label}>ORDER NO  :</Text> <Text>{data.order_id || "N/A"}</Text>
+              <Text style={styles.label}>ORDER NO  :</Text> <Text>{data.order.order_id || "N/A"}</Text>
             </View> <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
-              <Text style={styles.label}>GST :</Text> <Text>{data.gst_no || "N/A"}</Text>
+              <Text style={styles.label}>GST :</Text> <Text>{data.order.gst_no || "N/A"}</Text>
             </View>
             <View style={[{ display: "flex", flexDirection: "row", margin: 5 }]}>
               <Text style={styles.label}>Order Type  : PV OR BV</Text>
-              {/* <Text>{data.order_type || "N/A"}</Text> */}
+              {/* <Text>{data.order.order_type || "N/A"}</Text> */}
             </View>
           </View>
         </View>
@@ -268,7 +294,7 @@ export default function InvoiceTemplate({ data }) {
             <Text style={[styles.col, styles.headerCol, styles.cTotal]}>Total (₹)</Text>
           </View>
 
-          {data.items.map((item, index) => {
+          {data.order.items.map((item, index) => {
             const total = (item.gst * item.dealer_price).toFixed(2);
 
             return (
@@ -293,22 +319,22 @@ export default function InvoiceTemplate({ data }) {
         <View style={styles.totalsSection}>
           <View style={[styles.totalsRow]}>
             <Text>Total Before Tax</Text>
-            <Text>{`\u20B9 ${(data.total_amount - data.total_gst).toFixed(2)}`}</Text>
+            <Text>{`\u20B9 ${(data.order.total_amount - data.order.total_gst).toFixed(2)}`}</Text>
           </View>
 
 
 
           <View style={[styles.totalsRow,]}>
             <Text>Add GST</Text>
-            <Text>{`\u20B9 ${data.total_gst.toFixed(2)}`}</Text>
+            <Text>{`\u20B9 ${data.order.total_gst.toFixed(2)}`}</Text>
           </View>
 
           {/* ---- ADVANCE DEDUCTED ---- */}
-          {data.is_first_order && (
+          {data.order.is_first_order && (
             <View style={[styles.totalsRow]}>
               <Text>Advance Deducted:</Text>
               <Text style={styles.deduction}>
-                {`- \u20B9 ${data.advance_deducted.toFixed(2)}`}
+                {`- \u20B9 ${data.order.advance_deducted.toFixed(2)}`}
               </Text>
             </View>
           )}
@@ -318,7 +344,7 @@ export default function InvoiceTemplate({ data }) {
 
           <View style={[styles.totalsRow]}>
             <Text style={{ fontWeight: "bold", fontSize: 10 }}>Grand Total</Text>
-            <Text style={{ fontWeight: "bold", fontSize: 10 }}>{`\u20B9 ${data.final_amount.toFixed(2)}`}</Text>
+            <Text style={{ fontWeight: "bold", fontSize: 10 }}>{`\u20B9 ${data.order.final_amount.toFixed(2)}`}</Text>
           </View>
         </View>
 

@@ -11,14 +11,27 @@ export async function handlePreviewPDF(
   try {
     setLoading(true);
 
-    const { data } = await axios.get(`/api/order-operations?id=${order_id}`);
-    const order = data?.data?.[0];
+    // 🔹 Fetch order
+    const orderRes = await axios.get(`/api/order-operations?id=${order_id}`);
+    const order = orderRes?.data?.data?.[0];
     if (!order) throw new Error("Order not found");
 
-    // generate pdf blob
-    const blob = await pdf(<InvoiceTemplate data={order} />).toBlob();
-    const url = URL.createObjectURL(blob);
+    // 🔹 Fetch office
+    const officeRes = await axios.get(`/api/office-operations`);
+    const office = officeRes?.data?.data;
 
+    // 🔹 Combine both
+    const pdfData = {
+      order,
+      office,
+    };
+
+    // 🔹 Generate PDF
+    const blob = await pdf(
+      <InvoiceTemplate data={pdfData} />
+    ).toBlob();
+
+    const url = URL.createObjectURL(blob);
     setPreviewUrl(url);
   } catch (error) {
     console.error("Preview Error:", error);

@@ -1,131 +1,108 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import Layout from "@/layout/Layout";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
-import Loader from "@/components/common/loader";
-import { useVLife } from "@/store/context";
-import PaymentModal from "@/components/common/PaymentModal/paymentmodal";
-import { formatDate } from "@/components/common/formatDate";
+import { IoIosArrowBack } from "react-icons/io";
 
-export default function PayAdvancePage() {
-  const { user } = useVLife();
+import CryptoJS from "crypto-js";
+
+const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
+
+export default function ActivateAccountPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
 
-  // console.log(user,"advance")
-
-  const ADVANCE_AMOUNT = 10000;
-
-  const handlePayNow = () => {
-    if (!user?.user_id) {
-      ShowToast.error("User not found");
+  const handleOrder = (amount: any) => {
+    if (![7500, 15000].includes(amount)) {
+      ShowToast.error("Invalid order amount");
       return;
     }
-    setShowPayment(true); // open Razorpay modal
+
+    const payload = { amount };
+    const encrypted = CryptoJS.AES.encrypt(
+      JSON.stringify(payload),
+      SECRET_KEY
+    ).toString();
+
+    router.push(`/orders/addorder?data=${encodeURIComponent(encrypted)}`);
   };
 
-  const onBack = () => {
+  const onCancel = () => {
     router.push("/historys");
   };
 
   return (
     <Layout>
-      {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <Loader />
+      <div className="relative">
+        {/* 🔙 Back Button */}
+        <div
+          className="
+        absolute
+        -top-10 left-8 max-md:top-3 max-md:left-4
+        flex items-center gap-2
+        cursor-pointer z-30 
+      "
+          onClick={() => router.back()}
+          title="Go Back"
+        >
+          <IoIosArrowBack
+            size={28}
+            className="
+          text-black
+          max-sm:text-white
+          max-sm:border
+          max-sm:border-white
+          max-sm:rounded-full
+        "
+          />
+          <p className="font-semibold text-black hidden lg:block">Back</p>
         </div>
-      )}
 
-      <div className="max-w-xl mx-auto p-6 mt-5 bg-white shadow-lg rounded-xl">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-          Activate Your Account
-        </h1>
-        <p className="text-gray-600 text-sm mb-4 text-center">
-          To activate your account, you need to pay{" "}
-          <span className="font-semibold text-green-700">
-            ₹{ADVANCE_AMOUNT.toLocaleString()}
-          </span>{" "}
-          as a prepaid amount.
-        </p>
-        <p className="text-gray-600 text-sm mb-6 text-center">
-          This amount will be <strong>adjusted in your first order</strong>.
-          Example: If your first order is{" "}
-          <span className="font-semibold">₹15,000</span>, then the prepaid{" "}
-          <span className="font-semibold">₹10,000</span> will be deducted, and
-          you only pay <span className="font-semibold">₹5,000</span>.
-        </p>
+        {/* Main Card */}
+        <div className="max-w-2xl mx-auto p-6 mt-16 bg-white shadow-lg rounded-xl">
+          <h1 className="text-2xl font-bold text-gray-800 mb-3 text-center">
+            Activate Your Account
+          </h1>
 
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={onBack}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-6 rounded-lg cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePayNow}
-            className="bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white
-             font-semibold py-2 px-6 rounded-lg transition-colors duration-200 cursor-pointer"
-          >
-            Pay ₹{ADVANCE_AMOUNT.toLocaleString()}
-          </button>
+          <p className="text-gray-600 text-sm mb-2 text-center">
+            Your account is currently inactive.
+          </p>
+
+          <p className="text-gray-600 text-sm mb-4 px-4 max-lg:px-1">
+            To activate your account, please place an order by choosing one of
+            the available activation packages below. Once the order is
+            successfully placed, your account will be activated automatically
+            and you will gain full access to all features.
+          </p>
+
+          {/* Buttons */}
+          <div className="flex flex-col gap-4 lg:flex-row">
+            <button
+              onClick={() => handleOrder(7500)}
+              className="flex-1 bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
+            text-white font-semibold py-3 rounded-lg"
+            >
+              Order ₹7,500
+            </button>
+
+            <button
+              onClick={() => handleOrder(15000)}
+              className="flex-1 bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
+            text-white font-semibold py-3 rounded-lg"
+            >
+              Order ₹15,000
+            </button>
+
+            <button
+              onClick={onCancel}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700
+            font-medium py-3 rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
-
-      {showPayment && (
-        <PaymentModal
-          amount={ADVANCE_AMOUNT}
-          user={{
-            name: user?.user_name,
-            email: user?.mail,
-            contact: user?.contact,
-          }}
-          onSuccess={async (res) => {
-            try {
-              setLoading(true);
-
-              // save history record
-              await axios.post("/api/history-operations", {
-                transaction_id: res.razorpay_payment_id,
-                wallet_id: user?.wallet_id || "",
-                user_id: user?.user_id,
-                user_name: user?.user_name,
-                rank: user?.rank,
-                contact:user?.contact || "",
-                mail:user?.mail || "",
-                // user_status:user?.user_status || "active",
-                account_holder_name: user?.user_name,
-                bank_name: "Razorpay",
-                account_number: "N/A",
-                ifsc_code: "N/A",
-                date: formatDate(new Date()), // Or get from Razorpay if available
-                time: new Date().toLocaleTimeString(), // store human-readable
-                available_balance: 0,
-                amount: ADVANCE_AMOUNT,
-                advance: true,
-                source: "advance",
-                transaction_type: "Debit",
-                details: "Advance Payment for Account Activation",
-                status: "Completed",
-                created_by: user?.user_id,
-              });
-
-              ShowToast.success("Advance payment successful!");
-              router.push("/orders");
-            } catch (error: any) {
-              console.error("Error saving history:", error);
-              ShowToast.error("Payment success but failed to save history!");
-            } finally {
-              setLoading(false);
-              setShowPayment(false);
-            }
-          }}
-          onClose={() => setShowPayment(false)}
-        />
-      )}
     </Layout>
   );
 }

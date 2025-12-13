@@ -253,12 +253,11 @@ export default function AdvanceHistoryPage() {
         visible={showAlert}
         title="Prepaid Required"
         message={
-          <>
-            You must pay <span className="font-semibold text-lg">₹10,000</span>{" "}
-            to activate your account.
-          </>
-        }
-        buttonLabel="Pay Now"
+            <>
+              To activate your account, please place{" "}an order
+            </>
+          }
+          buttonLabel="ORDER NOW"
         buttonAction={() => router.push("/historys/payAdvance")}
         onClose={() => setShowAlert(false)}
       />

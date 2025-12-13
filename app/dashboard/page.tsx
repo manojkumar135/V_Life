@@ -146,12 +146,10 @@ const DashboardPage: React.FC = () => {
           title="Action Required!"
           message={
             <>
-              To activate your account, please pay{" "}
-              <span className="font-semibold text-lg text-yellow-400">₹10,000</span>{" "}
-              as prepaid. This will be adjusted in your first order.
+              To activate your account, please place{" "}an order
             </>
           }
-          buttonLabel="Pay Now"
+          buttonLabel="ORDER NOW"
           buttonAction={() => router.push("/historys/payAdvance")}
           onClose={() => setShowAlert(false)}
         />

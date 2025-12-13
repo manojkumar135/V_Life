@@ -246,14 +246,8 @@ export default function TransactionHistory() {
       <AlertBox
         visible={showAlert}
         title="Action Required!"
-        message={
-          <>
-            To activate your account, please pay{" "}
-            <span className="font-semibold text-lg">₹10,000</span> as prepaid.
-            This will be adjusted in your first order.
-          </>
-        }
-        buttonLabel="Pay Now"
+        message={<>To activate your account, please place an order</>}
+        buttonLabel="ORDER NOW"
         buttonAction={handlePayAdvance}
         onClose={() => setShowAlert(false)}
       />
@@ -271,7 +265,7 @@ export default function TransactionHistory() {
           setSearch={setQuery}
           showBack={user.role !== "user"}
           showAddButton={!advancePaid}
-          addLabel="Make Payment"
+          addLabel="Place Order"
           onAdd={handlePayAdvance}
           onBack={onBack}
           onMore={handleDownloadClick}

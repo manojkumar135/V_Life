@@ -178,7 +178,7 @@ export default function WelcomeLetter() {
               </p>
 
               <div className="pt-6 border-t border-gray-300">
-                <p className="text-sm">
+                <p className="text-sm max-md:text-xs">
                   <strong>Maverick Private Limited</strong>
                   <br />
                   No.3, Bellary Road, Yadavananda Building, 2nd Floor, Opp. To

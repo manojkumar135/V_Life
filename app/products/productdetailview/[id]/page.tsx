@@ -84,7 +84,7 @@ export default function ProductViewPage() {
           className="cursor-pointer mr-3"
           onClick={goBack}
         />
-        <p className="text-xl font-semibold">Product Details</p>
+        <p className="text-xl max-sm:text-lg font-semibold">Product Details</p>
       </div>
 
       <div className="px-4 md:px-10 pb-10">
@@ -95,7 +95,7 @@ export default function ProductViewPage() {
               <img
                 src={product.image}
                 alt={product.name}
-                className="w-full max-w-[350px] object-contain rounded-lg lg:mt-10"
+                className="w-full max-w-[350px] max-sm:max-w-[250px] object-contain rounded-lg mt-4 lg:mt-10"
               />
             </div>
 

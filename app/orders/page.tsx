@@ -298,14 +298,12 @@ export default function OrdersPage() {
       <AlertBox
         visible={showAlert}
         title="Action Required!"
-        message={
-          <>
-            To activate your account, please pay{" "}
-            <span className="font-semibold text-lg">₹10,000</span> as prepaid.
-            This will be adjusted in your first order.
-          </>
-        }
-        buttonLabel="Pay Now"
+         message={
+            <>
+              To activate your account, please place{" "}an order
+            </>
+          }
+          buttonLabel="ORDER NOW"
         buttonAction={() => router.push("/historys/payAdvance")}
         onClose={() => setShowAlert(false)}
       />
