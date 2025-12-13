@@ -218,7 +218,6 @@ export default function OfficeAddress() {
       )}
 
       <div className="px-3 max-md:px-0">
-        <p className="text-lg font-semibold mb-3">OFFICE ADDRESS</p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-md:gap-4">
           {/* Basic Office Info */}

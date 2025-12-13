@@ -152,7 +152,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           <HiOutlineMenuAlt2 size={30} className="text-gray-800" />
         </button>
 
-        <h1 className="text-[1.5rem] max-md:text-[1.2rem] font-semibold text-gray-800 truncate max-w-[400px] max-md:max-w-[200px]">
+        <h1 className="text-[1.2rem] max-md:text-[1rem] font-semibold text-gray-800 truncate max-w-[400px] max-md:max-w-[200px]">
           Hello,{" "}
           <span>
             {user?.gender === "male"

@@ -300,7 +300,12 @@ const Page = () => {
               sections.push("Office Address");
             }
 
-            sections.push("Change Password", "Invite", "Support");
+            sections.push(
+              "Welcome Letter",
+              "Change Password",
+              "Invite",
+              "Support"
+            );
 
             return sections.map((section) => (
               <Accordion
@@ -322,6 +327,18 @@ const Page = () => {
 
                 <AccordionDetails>
                   {section === "Office Address" && <OfficeDetails />}
+                  {section === "Welcome Letter" && (
+                    <p className="text-gray-600 text-sm">
+                      To view welcome letter,&nbsp;&nbsp;
+                      <a
+                        href="/welcomeletter"
+                        className="text-blue-600 font-medium hover:underline text-md max-md:text-md"
+                      >
+                        CLICK HERE
+                      </a>
+                      .
+                    </p>
+                  )}
                   {section === "Change Password" && (
                     <ChangePasswordForm onSuccess={() => setExpanded(false)} />
                   )}

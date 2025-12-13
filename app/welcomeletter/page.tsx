@@ -1,30 +1,73 @@
 "use client";
 
 import Image from "next/image";
-import React from "react";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { FiDownload } from "react-icons/fi";
 import Layout from "@/layout/Layout";
 import { useVLife } from "@/store/context";
+import { pdf } from "@react-pdf/renderer";
+import WelcomePDF from "@/components/PDF/welcome";
+import Loader from "@/components/common/loader";
+import { IoIosArrowBack } from "react-icons/io";
 
 export default function WelcomeLetter() {
   const { user } = useVLife();
+  const [loading, setLoading] = useState(false);
 
-  const handleDownload = () => {
-    const link = document.createElement("a");
-    link.href = "/api/welcome-pdf"; // API route that returns PDF
-    link.download = "welcome-letter.pdf";
-    link.click();
+  const router = useRouter();
+
+  const handleDownload = async () => {
+    try {
+      setLoading(true); // ✅ show loader
+
+      const data = {
+        user_name: user?.user_name || "Member",
+      };
+
+      const blob = await pdf(<WelcomePDF data={data} />).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `welcome-letter-${user.user_id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to download welcome PDF", error);
+    } finally {
+      setLoading(false); // ✅ hide loader
+    }
   };
 
   return (
     <Layout>
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
+
       <div className="min-h-screen w-full relative bg-transparent">
+        <div
+          className="fixed lg:absolute  max-md:top-23 max-md:left-5 top-4 left-5   flex items-center gap-2 cursor-pointer z-30"
+          onClick={() => router.push("/settings")}
+          title="Go Back"
+        >
+          <IoIosArrowBack size={28} className="text-black max-sm:text-white max-sm:border-white max-sm:rounded-full max-sm:border-2" />
+          {/* <p className="font-semibold text-black">Back</p> */}
+        </div>
 
         {/* FIXED Download Button (Bottom Right) */}
         <div className="fixed bottom-10 right-10 max-md:right-5 z-10">
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 bg-[#0C3978] hover:bg-[#10509A]
+            className="flex items-center gap-2 bg-[#0C3978]
             text-white px-3 py-3 rounded-full shadow-md transition cursor-pointer"
           >
             <FiDownload size={22} />
@@ -32,9 +75,9 @@ export default function WelcomeLetter() {
         </div>
 
         {/* Page Content */}
-        <div className="pt-5 pb-8 px-4">
+        <div className="pt-5 pb-8 px-4 max-md:px-2">
           <div
-            className="max-w-4xl mx-auto bg-white shadow-xl rounded-lg p-10 relative"
+            className="max-w-4xl mx-auto bg-white shadow-xl rounded-lg p-10 max-md:p-4 relative"
             style={{
               backgroundImage:
                 "url('https://res.cloudinary.com/dtb4vozhy/image/upload/v1765538939/ChatGPT_Image_Dec_12_2025_04_58_15_PM_ezevkm.png')",
@@ -44,21 +87,26 @@ export default function WelcomeLetter() {
             }}
           >
             {/* Logo + Title */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-6 max-md:mb-5">
               <Image
                 src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1764400245/maverick-logo_sddrui.png"
                 alt="Maverick Logo"
                 width={180}
                 height={100}
-                className="mx-auto"
+                className="mx-auto 
+                  w-[140px]       
+                  sm:w-[150px]     
+                  md:w-[180px]    
+                  h-auto
+                "
               />
-              <h1 className="text-2xl font-bold text-black mt-6 mb-4 font-sans">
+              <p className="text-md lg:text-2xl font-bold text-black mt-6 max-md:mt-1 mb-4 font-sans">
                 WELCOME TO MAVERICK
-              </h1>
+              </p>
             </div>
 
             {/* Letter Content */}
-            <div className="text-gray-900 leading-relaxed space-y-4 text-[14px] px-5">
+            <div className="text-gray-900 leading-relaxed space-y-4 max-md:text-[12px] text-[14px]  px-5 max-md:px-1">
               <p>
                 <strong className="text-[18px]">Dear {user?.user_name},</strong>
               </p>
