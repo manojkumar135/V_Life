@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken } from "@/utils/auth/token";
-import { connectDB } from "@/lib/mongodb"; 
+import { connectDB } from "@/lib/mongodb";
 import { Login } from "@/models/login";
 import { User } from "@/models/user"; // ⭐ get User model
 
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
     // 🔍 Find user in Login collection
     const loginUser = await Login.findOne({
-      $or: [{ _id: decoded.id }, { user_id: decoded.user_id }]
+      $or: [{ _id: decoded.id }, { user_id: decoded.user_id }],
     }).select("-password");
 
     if (!loginUser) {
@@ -57,20 +57,23 @@ export async function POST(req: Request) {
       );
     }
 
-   // ⭐ Fetch only important attributes (score, rank, club)
+    // ⭐ Fetch only important attributes (score, rank, club)
     const userData = await User.findOne(
       { user_id: loginUser.user_id },
-      { score: 1, rank: 1, club: 1, _id: 0 }
-    ).lean<{ score: number; rank: string; club: string }>();
+      { score: 1, reward: 1,rank: 1, club: 1, _id: 0 }
+    ).lean<{ score: number; rank: string; club: string,reward:number }>();
 
     // Convert login doc to plain object
     const loginObj = loginUser.toObject();
 
     // ⭐ Overwrite / add values directly from User model
     loginObj.score = userData?.score ?? 0;
+    loginObj.reward = userData?.reward ?? 0;
+
     loginObj.rank = userData?.rank ?? loginObj.rank ?? "none";
     loginObj.club = userData?.club ?? loginObj.club ?? "none";
 
+    // console.log("Refreshed user data:", loginObj);
 
     // 🎟 Generate new short-lived access token
     const accessToken = generateAccessToken({
@@ -88,7 +91,6 @@ export async function POST(req: Request) {
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error("Refresh error:", error);
     return NextResponse.json(

@@ -61,6 +61,7 @@ export default function LoginPage() {
             theme: res.data.data.theme,
             wallet_id: res.data.data.wallet_id,
             score: res.data.data.score,
+            reward: res.data.data.reward,
           });
           // ✅ Pass theme string directly
           // if (res.data.data.theme) {

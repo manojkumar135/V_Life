@@ -3,12 +3,55 @@ import mongoose from "mongoose";
 import { boolean } from "yup";
 // import { title } from "process";
 
-const BonusHistorySchema = new mongoose.Schema({
-  type: { type: String, enum: ["matching", "leadership", "referral"], required: true },
-  amount: { type: Number, required: true },
-  cycle: { type: String }, // e.g., "2025-09-01-AM"
-  details: { type: mongoose.Schema.Types.Mixed }, // flexible extra data
-  timestamp: { type: Date, default: Date.now },
+const RewardHistorySchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ["credit", "debit", "adjustment"],
+    required: true,
+  },
+
+  source: {
+    type: String,
+    enum: [
+      "matching_bonus",
+      "infinity_matching_bonus",
+      "referral_bonus",
+      "direct_sales_bonus",
+      "infinity_sales_bonus",
+      "order",
+      "booking",
+      "manual",
+    ],
+    required: true,
+  },
+
+  reference_id: {
+    type: String,
+  },
+
+  earned: {
+    type: Number,
+    default: 0,
+  },
+
+  used: {
+    type: Number,
+    default: 0,
+  },
+
+  balance_after: {
+    type: Number,
+    required: true,
+  },
+
+  remarks: {
+    type: String,
+  },
+
+  created_at: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 const UserSchema = new mongoose.Schema(
@@ -114,8 +157,10 @@ const UserSchema = new mongoose.Schema(
 
     // 🏦 Wallet
     wallet_balance: { type: Number, default: 0 },
-    bonus_history: [BonusHistorySchema],
-
+    reward_history: {
+      type: [RewardHistorySchema],
+      default: [],
+    },
     // 🏅 Leadership
     is_leader: { type: Boolean, default: false },
     leader_qualifications: { type: Number, default: 0 }, // e.g., successful payments count

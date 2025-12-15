@@ -15,6 +15,8 @@ import { IoMdAdd } from "react-icons/io";
 import Loader from "@/components/common/loader";
 import { formatDate } from "@/components/common/formatDate";
 import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import CryptoJS from "crypto-js";
+import { useSearchParams } from "next/navigation";
 
 interface CartItem {
   product_id: string;
@@ -89,6 +91,51 @@ export default function AddOrderPage() {
   const { user, setUser, updateUserCart } = useVLife();
   const router = useRouter();
 
+  const searchParams = useSearchParams();
+  const [decodedAmount, setDecodedAmount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const encryptedData = searchParams.get("data");
+
+    if (!encryptedData) {
+      console.warn("No encrypted data found in URL");
+      return;
+    }
+
+    try {
+      const secretKey = process.env.NEXT_PUBLIC_REF_KEY;
+
+      if (!secretKey) {
+        console.error("Secret key missing");
+        return;
+      }
+
+      const bytes = CryptoJS.AES.decrypt(
+        decodeURIComponent(encryptedData),
+        secretKey
+      );
+
+      const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+
+      if (!decryptedString) {
+        console.error("Decryption failed: empty string");
+        return;
+      }
+
+      const decrypted = JSON.parse(decryptedString);
+
+      if (typeof decrypted.amount === "number") {
+        setDecodedAmount(decrypted.amount);
+      } else {
+        console.error("Amount missing in decrypted payload");
+      }
+    } catch (error) {
+      console.error("Decryption error:", error);
+    }
+  }, [searchParams]);
+
+  // console.log("Decoded Amount:", decodedAmount);
+
   const handlePaymentSuccess = () => {
     // 1️⃣ Start loader
     setShowCart(false);
@@ -116,6 +163,8 @@ export default function AddOrderPage() {
     amount: 0,
     remaining: 0,
   });
+
+  const isRestrictedFirstOrder = isFirstOrder && user?.status === "inactive";
 
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
@@ -296,7 +345,29 @@ export default function AddOrderPage() {
     }));
   };
 
+  const isProductAllowed = (product: Product) => {
+    // 1️⃣ If encrypted amount is passed → EXACT PV match
+    if (decodedAmount !== null) {
+      return product.pv === decodedAmount;
+    }
+
+    // 2️⃣ First order → only PV 50 & 100 (7500 / 15000)
+    if (isFirstOrder) {
+      return product.pv === 50 || product.pv === 100;
+    }
+
+    // 3️⃣ Otherwise → allow all
+    return true;
+  };
+
   const addToCart = async (product: Product) => {
+    if (isRestrictedFirstOrder) {
+      if (cart.length >= 1) {
+        ShowToast.error("You can select only one product for your first order");
+        return;
+      }
+    }
+
     // console.log(product);
     const updatedCart = [...cart];
     const productId = product.product_id;
@@ -355,6 +426,11 @@ export default function AddOrderPage() {
 
   // console.log(cart);
   const updateQuantity = async (id: number, newQuantity: number) => {
+    if (isRestrictedFirstOrder && newQuantity > 1) {
+      ShowToast.error("Quantity cannot exceed 1 for first order");
+      return;
+    }
+
     if (newQuantity < 1) {
       removeFromCart(id);
       return;
@@ -529,13 +605,28 @@ export default function AddOrderPage() {
     // await createOrder(finalAmount);
   };
 
+  // console.log(cart,"addorder")
 
-
-// console.log(cart,"addorder")
-
+  const visibleCategories = categories
+    .map((cat) => ({
+      ...cat,
+      products: cat.products.filter(isProductAllowed),
+    }))
+    .filter((cat) => cat.products.length > 0);
 
   const activeCategoryProducts =
-    categories.find((cat) => cat.name === activeCategory)?.products || [];
+    visibleCategories.find((cat) => cat.name === activeCategory)?.products ||
+    [];
+
+  useEffect(() => {
+    if (!visibleCategories.length) return;
+
+    const exists = visibleCategories.some((cat) => cat.name === activeCategory);
+
+    if (!exists) {
+      setActiveCategory(visibleCategories[0].name);
+    }
+  }, [visibleCategories, activeCategory]);
 
   return (
     <Layout>
@@ -579,7 +670,7 @@ export default function AddOrderPage() {
         {/* Category Tabs */}
         <div className="rounded-xl px-6 max-lg:px-3 py-1 bg-white mb-2 xl:mt-2">
           <div className="flex space-x-4 overflow-x-auto scrollbar-hide border-b">
-            {categories.map((category) => (
+            {visibleCategories.map((category) => (
               <button
                 key={category.name}
                 className={`px-4 py-2 font-medium whitespace-nowrap text-md max-lg:text-sm ${
@@ -622,6 +713,7 @@ export default function AddOrderPage() {
                 key={product.product_id}
                 {...product}
                 onAddToCart={addToCart}
+                disabled={isRestrictedFirstOrder && cart.length >= 1}
                 isInCart={
                   !!cart.find((item) => item.product_id === product.product_id)
                 }

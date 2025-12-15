@@ -13,8 +13,8 @@ export default function ActivateAccountPage() {
   const router = useRouter();
 
   const handleOrder = (amount: any) => {
-    if (![7500, 15000].includes(amount)) {
-      ShowToast.error("Invalid order amount");
+    if (![50, 100].includes(amount)) {
+      ShowToast.error("Invalid order PV");
       return;
     }
 
@@ -38,7 +38,7 @@ export default function ActivateAccountPage() {
         <div
           className="
         absolute
-        -top-10 left-8 max-md:top-3 max-md:left-4
+        -top-5 left-8 max-md:top-3 max-md:left-4
         flex items-center gap-2
         cursor-pointer z-30 
       "
@@ -49,17 +49,13 @@ export default function ActivateAccountPage() {
             size={28}
             className="
           text-black
-          max-sm:text-white
-          max-sm:border
-          max-sm:border-white
-          max-sm:rounded-full
         "
           />
           <p className="font-semibold text-black hidden lg:block">Back</p>
         </div>
 
         {/* Main Card */}
-        <div className="max-w-2xl mx-auto p-6 mt-16 bg-white shadow-lg rounded-xl">
+        <div className="max-w-2xl mx-auto p-6 max-md:p-4 max-lg:mx-4 mt-10 bg-white shadow-lg rounded-xl border-1 border-gray-300">
           <h1 className="text-2xl font-bold text-gray-800 mb-3 text-center">
             Activate Your Account
           </h1>
@@ -78,25 +74,25 @@ export default function ActivateAccountPage() {
           {/* Buttons */}
           <div className="flex flex-col gap-4 lg:flex-row">
             <button
-              onClick={() => handleOrder(7500)}
-              className="flex-1 bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
-            text-white font-semibold py-3 rounded-lg"
+              onClick={() => handleOrder(50)}
+              className="flex-1 bg-gradient-to-r from-[rgb(12,57,120)] via-[#106187] to-[#16B8E4]
+            text-white font-semibold py-3 rounded-lg cursor-pointer"
             >
-              Order ₹7,500
+              Order 50 PV
             </button>
 
             <button
-              onClick={() => handleOrder(15000)}
+              onClick={() => handleOrder(100)}
               className="flex-1 bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
-            text-white font-semibold py-3 rounded-lg"
+            text-white font-semibold py-3 rounded-lg cursor-pointer"
             >
-              Order ₹15,000
+              Order 100 PV
             </button>
 
             <button
               onClick={onCancel}
               className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700
-            font-medium py-3 rounded-lg"
+            font-medium py-3 rounded-lg cursor-pointer"
             >
               Cancel
             </button>

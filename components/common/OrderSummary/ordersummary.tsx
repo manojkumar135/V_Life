@@ -44,6 +44,8 @@ export default function OrderFormCartSection({
   createOrder,
   onPaymentSuccess,
 }: any) {
+  const { user } = useVLife();
+
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,9 +58,13 @@ export default function OrderFormCartSection({
     remaining: 0,
   });
 
+  const [useReward, setUseReward] = useState(false);
+  const rewardPoints = Number(user?.reward || 0);
+
+  console.log("Reward Points:", rewardPoints);
+
   const router = useRouter();
   const [address, setAddress] = useState("");
-  const { user } = useVLife();
   const user_id = user?.user_id || "";
   const [paymentDetails, setPaymentDetails] = useState({
     upiId: "",
@@ -66,6 +72,12 @@ export default function OrderFormCartSection({
     expiryDate: "",
     cvv: "",
   });
+
+  const totalAmount = getTotalPrice();
+
+  const rewardDeduction = useReward ? Math.min(rewardPoints, totalAmount) : 0;
+
+  const payableAmount = Math.max(0, totalAmount - rewardDeduction);
 
   // GST = dealer_price * gst%
   const calcUnitPriceWithGST = (item: CartItem) => {
@@ -155,19 +167,17 @@ export default function OrderFormCartSection({
         return;
       }
 
-      const totalAmount = getTotalPrice();
+      // if (isFirstOrder && totalAmount < 10000) {
+      //   ShowToast.error("First order must be at least ₹10,000");
+      //   return;
+      // }
 
-      if (isFirstOrder && totalAmount < 10000) {
-        ShowToast.error("First order must be at least ₹10,000");
-        return;
-      }
-
-      if (!hasPaidAdvance) {
-        ShowToast.error(
-          "You must pay an advance of ₹10,000 before placing an order"
-        );
-        return;
-      }
+      // if (!hasPaidAdvance) {
+      //   ShowToast.error(
+      //     "You must pay an advance of ₹10,000 before placing an order"
+      //   );
+      //   return;
+      // }
 
       setShowPayment(true);
     } catch (error) {
@@ -190,6 +200,12 @@ export default function OrderFormCartSection({
 
   const handleIncreaseQuantity = (itemId: string | number | undefined) => {
     if (!itemId) return;
+
+    if (isFirstOrder && user?.status === "inactive") {
+      ShowToast.error("Quantity is limited to 1 for first order");
+      return;
+    }
+
     const item = cart.find(
       (item: CartItem) => String(item.product_id) === String(itemId)
     );
@@ -455,41 +471,46 @@ export default function OrderFormCartSection({
                 {/* Totals */}
                 <div className="xl:pt-4 xl:border-t fixed bottom-0 left-0 right-0 max-lg:bg-white max-lg:shadow-[0_-4px_6px_rgba(0,0,0,0.1)] max-lg:rounded-t-xl">
                   <div className="px-6 py-4 bg-white -mt-4">
-                    {isFirstOrder &&
-                      hasPaidAdvance &&
-                      advanceDetails.amount > 0 && (
-                        <>
-                          <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
-                            <span>Subtotal</span>
-                            <span className="font-semibold">
-                              ₹ {getTotalPrice().toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm text-red-500 mt-1">
-                            <span>Advance Paid</span>
-                            <span>- ₹ {advanceDetails.amount.toFixed(2)}</span>
-                          </div>
-                          <div className="border-t border-gray-200 my-3"></div>
-                        </>
-                      )}
+                    {/* Subtotal */}
+                    <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
+                      <span>Subtotal</span>
+                      <span className="font-semibold">
+                        ₹ {totalAmount.toFixed(2)}
+                      </span>
+                    </div>
 
+                    {/* Reward Checkbox */}
+                    {rewardPoints > 0 && (
+                      <div className="flex justify-between items-center text-sm text-gray-700 py-3 ">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={useReward}
+                            onChange={() => setUseReward((prev) => !prev)}
+                            className="w-4 h-4 accent-blue-600 cursor-pointer"
+                          />
+                          <span>
+                            Use Reward Points ( {rewardPoints.toFixed(2)})
+                          </span>
+                        </label>
+
+                        {useReward && (
+                          <span className="text-red-600 font-semibold text-right">
+                            - ₹ {rewardDeduction.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-300 my-2 mx-2"></div>
+
+                    {/* Final Total */}
                     <div className="flex justify-between items-center text-lg md:text-xl font-bold text-gray-900">
                       <span>Total Amount</span>
-                      {isFirstOrder ? (
-                        getTotalPrice() < 10000 ? (
-                          <span className="text-red-600 text-sm md:text-base font-semibold">
-                            Must be ≥ ₹10,000
-                          </span>
-                        ) : (
-                          <span className="text-green-600">
-                            ₹ {finalAmount.toFixed(2)}
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-green-600">
-                          ₹ {finalAmount.toFixed(2)}
-                        </span>
-                      )}
+                      <span className="text-green-600">
+                        ₹ {payableAmount.toFixed(2)}
+                      </span>
                     </div>
                   </div>
 

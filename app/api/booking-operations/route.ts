@@ -2,28 +2,76 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
 import { Booking } from "@/models/bookings";
+import { User } from "@/models/user";
+
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
 // ✅ POST — Create new booking
 export async function POST(request: Request) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     await connectDB();
     const body = await request.json();
 
-    // Generate unique booking_id with prefix "BK"
+    const {
+      user_id,
+      type,
+      total_score_used,
+    } = body;
+
     const booking_id = await generateUniqueCustomId("BK", Booking, 8, 8);
 
-    const newBooking = await Booking.create({
-      ...body,
-      booking_id,
-    });
+    let userDoc = null;
+
+    if (type === "score") {
+      userDoc = await User.findOne({ user_id }).session(session);
+
+      if (!userDoc) {
+        throw new Error("User not found");
+      }
+
+      if (userDoc.reward < total_score_used) {
+        throw new Error("Insufficient reward balance");
+      }
+
+      userDoc.reward = userDoc.reward - total_score_used;
+
+      userDoc.reward_history.push({
+        type: "debit",
+        source: "booking",
+        reference_id: booking_id,
+        earned: 0,
+        used: total_score_used,
+        balance_after: userDoc.reward,
+        remarks: "Reward used for booking",
+      });
+
+      await userDoc.save({ session });
+    }
+
+    const newBooking = await Booking.create(
+      [
+        {
+          ...body,
+          booking_id,
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
 
     return NextResponse.json(
-      { success: true, data: newBooking },
+      { success: true, data: newBooking[0] },
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("POST Booking Error:", error);
+    await session.abortTransaction();
+    session.endSession();
+
     return NextResponse.json(
       { success: false, message: error.message || "Failed to create booking" },
       { status: 500 }

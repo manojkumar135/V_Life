@@ -29,6 +29,7 @@ interface ProductCardProps {
   status?: "active" | "inactive";
   onAddToCart: (product: any) => void;
   isInCart?: boolean;
+  disabled?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -53,6 +54,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   status = "active",
   onAddToCart,
   isInCart = false,
+  disabled = false,
 }) => {
   const router = useRouter();
   const { user } = useVLife();
@@ -69,7 +71,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     // }
   };
 
-  const isDisabled = status !== "active";
+  const isDisabled = status !== "active" || disabled;
 
   return (
     <div
@@ -139,7 +141,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <SubmitButton
               type="button"
               onClick={(e) => {
-                e.stopPropagation(); // 🔥 BLOCK navigation
+                e.stopPropagation();
+
+                if (isDisabled) return; // 🔒 hard stop
+
                 onAddToCart({
                   _id,
                   product_id,
@@ -161,14 +166,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
               }}
               disabled={isDisabled}
               className={`font-medium py-2 px-4 rounded-md
-                ${
-                  isDisabled
-                    ? "!bg-gray-400 !cursor-not-allowed"
-                    : "cursor-pointer"
-                }
-              `}
+    ${isDisabled ? "!bg-gray-400 !cursor-not-allowed" : "cursor-pointer"}
+  `}
             >
-              {isDisabled ? "Unavailable" : isInCart ? "Added" : "Add to Cart"}
+              {isDisabled
+                ? isInCart
+                  ? "Added"
+                  : "Unavailable"
+                : isInCart
+                ? "Added"
+                : "Add to Cart"}
             </SubmitButton>
           </div>
         </div>

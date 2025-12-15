@@ -57,17 +57,17 @@ export interface UserType {
   theme?: ThemeType;
   category?: string;
   score?: number;
+  reward?: number;
   referBy?: string;
   infinity?: string;
   gst?: string;
   country?: string;
   state?: string;
-  district?:string;
-  nominee_name?:string;
-  nominee_contact?:string;
-  nominee_relation?:string;
-  alternate_contact?:string;
-
+  district?: string;
+  nominee_name?: string;
+  nominee_contact?: string;
+  nominee_relation?: string;
+  alternate_contact?: string;
 
   address?: string;
   landmark?: string;
@@ -98,7 +98,7 @@ const defaultUser: UserType = {
   user_name: "",
   gender: "",
   blood: "",
-  gst:"",
+  gst: "",
   dob: "",
   rank: "",
   role: "",
@@ -113,6 +113,7 @@ const defaultUser: UserType = {
   referBy: "",
   infinity: "",
   score: 0,
+  reward: 0,
 
   address: "",
   pincode: "",
