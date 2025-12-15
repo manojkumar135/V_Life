@@ -496,7 +496,12 @@ export default function AddOrderPage() {
   const getTotalPV = () =>
     cart.reduce((total, item) => total + (item.pv ?? 0) * item.quantity, 0);
 
-  const createOrder = async (finalAmount: number, razorpayResponse: any) => {
+  const createOrder = async (
+    payableAmount: number,
+    rewardUsed: number,
+    rewardRemaining: number,
+    razorpayResponse: any
+  ) => {
     try {
       // console.log(cart);
       const orderItems = cart.map((item) => ({
@@ -547,22 +552,25 @@ export default function AddOrderPage() {
         order_pv: getTotalPV(),
         total_gst: calcTotalGST(cart),
         order_status: "pending",
-        amount: getTotalPrice(),
+        amount: getPriceWithoutGST(),
+        reward_used: rewardUsed, 
+        reward_remaining: rewardRemaining,
         total_amount: getTotalPrice(),
-        final_amount: finalAmount,
-        advance_deducted: isFirstOrder && advancePaid ? 10000 : 0,
+        final_amount: payableAmount,
+        payable_amount: payableAmount,
+        advance_deducted: 0,
         is_first_order: isFirstOrder,
       };
 
-      // // ✅ Add referBy only if exists
-      // if (user.referBy && user.referBy.trim() !== "") {
-      //   payload.referBy = user.referBy;
-      // }
+      // ✅ Add referBy only if exists
+      if (user.referBy && user.referBy.trim() !== "") {
+        payload.referBy = user.referBy;
+      }
 
-      // // ✅ Add infinity only if exists
-      // if (user.infinity && user.infinity.trim() !== "") {
-      //   payload.infinity = user.infinity;
-      // }
+      // ✅ Add infinity only if exists
+      if (user.infinity && user.infinity.trim() !== "") {
+        payload.infinity = user.infinity;
+      }
 
       const response = await axios.post("/api/order-operations", payload, {
         headers: { "Content-Type": "application/json" },
@@ -592,14 +600,6 @@ export default function AddOrderPage() {
     }
     const totalAmount = getTotalPrice();
     let finalAmount = totalAmount;
-
-    if (isFirstOrder) {
-      if (totalAmount < 10000) {
-        ShowToast.error("First order must be at least ₹10,000");
-        return;
-      }
-      finalAmount = totalAmount - 10000;
-    }
 
     // Call your createOrder API here
     // await createOrder(finalAmount);

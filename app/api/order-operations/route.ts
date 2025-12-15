@@ -50,6 +50,10 @@ interface OrderPayload {
   payment_id?: string;
   payment_type?: string;
   is_first_order?: boolean;
+  reward_used?: number;
+  reward_remaining?: number;
+  payable_amount?: number;
+
 }
 
 // ----------------- POST -----------------
@@ -96,9 +100,9 @@ export async function POST(request: Request) {
         wallet_id: user.wallet_id || "",
         user_id: user.user_id,
         user_name: user.user_name,
-        contact:user.contact || "",
-        mail:user.mail || "",
-        user_status:user.user_status || "active",
+        contact: user.contact || "",
+        mail: user.mail || "",
+        user_status: user.user_status || "active",
         pan_verified: user.pan_verified || false,
         rank: user.rank,
         order_id: newOrder.order_id,
@@ -128,11 +132,26 @@ export async function POST(request: Request) {
       // -------------------
       user.bv = (user.bv || 0) + totalBV;
       user.pv = (user.pv || 0) + totalPV;
-      await user.save();
 
-      // update self_bv (user's own BV)
       user.self_bv = (user.self_bv || 0) + totalBV;
       user.self_pv = (user.self_pv || 0) + totalPV;
+
+      if (body.reward_used && body.reward_used > 0) {
+        const newBalance = Math.max(0, (user.reward || 0) - body.reward_used);
+
+        // Update reward balance
+        user.reward = newBalance;
+
+        // Push reward history entry
+        user.reward_history.push({
+          type: "debit",
+          source: "order",
+          reference_id: newOrder.order_id,
+          used: body.reward_used,
+          balance_after: newBalance,
+          remarks: `Reward used for order ${newOrder.order_id}`,
+        });
+      }
 
       await user.save();
 

@@ -59,9 +59,9 @@ export default function OrderFormCartSection({
   });
 
   const [useReward, setUseReward] = useState(false);
-  const rewardPoints = Number(user?.reward || 0);
+  // const rewardPoints = Number(user?.reward || 0);
 
-  console.log("Reward Points:", rewardPoints);
+  // console.log("Reward Points:", rewardPoints);
 
   const router = useRouter();
   const [address, setAddress] = useState("");
@@ -75,9 +75,11 @@ export default function OrderFormCartSection({
 
   const totalAmount = getTotalPrice();
 
+  const rewardPoints = Number(user.reward || 0);
   const rewardDeduction = useReward ? Math.min(rewardPoints, totalAmount) : 0;
 
   const payableAmount = Math.max(0, totalAmount - rewardDeduction);
+  const rewardRemaining = rewardPoints - rewardDeduction;
 
   // GST = dealer_price * gst%
   const calcUnitPriceWithGST = (item: CartItem) => {
@@ -247,10 +249,7 @@ export default function OrderFormCartSection({
     !formData.shippingAddress ||
     !formData.contact;
 
-  const isDisabled =
-    cart.length === 0 ||
-    (isFirstOrder && getTotalPrice() < 10000) ||
-    !hasPaidAdvance;
+  const isDisabled = cart.length === 0 || payableAmount < 0;
 
   return (
     <div className="relative">
@@ -481,7 +480,7 @@ export default function OrderFormCartSection({
 
                     {/* Reward Checkbox */}
                     {rewardPoints > 0 && (
-                      <div className="flex justify-between items-center text-sm text-gray-700 py-3 ">
+                      <div className="flex justify-between items-center text-sm text-gray-700 py-1.5 ">
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="checkbox"
@@ -490,7 +489,7 @@ export default function OrderFormCartSection({
                             className="w-4 h-4 accent-blue-600 cursor-pointer"
                           />
                           <span>
-                            Use Reward Points ( {rewardPoints.toFixed(2)})
+                            Use Reward Points ({rewardPoints.toFixed(2)})
                           </span>
                         </label>
 
@@ -503,10 +502,10 @@ export default function OrderFormCartSection({
                     )}
 
                     {/* Divider */}
-                    <div className="border-t border-gray-300 my-2 mx-2"></div>
+                    <div className="border-t border-gray-300 my-1 mx-2"></div>
 
                     {/* Final Total */}
-                    <div className="flex justify-between items-center text-lg md:text-xl font-bold text-gray-900">
+                    <div className="flex justify-between items-center text-md md:text-md font-bold text-gray-900">
                       <span>Total Amount</span>
                       <span className="text-green-600">
                         ₹ {payableAmount.toFixed(2)}
@@ -519,7 +518,7 @@ export default function OrderFormCartSection({
                       type="button"
                       onClick={handleGoToCustomerInfo}
                       disabled={isDisabled}
-                      className={`w-full lg:w-1/2 mt-2 py-3 px-4 rounded-md font-semibold
+                      className={`w-full lg:w-1/2 mt-1 py-2 px-4 rounded-md font-semibold
       ${
         isDisabled
           ? "bg-gray-400 text-white cursor-not-allowed"
@@ -602,7 +601,7 @@ export default function OrderFormCartSection({
       {/* Payment Modal */}
       {showPayment && (
         <PaymentModal
-          amount={Number(finalAmount.toFixed(2))}
+          amount={Number(payableAmount.toFixed(2))}
           user={{
             name: user?.user_name,
             email: user?.mail,
@@ -612,7 +611,12 @@ export default function OrderFormCartSection({
             console.log("✅ Payment successful:", res);
             setShowPayment(false);
 
-            await createOrder(finalAmount, res);
+            await createOrder(
+              payableAmount,
+              rewardDeduction,
+              rewardPoints - rewardDeduction,
+              res
+            );
             if (onPaymentSuccess) {
               onPaymentSuccess();
             }
