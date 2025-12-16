@@ -27,8 +27,15 @@ const HistorySchema = new mongoose.Schema(
     details: { type: String },
     status: { type: String, required: true, enum: ["Pending", "Completed", "Failed", "OnHold"] },
     first_payment: { type: Boolean, default: false },
+    first_order: { type: Boolean, default: false },
+    reward_used: { type: Number, default: 0 },
+    reward_added: { type: Number, default: 0 },
+    reward_remaining: { type: Number, default: 0 },
+    payable_amount: { type: Number, default: 0 },
+    base_amount: { type: Number, default: 0 },
     advance: { type: Boolean, default: false },
     ischecked: { type: Boolean, default: false },
+
 
     from: { type: String, },
     to: { type: String, },

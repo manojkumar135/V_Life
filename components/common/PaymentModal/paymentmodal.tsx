@@ -1,19 +1,46 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import axios from "axios";
 import Loader from "@/components/common/loader";
 
 interface PaymentModalProps {
-  amount: number; // amount in rupees
+  amount: number; // RUPEES
   user?: {
-    name: string;
-    email: string;
-    contact: string;
+    name?: string;
+    email?: string;
+    contact?: string;
   };
-  onSuccess: (response: any) => void;
+  onSuccess: (response: any) => Promise<void> | void;
   onClose: () => void;
 }
+
+/**
+ * Load Razorpay SDK safely and wait until it's ready
+ */
+const loadRazorpayScript = (): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    if ((window as any).Razorpay) {
+      resolve();
+      return;
+    }
+
+    const existing = document.getElementById("razorpay-script") as HTMLScriptElement | null;
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject());
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "razorpay-script";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject();
+    document.body.appendChild(script);
+  });
+};
 
 export default function PaymentModal({
   amount,
@@ -21,36 +48,52 @@ export default function PaymentModal({
   onSuccess,
   onClose,
 }: PaymentModalProps) {
-  // Load Razorpay script once
-  useEffect(() => {
-    if (!document.getElementById("razorpay-script")) {
-      const script = document.createElement("script");
-      script.id = "razorpay-script";
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
+  const openedRef = useRef(false);
+  const handledRef = useRef(false);
 
-  // Trigger Razorpay on mount
   useEffect(() => {
+    if (openedRef.current) return;
+    openedRef.current = true;
+
     const startPayment = async () => {
       try {
-        const res = await axios.post("/api/payment-operations", { amount });
+        if (!amount || amount <= 0) {
+          onClose();
+          return;
+        }
 
-        const order = res.data.order || res.data;
-        if (!order || !order.amount) {
+        // ✅ RUPEES → PAISE (ONLY HERE)
+        const amountInPaise = Math.round(amount * 100);
+
+        // Load Razorpay SDK
+        await loadRazorpayScript();
+
+        if (!(window as any).Razorpay) {
+          throw new Error("Razorpay SDK not available");
+        }
+
+        // Create Razorpay order (PAISE)
+        const res = await axios.post("/api/payment-operations", {
+          amount: amountInPaise,
+        });
+
+        const order = res.data?.order;
+        if (!order?.id) {
           throw new Error("Invalid Razorpay order response");
         }
 
         const options: any = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: order.amount, // in paise
-          currency: order.currency,
-          name: "Maverick",
-          description: "Payment Transaction",
           order_id: order.id,
+          amount: order.amount, // PAISE
+          currency: "INR",
+          name: "Maverick",
+          description: "Order Payment",
+
           handler: async (response: any) => {
+            if (handledRef.current) return;
+            handledRef.current = true;
+
             try {
               const verifyRes = await axios.post(
                 "/api/payment-verify-operations",
@@ -61,28 +104,39 @@ export default function PaymentModal({
                 }
               );
 
-              if (verifyRes.data.success) {
-                onSuccess(response);
-              } else {
-                console.error("❌ Payment verification failed");
+              if (!verifyRes.data?.success) {
+                throw new Error("Payment verification failed");
               }
+
+              await onSuccess(response);
             } catch (err) {
-              console.error("❌ Payment verification error", err);
+              console.error("Payment verification error:", err);
             } finally {
-              setTimeout(() => onClose(), 10000);
+              onClose();
             }
           },
-          prefill: {
-            name: user?.name || "Guest",
-            email: user?.email || "guest@example.com",
-            contact: user?.contact || "9999999999",
+
+          modal: {
+            ondismiss: () => {
+              if (handledRef.current) return;
+              handledRef.current = true;
+              onClose();
+            },
           },
-          theme: { color: "#0C3978" },
-          modal: { ondismiss: () => onClose() },
+
+          prefill: {
+            name: user?.name || "",
+            email: user?.email || "",
+            contact: user?.contact || "",
+          },
+
+          theme: {
+            color: "#0C3978",
+          },
         };
 
-        const rzp1 = new (window as any).Razorpay(options);
-        rzp1.open();
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
       } catch (err) {
         console.error("Error creating Razorpay order:", err);
         onClose();
@@ -90,7 +144,7 @@ export default function PaymentModal({
     };
 
     startPayment();
-  }, [amount, user, onSuccess, onClose]);
+  }, [amount]);
 
   return (
     <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/40 backdrop-blur-sm">

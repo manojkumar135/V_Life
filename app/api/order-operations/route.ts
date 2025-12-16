@@ -1,3 +1,5 @@
+//api/order-operations/route.ts
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
@@ -7,6 +9,13 @@ import { History } from "@/models/history";
 import { Alert } from "@/models/alert";
 
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+import { activateUser } from "@/services/userActivation";
+import { checkAndUpgradeRank } from "@/services/rankEngine";
+
+import {
+  updateInfinityTeam,
+  propagateInfinityUpdateToAncestors,
+} from "@/services/infinity";
 
 // ----------------- Types -----------------
 interface OrderItem {
@@ -53,20 +62,37 @@ interface OrderPayload {
   reward_used?: number;
   reward_remaining?: number;
   payable_amount?: number;
-
 }
 
 // ----------------- POST -----------------
-
 export async function POST(request: Request) {
   try {
     await connectDB();
     const body: OrderPayload = await request.json();
 
-    // Generate unique order_id with prefix "OR"
+    /* ---------------- NORMALIZE OPTIONAL FIELDS ---------------- */
+    const rewardUsed = Number(body.reward_used ?? 0);
+    const rewardRemaining = Number(body.reward_remaining ?? 0);
+
+    /* ---------------- FETCH USER & ORDER STATUS ---------------- */
+    const [hasOrder, user] = await Promise.all([
+      Order.exists({ user_id: body.user_id }),
+      User.findOne({ user_id: body.user_id }),
+    ]);
+
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    const isFirstOrder = !hasOrder && user.user_status !== "active";
+
+    /* ---------------- GENERATE ORDER ID ---------------- */
     const order_id = await generateUniqueCustomId("OR", Order, 8, 8);
 
-    // Calculate total amount using dealer_price * quantity
+    /* ---------------- CALCULATE AMOUNT ---------------- */
     const amount =
       body.amount ??
       body.items.reduce(
@@ -75,136 +101,176 @@ export async function POST(request: Request) {
         0
       );
 
-    // Calculate total BV from items
+    /* ---------------- CALCULATE BV / PV ---------------- */
     const totalBV = body.items.reduce(
       (sum, item) => sum + (item.bv || 0) * item.quantity,
       0
     );
+
     const totalPV = body.items.reduce(
       (sum, item) => sum + (item.pv || 0) * item.quantity,
       0
     );
 
-    // -------------------
-    // 1️⃣ Create the Order first
-    // -------------------
-    const newOrder = await Order.create({ ...body, order_id, amount });
+    /* ---------------- 1️⃣ CREATE ORDER ---------------- */
+    const newOrder = await Order.create({
+      ...body,
+      order_id,
+      amount,
+    });
 
-    // -------------------
-    // 2️⃣ Create History record AFTER order creation
-    // -------------------
-    const user = await User.findOne({ user_id: body.user_id });
-    if (user) {
-      await History.create({
-        transaction_id: body.payment_id,
-        wallet_id: user.wallet_id || "",
-        user_id: user.user_id,
-        user_name: user.user_name,
-        contact: user.contact || "",
-        mail: user.mail || "",
-        user_status: user.user_status || "active",
-        pan_verified: user.pan_verified || false,
-        rank: user.rank,
-        order_id: newOrder.order_id,
-        account_holder_name: user.user_name,
-        bank_name: "Razorpay",
-        account_number: "N/A",
-        ifsc_code: "N/A",
-        date: new Date()
-          .toISOString()
-          .split("T")[0]
-          .split("-")
-          .reverse()
-          .join("-"),
-        time: new Date().toLocaleTimeString(),
-        available_balance: user.wallet_balance || 0,
-        amount: body.final_amount,
-        transaction_type: "Debit",
-        details: body.is_first_order
-          ? "Order Payment (₹10,000 Advance Deducted)"
-          : "Order Payment",
-        status: "Completed",
-        created_by: user.user_id,
+    /* ---------------- 2️⃣ CREATE HISTORY ---------------- */
+    await History.create({
+      // Ensure transaction_id exists (use payment_id when present, otherwise fallback to order_id)
+      transaction_id: body.payment_id || newOrder.order_id,
+      wallet_id: user.wallet_id || "",
+      user_id: user.user_id,
+      user_name: user.user_name,
+      contact: user.contact || "",
+      mail: user.mail || "",
+      user_status: user.user_status || "active",
+      pan_verified: user.pan_verified || false,
+      rank: user.rank,
+      order_id: newOrder.order_id,
+
+      account_holder_name: user.user_name,
+      bank_name: "Razorpay",
+      account_number: "N/A",
+      ifsc_code: "N/A",
+
+      date: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+      time: new Date().toLocaleTimeString(),
+
+      available_balance: user.wallet_balance || 0,
+      transaction_type: "Debit",
+      status: "Completed",
+
+      amount: body.payable_amount,
+      payable_amount: body.payable_amount,
+      base_amount: body.amount,
+
+      reward_used: rewardUsed,
+      reward_remaining: rewardRemaining,
+
+      first_order: isFirstOrder,
+      first_payment: isFirstOrder,
+      advance: false,
+
+      details: rewardUsed > 0 ? "Order Payment (Reward Used)" : "Order Payment",
+
+      created_by: user.user_id,
+    });
+
+    /* ---------------- 3️⃣ UPDATE USER BV / PV ---------------- */
+    user.bv = (user.bv || 0) + totalBV;
+    user.pv = (user.pv || 0) + totalPV;
+
+    user.self_bv = (user.self_bv || 0) + totalBV;
+    user.self_pv = (user.self_pv || 0) + totalPV;
+
+    /* ---------------- REWARD DEDUCTION ---------------- */
+    if (rewardUsed > 0) {
+      const newBalance = Math.max(0, (user.reward || 0) - rewardUsed);
+      user.reward = newBalance;
+
+      user.reward_history.push({
+        type: "debit",
+        source: "order",
+        reference_id: newOrder.order_id,
+        used: rewardUsed,
+        balance_after: newBalance,
+        remarks: `Reward used for order ${newOrder.order_id}`,
       });
+    }
 
-      // -------------------
-      // 3️⃣ Update user BV after history
-      // -------------------
-      user.bv = (user.bv || 0) + totalBV;
-      user.pv = (user.pv || 0) + totalPV;
-
-      user.self_bv = (user.self_bv || 0) + totalBV;
-      user.self_pv = (user.self_pv || 0) + totalPV;
-
-      if (body.reward_used && body.reward_used > 0) {
-        const newBalance = Math.max(0, (user.reward || 0) - body.reward_used);
-
-        // Update reward balance
-        user.reward = newBalance;
-
-        // Push reward history entry
-        user.reward_history.push({
-          type: "debit",
-          source: "order",
-          reference_id: newOrder.order_id,
-          used: body.reward_used,
-          balance_after: newBalance,
-          remarks: `Reward used for order ${newOrder.order_id}`,
-        });
-      }
-
+    /* ---------------- ACTIVATE USER ON FIRST ORDER ---------------- */
+    if (isFirstOrder && user.user_status !== "active") {
+      await activateUser(user);
+    } else {
       await user.save();
+    }
 
-      // -------------------
-      // 4️⃣ Update direct_bv for immediate referrer (referBy)
-      // -------------------
-      if (user.referBy) {
+    /* ---------------- FAST RESPONSE (VERY IMPORTANT) ---------------- */
+    const response = NextResponse.json(
+      { success: true, data: newOrder, addedBV: totalBV },
+      { status: 201 }
+    );
+
+    /* ---------------- BACKGROUND TASKS (DO NOT AWAIT) ---------------- */
+    setImmediate(async () => {
+      try {
+        if (!user.referBy) return;
+
+        /* DIRECT BV */
         await User.updateOne(
           { user_id: user.referBy },
           { $inc: { direct_bv: totalBV, direct_pv: totalPV } }
         );
-      }
 
-      // -------------------
-      // 5️⃣ Update infinity_bv for user's infinity sponsor (if any)
-      //     amount = totalBV * rankPercentage(of infinity sponsor)
-      // -------------------
-      if (user.infinity) {
-        const infinitySponsor = await User.findOne({ user_id: user.infinity });
-        if (infinitySponsor) {
-          const rankPercentages: Record<string, number> = {
-            "1": 0.25,
-            "2": 0.35,
-            "3": 0.4,
-            "4": 0.45,
-            "5": 0.5,
-          };
-          const sponsorRank = String(infinitySponsor.rank || "1");
-          const pct = rankPercentages[sponsorRank] ?? 0;
-          const infinityBVToAdd = totalBV * pct;
+        /* INFINITY BV */
+        if (user.infinity) {
+          const infinitySponsor = await User.findOne({
+            user_id: user.infinity,
+          });
 
-          if (infinityBVToAdd > 0) {
-            await User.updateOne(
-              { user_id: infinitySponsor.user_id },
-              { $inc: { infinity_bv: infinityBVToAdd } }
-            );
+          if (infinitySponsor) {
+            const rankPercentages: Record<string, number> = {
+              "1": 0.25,
+              "2": 0.35,
+              "3": 0.4,
+              "4": 0.45,
+              "5": 0.5,
+            };
+
+            const pct =
+              rankPercentages[String(infinitySponsor.rank || "1")] ?? 0;
+
+            const infinityBV = totalBV * pct;
+
+            if (infinityBV > 0) {
+              await User.updateOne(
+                { user_id: infinitySponsor.user_id },
+                { $inc: { infinity_bv: infinityBV } }
+              );
+            }
           }
         }
+
+        /* INFINITY TREE + RANK */
+        await updateInfinityTeam(user.referBy);
+        await propagateInfinityUpdateToAncestors(user.referBy);
+
+        const referrer = await User.findOne({ user_id: user.referBy });
+        if (!referrer) return;
+
+        const oldRank = referrer.rank;
+        await checkAndUpgradeRank(referrer);
+
+        const updatedReferrer = await User.findOne({
+          user_id: referrer.user_id,
+        });
+
+        if (updatedReferrer && updatedReferrer.rank !== oldRank) {
+          await Alert.create({
+            user_id: updatedReferrer.user_id,
+            user_name: updatedReferrer.user_name || "",
+            user_status: updatedReferrer.user_status,
+            role: "user",
+            priority: "high",
+            title: "🎖️ Rank Achieved!",
+            description: `Congratulations ${updatedReferrer.user_name}! You achieved Rank ${updatedReferrer.rank}.`,
+            type: "achievement",
+            link: "/dashboards",
+            date: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+          });
+        }
+      } catch (err) {
+        console.error("Background infinity / rank error:", err);
       }
-    }
+    });
 
-    const alertDate = new Date();
-    const formattedDate = alertDate
-      .toISOString()
-      .split("T")[0]
-      .split("-")
-      .reverse()
-      .join("-"); // 10-11-2025 format
-
-    console.log(formattedDate);
-
+    /* ---------------- ADMIN ALERT ---------------- */
     await Alert.create({
-      // alert_id: `AL${Date.now()}`,
       user_id: user.user_id,
       user_contact: user.contact || "",
       user_email: user.mail || "",
@@ -215,15 +281,12 @@ export async function POST(request: Request) {
       link: "/orders",
       related_id: newOrder.order_id,
       alert_type: "success",
-      date: formattedDate,
+      date: new Date().toLocaleDateString("en-GB").split("/").join("-"),
       priority: "high",
       delivered_via: "system",
     });
 
-    return NextResponse.json(
-      { success: true, data: newOrder, addedBV: totalBV },
-      { status: 201 }
-    );
+    return response;
   } catch (error: any) {
     console.error("Order creation error:", error);
     return NextResponse.json(

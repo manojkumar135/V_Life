@@ -9,7 +9,7 @@ import { TiTick } from "react-icons/ti";
 
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
 import showToast from "@/components/common/Toast/toast";
 import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
 import CryptoJS from "crypto-js";
@@ -101,27 +101,29 @@ const DashboardPage: React.FC = () => {
     tax: 0,
   });
 
-  console.log(cycles);
+  // console.log(cycles);
 
-  useEffect(() => {
-    const checkAdvancePayment = async () => {
-      try {
-        const paid = await hasAdvancePaid(user_id, 10000);
-        // console.log(paid)
+ useEffect(() => {
+  const checkFirstOrder = async () => {
+    try {
+      const res = await hasFirstOrder(user_id);
 
-        if (!paid.hasPermission) {
-          setShowAlert(true);
-        }
-      } catch (err) {
-        console.error("Error checking payment history:", err);
-        setShowAlert(true); // fallback → show alert
+      if (!res.hasPermission) {
+        setShowAlert(true);
+      } else {
+        setShowAlert(false);
       }
-    };
-
-    if (user_id) {
-      checkAdvancePayment();
+    } catch (err) {
+      console.error("Error checking first order:", err);
+      setShowAlert(true); // safe fallback
     }
-  }, [user_id]);
+  };
+
+  if (user_id) {
+    checkFirstOrder();
+  }
+}, [user_id]);
+
   // console.log(showAlert)
   // console.log(user.rank);
 

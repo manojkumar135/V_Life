@@ -1,3 +1,6 @@
+//api/history-operations/route.js
+
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { History } from "@/models/history";
@@ -135,7 +138,13 @@ async function checkAndUpgradeRank(user) {
   const paidDirects = [];
 
   for (const direct of directs) {
-    const paid = await History.findOne({ user_id: direct.user_id, advance: true }).lean();
+    const paid = await History.findOne({
+      user_id: direct.user_id,
+      $or: [
+        { advance: true },
+        { first_order: true },
+      ],
+    }).lean();
     if (paid) {
       const team = await getUserTeam(user.user_id, direct.user_id);
       if (team === "left" || team === "right") {
@@ -254,157 +263,29 @@ async function checkAndUpgradeRank(user) {
 
 
 // ✅ POST - Create payment record
+// api/history-operations/route.ts (POST ONLY)
+
 export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
 
-    const existingPayment = await History.findOne({ user_id: body.user_id });
-    const isAdvancePayment =
-      !existingPayment &&
-      (body.advance === true || body.source === "advance") &&
-      Number(body.amount) >= 10000;
-
-    body.first_payment = !existingPayment;
-    body.advance = isAdvancePayment;
+    // History is PURE ledger now
+    body.first_payment = false;
+    body.advance = false;
     body.ischecked = false;
 
-    const newHistory = await History.create(body);
+    const history = await History.create(body);
 
-    // After advance payment
-    if (isAdvancePayment) {
-      const user = await User.findOne({ user_id: body.user_id });
-
-      if (user) {
-        const updateData = {
-          user_status: "active",
-          status: "active",
-          status_notes: "Activated automatically after advance payment",
-          activated_date: `${String(date.getDate()).padStart(2, "0")}-${String(date.getMonth() + 1).padStart(2, "0")}-${date.getFullYear()}`,
-          last_modified_at: new Date(),
-        };
-
-        await Promise.all([
-          User.updateOne({ user_id: body.user_id }, { $set: updateData }),
-          Login.updateMany({ user_id: body.user_id }, { $set: updateData }),
-          TreeNode.updateOne({ user_id: body.user_id }, { $set: updateData }),
-          Wallet.updateOne({ user_id: body.user_id }, { $set: updateData }),
-
-        ]);
-
-        // ✅ Create alert for activation
-        await Alert.create({
-          user_id: user.user_id,
-          user_name: user.user_name || "",
-          user_contact: user.user_contact || "",
-          user_email: user.user_email || "",
-          user_status: "active",
-          role: "user",
-          priority: "high",
-          title: "🎉 Account Activated!",
-          description: `Hi ${user.user_name}, your account is now active. You can start placing orders and earning rewards.`,
-          type: "activation",
-          link: "/orders",
-          read: false,
-          date: (() => {
-            const dd = String(date.getDate()).padStart(2, "0");
-            const mm = String(date.getMonth() + 1).padStart(2, "0");
-            const yyyy = date.getFullYear();
-            return `${dd}-${mm}-${yyyy}`;
-          })(),
-        });
-      }
-
-      if (user?.referBy) {
-        const referrerId = user.referBy;
-        console.log("\n====================================");
-        console.log("🎯 ADVANCE PAYMENT TRIGGERED FOR:", user.user_id);
-        console.log("👤 Referrer:", referrerId);
-
-        // 1️⃣ Add direct referral (no duplicates)
-        const updateResult = await User.updateOne(
-          { user_id: referrerId, paid_directs: { $ne: user.user_id } },
-          {
-            $addToSet: { paid_directs: user.user_id },
-            $inc: { paid_directs_count: 1 },
-          }
-        );
-
-        console.log("📌 paid_directs update result:", updateResult);
-
-        const infinityUpdate = await User.updateOne(
-          { user_id: referrerId, infinity_referred_users: { $ne: user.user_id } },
-          {
-            $addToSet: { infinity_referred_users: user.user_id },
-            $inc: { infinity_referred_count: 1 },
-          }
-        );
-        console.log("📌 infinity_referred_users update result:", infinityUpdate);
-
-
-        const refBefore = await User.findOne({ user_id: referrerId });
-        console.log("✅ Updated paid_directs for referrer:", refBefore?.paid_directs, refBefore?.infinity_referred_users);
-
-        // 2️⃣ Update Infinity team (referrer + upper chain)
-        console.log("\n🚀 Calling updateInfinityTeam for:", referrerId);
-        await updateInfinityTeam(referrerId);
-
-        console.log("🔁 Propagating Infinity to ancestors...");
-        await propagateInfinityUpdateToAncestors(referrerId);
-        console.log("✅ Infinity propagation completed");
-
-        // 3️⃣ Rank validation
-        const referrer = await User.findOne({ user_id: referrerId }, { _id: 0 });
-        if (referrer) {
-          try {
-            console.log("\n🏆 Checking Rank Upgrade for:", referrer.user_id);
-            const oldRank = referrer.rank;
-
-            await checkAndUpgradeRank(referrer);
-            // Fetch updated rank
-            const updatedReferrer = await User.findOne({ user_id: referrer.user_id });
-            if (updatedReferrer && updatedReferrer.rank !== oldRank) {
-              console.log(`🎉 ${referrer.user_id} achieved new rank: ${updatedReferrer.rank}`);
-
-              // ✅ Create Alert for Rank Achievement
-              await Alert.create({
-                user_id: referrer.user_id,
-                user_name: updatedReferrer.user_name || "",
-                user_contact: updatedReferrer.user_contact || "",
-                user_email: updatedReferrer.user_email || "",
-                user_status: updatedReferrer.user_status || "active",
-                role: "user",
-                priority: "high",
-                title: "🎖️ Rank Achieved!",
-                description: `Congratulations ${updatedReferrer.user_name}! You've achieved Rank ${updatedReferrer.rank}. Keep up the great work!`,
-                type: "achievement",
-                link: "/dashboards",
-                read: false,
-                date: (() => {
-                  const now = new Date();
-                  const dd = String(now.getDate()).padStart(2, "0");
-                  const mm = String(now.getMonth() + 1).padStart(2, "0");
-                  const yyyy = now.getFullYear();
-                  return `${dd}-${mm}-${yyyy}`;
-                })(),
-              });
-            }
-            console.log("✅ Rank check completed");
-          } catch (err) {
-            console.error("❌ Rank upgrade error:", err);
-          }
-        }
-
-        console.log("====================================\n");
-      }
-
-
-    }
-
-    return NextResponse.json({ success: true, data: newHistory }, { status: 201 });
+    return NextResponse.json(
+      { success: true, data: history },
+      { status: 201 }
+    );
   } catch (error) {
-    console.error("Error creating history:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -578,18 +459,18 @@ export async function GET(request) {
     });
 
     if (role === "user") {
-  histories = histories.filter((h) => {
-    const details = String(h.details || "").trim();
+      histories = histories.filter((h) => {
+        const details = String(h.details || "").trim();
 
-    // Exact match: "Order Payment"
-    if (details === "Order Payment") return false;
+        // Exact match: "Order Payment"
+        if (details === "Order Payment") return false;
 
-    // Starts with: "Order Payment (...)"
-    if (details.startsWith("Order Payment (")) return false;
+        // Starts with: "Order Payment (...)"
+        if (details.startsWith("Order Payment (")) return false;
 
-    return true; // keep everything else
-  });
-}
+        return true; // keep everything else
+      });
+    }
 
     return NextResponse.json({ success: true, data: histories }, { status: 200 });
   } catch (error) {

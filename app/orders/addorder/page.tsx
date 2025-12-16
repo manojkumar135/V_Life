@@ -14,7 +14,7 @@ import SubmitButton from "@/components/common/submitbutton";
 import { IoMdAdd } from "react-icons/io";
 import Loader from "@/components/common/loader";
 import { formatDate } from "@/components/common/formatDate";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
 import CryptoJS from "crypto-js";
 import { useSearchParams } from "next/navigation";
 
@@ -136,16 +136,15 @@ export default function AddOrderPage() {
 
   // console.log("Decoded Amount:", decodedAmount);
 
-  const handlePaymentSuccess = () => {
-    // 1️⃣ Start loader
+  const handlePaymentSuccess = async () => {
     setShowCart(false);
     setLoading(true);
 
-    // 2️⃣ Wait for 3 seconds, then redirect
-    setTimeout(() => {
+    try {
+      router.replace("/orders"); // replace avoids back navigation issues
+    } finally {
       setLoading(false);
-      router.push("/orders");
-    }, 2000);
+    }
   };
 
   // console.log(user);
@@ -158,11 +157,11 @@ export default function AddOrderPage() {
   const [address, setAddress] = useState("");
   const [showCart, setShowCart] = useState(false);
   const [isFirstOrder, setIsFirstOrder] = useState(false);
-  const [advancePaid, setAdvancePaid] = useState(false);
-  const [advanceDetails, setAdvanceDetails] = useState({
-    amount: 0,
-    remaining: 0,
-  });
+  // const [advancePaid, setAdvancePaid] = useState(false);
+  // const [advanceDetails, setAdvanceDetails] = useState({
+  //   amount: 0,
+  //   remaining: 0,
+  // });
 
   const isRestrictedFirstOrder = isFirstOrder && user?.status === "inactive";
 
@@ -277,41 +276,20 @@ export default function AddOrderPage() {
   useEffect(() => {
     const checkFirstOrder = async () => {
       try {
-        const res = await axios.get(
-          `/api/order-operations?role=${user.role}&user_id=${user.user_id}`
-        );
-        setIsFirstOrder(!res.data?.data || res.data.data.length === 0);
+        const result = await hasFirstOrder(user.user_id);
+
+        // First order = user has NOT placed any order yet
+        setIsFirstOrder(!result.hasFirstOrder);
       } catch (error) {
         console.error("Failed to check first order:", error);
+        setIsFirstOrder(false); // safe fallback
       }
     };
-    if (user?.user_id) checkFirstOrder();
+
+    if (user?.user_id) {
+      checkFirstOrder();
+    }
   }, [user?.user_id]);
-
-  // Check advance payment
-  useEffect(() => {
-    const checkAdvancePayment = async () => {
-      try {
-        const result = await hasAdvancePaid(user.user_id, 10000);
-        // console.log(result)
-        setAdvancePaid(result.hasAdvance);
-        if (result.hasAdvance) {
-          setAdvanceDetails({
-            amount: 10000,
-            remaining: Math.max(0, getTotalPrice() - 10000),
-          });
-        } else {
-          setAdvanceDetails({ amount: 0, remaining: getTotalPrice() });
-        }
-      } catch (error) {
-        console.error("Error checking advance payment:", error);
-        setAdvancePaid(false);
-        setAdvanceDetails({ amount: 0, remaining: getTotalPrice() });
-      }
-    };
-
-    if (user.user_id) checkAdvancePayment();
-  }, [user.user_id, cart]);
 
   // Update cart from context
   useEffect(() => {
@@ -504,6 +482,7 @@ export default function AddOrderPage() {
   ) => {
     try {
       // console.log(cart);
+      setLoading(true);
       const orderItems = cart.map((item) => ({
         product_id: String(item.id),
         product: String(item.id),
@@ -536,6 +515,7 @@ export default function AddOrderPage() {
         referBy: user.referBy,
         infinity: user.infinity,
         user_name: formData.customerName || user.user_name,
+        user_status: user.status,
         contact: formData.contact || user.contact,
         mail: formData.customerEmail || user.mail,
         address: formData.shippingAddress || address,
@@ -553,7 +533,7 @@ export default function AddOrderPage() {
         total_gst: calcTotalGST(cart),
         order_status: "pending",
         amount: getPriceWithoutGST(),
-        reward_used: rewardUsed, 
+        reward_used: rewardUsed,
         reward_remaining: rewardRemaining,
         total_amount: getTotalPrice(),
         final_amount: payableAmount,
@@ -575,6 +555,9 @@ export default function AddOrderPage() {
       const response = await axios.post("/api/order-operations", payload, {
         headers: { "Content-Type": "application/json" },
       });
+      console.log(response.data.success);
+      console.log(response.data);
+      console.log(response)
 
       if (response.data.success) {
         // ✅ Clear cart
@@ -589,6 +572,8 @@ export default function AddOrderPage() {
     } catch (error: any) {
       console.error("Error creating order:", error);
       ShowToast.error("Failed to create order: " + error.message);
+    } finally {
+      setLoading(false); // 🔥 STOP LOADER
     }
   };
 
@@ -767,7 +752,7 @@ export default function AddOrderPage() {
         <div
           className={`
             absolute bg-white shadow-2xl pointer-events-auto
-            w-full h-[90%] rounded-t-2xl bottom-0 transform transition-transform duration-500 ease-out
+            w-full h-[93%] rounded-t-2xl bottom-0 transform transition-transform duration-500 ease-out
             lg:w-[650px] lg:h-full lg:rounded-none lg:top-0 lg:right-0
             ${
               showCart

@@ -32,7 +32,7 @@ const TextareaField: React.FC<TextareaFieldProps> = ({
       onChange={onChange}
       required={required}
       className={clsx(
-        "border border-gray-500 rounded-lg px-3 py-2 w-[66%] max-lg:w-full bg-white resize-none text-sm",
+        "border border-gray-500 hover:border-black rounded-lg px-3 py-2 w-[66%] max-lg:w-full bg-white resize-none text-sm ",
         className // ✅ now your height overrides here
       )}
     />

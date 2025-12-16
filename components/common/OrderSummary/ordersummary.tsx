@@ -105,25 +105,6 @@ export default function OrderFormCartSection({
   };
 
   useEffect(() => {
-    const checkAdvancePayment = async () => {
-      try {
-        const result = await hasAdvancePaid(user_id, 10000);
-        setHasPaidAdvance(result.hasPermission);
-        if (result.hasAdvance) {
-          setAdvanceDetails({
-            amount: 10000,
-            remaining: Math.max(0, getTotalPrice() - 10000),
-          });
-        } else {
-          setAdvanceDetails({ amount: 0, remaining: getTotalPrice() });
-        }
-      } catch (error) {
-        console.error("Error checking advance payment:", error);
-        setHasPaidAdvance(false);
-        setAdvanceDetails({ amount: 0, remaining: getTotalPrice() });
-      }
-    };
-
     const fetchAddress = async () => {
       try {
         const res = await axios.post("/api/address-operations", {
@@ -140,7 +121,6 @@ export default function OrderFormCartSection({
     };
 
     if (user_id) {
-      checkAdvancePayment();
       fetchAddress();
     }
   }, [user_id, cart]);
@@ -468,43 +448,54 @@ export default function OrderFormCartSection({
                 </div>
 
                 {/* Totals */}
-                <div className="xl:pt-4 xl:border-t fixed bottom-0 left-0 right-0 max-lg:bg-white max-lg:shadow-[0_-4px_6px_rgba(0,0,0,0.1)] max-lg:rounded-t-xl">
-                  <div className="px-6 py-4 bg-white -mt-4">
-                    {/* Subtotal */}
-                    <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
-                      <span>Subtotal</span>
-                      <span className="font-semibold">
-                        ₹ {totalAmount.toFixed(2)}
-                      </span>
-                    </div>
-
-                    {/* Reward Checkbox */}
+                <div
+                  className="
+  xl:pt-4 xl:border-t
+  fixed bottom-0 left-0 right-0
+  bg-white
+  rounded-t-2xl
+  max-md:shadow-[0_-6px_16px_rgba(0,0,0,0.4)]
+"
+                >
+                  <div className="px-6 py-2 bg-white -mt-4">
+                    {/* Subtotal + Reward section only if reward exists */}
                     {rewardPoints > 0 && (
-                      <div className="flex justify-between items-center text-sm text-gray-700 py-1.5 ">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={useReward}
-                            onChange={() => setUseReward((prev) => !prev)}
-                            className="w-4 h-4 accent-blue-600 cursor-pointer"
-                          />
-                          <span>
-                            Use Reward Points ({rewardPoints.toFixed(2)})
+                      <>
+                        {/* Subtotal */}
+                        <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
+                          <span>Subtotal</span>
+                          <span className="font-semibold">
+                            ₹ {totalAmount.toFixed(2)}
                           </span>
-                        </label>
+                        </div>
 
-                        {useReward && (
-                          <span className="text-red-600 font-semibold text-right">
-                            - ₹ {rewardDeduction.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
+                        {/* Reward Checkbox */}
+                        <div className="flex justify-between items-center text-sm text-gray-700 py-1.5">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={useReward}
+                              onChange={() => setUseReward((prev) => !prev)}
+                              className="w-4 h-4 accent-blue-600 cursor-pointer"
+                            />
+                            <span>
+                              Use Reward Points ({rewardPoints.toFixed(2)})
+                            </span>
+                          </label>
+
+                          {useReward && (
+                            <span className="text-red-600 font-semibold text-right">
+                              - ₹ {rewardDeduction.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Divider */}
+                        <div className="border-t border-gray-300 my-1 mx-2"></div>
+                      </>
                     )}
 
-                    {/* Divider */}
-                    <div className="border-t border-gray-300 my-1 mx-2"></div>
-
-                    {/* Final Total */}
+                    {/* Final Total (always visible) */}
                     <div className="flex justify-between items-center text-md md:text-md font-bold text-gray-900">
                       <span>Total Amount</span>
                       <span className="text-green-600">
@@ -519,11 +510,11 @@ export default function OrderFormCartSection({
                       onClick={handleGoToCustomerInfo}
                       disabled={isDisabled}
                       className={`w-full lg:w-1/2 mt-1 py-2 px-4 rounded-md font-semibold
-      ${
-        isDisabled
-          ? "bg-gray-400 text-white cursor-not-allowed"
-          : "bg-[#106187] text-white cursor-pointer"
-      }`}
+        ${
+          isDisabled
+            ? "bg-gray-400 text-white cursor-not-allowed"
+            : "bg-[#106187] text-white cursor-pointer"
+        }`}
                     >
                       Place Order
                     </button>
@@ -570,7 +561,7 @@ export default function OrderFormCartSection({
               placeholder="Full shipping address"
               value={formData.shippingAddress || ""}
               onChange={handleInputChange}
-              className="w-full h-15 max-md:h-24"
+              className="w-full h-15 max-md:h-20"
               required
             />
             <TextareaField
@@ -579,7 +570,7 @@ export default function OrderFormCartSection({
               placeholder="Additional notes"
               value={formData.notes || ""}
               onChange={handleInputChange}
-              className="w-full h-15 max-md:h-24"
+              className="w-full h-15 max-md:h-20"
             />
 
             <button
@@ -608,22 +599,29 @@ export default function OrderFormCartSection({
             contact: user?.contact,
           }}
           onSuccess={async (res) => {
-            console.log("✅ Payment successful:", res);
-            setShowPayment(false);
+            try {
+              setLoading(true);
 
-            await createOrder(
-              payableAmount,
-              rewardDeduction,
-              rewardPoints - rewardDeduction,
-              res
-            );
-            if (onPaymentSuccess) {
-              onPaymentSuccess();
+              await createOrder(
+                payableAmount,
+                rewardDeduction,
+                rewardPoints - rewardDeduction,
+                res
+              );
+
+              setShowPayment(false);
+
+              if (onPaymentSuccess) {
+                await onPaymentSuccess();
+              }
+            } catch (err) {
+              console.error("Order error after payment:", err);
+            } finally {
+              setLoading(false);
             }
           }}
           onClose={() => {
             setShowPayment(false);
-            router.push("/orders/addorder");
           }}
         />
       )}

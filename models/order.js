@@ -38,6 +38,7 @@ const OrderSchema = new mongoose.Schema(
     order_id: { type: String, required: true, unique: true }, // custom order ID
     user_id: { type: String, required: true }, // reference to User.user_id
     user_name: { type: String, },
+    user_status: { type: String, },
     contact: { type: String, },
     mail: { type: String, },
     rank: { type: String },

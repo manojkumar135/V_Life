@@ -27,7 +27,7 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
         <label key={opt} className="flex items-center space-x-2">
           <input
             type="checkbox"
-            className="accent-yellow-400"
+            className="accent-black-400"
             checked={selected.includes(opt)}
             onChange={() => onChange(opt)}
           />
