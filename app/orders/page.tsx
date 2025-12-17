@@ -13,7 +13,9 @@ import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { useVLife } from "@/store/context";
 import { IoClose } from "react-icons/io5";
 import AlertBox from "@/components/Alerts/advanceAlert";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
+
 import ShowToast from "@/components/common/Toast/toast";
 import { FiFilter } from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
@@ -33,7 +35,7 @@ export default function OrdersPage() {
   const { user } = useVLife();
   const router = useRouter();
   const [showAlert, setShowAlert] = useState(false);
-  const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
 
   const user_id = user?.user_id || "";
 
@@ -79,17 +81,18 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
-    const checkAdvancePayment = async () => {
-      const paid = await hasAdvancePaid(user_id, 10000);
-      console.log(paid);
-      setHasPaidAdvance(paid.hasPermission);
+    if (!user_id) return;
 
-      if (!paid.hasPermission) {
+    (async () => {
+      try {
+        const res = await hasFirstOrder(user_id);
+        setHasPermission(res.hasPermission);
+        setShowAlert(!res.hasPermission);
+      } catch (err) {
+        console.error("Error checking first order status:", err);
         setShowAlert(true);
       }
-    };
-
-    if (user_id) checkAdvancePayment();
+    })();
   }, [user_id]);
 
   // Fetch orders from API
@@ -298,12 +301,8 @@ export default function OrdersPage() {
       <AlertBox
         visible={showAlert}
         title="Action Required!"
-         message={
-            <>
-              To activate your account, please place{" "}an order
-            </>
-          }
-          buttonLabel="ORDER NOW"
+        message={<>To activate your account, please place an order</>}
+        buttonLabel="ORDER NOW"
         buttonAction={() => router.push("/historys/payAdvance")}
         onClose={() => setShowAlert(false)}
       />
@@ -332,6 +331,8 @@ export default function OrdersPage() {
           search={query}
           setSearch={setQuery}
           addLabel="+ ADD ORDER"
+          // showAddButton={user?.role === "admin" || hasPermission}
+
           showAddButton
           // ={
           //   user?.role === "admin"
@@ -394,8 +395,7 @@ export default function OrdersPage() {
             ✕
           </button>
 
-         <PdfPreview url={previewUrl} scale={pdfScale} />
-
+          <PdfPreview url={previewUrl} scale={pdfScale} />
         </div>
       )}
     </Layout>

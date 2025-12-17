@@ -7,7 +7,9 @@ import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
+
 import { Alert } from "@/models/alert";
 
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
@@ -101,37 +103,44 @@ function generateTransactionId(prefix = "MB") {
 
 const txId = generateTransactionId("DS");
 
-async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
+async function checkFirstOrder(user_id: string) {
   if (!user_id) {
     return {
-      hasAdvance: false,
+      hasFirstOrder: false,
       hasPermission: false,
       reason: "Missing user_id",
     };
   }
 
-  // Fetch user (optional, but kept in case of invalid user)
-  const user = await User.findOne({ user_id });
+  // Fetch user
+  const user = await User.findOne({ user_id })
+    .select("status_notes")
+    .lean<{ status_notes?: string }>();
   if (!user) {
     return {
-      hasAdvance: false,
+      hasFirstOrder: false,
       hasPermission: false,
       reason: "User not found",
     };
   }
 
-  // ✅ Only check if advance >= minAmount (no admin access allowed)
-  const historyRecord = await History.findOne({
-    user_id,
-    amount: { $gte: minAmount },
-  });
+  // 🔹 Admin activation check
+  const note = user?.status_notes?.toLowerCase()?.trim();
+  const activatedByAdmin =
+    note === "activated by admin" || note === "activated";
 
-  const hasAdvance = !!historyRecord;
+  // 🔹 First order check
+  const hasFirstOrder = await Order.exists({ user_id });
 
   return {
-    hasAdvance,
-    hasPermission: hasAdvance, // ✅ Only advance matters now
-    reason: hasAdvance ? "Advance paid" : "Advance not paid",
+    hasFirstOrder: !!hasFirstOrder,
+    activatedByAdmin,
+    hasPermission: activatedByAdmin || !!hasFirstOrder,
+    reason: activatedByAdmin
+      ? "Activated by admin"
+      : hasFirstOrder
+      ? "First order placed"
+      : "No orders placed",
   };
 }
 
@@ -238,10 +247,10 @@ export async function runDirectSalesBonus() {
 
         // Check hasAdvancePaid >= 10000
         // const advancePaid = await hasAdvancePaid(referBy, 10000);
-        const advancePaid = await checkAdvancePaid(referBy);
+        const firstOrder = await checkFirstOrder(referBy);
         // if (!advancePaid.hasPermission) continue;
 
-        if (!advancePaid.hasPermission) {
+        if (!firstOrder.hasPermission) {
           // mark order as checked
           await Order.findOneAndUpdate(
             { order_id: order.order_id },

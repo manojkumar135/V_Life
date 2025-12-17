@@ -66,6 +66,8 @@ interface OrderPayload {
 
 // ----------------- POST -----------------
 export async function POST(request: Request) {
+  console.info("🟢 [ORDER] Request started");
+
   try {
     await connectDB();
     const body: OrderPayload = await request.json();
@@ -81,13 +83,25 @@ export async function POST(request: Request) {
     ]);
 
     if (!user) {
+      console.error("❌ [ORDER] User not found", body.user_id);
       return NextResponse.json(
         { success: false, message: "User not found" },
         { status: 404 }
       );
     }
 
-    const isFirstOrder = !hasOrder && user.user_status !== "active";
+    const isFirstOrder = !hasOrder;
+    const adminActivated =
+      user.status_notes?.toLowerCase().includes("admin") ?? false;
+
+    const shouldTriggerMLM = isFirstOrder && !adminActivated;
+
+    console.info("👤 [ORDER] User loaded", {
+      user_id: user.user_id,
+      isFirstOrder,
+      adminActivated,
+      shouldTriggerMLM,
+    });
 
     /* ---------------- GENERATE ORDER ID ---------------- */
     const order_id = await generateUniqueCustomId("OR", Order, 8, 8);
@@ -112,16 +126,14 @@ export async function POST(request: Request) {
       0
     );
 
+    console.info("📊 [ORDER] Calculated", { amount, totalBV, totalPV });
+
     /* ---------------- 1️⃣ CREATE ORDER ---------------- */
-    const newOrder = await Order.create({
-      ...body,
-      order_id,
-      amount,
-    });
+    const newOrder = await Order.create({ ...body, order_id, amount });
+    console.info("✅ [ORDER] Order created", newOrder.order_id, isFirstOrder);
 
     /* ---------------- 2️⃣ CREATE HISTORY ---------------- */
     await History.create({
-      // Ensure transaction_id exists (use payment_id when present, otherwise fallback to order_id)
       transaction_id: body.payment_id || newOrder.order_id,
       wallet_id: user.wallet_id || "",
       user_id: user.user_id,
@@ -161,10 +173,11 @@ export async function POST(request: Request) {
       created_by: user.user_id,
     });
 
+    console.info("🧾 [ORDER] History created");
+
     /* ---------------- 3️⃣ UPDATE USER BV / PV ---------------- */
     user.bv = (user.bv || 0) + totalBV;
     user.pv = (user.pv || 0) + totalPV;
-
     user.self_bv = (user.self_bv || 0) + totalBV;
     user.self_pv = (user.self_pv || 0) + totalPV;
 
@@ -181,36 +194,86 @@ export async function POST(request: Request) {
         balance_after: newBalance,
         remarks: `Reward used for order ${newOrder.order_id}`,
       });
+
+      console.info("🎁 [ORDER] Reward deducted", {
+        used: rewardUsed,
+        balance: newBalance,
+      });
     }
 
-    /* ---------------- ACTIVATE USER ON FIRST ORDER ---------------- */
+    /* ---------------- ACTIVATE USER ---------------- */
+    let justActivated = false;
+
     if (isFirstOrder && user.user_status !== "active") {
-      await activateUser(user);
+      // console.info("🚀 [ORDER] Activating user", user.user_id);
+      await user.save();
+      // await activateUser(user);
+      justActivated = true;
     } else {
       await user.save();
     }
 
-    /* ---------------- FAST RESPONSE (VERY IMPORTANT) ---------------- */
+    /* 🔥 RELOAD USER AFTER ACTIVATION */
+    const freshUser = await User.findOne({ user_id: user.user_id });
+
+    console.info("🔄 [ORDER] Fresh user snapshot", {
+      user_id: freshUser?.user_id,
+      status: freshUser?.user_status,
+      referBy: freshUser?.referBy,
+      infinity: freshUser?.infinity,
+    });
+
+    /* ---------------- FAST RESPONSE ---------------- */
     const response = NextResponse.json(
       { success: true, data: newOrder, addedBV: totalBV },
       { status: 201 }
     );
 
-    /* ---------------- BACKGROUND TASKS (DO NOT AWAIT) ---------------- */
-    setImmediate(async () => {
-      try {
-        if (!user.referBy) return;
+    /* ---------------- BACKGROUND TASKS ---------------- */
+    void (async () => {
+      console.info("⚙️ [BG] Started", {
+        user: freshUser?.user_id,
+        referBy: freshUser?.referBy,
+        justActivated,
+      });
 
-        /* DIRECT BV */
+      try {
+        if (!freshUser?.referBy) return;
+
+        const referrerId = freshUser.referBy;
+
+        /* 🔥 0️⃣ ADD PAID DIRECT (CRITICAL FIX) */
+        if (justActivated) {
+          await User.updateOne(
+            { user_id: referrerId },
+            {
+              $addToSet: { paid_directs: freshUser.user_id },
+              $inc: { paid_directs_count: 1 },
+            }
+          );
+        }
+        if (shouldTriggerMLM) {
+          /* 1️⃣ Infinity rebuild */
+          await updateInfinityTeam(referrerId);
+          await propagateInfinityUpdateToAncestors(referrerId);
+
+          /* 2️⃣ Rank check (handled fully inside rankEngine) */
+          const referrer = await User.findOne({ user_id: referrerId });
+          if (referrer) {
+            await checkAndUpgradeRank(referrer);
+          }
+        }
+
+        /* 3️⃣ Direct BV / PV */
         await User.updateOne(
-          { user_id: user.referBy },
+          { user_id: referrerId },
           { $inc: { direct_bv: totalBV, direct_pv: totalPV } }
         );
 
-        /* INFINITY BV */
-        if (user.infinity) {
+        /* 4️⃣ Infinity BV */
+        if (freshUser.infinity) {
           const infinitySponsor = await User.findOne({
-            user_id: user.infinity,
+            user_id: freshUser.infinity,
           });
 
           if (infinitySponsor) {
@@ -235,39 +298,10 @@ export async function POST(request: Request) {
             }
           }
         }
-
-        /* INFINITY TREE + RANK */
-        await updateInfinityTeam(user.referBy);
-        await propagateInfinityUpdateToAncestors(user.referBy);
-
-        const referrer = await User.findOne({ user_id: user.referBy });
-        if (!referrer) return;
-
-        const oldRank = referrer.rank;
-        await checkAndUpgradeRank(referrer);
-
-        const updatedReferrer = await User.findOne({
-          user_id: referrer.user_id,
-        });
-
-        if (updatedReferrer && updatedReferrer.rank !== oldRank) {
-          await Alert.create({
-            user_id: updatedReferrer.user_id,
-            user_name: updatedReferrer.user_name || "",
-            user_status: updatedReferrer.user_status,
-            role: "user",
-            priority: "high",
-            title: "🎖️ Rank Achieved!",
-            description: `Congratulations ${updatedReferrer.user_name}! You achieved Rank ${updatedReferrer.rank}.`,
-            type: "achievement",
-            link: "/dashboards",
-            date: new Date().toLocaleDateString("en-GB").split("/").join("-"),
-          });
-        }
       } catch (err) {
-        console.error("Background infinity / rank error:", err);
+        console.error("❌ [BG] Infinity / Rank error", err);
       }
-    });
+    })();
 
     /* ---------------- ADMIN ALERT ---------------- */
     await Alert.create({
@@ -286,9 +320,10 @@ export async function POST(request: Request) {
       delivered_via: "system",
     });
 
+    console.info("📣 [ORDER] Completed successfully");
     return response;
   } catch (error: any) {
-    console.error("Order creation error:", error);
+    console.error("🔥 [ORDER] Fatal error", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }

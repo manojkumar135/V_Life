@@ -12,7 +12,8 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 import { GridColDef } from "@mui/x-data-grid";
@@ -26,7 +27,7 @@ export default function WithdrawPage() {
   const [withdrawData, setWithdrawData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [advancePaid, setAdvancePaid] = useState<boolean>(false);
+const [hasPermission, setHasPermission] = useState<boolean>(false);
 
   // ✅ date filter state
   const [dateFilter, setDateFilter] = useState<any>(null);
@@ -37,13 +38,20 @@ export default function WithdrawPage() {
   const API_URL = "/api/weeklyPayout-operations";
 
   // ✅ Check if advance is paid
-  useEffect(() => {
-    if (!user?.user_id) return;
-    (async () => {
-      const paid = await hasAdvancePaid(user.user_id, 10000);
-      setAdvancePaid(paid.hasPermission);
-    })();
-  }, [user?.user_id]);
+ useEffect(() => {
+  if (!user?.user_id) return;
+
+  (async () => {
+    try {
+      const res = await hasFirstOrder(user.user_id);
+      setHasPermission(res.hasPermission);
+    } catch (err) {
+      console.error("Error checking first order status:", err);
+      setHasPermission(false);
+    }
+  })();
+}, [user?.user_id]);
+
 
   // ✅ Fetch withdrawals with search + date filter
   const fetchWithdrawals = useCallback(async () => {

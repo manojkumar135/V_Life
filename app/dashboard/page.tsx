@@ -8,7 +8,7 @@ import { MdOutlineAttachMoney } from "react-icons/md";
 import { useRouter } from "next/navigation";
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
 
 import {
   Chart as ChartJS,
@@ -43,18 +43,19 @@ const DashboardPage: React.FC = () => {
   const [range, setRange] = useState<RangeKey>("daily");
 
   useEffect(() => {
-    const checkAdvancePayment = async () => {
-      try {
-        const paid = await hasAdvancePaid(user_id, 10000);
-        if (!paid.hasPermission) setShowAlert(true);
-      } catch (err) {
-        console.error("Error checking payment history:", err);
-        setShowAlert(true);
-      }
-    };
+  const checkFirstOrderStatus = async () => {
+    try {
+      const res = await hasFirstOrder(user_id);
+      if (!res.hasPermission) setShowAlert(true);
+    } catch (err) {
+      console.error("Error checking first order status:", err);
+      setShowAlert(true);
+    }
+  };
 
-    if (user_id) checkAdvancePayment();
-  }, [user_id]);
+  if (user_id) checkFirstOrderStatus();
+}, [user_id]);
+
 
   // Dummy data for chart — replace with API calls later
   const chartDataSets = useMemo(

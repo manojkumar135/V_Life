@@ -4,8 +4,9 @@ import { DailyPayout } from "@/models/payout";
 import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
+import { Order } from "@/models/order";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { checkIs5StarRank, updateClub } from "@/services/getrank";
@@ -17,35 +18,42 @@ function formatDate(date: Date): string {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-async function checkAdvancePaid(user_id: string, minAmount: number = 10000) {
+async function checkFirstOrder(user_id: string) {
   if (!user_id) {
     return {
-      hasAdvance: false,
+      hasFirstOrder: false,
       hasPermission: false,
       reason: "Missing user_id",
     };
   }
 
-  const user = (await User.findOne({ user_id }).lean()) as any;
+  const user = await User.findOne({ user_id })
+    .select("status_notes")
+    .lean<{ status_notes?: string }>();
+
   if (!user) {
     return {
-      hasAdvance: false,
+      hasFirstOrder: false,
       hasPermission: false,
       reason: "User not found",
     };
   }
 
-  const historyRecord = (await History.findOne({
-    user_id,
-    amount: { $gte: minAmount },
-  }).lean()) as any;
+  const note = user.status_notes?.toLowerCase()?.trim();
+  const activatedByAdmin =
+    note === "activated by admin" || note === "activated";
 
-  const hasAdvance = !!historyRecord;
+  const hasFirstOrder = await Order.exists({ user_id });
 
   return {
-    hasAdvance,
-    hasPermission: hasAdvance,
-    reason: hasAdvance ? "Advance paid" : "Advance not paid",
+    hasFirstOrder: !!hasFirstOrder,
+    activatedByAdmin,
+    hasPermission: activatedByAdmin || !!hasFirstOrder,
+    reason: activatedByAdmin
+      ? "Activated by admin"
+      : hasFirstOrder
+      ? "First order placed"
+      : "No orders placed",
   };
 }
 
@@ -214,8 +222,7 @@ export async function getUserTeamsAndHistories() {
 
   // Select histories using created_at (UTC) window to avoid fragile parsing
   const historiesInWindow = (await History.find({
-    first_payment: true,
-    advance: true,
+    first_order: true,
     ischecked: false,
     created_at: { $gte: start, $lte: end },
   }).lean()) as any[];
@@ -296,7 +303,7 @@ export async function runMatchingBonus() {
       }).lean()) as any;
       if (!node || node.status !== "active") continue;
 
-      const advancePaid = await checkAdvancePaid(u.user_id);
+      const firstOrder = await checkFirstOrder(u.user_id);
       // if (!advancePaid.hasPermission) continue;
 
       const now = new Date();

@@ -8,7 +8,7 @@ import PaymentModal from "@/components/common/PaymentModal/paymentmodal";
 import ShowToast from "@/components/common/Toast/toast";
 import axios from "axios";
 import { useVLife } from "@/store/context";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { useRouter } from "next/navigation";
 import { IoRemove, IoAdd, IoTrashOutline } from "react-icons/io5";
 import Loader from "@/components/common/loader";

@@ -14,7 +14,9 @@ import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 import AlertBox from "@/components/Alerts/advanceAlert";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
+
 import { FaPlusCircle, FaMinusCircle, FaEye, FaDownload } from "react-icons/fa";
 import { handleDownload } from "@/utils/handleDownload";
 import dynamic from "next/dynamic";
@@ -39,7 +41,7 @@ export default function AdvanceHistoryPage() {
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
   const [showAlert, setShowAlert] = useState(false);
-  const [advancePaid, setAdvancePaid] = useState(false);
+const [hasPermission, setHasPermission] = useState(false);
 
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
@@ -76,14 +78,21 @@ export default function AdvanceHistoryPage() {
   };
 
   // 🔹 Check initial advance payment status
-  useEffect(() => {
-    if (!user?.user_id) return;
-    (async () => {
-      const paid = await hasAdvancePaid(user?.user_id, 10000);
-      setAdvancePaid(paid.hasPermission);
-      setShowAlert(!paid.hasPermission);
-    })();
-  }, [user?.user_id]);
+ useEffect(() => {
+  if (!user?.user_id) return;
+
+  (async () => {
+    try {
+      const res = await hasFirstOrder(user.user_id);
+      setHasPermission(res.hasPermission);
+      setShowAlert(!res.hasPermission);
+    } catch (err) {
+      console.error("Error checking first order status:", err);
+      setShowAlert(true);
+    }
+  })();
+}, [user?.user_id]);
+
 
   // 🔹 Fetch Advance payments
   const fetchHistory = useCallback(async () => {
@@ -277,7 +286,7 @@ export default function AdvanceHistoryPage() {
           showBack={user.role !== "user"}
           showPagination
           showMoreOptions
-          showAddButton={!advancePaid}
+          showAddButton={!hasPermission}
           addLabel="Make Payment"
           onAdd={() => router.push("/historys/payAdvance")}
           onBack={() => router.push("/historys/adminhistory")}

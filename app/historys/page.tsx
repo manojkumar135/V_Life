@@ -11,7 +11,8 @@ import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
 import { FaPlusCircle, FaMinusCircle } from "react-icons/fa";
-import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
@@ -32,7 +33,7 @@ export default function TransactionHistory() {
   const [downloading, setDownloading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [showAlert, setShowAlert] = useState(false);
-  const [advancePaid, setAdvancePaid] = useState<boolean>(false);
+  const [hasPermission, setHasPermission] = useState<boolean>(false);
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -63,13 +64,22 @@ export default function TransactionHistory() {
   // ✅ Check if advance is paid
   useEffect(() => {
     if (!user?.user_id) return;
+
     let isMounted = true;
+
     (async () => {
-      const paid = await hasAdvancePaid(user.user_id, 10000);
-      if (!isMounted) return;
-      setAdvancePaid(paid.hasPermission);
-      setShowAlert(!paid.hasPermission);
+      try {
+        const res = await hasFirstOrder(user.user_id);
+        if (!isMounted) return;
+
+        setHasPermission(res.hasPermission);
+        setShowAlert(!res.hasPermission);
+      } catch (err) {
+        console.error("Error checking first order status:", err);
+        if (isMounted) setShowAlert(true);
+      }
     })();
+
     return () => {
       isMounted = false;
     };
@@ -264,7 +274,7 @@ export default function TransactionHistory() {
           search={query}
           setSearch={setQuery}
           showBack={user.role !== "user"}
-          showAddButton={!advancePaid}
+          showAddButton={!hasPermission}
           addLabel="Place Order"
           onAdd={handlePayAdvance}
           onBack={onBack}

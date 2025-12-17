@@ -251,7 +251,7 @@ export default function InvoiceTemplate({ data }) {
             </View>
             <View style={[{ display: "flex", marginLeft: 5 }]}>
               <Text style={styles.label}>ADDRESS  :</Text>
-              <Text style={{ margin: 5, marginLeft: 10, textTransform: "capitalize", fontSize: 9, marginBottom: 30 }}>{data.address || "N/A"}</Text>
+              <Text style={{ margin: 5, marginLeft: 10, textTransform: "capitalize", fontSize: 9, marginBottom: 30 }}>{data.order.address || "N/A"}</Text>
             </View>
 
             <View style={[{ display: "flex", flexDirection: "row", marginTop: 5, marginLeft: 5 }]}>

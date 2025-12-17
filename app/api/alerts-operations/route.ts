@@ -240,6 +240,7 @@ export async function DELETE(request: Request) {
     const alert_id = searchParams.get("alert_id");
 
     const targetId = id ?? alert_id;
+    console.log(targetId)
     let deletedAlert;
 
     if (targetId && mongoose.Types.ObjectId.isValid(targetId)) {
