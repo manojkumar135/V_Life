@@ -66,7 +66,7 @@ interface OrderPayload {
 
 // ----------------- POST -----------------
 export async function POST(request: Request) {
-  console.info("🟢 [ORDER] Request started");
+  // console.info("🟢 [ORDER] Request started");
 
   try {
     await connectDB();
@@ -96,12 +96,12 @@ export async function POST(request: Request) {
 
     const shouldTriggerMLM = isFirstOrder && !adminActivated;
 
-    console.info("👤 [ORDER] User loaded", {
-      user_id: user.user_id,
-      isFirstOrder,
-      adminActivated,
-      shouldTriggerMLM,
-    });
+    // console.info("👤 [ORDER] User loaded", {
+    //   user_id: user.user_id,
+    //   isFirstOrder,
+    //   adminActivated,
+    //   shouldTriggerMLM,
+    // });
 
     /* ---------------- GENERATE ORDER ID ---------------- */
     const order_id = await generateUniqueCustomId("OR", Order, 8, 8);
@@ -126,11 +126,11 @@ export async function POST(request: Request) {
       0
     );
 
-    console.info("📊 [ORDER] Calculated", { amount, totalBV, totalPV });
+    // console.info("📊 [ORDER] Calculated", { amount, totalBV, totalPV });
 
     /* ---------------- 1️⃣ CREATE ORDER ---------------- */
     const newOrder = await Order.create({ ...body, order_id, amount });
-    console.info("✅ [ORDER] Order created", newOrder.order_id, isFirstOrder);
+    // console.info("✅ [ORDER] Order created", newOrder.order_id, isFirstOrder);
 
     /* ---------------- 2️⃣ CREATE HISTORY ---------------- */
     await History.create({
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
       created_by: user.user_id,
     });
 
-    console.info("🧾 [ORDER] History created");
+    // console.info("🧾 [ORDER] History created");
 
     /* ---------------- 3️⃣ UPDATE USER BV / PV ---------------- */
     user.bv = (user.bv || 0) + totalBV;
@@ -195,10 +195,10 @@ export async function POST(request: Request) {
         remarks: `Reward used for order ${newOrder.order_id}`,
       });
 
-      console.info("🎁 [ORDER] Reward deducted", {
-        used: rewardUsed,
-        balance: newBalance,
-      });
+      // console.info("🎁 [ORDER] Reward deducted", {
+      //   used: rewardUsed,
+      //   balance: newBalance,
+      // });
     }
 
     /* ---------------- ACTIVATE USER ---------------- */
@@ -207,7 +207,7 @@ export async function POST(request: Request) {
     if (isFirstOrder && user.user_status !== "active") {
       // console.info("🚀 [ORDER] Activating user", user.user_id);
       await user.save();
-      // await activateUser(user);
+      await activateUser(user);
       justActivated = true;
     } else {
       await user.save();
@@ -216,12 +216,12 @@ export async function POST(request: Request) {
     /* 🔥 RELOAD USER AFTER ACTIVATION */
     const freshUser = await User.findOne({ user_id: user.user_id });
 
-    console.info("🔄 [ORDER] Fresh user snapshot", {
-      user_id: freshUser?.user_id,
-      status: freshUser?.user_status,
-      referBy: freshUser?.referBy,
-      infinity: freshUser?.infinity,
-    });
+    // console.info("🔄 [ORDER] Fresh user snapshot", {
+    //   user_id: freshUser?.user_id,
+    //   status: freshUser?.user_status,
+    //   referBy: freshUser?.referBy,
+    //   infinity: freshUser?.infinity,
+    // });
 
     /* ---------------- FAST RESPONSE ---------------- */
     const response = NextResponse.json(
@@ -231,11 +231,11 @@ export async function POST(request: Request) {
 
     /* ---------------- BACKGROUND TASKS ---------------- */
     void (async () => {
-      console.info("⚙️ [BG] Started", {
-        user: freshUser?.user_id,
-        referBy: freshUser?.referBy,
-        justActivated,
-      });
+      // console.info("⚙️ [BG] Started", {
+      //   user: freshUser?.user_id,
+      //   referBy: freshUser?.referBy,
+      //   justActivated,
+      // });
 
       try {
         if (!freshUser?.referBy) return;
@@ -320,7 +320,7 @@ export async function POST(request: Request) {
       delivered_via: "system",
     });
 
-    console.info("📣 [ORDER] Completed successfully");
+    // console.info("📣 [ORDER] Completed successfully");
     return response;
   } catch (error: any) {
     console.error("🔥 [ORDER] Fatal error", error);

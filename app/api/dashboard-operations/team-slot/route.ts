@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 
     const historiesInWindow = await History.find({
       first_payment: true,
-      advance: true,
+      first_order: true,
       ischecked: false,
       created_at: { $gte: start, $lte: end },
     }).lean();

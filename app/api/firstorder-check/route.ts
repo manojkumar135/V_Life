@@ -28,9 +28,11 @@ export async function GET(request: Request) {
     }
 
     // 2️⃣ Admin activation check (status_notes)
-    const note = user.status_notes?.toLowerCase()?.trim();
+    const note = user.status_notes?.toLowerCase()?.trim() || "";
     const activatedByAdmin =
-      note === "activated by admin" || note === "activated";
+      note === "activated by admin" || note === "activated" || note==="activated automatically after advance payment";
+    // console.log(note,activatedByAdmin)
+
 
     // 3️⃣ User status check
     const isActive = user.user_status === "active";
@@ -40,7 +42,7 @@ export async function GET(request: Request) {
 
     // 5️⃣ FINAL permission logic
     const hasPermission =
-      activatedByAdmin || (isActive && !!hasFirstOrder);
+       (isActive && !!hasFirstOrder) || activatedByAdmin;
 
     return NextResponse.json(
       {

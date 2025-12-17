@@ -249,8 +249,10 @@ export async function runDirectSalesBonus() {
         // const advancePaid = await hasAdvancePaid(referBy, 10000);
         const firstOrder = await checkFirstOrder(referBy);
         // if (!advancePaid.hasPermission) continue;
+        // console.log(firstOrder.hasPermission, firstOrder,"getting")
 
         if (!firstOrder.hasPermission) {
+          // console.log(!firstOrder.hasPermission)
           // mark order as checked
           await Order.findOneAndUpdate(
             { order_id: order.order_id },

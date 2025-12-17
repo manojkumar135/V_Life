@@ -540,6 +540,7 @@ export default function AddOrderPage() {
         payable_amount: payableAmount,
         advance_deducted: 0,
         is_first_order: isFirstOrder,
+        bonus_checked:false,
       };
 
       // ✅ Add referBy only if exists
@@ -555,9 +556,9 @@ export default function AddOrderPage() {
       const response = await axios.post("/api/order-operations", payload, {
         headers: { "Content-Type": "application/json" },
       });
-      console.log(response.data.success);
-      console.log(response.data);
-      console.log(response)
+      // console.log(response.data.success);
+      // console.log(response.data);
+      // console.log(response)
 
       if (response.data.success) {
         // ✅ Clear cart

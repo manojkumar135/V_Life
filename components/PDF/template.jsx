@@ -330,14 +330,15 @@ export default function InvoiceTemplate({ data }) {
           </View>
 
           {/* ---- ADVANCE DEDUCTED ---- */}
-          {data.order.is_first_order && (
-            <View style={[styles.totalsRow]}>
-              <Text>Advance Deducted:</Text>
+          {data.order.reward_used > 0 && (
+            <View style={styles.totalsRow}>
+              <Text>Reward Used:</Text>
               <Text style={styles.deduction}>
-                {`- \u20B9 ${data.order.advance_deducted.toFixed(2)}`}
+                {`- ₹ ${data.order.reward_used.toFixed(2)}`}
               </Text>
             </View>
           )}
+
           <View style={[styles.totalsBottomBorder]}>
 
           </View>
