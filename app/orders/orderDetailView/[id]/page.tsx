@@ -41,7 +41,9 @@ interface OrderData {
   paymentDate?: string;
   paymentId?: string;
   payment?: string;
-  shippingAddress?: string; // ✅ new field
+  shippingAddress?: string;
+  payableAmount?: number;
+  rewardUsed: number;
 }
 
 export default function OrderDetailView() {
@@ -92,6 +94,8 @@ export default function OrderDetailView() {
             paymentId: raw.payment_id,
             payment: raw.payment || "completed",
             shippingAddress: raw.shipping_address,
+            payableAmount: raw.payable_amount,
+            rewardUsed: Number(raw.reward_used) || 0,
           };
 
           setOrder(mappedOrder);
@@ -146,8 +150,10 @@ export default function OrderDetailView() {
           </button>
 
           <div className="flex flex-col xl:flex-row max-lg:items-start items-center max-lg:justify-start justify-between gap-4 w-full">
-            <div className=" flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between
-             xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5 ">
+            <div
+              className=" flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between
+             xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5 "
+            >
               <span className="text-sm font-medium text-gray-600">
                 Order ID:{" "}
                 <span className="text-black font-semibold">
@@ -289,7 +295,9 @@ export default function OrderDetailView() {
 
                         <div className=" text-right font-bold text-gray-700">
                           ₹{" "}
-                          {((item.price_with_gst || 0) * item.quantity).toFixed(2)}
+                          {((item.price_with_gst || 0) * item.quantity).toFixed(
+                            2
+                          )}
                         </div>
                       </div>
                     </div>
@@ -301,38 +309,35 @@ export default function OrderDetailView() {
         </div>
 
         {/* Footer */}
-        <div className="flex-none border-t pt-4 lg:px-10 bg-white py-3">
-          {order.isFirstOrder && order.advanceDeducted ? (
+        <div className="flex-none border-t pt-4 lg:px-10 bg-white py-3 space-y-2">
+          {/* Show ONLY when reward_used > 1 */}
+          {order.rewardUsed > 0 && (
             <>
-              <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
-                <span>Subtotal</span>
+              {/* Total Amount */}
+              <div className="flex justify-between items-center text-sm text-gray-700">
+                <span>Total Amount</span>
                 <span className="font-semibold">
-                  ₹ {order.subtotal?.toFixed(2)}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-sm text-red-500 mt-1">
-                <span>Advance Paid</span>
-                <span>- ₹ {order.advanceDeducted.toFixed(2)}</span>
-              </div>
-
-              <div className="border-t border-gray-200 my-3"></div>
-
-              <div className="flex justify-between items-center text-base sm:text-lg font-semibold">
-                <span>Total Paid:</span>
-                <span className="text-black">
                   ₹ {order.totalAmount.toFixed(2)}
                 </span>
               </div>
+
+              {/* Reward Used */}
+              <div className="flex justify-between items-center text-sm text-red-600">
+                <span>Reward Used</span>
+                <span>- ₹ {order.rewardUsed.toFixed(2)}</span>
+              </div>
+
+              <div className="border-t border-gray-200 my-2"></div>
             </>
-          ) : (
-            <div className="flex justify-between items-center text-base sm:text-lg font-semibold">
-              <span>Total Paid:</span>
-              <span className="text-black">
-                ₹ {order.totalAmount.toFixed(2)}
-              </span>
-            </div>
           )}
+
+          {/* Always show payable / paid */}
+          <div className="flex justify-between items-center text-base sm:text-lg font-semibold">
+            <span>Total Paid</span>
+            <span className="text-green-600">
+              ₹ {(order.payableAmount ?? order.totalAmount).toFixed(2)}
+            </span>
+          </div>
         </div>
       </div>
 
