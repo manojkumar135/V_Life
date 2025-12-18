@@ -235,7 +235,7 @@ const Page = () => {
         </div>
       )}
       <Layout>
-        <div className="px-6 py-3 md:px-6 md:py-10 bg-[#fefefe] min-h-screen -mt-5 max-md:-mt-3">
+        <div className="px-6 py-3 md:px-6 md:py-10 bg-[#fefefe] min-h-screen -mt-10 max-md:-mt-3">
           {/* Profile Banner - Desktop */}
           <div className="flex flex-row max-md:flex-col justify-between items-center rounded-2xl bg-gradient-to-tl from-gray-600   to-[#16B8E4] max-md:hidden  px-5 py-4 mb-8 relative overflow-hidden shadow-lg">
             <h2 className="text-white text-[2rem] max-md:text-[1.8rem] font-semibold tracking-wide font-[cursive] bottom-0 self-end max-md:hidden">

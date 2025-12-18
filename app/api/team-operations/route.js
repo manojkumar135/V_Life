@@ -3,29 +3,35 @@ import { connectDB } from "@/lib/mongodb";
 import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
 
-// Helper to recursively collect team members
-async function collectTeam(userId, side, allNodes, collected = new Set()) {
-  const node = allNodes.find((n) => n.user_id === userId);
-  if (!node) return collected;
+/* ---------------- TEAM COLLECTION (ITERATIVE – FASTER) ---------------- */
+function collectTeamIterative(rootId, side, nodeMap) {
+  const collected = new Set();
+  const stack = [];
 
-  const childId = node[side];
-  if (childId) {
-    collected.add(childId);
-    await collectTeam(childId, "left", allNodes, collected);
-    await collectTeam(childId, "right", allNodes, collected);
+  const root = nodeMap.get(rootId);
+  if (root?.[side]) stack.push(root[side]);
+
+  while (stack.length) {
+    const currentId = stack.pop();
+    if (!currentId || collected.has(currentId)) continue;
+
+    collected.add(currentId);
+    const node = nodeMap.get(currentId);
+    if (node?.left) stack.push(node.left);
+    if (node?.right) stack.push(node.right);
   }
 
   return collected;
 }
 
-// GET /api/team-operations?user_id=USER123&team=left&search=user,123456
+/* ---------------- API ---------------- */
 export async function GET(req) {
   try {
     await connectDB();
 
     const { searchParams } = new URL(req.url);
     const user_id = searchParams.get("user_id");
-    const team = searchParams.get("team"); // "left" or "right"
+    const team = searchParams.get("team");
     const search = searchParams.get("search") || "";
 
     if (!user_id || !team) {
@@ -35,34 +41,32 @@ export async function GET(req) {
       );
     }
 
-    // 1️⃣ Load all tree nodes (to avoid many queries in recursion)
+    /* 1️⃣ LOAD TREE ONCE */
     const allNodes = await TreeNode.find({}).lean();
 
-    // 2️⃣ Find root node
-    const root = allNodes.find((n) => n.user_id === user_id);
-    if (!root) {
+    const nodeMap = new Map();
+    for (const n of allNodes) nodeMap.set(n.user_id, n);
+
+    if (!nodeMap.has(user_id)) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    // 3️⃣ Collect user_ids of the given team
-    const collectedIds = await collectTeam(user_id, team, allNodes);
-
-    if (collectedIds.size === 0) {
+    /* 2️⃣ COLLECT TEAM IDS (FAST) */
+    const teamIds = collectTeamIterative(user_id, team, nodeMap);
+    if (!teamIds.size) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    // 4️⃣ Build query
-    let query = { user_id: { $in: [...collectedIds] } };
+    /* 3️⃣ USER QUERY */
+    const query = { user_id: { $in: [...teamIds] } };
 
     if (search) {
-      // Split by comma and trim spaces
-      const searchTerms = search
+      const terms = search
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
 
-      // Build OR conditions for each search term across all fields
-      query.$or = searchTerms.flatMap((term) => {
+      query.$or = terms.flatMap((term) => {
         const regex = new RegExp("^" + term, "i");
         return [
           { user_id: regex },
@@ -82,41 +86,52 @@ export async function GET(req) {
       });
     }
 
-    // 5️⃣ Fetch user details from User table with filtering in DB
-    const users = await User.find(query).sort({ created_at: -1 }).lean();
+    /* 4️⃣ FETCH USERS ONCE */
+    const users = await User.find(query)
+      .sort({ created_at: -1 })
+      .lean();
 
-    // 6️⃣ Add BV calculations to each user
+    if (!users.length) {
+      return NextResponse.json({ data: [], total: 0 });
+    }
+
+    /* 5️⃣ BUILD BV MAP (ONE QUERY ONLY) */
+    const allInfinityIds = new Set();
+
+    for (const u of users) {
+      (u.infinity_left_users || []).forEach((id) =>
+        allInfinityIds.add(id)
+      );
+      (u.infinity_right_users || []).forEach((id) =>
+        allInfinityIds.add(id)
+      );
+    }
+
+    const bvDocs = await User.find(
+      { user_id: { $in: [...allInfinityIds] } },
+      { user_id: 1, self_bv: 1 }
+    ).lean();
+
+    const bvMap = new Map(
+      bvDocs.map((u) => [u.user_id, u.self_bv || 0])
+    );
+
+    /* 6️⃣ CALCULATE BV IN MEMORY */
     for (const user of users) {
-      const leftUsers = user.infinity_left_users || [];
-      const rightUsers = user.infinity_right_users || [];
-
-      // Fetch only required users and only self_bv field for performance
-      const leftUserDocs = await User.find(
-        { user_id: { $in: leftUsers } },
-        { self_bv: 1 }
-      ).lean();
-
-      const rightUserDocs = await User.find(
-        { user_id: { $in: rightUsers } },
-        { self_bv: 1 }
-      ).lean();
-
-      const leftBV = leftUserDocs.reduce(
-        (sum, u) => sum + (u.self_bv || 0),
-        0
-      );
-      const rightBV = rightUserDocs.reduce(
-        (sum, u) => sum + (u.self_bv || 0),
+      const leftBV = (user.infinity_left_users || []).reduce(
+        (sum, id) => sum + (bvMap.get(id) || 0),
         0
       );
 
-      const cumulativeBV =
-        leftBV > 0 && rightBV > 0 ? Math.min(leftBV, rightBV) : 0;
+      const rightBV = (user.infinity_right_users || []).reduce(
+        (sum, id) => sum + (bvMap.get(id) || 0),
+        0
+      );
 
-      // Add to result object
       user.leftBV = leftBV;
       user.rightBV = rightBV;
-      user.cumulativeBV = cumulativeBV;
+      user.cumulativeBV =
+        leftBV > 0 && rightBV > 0 ? Math.min(leftBV, rightBV) : 0;
     }
 
     return NextResponse.json({

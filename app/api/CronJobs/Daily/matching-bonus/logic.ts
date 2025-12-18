@@ -293,9 +293,39 @@ export async function runMatchingBonus() {
 
     let totalPayouts = 0;
 
+    const allOrderIds = teamsAndHistories
+      .flatMap((u) => [...u.left_histories, ...u.right_histories])
+      .map((h) => h.order_id)
+      .filter(Boolean);
+
+    const orders = await Order.find(
+      { order_id: { $in: allOrderIds } },
+      { order_id: 1, order_pv: 1 }
+    ).lean();
+
+    const orderPvMap = new Map(
+      orders.map((o) => [o.order_id, Number(o.order_pv || 0)])
+    );
+
     for (const u of teamsAndHistories) {
-      const match = u.left_histories.length > 0 && u.right_histories.length > 0;
-      // console.log(match,"Matching Bonus Check for User:", u.user_id);
+      let leftPV = 0;
+      let rightPV = 0;
+
+      for (const h of u.left_histories) {
+        leftPV += orderPvMap.get(h.order_id) || 0;
+      }
+
+      for (const h of u.right_histories) {
+        rightPV += orderPvMap.get(h.order_id) || 0;
+      }
+
+      // 🔒 cap at 100 PV per side
+      const effectiveLeftPV = Math.min(leftPV, 100);
+      const effectiveRightPV = Math.min(rightPV, 100);
+
+      // ✅ compulsory condition
+      const match = effectiveLeftPV >= 100 && effectiveRightPV >= 100;
+
       if (!match) continue;
 
       const node = (await TreeNode.findOne({

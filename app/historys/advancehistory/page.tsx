@@ -41,7 +41,7 @@ export default function AdvanceHistoryPage() {
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
   const [showAlert, setShowAlert] = useState(false);
-const [hasPermission, setHasPermission] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
 
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
@@ -78,21 +78,20 @@ const [hasPermission, setHasPermission] = useState(false);
   };
 
   // 🔹 Check initial advance payment status
- useEffect(() => {
-  if (!user?.user_id) return;
+  useEffect(() => {
+    if (!user?.user_id) return;
 
-  (async () => {
-    try {
-      const res = await hasFirstOrder(user.user_id);
-      setHasPermission(res.hasPermission);
-      setShowAlert(!res.hasPermission);
-    } catch (err) {
-      console.error("Error checking first order status:", err);
-      setShowAlert(true);
-    }
-  })();
-}, [user?.user_id]);
-
+    (async () => {
+      try {
+        const res = await hasFirstOrder(user.user_id);
+        setHasPermission(res.hasPermission);
+        setShowAlert(!res.hasPermission);
+      } catch (err) {
+        console.error("Error checking first order status:", err);
+        setShowAlert(true);
+      }
+    })();
+  }, [user?.user_id]);
 
   // 🔹 Fetch Advance payments
   const fetchHistory = useCallback(async () => {
@@ -153,9 +152,8 @@ const [hasPermission, setHasPermission] = useState(false);
   /** ======================== TABLE COLUMNS ========================= */
 
   const columns: GridColDef[] = [
-    { field: "transaction_id", headerName: "Transaction ID", flex: 0.8 },
-        { field: "order_id", headerName: "Order ID", flex: 0.8 },
-
+    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
+    { field: "order_id", headerName: "Order ID", flex: 0.8 },
 
     user?.role === "admin" && {
       field: "user_id",
@@ -204,39 +202,39 @@ const [hasPermission, setHasPermission] = useState(false);
     // },
 
     {
-          field: "download",
-          headerName: "Invoice",
-          flex: 0.8,
-          // sortable: false,
-          // filterable: false,
-          renderCell: (params: GridRenderCellParams) => (
-            <div className="flex max-lg:gap-8 max-lg:min-w-[150px] gap-8 xl:items-center xl:justify-center mt-2">
-              {/* Preview Icon */}
-              <button
-                title="Preview Invoice"
-                className="text-[#106187] cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePreviewPDF(params.row.order_id, setLoading, setPreviewUrl);
-                  setShowPreview(true);
-                }}
-              >
-                <FaEye size={16} />
-              </button>
-              {/* Download */}
-              <button
-                title="Download Invoice"
-                className="text-[#106187] cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDownloadPDF(params.row.order_id, setLoading);
-                }}
-              >
-                <FaDownload size={15} />
-              </button>
-            </div>
-          ),
-        },
+      field: "download",
+      headerName: "Invoice",
+      flex: 0.8,
+      // sortable: false,
+      // filterable: false,
+      renderCell: (params: GridRenderCellParams) => (
+        <div className="flex max-lg:gap-8 max-lg:min-w-[150px] gap-8 xl:items-center xl:justify-center mt-2">
+          {/* Preview Icon */}
+          <button
+            title="Preview Invoice"
+            className="text-[#106187] cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePreviewPDF(params.row.order_id, setLoading, setPreviewUrl);
+              setShowPreview(true);
+            }}
+          >
+            <FaEye size={16} />
+          </button>
+          {/* Download */}
+          <button
+            title="Download Invoice"
+            className="text-[#106187] cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownloadPDF(params.row.order_id, setLoading);
+            }}
+          >
+            <FaDownload size={15} />
+          </button>
+        </div>
+      ),
+    },
   ].filter(Boolean) as GridColDef[];
 
   /** ======================== PAGINATION ========================= */
@@ -262,12 +260,8 @@ const [hasPermission, setHasPermission] = useState(false);
       <AlertBox
         visible={showAlert}
         title="Prepaid Required"
-        message={
-            <>
-              To activate your account, please place{" "}an order
-            </>
-          }
-          buttonLabel="ORDER NOW"
+        message={<>To activate your account, please place an order</>}
+        buttonLabel="ORDER NOW"
         buttonAction={() => router.push("/historys/payAdvance")}
         onClose={() => setShowAlert(false)}
       />
