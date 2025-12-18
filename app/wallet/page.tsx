@@ -8,6 +8,8 @@ import { FaGift } from "react-icons/fa6";
 import { VscGraph } from "react-icons/vsc";
 import { useVLife } from "@/store/context";
 import { FaPercent } from "react-icons/fa";
+import { MdOutlineVerifiedUser } from "react-icons/md";
+
 
 const page = () => {
   const router = useRouter();
@@ -64,6 +66,15 @@ const page = () => {
           >
             <VscGraph size={32} />
             <span className="mt-2 text-lg font-semibold">Reports</span>
+          </div>
+
+          {/* Reports Card */}
+          <div
+            onClick={() => router.push("/reports")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <MdOutlineVerifiedUser  size={32} />
+            <span className="mt-2 text-lg font-semibold">Activation</span>
           </div>
 
           {/* Convert Card */}

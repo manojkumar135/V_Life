@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { History } from "@/models/history";
 import TreeNode from "@/models/tree";
+import { Order } from "@/models/order";
 import { getCurrentWindow } from "@/app/api/CronJobs/Daily/matching-bonus/logic";
 
 function getTimeRemaining(end: Date): string {
@@ -53,24 +54,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const user_id = searchParams.get("user_id");
 
-    if (!user_id)
+    if (!user_id) {
       return NextResponse.json({
         success: false,
         message: "Missing user_id",
       });
+    }
 
     const { start, end } = getCurrentWindow();
 
+    /* ---------------- HISTORIES IN WINDOW ---------------- */
     const historiesInWindow = await History.find({
       first_payment: true,
       first_order: true,
       ischecked: false,
       created_at: { $gte: start, $lte: end },
     }).lean();
-
-    
-
-    
 
     if (!historiesInWindow.length) {
       return NextResponse.json({
@@ -82,28 +81,50 @@ export async function GET(request: Request) {
       });
     }
 
+    /* ---------------- TREE MAP ---------------- */
     const treeNodes = await TreeNode.find({}).lean();
     const allNodesMap = new Map(treeNodes.map((n: any) => [n.user_id, n]));
 
     const leftTeamIds = getTeamUserIdsFromMap(allNodesMap, user_id, "left");
     const rightTeamIds = getTeamUserIdsFromMap(allNodesMap, user_id, "right");
 
-    const leftCount = historiesInWindow.filter((h) =>
-      leftTeamIds.includes(h.user_id)
-    ).length;
-    const rightCount = historiesInWindow.filter((h) =>
-      rightTeamIds.includes(h.user_id)
-    ).length;
+    /* ---------------- ORDERS LOOKUP ---------------- */
+    const orderIds = historiesInWindow.map(h => h.order_id);
 
+    const orders = await Order.find(
+      { order_id: { $in: orderIds } },
+      { order_id: 1, order_pv: 1 }
+    ).lean();
+
+    const orderPvMap = new Map(
+      orders.map(o => [o.order_id, Number(o.order_pv || 0)])
+    );
+
+    /* ---------------- PV CALCULATION ---------------- */
+    let leftPV = 0;
+    let rightPV = 0;
+
+    for (const h of historiesInWindow) {
+      const pv = orderPvMap.get(h.order_id) || 0;
+
+      if (leftTeamIds.includes(h.user_id)) {
+        leftPV += pv;
+      } else if (rightTeamIds.includes(h.user_id)) {
+        rightPV += pv;
+      }
+    }
+
+    /* ---------------- RESPONSE ---------------- */
     return NextResponse.json({
       success: true,
       message: "Team slot data fetched successfully",
       user_id,
-      leftTeam: leftCount,
-      rightTeam: rightCount,
+      leftTeam: leftPV,
+      rightTeam: rightPV,
       timeRemaining: getTimeRemaining(end),
       window: { start, end },
     });
+
   } catch (error) {
     console.error("Error in /team-slot:", error);
     return NextResponse.json({

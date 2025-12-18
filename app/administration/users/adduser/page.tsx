@@ -14,6 +14,7 @@ import SelectField from "@/components/InputFields/selectinput";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
+import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 const validationSchema = Yup.object().shape({
   fullName: Yup.string()
@@ -46,6 +47,16 @@ const validationSchema = Yup.object().shape({
       return false;
     }),
   gender: Yup.string().required("Gender is required"),
+  pan: Yup.string()
+    .trim()
+    .max(10, "PAN must be exactly 10 characters")
+    .test("valid-pan", "Invalid PAN format (ABCDE1234F)", (value) => {
+      if (!value) return true;
+      if (value.length < 10) return true;
+      return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value);
+    })
+    .nullable()
+    .notRequired(),
 
   // address: Yup.string().required("Address is required"),
   // city: Yup.string().required("City is required"),
@@ -65,6 +76,56 @@ function AddUserFormContent() {
   const searchParams = useSearchParams();
   const team = searchParams.get("team") || "right";
 
+  const [panVerified, setPanVerified] = useState(false);
+  const [panChecking, setPanChecking] = useState(false);
+
+  const checkPanDuplicate = async (pan: string) => {
+    try {
+      setPanChecking(true);
+      const res = await axios.get(`/api/panfind-operations?pan=${pan}`);
+
+      if (res.data.exists) {
+        setPanVerified(false);
+        return true; // ❌ exists
+      }
+      return false; // ✅ available
+    } catch (err) {
+      console.error(err);
+      return false;
+    } finally {
+      setPanChecking(false);
+    }
+  };
+
+  const verifyPan = async () => {
+    try {
+      setPanChecking(true);
+
+      const res = await axios.post("/api/pancheck-operations", {
+        pan_number: formik.values.pan,
+      });
+
+      const panData = res.data?.data?.data;
+
+      if (res.data.success && panData?.status === "valid") {
+        setPanVerified(true);
+        formik.setFieldValue("pancheck", true); // ✅ IMPORTANT
+        ShowToast.success("PAN Verified!");
+      } else {
+        setPanVerified(false);
+        formik.setFieldValue("pancheck", false);
+        ShowToast.error("Invalid PAN Number");
+      }
+    } catch (err) {
+      console.error(err);
+      ShowToast.error("PAN verification failed");
+      setPanVerified(false);
+      formik.setFieldValue("pancheck", false);
+    } finally {
+      setPanChecking(false);
+    }
+  };
+
   const formik = useFormik({
     initialValues: {
       fullName: "",
@@ -77,6 +138,9 @@ function AddUserFormContent() {
       bloodGroup: "",
       landmark: "",
       gstNumber: "",
+
+      pan: "",
+      pancheck: false,
 
       address: "",
       city: "",
@@ -104,6 +168,9 @@ function AddUserFormContent() {
           gender: values.gender,
           blood: values.bloodGroup,
           gst: values.gstNumber,
+
+          pan: values.pan,
+          pancheck: values.pancheck,
 
           address: values.address,
           landmark: values.landmark,
@@ -340,6 +407,94 @@ function AddUserFormContent() {
               />
             </div>
           </div>
+
+          <div className="rounded-xl p-2">
+            <p className="text-md font-semibold mb-4 capitalize">PAN Details</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {/* PAN FIELD */}
+              <div className="relative w-full">
+                {/* INPUT */}
+                <InputField
+                  label="PAN Number (Optional)"
+                  name="pan"
+                  value={formik.values.pan}
+                  onChange={async (e) => {
+                    const value = e.target.value.toUpperCase();
+                    formik.setFieldValue("pan", value);
+                    setPanVerified(false);
+                    formik.setFieldValue("pancheck", false);
+
+                    if (value.length < 10) {
+                      formik.setFieldError("pan", "");
+                      return;
+                    }
+
+                    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value)) {
+                      formik.setFieldError(
+                        "pan",
+                        "* Invalid PAN format (ABCDE1234F)"
+                      );
+                      return;
+                    }
+
+                    const exists = await checkPanDuplicate(value);
+                    if (exists) {
+                      formik.setFieldError("pan", "* PAN already exists");
+                      return;
+                    }
+                  }}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.pan ? formik.errors.pan : undefined}
+                  maxLength={10}
+                  className="pr-28" // ✅ reserve space inside input
+                />
+
+                {/* VERIFY BUTTON */}
+                {formik.values.pan.length === 10 &&
+                  /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(formik.values.pan) &&
+                  !panChecking &&
+                  !panVerified &&
+                  !formik.errors.pan && (
+                    <button
+                      type="button"
+                      onClick={verifyPan}
+                      className="
+            absolute right-2
+           top-[32px]
+            bg-[#106187] text-white
+            px-3 py-1
+            rounded
+            h-[26px]
+            text-xs
+            flex items-center
+          "
+                    >
+                      Verify
+                    </button>
+                  )}
+
+                {/* CHECKING */}
+                {panChecking && (
+                  <span className="absolute right-3 top-[38px] text-[11px] text-gray-500">
+                    Checking…
+                  </span>
+                )}
+
+                {/* VERIFIED ICON */}
+                {panVerified && !panChecking && (
+                  <RiVerifiedBadgeFill className="absolute right-3 top-[34px] text-green-600 text-xl" />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* PAN Note */}
+          <p className="text-[0.75rem] text-red-600 mt-3 mb-5 ml-3">
+            <strong className="text-gray-600">Note:</strong> If PAN is verified,
+            TDS will be <strong>2%</strong>. If not verified, TDS will be{" "}
+            <strong>20%</strong>.
+          </p>
 
           {/* ADDRESS DETAILS SECTION */}
           <div className=" rounded-xl p-2  ">

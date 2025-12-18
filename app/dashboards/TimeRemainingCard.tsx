@@ -129,7 +129,7 @@ const TimeRemainingCard = () => {
             </p>
 
             <p className="text-xl font-semibold text-green-600">
-              {Number(teamData.leftTeam || 0) * 100}
+              {Number(teamData.leftTeam || 0) }
             </p>
           </div>
 
@@ -139,7 +139,7 @@ const TimeRemainingCard = () => {
             </p>
 
             <p className="text-xl font-semibold text-pink-600">
-              {Number(teamData.rightTeam || 0) * 100}
+              {Number(teamData.rightTeam || 0)}
             </p>
           </div>
         </div>
