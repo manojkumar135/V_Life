@@ -20,8 +20,8 @@ import { hasFirstOrder } from "@/services/hasFirstOrder";
 import { FaPlusCircle, FaMinusCircle, FaEye, FaDownload } from "react-icons/fa";
 import { handleDownload } from "@/utils/handleDownload";
 import dynamic from "next/dynamic";
-import { dummyPreviewPDF, dummyDownloadPDF } from "@/lib/dummyInvoiceActions";
-
+import { handleDownloadPDF } from "@/lib/invoiceDownload";
+import { handlePreviewPDF } from "@/lib/invoicePreview";
 const PdfPreview = dynamic(() => import("@/components/PDF/PdfPreview"), {
   ssr: false,
 });
@@ -50,7 +50,7 @@ const [hasPermission, setHasPermission] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pdfScale, setPdfScale] = useState<number>(1);
 
-  const API_URL = "/api/get-advance";
+  const API_URL = "/api/get-firstorders";
 
   // 🔹 Mobile responsive scaling PDF
   useEffect(() => {
@@ -62,7 +62,7 @@ const [hasPermission, setHasPermission] = useState(false);
   const handleExport = () => {
     handleDownload({
       rows: selectedRows,
-      fileName: "advance_payments",
+      fileName: "first orders",
       format: "xlsx",
       excludeHeaders: [
         "_id",
@@ -154,6 +154,8 @@ const [hasPermission, setHasPermission] = useState(false);
 
   const columns: GridColDef[] = [
     { field: "transaction_id", headerName: "Transaction ID", flex: 0.8 },
+        { field: "order_id", headerName: "Order ID", flex: 0.8 },
+
 
     user?.role === "admin" && {
       field: "user_id",
@@ -202,40 +204,39 @@ const [hasPermission, setHasPermission] = useState(false);
     // },
 
     {
-      field: "invoice",
-      headerName: "Invoice",
-      flex: 0.7,
-      renderCell: (params: any) => (
-        <div className="flex gap-6 mt-1 items-center justify-center">
-          {/* Preview */}
-          <button
-            className="text-[#106187] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              dummyPreviewPDF(
-                params.row._id,
-                setLoading,
-                setPreviewUrl
-              );
-              setShowPreview(true);
-            }}
-          >
-            <FaEye size={16} />
-          </button>
-
-          {/* Download */}
-          <button
-            className="text-[#106187] cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              dummyDownloadPDF(params.row._id, setLoading);
-            }}
-          >
-            <FaDownload size={15} />
-          </button>
-        </div>
-      ),
-    },
+          field: "download",
+          headerName: "Invoice",
+          flex: 0.8,
+          // sortable: false,
+          // filterable: false,
+          renderCell: (params: GridRenderCellParams) => (
+            <div className="flex max-lg:gap-8 max-lg:min-w-[150px] gap-8 xl:items-center xl:justify-center mt-2">
+              {/* Preview Icon */}
+              <button
+                title="Preview Invoice"
+                className="text-[#106187] cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePreviewPDF(params.row.order_id, setLoading, setPreviewUrl);
+                  setShowPreview(true);
+                }}
+              >
+                <FaEye size={16} />
+              </button>
+              {/* Download */}
+              <button
+                title="Download Invoice"
+                className="text-[#106187] cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownloadPDF(params.row.order_id, setLoading);
+                }}
+              >
+                <FaDownload size={15} />
+              </button>
+            </div>
+          ),
+        },
   ].filter(Boolean) as GridColDef[];
 
   /** ======================== PAGINATION ========================= */
@@ -280,7 +281,7 @@ const [hasPermission, setHasPermission] = useState(false);
 
         {/* Header */}
         <HeaderWithActions
-          title="Advances"
+          title="First Orders"
           search={query}
           setSearch={setQuery}
           showBack={user.role !== "user"}

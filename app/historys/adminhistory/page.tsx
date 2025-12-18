@@ -33,7 +33,7 @@ const page = () => {
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <LuHandCoins size={36} />
-            <span className="mt-2 text-lg font-semibold">Advance Payments</span>
+            <span className="mt-2 text-lg font-semibold">First Orders</span>
           </div>
          
         </div>

@@ -127,7 +127,9 @@ async function checkFirstOrder(user_id: string) {
   // 🔹 Admin activation check
   const note = user?.status_notes?.toLowerCase()?.trim();
   const activatedByAdmin =
-    note === "activated by admin" || note === "activated";
+    note === "activated by admin" ||
+    note === "activated" ||
+    note === "activated automatically after advance payment";
 
   // 🔹 First order check
   const hasFirstOrder = await Order.exists({ user_id });
