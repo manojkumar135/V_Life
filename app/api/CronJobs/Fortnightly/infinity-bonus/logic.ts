@@ -7,6 +7,7 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { checkIs5StarRank, updateClub } from "@/services/getrank";
+import { addRewardScore } from "@/services/updateRewardScore";
 
 // ---------------- Helper Functions ----------------
 function formatDate(date: Date): string {
@@ -293,10 +294,17 @@ export async function runInfinityBonus() {
         last_modified_at: now,
       });
 
-      await User.findOneAndUpdate(
-        { user_id: sponsor.user_id },
-        { $inc: { score: rewardAmount } }
-      );
+      await addRewardScore({
+        user_id: sponsor.user_id,
+        points: rewardAmount,
+        source:
+          payout.name === "Matching Bonus"
+            ? "infinity_matching_bonus"
+            : "infinity_sales_bonus",
+        reference_id: infinityPayout.payout_id,
+        remarks: `${infinityTitle} from ${user.user_id}`,
+        type: "fortnight",
+      });
 
       await DailyPayout.updateOne(
         { _id: payout._id },

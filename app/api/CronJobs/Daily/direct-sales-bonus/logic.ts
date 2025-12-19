@@ -9,7 +9,7 @@ import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 // import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
-
+import { addRewardScore } from "@/services/updateRewardScore";
 import { Alert } from "@/models/alert";
 
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
@@ -446,11 +446,15 @@ export async function runDirectSalesBonus() {
             last_modified_at: now,
           });
 
-          // update user score by rewardAmount (same as matching)
-          await User.findOneAndUpdate(
-            { user_id: referBy },
-            { $inc: { score: rewardAmount } }
-          );
+
+          await addRewardScore({
+            user_id: referBy,
+            points: rewardAmount,
+            source: "direct_sales_bonus",
+            reference_id: order.order_id,
+            remarks: `Direct sales bonus for order ${order.order_id}`,
+            type: "daily",
+          });
 
           await Alert.create({
             user_id: referBy,

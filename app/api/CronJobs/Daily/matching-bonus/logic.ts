@@ -10,6 +10,7 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { checkIs5StarRank, updateClub } from "@/services/getrank";
+import { addRewardScore } from "@/services/updateRewardScore";
 
 function formatDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, "0");
@@ -507,10 +508,14 @@ export async function runMatchingBonus() {
           last_modified_at: now,
         });
 
-        await User.findOneAndUpdate(
-          { user_id: u.user_id },
-          { $inc: { score: rewardAmount } }
-        ).exec();
+        await addRewardScore({
+          user_id: u.user_id,
+          points: rewardAmount,
+          source: "matching_bonus",
+          reference_id: payout.payout_id,
+          remarks: `Matching bonus for cycle ${formattedDate}`,
+          type: "daily",
+        });
 
         // ✅ Create alert for user
         await Alert.create({
