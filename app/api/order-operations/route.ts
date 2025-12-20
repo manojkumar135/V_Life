@@ -150,8 +150,8 @@ export async function POST(request: Request) {
       account_number: "N/A",
       ifsc_code: "N/A",
 
-      date: new Date().toLocaleDateString("en-GB").split("/").join("-"),
-      time: new Date().toLocaleTimeString(),
+      date: newOrder.payment_date,
+      time: newOrder.payment_time,
 
       available_balance: user.wallet_balance || 0,
       transaction_type: "Debit",

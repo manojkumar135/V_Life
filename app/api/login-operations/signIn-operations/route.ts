@@ -4,6 +4,7 @@ import { Login } from "@/models/login";
 import { User } from "@/models/user"; // ⭐ Import User model
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import {Score} from "@/models/score"
 
 const secretKey = process.env.JWT_SECRET as string;
 const secretRefreshKey = process.env.JWT_REFRESH_SECRET as string;
@@ -60,6 +61,27 @@ export async function POST(request: Request) {
     userObj.reward = userData?.reward ?? 0;
     userObj.rank = userData?.rank ?? userObj.rank ?? "none";
     userObj.club = userData?.club ?? userObj.club ?? "none";
+
+
+    const scoreData = await Score.findOne(
+      { user_id: loginRecord.user_id },
+      {
+        "daily.balance": 1,
+        "fortnight.balance": 1,
+        "cashback.balance": 1,
+        _id: 0,
+      }
+    ).lean<{
+      daily?: { balance: number };
+      fortnight?: { balance: number };
+      cashback?: { balance: number };
+    }>();
+
+    userObj.dailyReward = scoreData?.daily?.balance ?? 0;
+    userObj.fortnightReward = scoreData?.fortnight?.balance ?? 0;
+    userObj.cashbackReward = scoreData?.cashback?.balance ?? 0;
+
+
 
     // console.log("Login user data:", userObj);
 

@@ -71,6 +71,8 @@ export async function GET(request: Request) {
       created_at: { $gte: start, $lte: end },
     }).lean();
 
+    // console.log(historiesInWindow)
+
     if (!historiesInWindow.length) {
       return NextResponse.json({
         success: true,

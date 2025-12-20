@@ -4,6 +4,7 @@ import { generateAccessToken } from "@/utils/auth/token";
 import { connectDB } from "@/lib/mongodb";
 import { Login } from "@/models/login";
 import { User } from "@/models/user"; // ⭐ get User model
+import { Score } from "@/models/score";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,24 @@ export async function POST(req: Request) {
     loginObj.rank = userData?.rank ?? loginObj.rank ?? "none";
     loginObj.club = userData?.club ?? loginObj.club ?? "none";
 
+
+     const scoreData = await Score.findOne(
+      { user_id: loginUser.user_id },
+      {
+        "daily.balance": 1,
+        "fortnight.balance": 1,
+        "cashback.balance": 1,
+        _id: 0,
+      }
+    ).lean<{
+      daily?: { balance: number };
+      fortnight?: { balance: number };
+      cashback?: { balance: number };
+    }>();
+
+    loginObj.dailyReward = scoreData?.daily?.balance ?? 0;
+    loginObj.fortnightReward = scoreData?.fortnight?.balance ?? 0;
+    loginObj.cashbackReward = scoreData?.cashback?.balance ?? 0;
     // console.log("Refreshed user data:", loginObj);
 
     // 🎟 Generate new short-lived access token

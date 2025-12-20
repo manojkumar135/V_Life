@@ -3,10 +3,12 @@ import { connectDB } from "@/lib/mongodb";
 import mongoose from "mongoose";
 import { Booking } from "@/models/bookings";
 import { User } from "@/models/user";
+import { Score } from "@/models/score";
+
 
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+import { useRewardScore } from "@/services/useRewardScore";
 
-// ✅ POST — Create new booking
 export async function POST(request: Request) {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -17,40 +19,30 @@ export async function POST(request: Request) {
 
     const {
       user_id,
-      type,
+      type, // "score" | "matching"
       total_score_used,
     } = body;
 
     const booking_id = await generateUniqueCustomId("BK", Booking, 8, 8);
 
-    let userDoc = null;
-
+    /* =====================================================
+       1️⃣ VALIDATE USER BALANCE (SCORE TYPE ONLY)
+    ===================================================== */
     if (type === "score") {
-      userDoc = await User.findOne({ user_id }).session(session);
+      const user = await User.findOne({ user_id }).session(session);
 
-      if (!userDoc) {
+      if (!user) {
         throw new Error("User not found");
       }
 
-      if (userDoc.reward < total_score_used) {
+      if ((user.reward || 0) < total_score_used) {
         throw new Error("Insufficient reward balance");
       }
-
-      userDoc.reward = userDoc.reward - total_score_used;
-
-      userDoc.reward_history.push({
-        type: "debit",
-        source: "booking",
-        reference_id: booking_id,
-        earned: 0,
-        used: total_score_used,
-        balance_after: userDoc.reward,
-        remarks: "Reward used for booking",
-      });
-
-      await userDoc.save({ session });
     }
 
+    /* =====================================================
+       2️⃣ CREATE BOOKING
+    ===================================================== */
     const newBooking = await Booking.create(
       [
         {
@@ -60,6 +52,21 @@ export async function POST(request: Request) {
       ],
       { session }
     );
+
+    /* =====================================================
+       3️⃣ DEDUCT DAILY REWARD (OUT)
+       🔴 THIS ALSO UPDATES User.reward & User.score
+    ===================================================== */
+    if (type === "score" && total_score_used > 0) {
+      await useRewardScore({
+        user_id,
+        points: total_score_used,
+        module: "booking",
+        reference_id: booking_id,
+        remarks: `Score reward used for booking ${booking_id}`,
+        type: "daily", // 🔒 ALWAYS DAILY
+      });
+    }
 
     await session.commitTransaction();
     session.endSession();

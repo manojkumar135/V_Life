@@ -60,65 +60,36 @@ async function checkFirstOrder(user_id: string) {
 
 // Get current 12-hour IST window converted to UTC
 export function getCurrentWindow() {
-  const now = new Date();
+  const nowUTC = new Date();
 
-  let start: Date;
-  let end: Date;
+  // Convert UTC → IST
+  const nowIST = new Date(nowUTC.getTime() + 5.5 * 60 * 60 * 1000);
 
-  // Get IST hours approximation
-  const istHours =
-    now.getUTCHours() + 5 + (now.getUTCMinutes() + 30 >= 60 ? 1 : 0);
+  const year = nowIST.getUTCFullYear();
+  const month = nowIST.getUTCMonth();
+  const date = nowIST.getUTCDate();
+  const hour = nowIST.getUTCHours();
 
-  if (istHours < 12) {
-    // 12:00 AM - 11:59 AM IST -> UTC 00:00 - 05:59
-    start = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        0,
-        0,
-        0
-      )
-    );
-    end = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        5,
-        59,
-        59,
-        999
-      )
-    );
+  let startIST: Date;
+  let endIST: Date;
+
+  if (hour < 12) {
+    // 🌅 12:00 AM – 11:59 AM IST
+    startIST = new Date(Date.UTC(year, month, date, 0, 0, 0));
+    endIST   = new Date(Date.UTC(year, month, date, 11, 59, 59, 999));
   } else {
-    // 12:00 PM - 11:59 PM IST -> UTC 06:00 - 17:59
-    start = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        6,
-        0,
-        0
-      )
-    );
-    end = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        17,
-        59,
-        59,
-        999
-      )
-    );
+    // 🌇 12:00 PM – 11:59 PM IST
+    startIST = new Date(Date.UTC(year, month, date, 12, 0, 0));
+    endIST   = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
   }
 
-  return { start, end };
+  // Convert IST → UTC for MongoDB
+  const startUTC = new Date(startIST.getTime() - 5.5 * 60 * 60 * 1000);
+  const endUTC   = new Date(endIST.getTime() - 5.5 * 60 * 60 * 1000);
+
+  return { start: startUTC, end: endUTC };
 }
+
 
 function generateTransactionId(prefix = "MB") {
   const now = new Date();
@@ -384,7 +355,7 @@ export async function runMatchingBonus() {
       } else {
         // PAN Not Verified OR No wallet
         withdrawAmount = Number((totalAmount * 0.62).toFixed(2));
-        rewardAmount = Number((totalAmount * 0.8).toFixed(2));
+        rewardAmount = Number((totalAmount * 0.08).toFixed(2));
         tdsAmount = Number((totalAmount * 0.2).toFixed(2));
         adminCharge = Number((totalAmount * 0.1).toFixed(2));
       }

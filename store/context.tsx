@@ -58,6 +58,9 @@ export interface UserType {
   category?: string;
   score?: number;
   reward?: number;
+  dailyReward?: number;
+  fortnightReward?: number;
+  cashbackReward?: number;
   referBy?: string;
   infinity?: string;
   gst?: string;
@@ -114,6 +117,9 @@ const defaultUser: UserType = {
   infinity: "",
   score: 0,
   reward: 0,
+  dailyReward: 0,
+  fortnightReward: 0,
+  cashbackReward: 0,
 
   address: "",
   pincode: "",
