@@ -8,6 +8,9 @@ import { User } from "@/models/user";
 import { History } from "@/models/history";
 import { Alert } from "@/models/alert";
 
+import { addRewardScore } from "@/services/updateRewardScore";
+
+
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { activateUser } from "@/services/userActivation";
 import { checkAndUpgradeRank } from "@/services/rankEngine";
@@ -182,24 +185,56 @@ export async function POST(request: Request) {
     user.self_pv = (user.self_pv || 0) + totalPV;
 
     /* ---------------- REWARD DEDUCTION ---------------- */
-    if (rewardUsed > 0) {
-      const newBalance = Math.max(0, (user.reward || 0) - rewardUsed);
-      user.reward = newBalance;
+    // if (rewardUsed > 0) {
+    //   const newBalance = Math.max(0, (user.reward || 0) - rewardUsed);
+    //   user.reward = newBalance;
 
-      user.reward_history.push({
-        type: "debit",
-        source: "order",
-        reference_id: newOrder.order_id,
-        used: rewardUsed,
-        balance_after: newBalance,
-        remarks: `Reward used for order ${newOrder.order_id}`,
-      });
+    //   user.reward_history.push({
+    //     type: "debit",
+    //     source: "order",
+    //     reference_id: newOrder.order_id,
+    //     used: rewardUsed,
+    //     balance_after: newBalance,
+    //     remarks: `Reward used for order ${newOrder.order_id}`,
+    //   });
 
       // console.info("🎁 [ORDER] Reward deducted", {
       //   used: rewardUsed,
       //   balance: newBalance,
       // });
-    }
+    // }
+
+    /* ---------------- 🎁 REWARD EARNING (IN) ---------------- */
+if (isFirstOrder && user.user_status !== "active") {
+  // 🔹 First order → Cashback reward
+  const cashbackPoints = 2 * newOrder.amount;
+
+  if (cashbackPoints > 0) {
+    await addRewardScore({
+      user_id: user.user_id,
+      points: cashbackPoints,
+      source: "order",
+      reference_id: newOrder.order_id,
+      remarks: `Cashback for first order ${newOrder.order_id}`,
+      type: "cashback",
+    });
+  }
+} else {
+  // 🔹 Repeat order → Daily reward based on PV
+  const dailyPoints = 10 * totalPV; // or newOrder.order_pv
+
+  if (dailyPoints > 0) {
+    await addRewardScore({
+      user_id: user.user_id,
+      points: dailyPoints,
+      source: "order",
+      reference_id: newOrder.order_id,
+      remarks: `Cashback reward for order ${newOrder.order_id}`,
+      type: "cashback",
+    });
+  }
+}
+
 
     /* ---------------- ACTIVATE USER ---------------- */
     let justActivated = false;
