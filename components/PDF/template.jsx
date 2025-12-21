@@ -331,13 +331,35 @@ export default function InvoiceTemplate({ data }) {
 
           {/* ---- ADVANCE DEDUCTED ---- */}
           {data.order.reward_used > 0 && (
-            <View style={styles.totalsRow}>
-              <Text>Reward Used:</Text>
-              <Text style={styles.deduction}>
-                {`- ₹ ${data.order.reward_used.toFixed(2)}`}
-              </Text>
-            </View>
+            <>
+
+
+              {/* Cashback */}
+              {data.order.reward_usage?.cashback?.used > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text >Cashback</Text>
+                  <Text style={styles.deduction}>
+                    {`- ₹ ${data.order.reward_usage.cashback.used.toFixed(2)}`}
+                  </Text>
+                </View>
+              )}
+
+              {/* Fortnight */}
+              {data.order.reward_usage?.fortnight?.used > 0 && (
+                <View style={styles.totalsRow}>
+                  <Text >Fortnight</Text>
+                  <Text style={styles.deduction}>
+                    {`- ₹ ${data.order.reward_usage.fortnight.used.toFixed(2)}`}
+                  </Text>
+                </View>
+              )}
+
+
+            </>
           )}
+
+
+
 
           <View style={[styles.totalsBottomBorder]}>
 

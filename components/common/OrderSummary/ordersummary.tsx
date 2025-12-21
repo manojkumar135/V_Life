@@ -36,6 +36,8 @@ export default function OrderFormCartSection({
   updateQuantity,
   removeFromCart,
   getTotalPrice,
+  getPriceWithoutGST,
+  getTotalPV,
   handleSubmit,
   formData,
   setFormData,
@@ -59,9 +61,11 @@ export default function OrderFormCartSection({
   });
 
   const [useReward, setUseReward] = useState(false);
-  // const rewardPoints = Number(user?.reward || 0);
+  const cashbackPoints = Number(user?.cashbackReward || 0);
+  const fortnightPoints = Number(user?.fortnightReward || 0);
 
-  // console.log("Reward Points:", rewardPoints);
+  const [useCashback, setUseCashback] = useState(false);
+  const [useFortnight, setUseFortnight] = useState(false);
 
   const router = useRouter();
   const [address, setAddress] = useState("");
@@ -74,12 +78,39 @@ export default function OrderFormCartSection({
   });
 
   const totalAmount = getTotalPrice();
+  const baseAmount = getPriceWithoutGST();
 
-  const rewardPoints = Number(user.reward || 0);
-  const rewardDeduction = useReward ? Math.min(rewardPoints, totalAmount) : 0;
+  // Cashback first (10% max)
+  const pvBasedCashback = Math.floor(getTotalPV() * 10);
+
+  // Cashback can NEVER exceed order value
+  const maxCashbackUsable = Math.min(pvBasedCashback, totalAmount);
+
+  const cashbackUsed = useCashback
+    ? Math.min(cashbackPoints, maxCashbackUsable)
+    : 0;
+
+  const cashbackCap = Math.min(cashbackPoints, maxCashbackUsable);
+  const remainingAfterCashback = totalAmount - cashbackUsed;
+
+  // Fortnight (no cap)
+  const fortnightUsed = useFortnight
+    ? Math.min(fortnightPoints, remainingAfterCashback)
+    : 0;
+
+  /* ---------------- LEGACY MAPPING (IMPORTANT) ---------------- */
+
+// backend still understands ONLY this
+const rewardDeduction = cashbackUsed + fortnightUsed;
+
+// total reward BEFORE usage (cashback + fortnight)
+const rewardPoints = cashbackPoints + fortnightPoints;
+
+// ✅ FIXED: total reward remaining AFTER usage
+const rewardRemaining =
+  rewardPoints - (cashbackUsed + fortnightUsed);
 
   const payableAmount = Math.max(0, totalAmount - rewardDeduction);
-  const rewardRemaining = rewardPoints - rewardDeduction;
 
   // GST = dealer_price * gst%
   const calcUnitPriceWithGST = (item: CartItem) => {
@@ -130,6 +161,7 @@ export default function OrderFormCartSection({
     setLoading(true);
 
     try {
+      // ✅ validate customer info ONLY when on customer tab
       if (activeTab === "customer") {
         if (
           !formData.customerName ||
@@ -140,7 +172,8 @@ export default function OrderFormCartSection({
           ShowToast.warning("Please fill in all required customer information");
           return;
         }
-        if (formData.shippingAddress.length < 15) {
+
+        if (formData.shippingAddress.length < 20) {
           ShowToast.error("Shipping address must be Valid Address");
           return;
         }
@@ -149,19 +182,37 @@ export default function OrderFormCartSection({
         return;
       }
 
-      // if (isFirstOrder && totalAmount < 10000) {
-      //   ShowToast.error("First order must be at least ₹10,000");
-      //   return;
-      // }
+      // 🟢 FINAL DECISION (TERNARY)
+      payableAmount === 0
+        ? await (async () => {
+            try {
+              await createOrder(
+                0,
+                rewardDeduction,
+                rewardRemaining,
+                {
+                  razorpay_payment_id: `REWARD_ONLY_${user.user_id}_${Date.now()}`,
+                  method: "reward",
+                },
+                {
+                  cashbackPoints,
+                  cashbackUsed,
+                  fortnightPoints,
+                  fortnightUsed,
+                }
+              );
 
-      // if (!hasPaidAdvance) {
-      //   ShowToast.error(
-      //     "You must pay an advance of ₹10,000 before placing an order"
-      //   );
-      //   return;
-      // }
+              ShowToast.success("Order placed successfully using rewards");
 
-      setShowPayment(true);
+              if (onPaymentSuccess) {
+                await onPaymentSuccess();
+              }
+            } catch (err) {
+              console.error("Zero payment order error:", err);
+              ShowToast.error("Failed to place order");
+            }
+          })()
+        : setShowPayment(true);
     } catch (error) {
       console.error("Error in handlePlaceOrder:", error);
       ShowToast.error("Something went wrong. Please try again later.");
@@ -463,35 +514,96 @@ export default function OrderFormCartSection({
                       <>
                         {/* Subtotal */}
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
-                          <span>Subtotal</span>
+                          <span className="font-semibold">Subtotal</span>
                           <span className="font-semibold">
                             ₹ {totalAmount.toFixed(2)}
                           </span>
                         </div>
 
-                        {/* Reward Checkbox */}
-                        <div className="flex justify-between items-center text-sm text-gray-700 py-1.5">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={useReward}
-                              onChange={() => setUseReward((prev) => !prev)}
-                              className="w-4 h-4 accent-blue-600 cursor-pointer"
-                            />
-                            <span>
-                              Use Reward Points ({rewardPoints.toFixed(2)})
-                            </span>
-                          </label>
+                        {/* Cashback Reward */}
+                        {cashbackPoints > 0 && (
+                          <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={useCashback}
+                                onChange={() => setUseCashback((prev) => !prev)}
+                                className="w-4 h-4 mt-1 accent-blue-600 cursor-pointer"
+                              />
+                              <div>
+                                <span className="font-medium">
+                                  Use Cashback Points
+                                </span>
+                                <div className="text-xs text-gray-500">
+                                  {cashbackCap <= 0 ? (
+                                    <>Cashback not applicable</>
+                                  ) : cashbackPoints <= maxCashbackUsable ? (
+                                    <>
+                                      You can use full {cashbackPoints} points.
+                                    </>
+                                  ) : (
+                                    <>
+                                      You can use {maxCashbackUsable} out of{" "}
+                                      {cashbackPoints} points.{" "}
+                                    </>
+                                  )}
+                                  {/* <br /> */}
+                                  {/* (Max 10% of order) */}
+                                </div>
+                              </div>
+                            </label>
 
-                          {useReward && (
-                            <span className="text-red-600 font-semibold text-right">
-                              - ₹ {rewardDeduction.toFixed(2)}
-                            </span>
-                          )}
-                        </div>
+                            {useCashback && (
+                              <span className="text-red-600 font-semibold text-right mt-3">
+                                - ₹ {cashbackUsed.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Fortnight Reward */}
+                        {fortnightPoints > 0 && (
+                          <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={useFortnight}
+                                onChange={() =>
+                                  setUseFortnight((prev) => !prev)
+                                }
+                                className="w-4 h-4 mt-1 accent-blue-600 cursor-pointer"
+                              />
+                              <div className="flex flex-col">
+                                <span className="text-[13px]">
+                                  Use Fortnight Reward Points
+                                </span>
+                                <div className="text-[11px] text-gray-700">
+                                  {fortnightPoints <= remainingAfterCashback ? (
+                                    <>
+                                      You can use full {fortnightPoints} points
+                                    </>
+                                  ) : (
+                                    <>
+                                      You can use {remainingAfterCashback} out
+                                      of {fortnightPoints} points
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+
+                            {useFortnight && (
+                              <span className="text-red-600 font-semibold text-right mt-3">
+                                - ₹ {fortnightUsed.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        )}
 
                         {/* Divider */}
-                        <div className="border-t border-gray-300 my-1 mx-2"></div>
+                        {(cashbackPoints > 0 || fortnightPoints > 0) && (
+                          <div className="border-t border-gray-300 my-1 mx-2"></div>
+                        )}
                       </>
                     )}
 
@@ -605,8 +717,14 @@ export default function OrderFormCartSection({
               await createOrder(
                 payableAmount,
                 rewardDeduction,
-                rewardPoints - rewardDeduction,
-                res
+                rewardRemaining,
+                res,
+                {
+                  cashbackPoints,
+                  cashbackUsed,
+                  fortnightPoints,
+                  fortnightUsed,
+                }
               );
 
               setShowPayment(false);

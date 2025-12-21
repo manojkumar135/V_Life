@@ -478,7 +478,13 @@ export default function AddOrderPage() {
     payableAmount: number,
     rewardUsed: number,
     rewardRemaining: number,
-    razorpayResponse: any
+    razorpayResponse: any,
+    rewardMeta: {
+      cashbackPoints: number;
+      cashbackUsed: number;
+      fortnightPoints: number;
+      fortnightUsed: number;
+    }
   ) => {
     try {
       // console.log(cart);
@@ -540,7 +546,37 @@ export default function AddOrderPage() {
         payable_amount: payableAmount,
         advance_deducted: 0,
         is_first_order: isFirstOrder,
-        bonus_checked:false,
+        bonus_checked: false,
+
+        /* ---------------- NEW FIELDS (ADDED) ---------------- */
+
+        placed_by: {
+          user_id: user.user_id, // who placed the order
+          name: user.user_name,
+          contact: user.contact,
+          mail: user.mail,
+        },
+
+        beneficiary: {
+          user_id: user.user_id, // who the order belongs to
+          name: formData.customerName || user.user_name,
+          contact: formData.contact || user.contact,
+          mail: formData.customerEmail || user.mail,
+          address: formData.shippingAddress || address,
+        },
+
+        reward_usage: {
+          cashback: {
+            before: rewardMeta.cashbackPoints,
+            used: rewardMeta.cashbackUsed,
+            after: rewardMeta.cashbackPoints - rewardMeta.cashbackUsed,
+          },
+          fortnight: {
+            before: rewardMeta.fortnightPoints,
+            used: rewardMeta.fortnightUsed,
+            after: rewardMeta.fortnightPoints - rewardMeta.fortnightUsed,
+          },
+        },
       };
 
       // ✅ Add referBy only if exists
@@ -779,6 +815,8 @@ export default function AddOrderPage() {
               updateQuantity={updateQuantity}
               removeFromCart={removeFromCart}
               getTotalPrice={getTotalPrice}
+              getPriceWithoutGST={getPriceWithoutGST}
+              getTotalPV={getTotalPV}
               handleSubmit={handleSubmit}
               formData={formData}
               setFormData={setFormData}

@@ -9,7 +9,7 @@ import { History } from "@/models/history";
 import { Alert } from "@/models/alert";
 
 import { addRewardScore } from "@/services/updateRewardScore";
-
+import { useRewardScore } from "@/services/useRewardScore";
 
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { activateUser } from "@/services/userActivation";
@@ -65,6 +65,35 @@ interface OrderPayload {
   reward_used?: number;
   reward_remaining?: number;
   payable_amount?: number;
+
+  /* ✅ ADD THESE */
+  placed_by?: {
+    user_id: string;
+    name?: string;
+    contact?: string;
+    mail?: string;
+  };
+
+  beneficiary?: {
+    user_id: string;
+    name?: string;
+    contact?: string;
+    mail?: string;
+    address?: string;
+  };
+
+  reward_usage: {
+    cashback: {
+      before: number;
+      used: number;
+      after: number;
+    };
+    fortnight: {
+      before: number;
+      used: number;
+      after: number;
+    };
+  };
 }
 
 // ----------------- POST -----------------
@@ -198,43 +227,69 @@ export async function POST(request: Request) {
     //     remarks: `Reward used for order ${newOrder.order_id}`,
     //   });
 
-      // console.info("🎁 [ORDER] Reward deducted", {
-      //   used: rewardUsed,
-      //   balance: newBalance,
-      // });
+    // console.info("🎁 [ORDER] Reward deducted", {
+    //   used: rewardUsed,
+    //   balance: newBalance,
+    // });
     // }
 
+    const rewardUsage = body.reward_usage;
+    const rewardOwnerId = body.placed_by?.user_id || body.user_id;
+
+    // 🔹 Cashback deduction
+    if (rewardUsage?.cashback?.used > 0) {
+      await useRewardScore({
+        user_id: rewardOwnerId,
+        points: rewardUsage.cashback.used,
+        module: "order",
+        reference_id: newOrder.order_id,
+        remarks: `Cashback used for order ${newOrder.order_id}`,
+        type: "cashback",
+      });
+    }
+
+    // 🔹 Fortnight deduction
+    if (rewardUsage?.fortnight?.used > 0) {
+      await useRewardScore({
+        user_id: rewardOwnerId,
+        points: rewardUsage.fortnight.used,
+        module: "order",
+        reference_id: newOrder.order_id,
+        remarks: `Fortnight reward used for order ${newOrder.order_id}`,
+        type: "fortnight",
+      });
+    }
+
     /* ---------------- 🎁 REWARD EARNING (IN) ---------------- */
-if (isFirstOrder && user.user_status !== "active") {
-  // 🔹 First order → Cashback reward
-  const cashbackPoints = 2 * newOrder.amount;
+    if (isFirstOrder && user.user_status !== "active") {
+      // 🔹 First order → Cashback reward
+      const cashbackPoints = 2 * newOrder.amount;
 
-  if (cashbackPoints > 0) {
-    await addRewardScore({
-      user_id: user.user_id,
-      points: cashbackPoints,
-      source: "order",
-      reference_id: newOrder.order_id,
-      remarks: `Cashback for first order ${newOrder.order_id}`,
-      type: "cashback",
-    });
-  }
-} else {
-  // 🔹 Repeat order → Daily reward based on PV
-  const dailyPoints = 10 * totalPV; // or newOrder.order_pv
+      if (cashbackPoints > 0) {
+        await addRewardScore({
+          user_id: user.user_id,
+          points: cashbackPoints,
+          source: "order",
+          reference_id: newOrder.order_id,
+          remarks: `Cashback for first order ${newOrder.order_id}`,
+          type: "cashback",
+        });
+      }
+    } else {
+      // 🔹 Repeat order → Daily reward based on PV
+      const dailyPoints = 10 * totalPV; // or newOrder.order_pv
 
-  if (dailyPoints > 0) {
-    await addRewardScore({
-      user_id: user.user_id,
-      points: dailyPoints,
-      source: "order",
-      reference_id: newOrder.order_id,
-      remarks: `Cashback reward for order ${newOrder.order_id}`,
-      type: "cashback",
-    });
-  }
-}
-
+      if (dailyPoints > 0) {
+        await addRewardScore({
+          user_id: user.user_id,
+          points: dailyPoints,
+          source: "order",
+          reference_id: newOrder.order_id,
+          remarks: `Cashback reward for order ${newOrder.order_id}`,
+          type: "cashback",
+        });
+      }
+    }
 
     /* ---------------- ACTIVATE USER ---------------- */
     let justActivated = false;

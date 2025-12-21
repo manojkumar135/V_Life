@@ -77,7 +77,38 @@ const OrderSchema = new mongoose.Schema(
     order_status: { type: String, default: "pending" }, // pending, paid, shipped, delivered, canceled
     bonus_checked: { type: Boolean, default: false },
 
+     // who placed / paid for the order
+    placed_by: {
+      user_id: { type: String },
+      name: { type: String },
+      contact: { type: String },
+      mail: { type: String },
+    },
+
+    // who receives the order
+    beneficiary: {
+      user_id: { type: String },
+      name: { type: String },
+      contact: { type: String },
+      mail: { type: String },
+      address: { type: String },
+    },
+
+    // detailed reward breakdown (informational)
+    reward_usage: {
+      fortnight: {
+        used: { type: Number, default: 0 },
+        before: { type: Number, default: 0 },
+        after: { type: Number, default: 0 },
+      },
+      cashback: {
+        used: { type: Number, default: 0 },
+        before: { type: Number, default: 0 },
+        after: { type: Number, default: 0 },
+      },
+    },
   },
+
   {
     timestamps: false, // you’re handling custom fields
     collection: "orders",

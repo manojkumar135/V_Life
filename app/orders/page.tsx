@@ -173,7 +173,7 @@ export default function OrdersPage() {
 
     { field: "payment_date", headerName: "Order Date", flex: 1 },
     {
-      field: "final_amount",
+      field: "total_amount",
       headerName: "Amount ( ₹ )",
       align: "right",
       flex: 1,

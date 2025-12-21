@@ -30,7 +30,9 @@ export default function RewardsPage() {
   const [rewards, setRewards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<{ [key: string]: number }>({});
-  const [scoreLeft, setScoreLeft] = useState(user?.score || 0);
+  const [scoreLeft, setScoreLeft] = useState(user?.dailyReward || 0);
+  const [matchesLeft, setMatchesLeft] = useState(0);
+
   const [showModal, setShowModal] = useState(false);
   const [address, setAddress] = useState<string>("");
   const [matchStats, setMatchStats] = useState<MatchStats>({
@@ -48,6 +50,7 @@ export default function RewardsPage() {
     null
   );
 
+  // console.log(user.dailyReward)
   const router = useRouter();
 
   useEffect(() => {
@@ -66,38 +69,37 @@ export default function RewardsPage() {
   }, [user?.user_id]);
 
   useEffect(() => {
-  const fetchBookingUsedMatches = async () => {
-    if (!user?.user_id || matchStats.cycleIndex === undefined) return;
-    
-    try {
-      const res = await axios.get("/api/booking-operations", {
-        params: { user_id: user?.user_id, type: "matching" }
-      });
+    const fetchBookingUsedMatches = async () => {
+      if (!user?.user_id || matchStats.cycleIndex === undefined) return;
 
-      if (res.data.success) {
-        const bookings = res.data.data || [];
+      try {
+        const res = await axios.get("/api/booking-operations", {
+          params: { user_id: user?.user_id, type: "matching" },
+        });
 
-        // Count matches used in same cycle only
-        const usedMatches = bookings.reduce((total: number, b: any) => {
-          return b.cycleIndex === matchStats.cycleIndex
-            ? total + (b.total_matches_used || 0)
-            : total;
-        }, 0);
+        if (res.data.success) {
+          const bookings = res.data.data || [];
 
-        // Update UI to show actual remaining matches
-        setMatchStats((prev) => ({
-          ...prev,
-          matches: (prev.matches || 0) - usedMatches
-        }));
+          // Count matches used in same cycle only
+          const usedMatches = bookings.reduce((total: number, b: any) => {
+            return b.cycleIndex === matchStats.cycleIndex
+              ? total + (b.total_matches_used || 0)
+              : total;
+          }, 0);
+
+          // Update UI to show actual remaining matches
+          setMatchStats((prev) => ({
+            ...prev,
+            matches: (prev.matches || 0) - usedMatches,
+          }));
+        }
+      } catch (err) {
+        console.error("Match usage calculation failed:", err);
       }
-    } catch (err) {
-      console.error("Match usage calculation failed:", err);
-    }
-  };
+    };
 
-  fetchBookingUsedMatches();
-}, [user?.user_id, matchStats.cycleIndex]);
-
+    fetchBookingUsedMatches();
+  }, [user?.user_id, matchStats.cycleIndex]);
 
   useEffect(() => {
     const fetchRewards = async () => {
@@ -133,17 +135,31 @@ export default function RewardsPage() {
     if (user?.user_id) fetchAddress();
   }, [user?.user_id]);
 
-  // 🧮 ScoreLeft should only consider SCORE-based rewards, not matching
   useEffect(() => {
     let used = 0;
+
     Object.entries(selected).forEach(([id, qty]) => {
       const reward = rewards.find((r) => r.reward_id === id);
       if (reward && reward.type === "score") {
         used += reward.points_required * qty;
       }
     });
-    setScoreLeft((user?.score || 0) - used);
-  }, [selected, rewards, user?.score]);
+
+    setScoreLeft((user?.dailyReward || 0) - used);
+  }, [selected, rewards, user?.dailyReward]);
+
+  useEffect(() => {
+    let usedMatches = 0;
+
+    Object.entries(selected).forEach(([id, qty]) => {
+      const reward = rewards.find((r) => r.reward_id === id);
+      if (reward && reward.type === "matching") {
+        usedMatches += reward.matches_required * qty;
+      }
+    });
+
+    setMatchesLeft((matchStats.matches || 0) - usedMatches);
+  }, [selected, rewards, matchStats.matches]);
 
   // 🎯 Selection handler with TYPE locking (Score vs Matching)
   const handleSelect = (reward: any) => {
@@ -257,8 +273,8 @@ export default function RewardsPage() {
 
     const remaining_score =
       bookingType === "score"
-        ? (user?.score || 0) - total_score_used
-        : user?.score || 0;
+        ? (user?.dailyReward || 0) - total_score_used
+        : user?.dailyReward || 0;
 
     const remaining_matches =
       bookingType === "matching"
@@ -306,6 +322,7 @@ export default function RewardsPage() {
         setSelected({});
         setSelectedType(null);
         router.push("/wallet/rewards/Bookings");
+        setLoading(false);
       } else {
         ShowToast.error(res.data.message || "Failed to create booking.");
       }
@@ -497,7 +514,7 @@ export default function RewardsPage() {
                               {" "}
                               (You have :{" "}
                               <span className="text-gray-900 font-bold text-sm">
-                                {matchStats.matches} / 60
+                                {matchesLeft} / 60
                               </span>{" "}
                               Matches)
                             </span>

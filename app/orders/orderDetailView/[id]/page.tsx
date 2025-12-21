@@ -35,7 +35,7 @@ interface OrderData {
   orderStatus?: string;
   cart: CartItem[];
   totalAmount: number; // final amount after advance deduction
-  subtotal?: number; // full order value before advance
+  subtotal: number; // full order value before advance
   advanceDeducted?: number; // advance amount deducted
   isFirstOrder?: boolean;
   paymentDate?: string;
@@ -44,6 +44,18 @@ interface OrderData {
   shippingAddress?: string;
   payableAmount?: number;
   rewardUsed: number;
+  rewardUsage: {
+    cashback: {
+      used: number;
+      before: number;
+      after: number;
+    };
+    fortnight: {
+      used: number;
+      before: number;
+      after: number;
+    };
+  };
 }
 
 export default function OrderDetailView() {
@@ -96,6 +108,7 @@ export default function OrderDetailView() {
             shippingAddress: raw.shipping_address,
             payableAmount: raw.payable_amount,
             rewardUsed: Number(raw.reward_used) || 0,
+            rewardUsage: raw.reward_usage,
           };
 
           setOrder(mappedOrder);
@@ -311,29 +324,37 @@ export default function OrderDetailView() {
         {/* Footer */}
         <div className="flex-none border-t pt-4 lg:px-10 bg-white py-3 space-y-2">
           {/* Show ONLY when reward_used > 1 */}
+          {/* Reward Used – Detailed */}
           {order.rewardUsed > 0 && (
             <>
               {/* Total Amount */}
               <div className="flex justify-between items-center text-sm text-gray-700">
                 <span>Total Amount</span>
                 <span className="font-semibold">
-                  ₹ {order.totalAmount.toFixed(2)}
+                  ₹ {order.subtotal.toFixed(2)}
                 </span>
               </div>
+              {order.rewardUsage?.cashback?.used > 0 && (
+                <div className="flex justify-between items-center text-sm text-red-600 pl-2">
+                  <span>Cashback</span>
+                  <span>- ₹ {order.rewardUsage.cashback.used.toFixed(2)}</span>
+                </div>
+              )}
 
-              {/* Reward Used */}
-              <div className="flex justify-between items-center text-sm text-red-600">
-                <span>Reward Used</span>
-                <span>- ₹ {order.rewardUsed.toFixed(2)}</span>
-              </div>
+              {order.rewardUsage?.fortnight?.used > 0 && (
+                <div className="flex justify-between items-center text-sm text-red-600 pl-2">
+                  <span>Fortnight</span>
+                  <span>- ₹ {order.rewardUsage.fortnight.used.toFixed(2)}</span>
+                </div>
+              )}
 
               <div className="border-t border-gray-200 my-2"></div>
             </>
           )}
 
           {/* Always show payable / paid */}
-          <div className="flex justify-between items-center text-base sm:text-lg font-semibold">
-            <span>Total Paid</span>
+          <div className="flex justify-between items-center sm:text-lg font-semibold mb-1 text-sm">
+            <span className="text-md">Total Paid</span>
             <span className="text-green-600">
               ₹ {(order.payableAmount ?? order.totalAmount).toFixed(2)}
             </span>
