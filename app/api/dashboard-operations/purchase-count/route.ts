@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Order } from "@/models/order";
 import { DailyPayout, WeeklyPayout } from "@/models/payout";
 import { User } from "@/models/user";
+import { Score } from "@/models/score";
 
 export async function GET(request: Request) {
   try {
@@ -54,7 +55,6 @@ export async function GET(request: Request) {
 
     const totalPayout =
       (dailyPayoutSum[0]?.total || 0) + (weeklyPayoutSum[0]?.total || 0);
-
 
     // 🎁 3️⃣ Reward Amount (sum of reward_amount field from both)
     const [dailyReward, weeklyReward] = await Promise.all([
@@ -111,6 +111,13 @@ export async function GET(request: Request) {
 
     const matches = matchingBonusCountAgg[0]?.count || 0;
 
+    // 🎯 9️⃣ Cashback Points (from Score)
+    const scoreDoc = (await Score.findOne(
+      { user_id },
+      { "cashback.balance": 1 }
+    ).lean()) as any;
+    const cashbackPoints = scoreDoc?.cashback?.balance || 0;
+
     return NextResponse.json(
       {
         success: true,
@@ -125,6 +132,7 @@ export async function GET(request: Request) {
           directTeamSales,
           infinityTeamSales,
           daysAfterActivation,
+          cashbackPoints
         },
       },
       { status: 200 }

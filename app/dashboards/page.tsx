@@ -26,6 +26,8 @@ import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { MdOutlineAttachMoney } from "react-icons/md";
 import { FaPercent } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
+import { BsFillPeopleFill } from "react-icons/bs";
+import { FaGift } from "react-icons/fa6";
 
 interface DashboardSummary {
   user_id: string;
@@ -38,6 +40,7 @@ interface DashboardSummary {
   directTeamSales: number;
   infinityTeamSales: number;
   daysAfterActivation: number;
+  cashbackPoints:number;
 }
 
 interface CycleStats {
@@ -103,26 +106,26 @@ const DashboardPage: React.FC = () => {
 
   // console.log(cycles);
 
- useEffect(() => {
-  const checkFirstOrder = async () => {
-    try {
-      const res = await hasFirstOrder(user_id);
+  useEffect(() => {
+    const checkFirstOrder = async () => {
+      try {
+        const res = await hasFirstOrder(user_id);
 
-      if (!res.hasPermission) {
-        setShowAlert(true);
-      } else {
-        setShowAlert(false);
+        if (!res.hasPermission) {
+          setShowAlert(true);
+        } else {
+          setShowAlert(false);
+        }
+      } catch (err) {
+        console.error("Error checking first order:", err);
+        setShowAlert(true); // safe fallback
       }
-    } catch (err) {
-      console.error("Error checking first order:", err);
-      setShowAlert(true); // safe fallback
-    }
-  };
+    };
 
-  if (user_id) {
-    checkFirstOrder();
-  }
-}, [user_id]);
+    if (user_id) {
+      checkFirstOrder();
+    }
+  }, [user_id]);
 
   // console.log(showAlert)
   // console.log(user.rank);
@@ -221,11 +224,7 @@ const DashboardPage: React.FC = () => {
         <AlertBox
           visible={showAlert}
           title="Action Required!"
-          message={
-            <>
-              To activate your account, please place{" "}an order
-            </>
-          }
+          message={<>To activate your account, please place an order</>}
           buttonLabel="ORDER NOW"
           buttonAction={() => router.push("/historys/payAdvance")}
           onClose={() => setShowAlert(false)}
@@ -462,12 +461,12 @@ const DashboardPage: React.FC = () => {
                   value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
-                  icon={<FaWallet />}
+                  icon={<FaGift />}
                   title="Reward Value"
                   value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
                 />
                 <DashBox
-                  icon={<MdOutlineCheckCircle />}
+                  icon={<BsFillPeopleFill />}
                   title={`Matching pairs (${
                     cycles?.matches?.toString() || "0"
                   }) `}
@@ -482,9 +481,9 @@ const DashboardPage: React.FC = () => {
                   value={summary?.purchaseCount?.toString() || "0"}
                 /> */}
                 <DashBox
-                  icon={<FaUser />}
-                  title="Days from Activation"
-                  value={`${cycles?.daysPassed?.toString() || "0"} days`}
+                  icon={<MdOutlineCheckCircle />}
+                  title="Cashback Points"
+                  value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
                 />
 
                 <DashBox
