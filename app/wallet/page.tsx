@@ -70,7 +70,7 @@ const page = () => {
 
           {/* ID activation */}
           <div
-            onClick={() => router.push("/reports")}
+            onClick={() => router.push("/activation/activationform")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <MdOutlineVerifiedUser  size={32} />

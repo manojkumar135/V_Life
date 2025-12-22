@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 
 export default function ActivationForm() {
   const { user, setUser } = useVLife();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
 
 
@@ -41,7 +41,7 @@ export default function ActivationForm() {
               className="cursor-pointer z-20"
               onClick={() => router.push("/wallet")}
             />
-            <p className="text-2xl max-md:text-xl font-bold text-black">
+            <p className="text-xl max-md:text-xl font-bold text-black">
               Activation Form
             </p>
            
@@ -49,7 +49,7 @@ export default function ActivationForm() {
 
           <div className="flex flex-row gap-3 w-full sm:w-auto">
             
-            <Link href="/activation/myactivation" className="w-full sm:w-39">
+            <Link href="/activation/myactivation" className="w-full sm:w-45">
               <SubmitButton className="w-full px-4 py-2 font-semibold rounded-md bg-blue-500">
                 {user?.role === "admin" ? "Activations" : "My Activations"}
               </SubmitButton>

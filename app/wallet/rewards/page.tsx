@@ -28,7 +28,7 @@ interface MatchStats {
 export default function RewardsPage() {
   const { user, setUser } = useVLife();
   const [rewards, setRewards] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<{ [key: string]: number }>({});
   const [scoreLeft, setScoreLeft] = useState(user?.dailyReward || 0);
   const [matchesLeft, setMatchesLeft] = useState(0);
