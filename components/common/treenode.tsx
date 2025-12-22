@@ -368,11 +368,11 @@ const handleMouseLeave = () => {
             </div>
           )}
           <div className="flex">
-            <strong className="w-20">BV:</strong>
+            <strong className="w-20">Total BV:</strong>
             <span>{node.bv ?? 0}</span>
           </div>
           <div className="flex">
-            <strong className="w-20">PV:</strong>
+            <strong className="w-20">Total PV:</strong>
             <span>{node.sv ?? 0}</span>
           </div>
           <div className="flex">
@@ -384,7 +384,7 @@ const handleMouseLeave = () => {
             <span>{node.rightBV ?? 0}</span>
           </div>
             <div className="flex">
-            <strong className="w-20">Left BV:</strong>
+            <strong className="w-20">Left PV:</strong>
             <span>{node.leftPV ?? 0}</span>
           </div>
           <div className="flex">

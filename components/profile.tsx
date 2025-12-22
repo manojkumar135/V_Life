@@ -165,15 +165,29 @@ export default function ProfileSection() {
 
   const verifyOtp = async () => {
     if (otp.join("").length !== 6) return;
+
     try {
       setLoading(true);
+
       const res = await axios.post("/api/verifyOTP", {
         email: user.mail,
         otp: otp.join(""),
       });
-      if (res.data.success) updateProfile(formik.values);
-      else ShowToast.error("Invalid OTP");
-    } finally {
+
+      if (!res.data.success) {
+        ShowToast.error("Invalid OTP");
+        return;
+      }
+
+      // ✅ OTP verified successfully
+      ShowToast.success("OTP Verified");
+
+      // ⏳ keep loader for 2 seconds
+      setTimeout(() => {
+        updateProfile(formik.values);
+      }, 2000);
+    } catch {
+      ShowToast.error("OTP verification failed");
       setLoading(false);
     }
   };
@@ -222,10 +236,20 @@ export default function ProfileSection() {
     value: p.Name,
   }));
 
+  const formatTime = (totalSeconds: number) => {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+      2,
+      "0"
+    )}`;
+  };
+
   return (
     <div>
       {loading && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex justify-center items-center">
+        <div className="fixed inset-0 z-999 bg-black/40 flex justify-center items-center backdrop-blur-sm">
           <Loader />
         </div>
       )}
@@ -368,7 +392,7 @@ export default function ProfileSection() {
       {/* OTP UI */}
       {otpPopup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-7 rounded-xl w-[380px] shadow-xl text-center space-y-4">
+          <div className="relative bg-white p-7 rounded-xl w-[380px] shadow-xl text-center space-y-4">
             <h2 className="text-xl font-bold">Verify OTP</h2>
             <p className="text-gray-600 text-sm">
               Enter the 6-digit code sent to
@@ -421,9 +445,13 @@ export default function ProfileSection() {
             {/* Timer */}
             <p className="text-sm text-gray-600">
               {timer > 0 ? (
-                <>Resend OTP in 00:{String(timer).padStart(2, "0")}</>
+                <>Resend OTP in {formatTime(timer)}</>
               ) : (
-                <button className="text-blue-600 underline" onClick={sendOtp}>
+                <button
+                  className="text-blue-600 underline"
+                  onClick={sendOtp}
+                  disabled={loading}
+                >
                   Resend OTP
                 </button>
               )}
@@ -431,8 +459,12 @@ export default function ProfileSection() {
 
             {/* Close X */}
             <button
-              onClick={() => setOtpPopup(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-red-600 text-xl font-bold"
+              onClick={() => {
+                setOtpPopup(false);
+                setOtp(new Array(6).fill(""));
+                setTimer(0);
+              }}
+              className="absolute top-2 right-3 text-red-600 hover:text-red-600 text-3xl"
             >
               ×
             </button>
