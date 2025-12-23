@@ -69,13 +69,13 @@ const page = () => {
           </div>
 
           {/* ID activation */}
-          <div
+          {user.status!=="inactive" &&(<div
             onClick={() => router.push("/activation/activationform")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <MdOutlineVerifiedUser  size={32} />
             <span className="mt-2 text-lg font-semibold">Activation</span>
-          </div>
+          </div>)}
 
 
           {/* Royal Club */}

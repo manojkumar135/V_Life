@@ -8,6 +8,8 @@ import { User } from "@/models/user";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { Wallet } from "@/models/wallet";
+import { Order } from "@/models/order";
+
 
 
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
@@ -22,7 +24,7 @@ export async function POST(request) {
     const body = await request.json();
     const { newUser, newLogin } = await createUserAndLogin(body);
 
-let newWallet = null;
+    let newWallet = null;
 
     if (body.pan && body.pancheck === true) {
       const wallet_id = await generateUniqueCustomId("WAL");
@@ -68,26 +70,46 @@ export async function GET(request) {
     const id = searchParams.get("id") || searchParams.get("user_id");
 
     if (id) {
-      let user;
-      if (mongoose.Types.ObjectId.isValid(id)) {
-        user = await User.findById(id);
-      } else {
-        user = await User.findOne({ user_id: id });
-      }
+      const user = mongoose.Types.ObjectId.isValid(id)
+        ? await User.findById(id).lean()
+        : await User.findOne({ user_id: id }).lean();
 
       if (!user) {
-        return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, message: "User not found" },
+          { status: 404 }
+        );
       }
 
-      return NextResponse.json({ success: true, data: user }, { status: 200 });
+      const hasFirstOrder = await Order.exists({
+        user_id: user.user_id,
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            ...user,
+            has_first_order: !!hasFirstOrder,
+          },
+        },
+        { status: 200 }
+      );
     }
 
-    const users = await User.find();
-    return NextResponse.json({ success: true, data: users }, { status: 200 });
+    const users = await User.find().lean();
+    return NextResponse.json(
+      { success: true, data: users },
+      { status: 200 }
+    );
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
   }
 }
+
 
 // PUT - Replace a user (full update)
 export async function PUT(request) {
