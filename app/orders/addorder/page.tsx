@@ -87,28 +87,42 @@ interface Category {
   products: Product[];
 }
 
+interface OrderContext {
+  order_mode: "SELF" | "OTHER";
+  pv?: number;
+  beneficiary_id?: string;
+  placed_by?: string;
+  source?: string;
+}
+
 export default function AddOrderPage() {
   const { user, setUser, updateUserCart } = useVLife();
   const router = useRouter();
 
   const searchParams = useSearchParams();
   const [decodedAmount, setDecodedAmount] = useState<number | null>(null);
+  const [orderContext, setOrderContext] = useState<OrderContext | null>(null);
+  const isOtherOrder = orderContext?.order_mode === "OTHER";
+
+  console.log(orderContext);
 
   useEffect(() => {
     const encryptedData = searchParams.get("data");
 
+    // ✅ NORMAL ENTRY (Add Order button)
     if (!encryptedData) {
-      console.warn("No encrypted data found in URL");
+      setOrderContext({
+        order_mode: "SELF",
+        pv: undefined, // 👈 NO PV LOCK
+        source: "normal_add",
+      });
       return;
     }
 
+    // 🔐 ACTIVATION / BUTTON FLOW
     try {
       const secretKey = process.env.NEXT_PUBLIC_REF_KEY;
-
-      if (!secretKey) {
-        console.error("Secret key missing");
-        return;
-      }
+      if (!secretKey) return;
 
       const bytes = CryptoJS.AES.decrypt(
         decodeURIComponent(encryptedData),
@@ -116,21 +130,19 @@ export default function AddOrderPage() {
       );
 
       const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
+      if (!decryptedString) return;
 
-      if (!decryptedString) {
-        console.error("Decryption failed: empty string");
-        return;
-      }
+      const payload = JSON.parse(decryptedString);
 
-      const decrypted = JSON.parse(decryptedString);
-
-      if (typeof decrypted.amount === "number") {
-        setDecodedAmount(decrypted.amount);
-      } else {
-        console.error("Amount missing in decrypted payload");
-      }
-    } catch (error) {
-      console.error("Decryption error:", error);
+      setOrderContext({
+        order_mode: payload.order_mode ?? "SELF",
+        pv: payload.pv,
+        beneficiary_id: payload.beneficiary_id,
+        placed_by: payload.placed_by,
+        source: payload.source,
+      });
+    } catch (err) {
+      console.error("Payload decryption failed", err);
     }
   }, [searchParams]);
 
@@ -291,10 +303,16 @@ export default function AddOrderPage() {
     }
   }, [user?.user_id]);
 
-  // Update cart from context
   useEffect(() => {
+    // 🔒 OTHER ORDER → do NOT sync global cart
+    if (isOtherOrder) {
+      setCart([]); // always start fresh
+      return;
+    }
+
+    // 🔓 SELF ORDER → sync from user cart
     setCart(normalizeCart(user.items ?? []));
-  }, [user.items]);
+  }, [isOtherOrder]);
 
   // Fetch address
   useEffect(() => {
@@ -323,18 +341,36 @@ export default function AddOrderPage() {
     }));
   };
 
-  const isProductAllowed = (product: Product) => {
-    // 1️⃣ If encrypted amount is passed → EXACT PV match
-    if (decodedAmount !== null) {
-      return product.pv === decodedAmount;
+  const handleBack = () => {
+    if (isOtherOrder) {
+      router.push("/activation/activationform");
+    } else {
+      router.push("/orders");
+    }
+  };
+
+  const isProductAllowed = (product: any) => {
+    // ⛔ Block render until payload is ready
+    if (!orderContext) return false;
+
+    const productPV = Number(product.pv);
+    const lockedPV = Number(orderContext.pv);
+
+    // 🔒 PV explicitly chosen (SELF or OTHER)
+    if (lockedPV && lockedPV > 0) {
+      return productPV === lockedPV;
     }
 
-    // 2️⃣ First order → only PV 50 & 100 (7500 / 15000)
-    if (isFirstOrder) {
-      return product.pv === 50 || product.pv === 100;
+    // 🔓 SELF first order (inactive) → allow 50 & 100
+    if (
+      orderContext.order_mode === "SELF" &&
+      isFirstOrder &&
+      user?.status === "inactive"
+    ) {
+      return productPV === 50 || productPV === 100;
     }
 
-    // 3️⃣ Otherwise → allow all
+    // 🔓 Normal flow → allow all
     return true;
   };
 
@@ -395,10 +431,13 @@ export default function AddOrderPage() {
     }
 
     setCart(updatedCart);
-    try {
-      await updateUserCart(updatedCart);
-    } catch {
-      ShowToast.error("Failed to update cart");
+    // 🔒 Only persist cart for SELF orders
+    if (!isOtherOrder) {
+      try {
+        await updateUserCart(updatedCart);
+      } catch {
+        ShowToast.error("Failed to update cart");
+      }
     }
   };
 
@@ -433,20 +472,26 @@ export default function AddOrderPage() {
     );
 
     setCart(updatedCart);
-    try {
-      await updateUserCart(updatedCart);
-    } catch {
-      ShowToast.error("Failed to update cart");
+    // 🔒 Only persist cart for SELF orders
+    if (!isOtherOrder) {
+      try {
+        await updateUserCart(updatedCart);
+      } catch {
+        ShowToast.error("Failed to update cart");
+      }
     }
   };
 
   const removeFromCart = async (id: number) => {
     const updatedCart = cart.filter((item) => item.id !== id);
     setCart(updatedCart);
-    try {
-      await updateUserCart(updatedCart);
-    } catch {
-      ShowToast.error("Failed to update cart");
+    // 🔒 Only persist cart for SELF orders
+    if (!isOtherOrder) {
+      try {
+        await updateUserCart(updatedCart);
+      } catch {
+        ShowToast.error("Failed to update cart");
+      }
     }
   };
 
@@ -599,7 +644,9 @@ export default function AddOrderPage() {
       if (response.data.success) {
         // ✅ Clear cart
         setCart([]);
-        await updateUserCart([]);
+        if (!isOtherOrder) {
+          await updateUserCart([]);
+        }
 
         ShowToast.success("Order created successfully!");
         router.push("/orders");
@@ -665,7 +712,7 @@ export default function AddOrderPage() {
             <IoIosArrowBack
               size={25}
               className="mr-3 cursor-pointer"
-              onClick={() => router.push("/orders")}
+              onClick={handleBack}
             />
             <h2 className="text-xl max-sm:text-[1rem] font-semibold">
               Products
@@ -735,7 +782,10 @@ export default function AddOrderPage() {
                 key={product.product_id}
                 {...product}
                 onAddToCart={addToCart}
-                disabled={isRestrictedFirstOrder && cart.length >= 1}
+                disabled={
+                  (isOtherOrder && cart.length >= 1) ||
+                  (isRestrictedFirstOrder && cart.length >= 1)
+                }
                 isInCart={
                   !!cart.find((item) => item.product_id === product.product_id)
                 }
@@ -814,6 +864,7 @@ export default function AddOrderPage() {
               cart={cart}
               updateQuantity={updateQuantity}
               removeFromCart={removeFromCart}
+              isOtherOrder={isOtherOrder}
               getTotalPrice={getTotalPrice}
               getPriceWithoutGST={getPriceWithoutGST}
               getTotalPV={getTotalPV}

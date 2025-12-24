@@ -12,6 +12,7 @@ import { Formik, Form } from "formik";
 import * as Yup from "yup";
 import axios from "axios";
 import { useVLife } from "@/store/context";
+import CryptoJS from "crypto-js";
 
 interface ActivationFormValues {
   user_id: string;
@@ -55,33 +56,49 @@ export default function ActivationForm() {
       }
 
       const userData = res.data.data;
-      console.log(userData)
 
       if (userData.user_status === "active") {
-        setFieldValue("user_name", "");
         setValidUser(false);
-        setFieldError("user_id", "* User already active");
+        setFieldError("user_id", "* User Already Active");
         return;
       }
 
       if (userData.has_first_order) {
-        setFieldValue("user_name", "");
         setValidUser(false);
         setFieldError("user_id", "* User already placed first order");
         return;
       }
 
-      // ✅ valid inactive user
       setFieldValue("user_name", userData.user_name);
       setValidUser(true);
     } catch (error) {
       console.error(error);
-      setFieldValue("user_name", "");
       setValidUser(false);
       setFieldError("user_id", "* Failed to fetch user");
     } finally {
       setLoading(false);
     }
+  };
+
+  /* 🔐 ENCRYPT + REDIRECT (OTHER USER) */
+  const handleOrderRedirect = (pv: 50 | 100, beneficiaryId: string) => {
+    if (!user?.user_id) return;
+
+    const payload = {
+      order_mode: "OTHER",
+      pv,
+      beneficiary_id: beneficiaryId,
+      placed_by: user.user_id,
+      source: "activation_form",
+      timestamp: Date.now(),
+    };
+
+    const encrypted = CryptoJS.AES.encrypt(
+      JSON.stringify(payload),
+      process.env.NEXT_PUBLIC_REF_KEY!
+    ).toString();
+
+    router.push(`/orders/addorder?data=${encodeURIComponent(encrypted)}`);
   };
 
   return (
@@ -94,7 +111,7 @@ export default function ActivationForm() {
 
       <div className="p-4">
         {/* HEADER */}
-        <div className="flex flex-row justify-between items-center w-full max-md:mb-2">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center w-full max-md:mb-2">
           <div className="flex items-center gap-2">
             <IoIosArrowBack
               size={25}
@@ -164,11 +181,7 @@ export default function ActivationForm() {
                     type="button"
                     disabled={!validUser}
                     className="px-6 py-2 bg-orange-500 disabled:opacity-50"
-                    onClick={() =>
-                      router.push(
-                        `/orders/create?user_id=${values.user_id}&pv=50`
-                      )
-                    }
+                    onClick={() => handleOrderRedirect(50, values.user_id)}
                   >
                     ORDER 50 PV
                   </SubmitButton>
@@ -177,11 +190,7 @@ export default function ActivationForm() {
                     type="button"
                     disabled={!validUser}
                     className="px-6 py-2 bg-green-600 disabled:opacity-50"
-                    onClick={() =>
-                      router.push(
-                        `/orders/create?user_id=${values.user_id}&pv=100`
-                      )
-                    }
+                    onClick={() => handleOrderRedirect(100, values.user_id)}
                   >
                     ORDER 100 PV
                   </SubmitButton>

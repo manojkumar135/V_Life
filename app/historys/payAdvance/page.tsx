@@ -4,21 +4,36 @@ import Layout from "@/layout/Layout";
 import { useRouter } from "next/navigation";
 import ShowToast from "@/components/common/Toast/toast";
 import { IoIosArrowBack } from "react-icons/io";
-
 import CryptoJS from "crypto-js";
+import { useVLife } from "@/store/context";
 
 const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
 
 export default function ActivateAccountPage() {
   const router = useRouter();
+  const { user } = useVLife();
 
-  const handleOrder = (amount: any) => {
-    if (![50, 100].includes(amount)) {
+  const handleOrder = (pv: number) => {
+    if (![50, 100].includes(pv)) {
       ShowToast.error("Invalid order PV");
       return;
     }
 
-    const payload = { amount };
+    if (!user?.user_id) {
+      ShowToast.error("User not logged in");
+      return;
+    }
+
+    // ✅ CONSISTENT ENCRYPTED PAYLOAD (SELF ACTIVATION)
+    const payload = {
+      order_mode: "SELF",
+      pv,
+      beneficiary_id: user.user_id, // self
+      placed_by: user.user_id,      // self
+      source: "self_activation",
+      timestamp: Date.now(),
+    };
+
     const encrypted = CryptoJS.AES.encrypt(
       JSON.stringify(payload),
       SECRET_KEY
@@ -37,20 +52,15 @@ export default function ActivateAccountPage() {
         {/* 🔙 Back Button */}
         <div
           className="
-        absolute
-        -top-5 left-8 max-md:top-3 max-md:left-4
-        flex items-center gap-2
-        cursor-pointer z-30 
-      "
+            absolute
+            -top-5 left-8 max-md:top-3 max-md:left-4
+            flex items-center gap-2
+            cursor-pointer z-30
+          "
           onClick={() => router.back()}
           title="Go Back"
         >
-          <IoIosArrowBack
-            size={28}
-            className="
-          text-black
-        "
-          />
+          <IoIosArrowBack size={28} className="text-black" />
           <p className="font-semibold text-black hidden lg:block">Back</p>
         </div>
 
@@ -61,7 +71,7 @@ export default function ActivateAccountPage() {
           </h1>
 
           <p className="text-gray-600 text-sm mb-2 text-center">
-            Your account is currently inactive.
+            Your Account is currently inactive.
           </p>
 
           <p className="text-gray-600 text-sm mb-4 px-4 max-lg:px-1">
@@ -76,7 +86,7 @@ export default function ActivateAccountPage() {
             <button
               onClick={() => handleOrder(50)}
               className="flex-1 bg-gradient-to-r from-[rgb(12,57,120)] via-[#106187] to-[#16B8E4]
-            text-white font-semibold py-3 rounded-lg cursor-pointer"
+              text-white font-semibold py-3 rounded-lg cursor-pointer"
             >
               Order 50 PV
             </button>
@@ -84,7 +94,7 @@ export default function ActivateAccountPage() {
             <button
               onClick={() => handleOrder(100)}
               className="flex-1 bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
-            text-white font-semibold py-3 rounded-lg cursor-pointer"
+              text-white font-semibold py-3 rounded-lg cursor-pointer"
             >
               Order 100 PV
             </button>
@@ -92,7 +102,7 @@ export default function ActivateAccountPage() {
             <button
               onClick={onCancel}
               className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700
-            font-medium py-3 rounded-lg cursor-pointer"
+              font-medium py-3 rounded-lg cursor-pointer"
             >
               Cancel
             </button>

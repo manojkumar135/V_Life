@@ -35,6 +35,8 @@ export default function OrderFormCartSection({
   cart,
   updateQuantity,
   removeFromCart,
+  isOtherOrder,
+
   getTotalPrice,
   getPriceWithoutGST,
   getTotalPV,
@@ -47,6 +49,13 @@ export default function OrderFormCartSection({
   onPaymentSuccess,
 }: any) {
   const { user } = useVLife();
+
+  useEffect(() => {
+  if (isOtherOrder) {
+    setUseCashback(false);
+  }
+}, [isOtherOrder]);
+
 
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
@@ -86,9 +95,12 @@ export default function OrderFormCartSection({
   // Cashback can NEVER exceed order value
   const maxCashbackUsable = Math.min(pvBasedCashback, totalAmount);
 
-  const cashbackUsed = useCashback
+  const cashbackUsed = isOtherOrder
+  ? 0
+  : useCashback
     ? Math.min(cashbackPoints, maxCashbackUsable)
     : 0;
+
 
   const cashbackCap = Math.min(cashbackPoints, maxCashbackUsable);
   const remainingAfterCashback = totalAmount - cashbackUsed;
@@ -100,15 +112,16 @@ export default function OrderFormCartSection({
 
   /* ---------------- LEGACY MAPPING (IMPORTANT) ---------------- */
 
-// backend still understands ONLY this
-const rewardDeduction = cashbackUsed + fortnightUsed;
+  // backend still understands ONLY this
+const rewardDeduction = isOtherOrder
+  ? fortnightUsed
+  : cashbackUsed + fortnightUsed;
 
-// total reward BEFORE usage (cashback + fortnight)
-const rewardPoints = cashbackPoints + fortnightPoints;
+  // total reward BEFORE usage (cashback + fortnight)
+  const rewardPoints = cashbackPoints + fortnightPoints;
 
-// ✅ FIXED: total reward remaining AFTER usage
-const rewardRemaining =
-  rewardPoints - (cashbackUsed + fortnightUsed);
+  // ✅ FIXED: total reward remaining AFTER usage
+  const rewardRemaining = rewardPoints - (cashbackUsed + fortnightUsed);
 
   const payableAmount = Math.max(0, totalAmount - rewardDeduction);
 
@@ -191,7 +204,9 @@ const rewardRemaining =
                 rewardDeduction,
                 rewardRemaining,
                 {
-                  razorpay_payment_id: `REWARD_ONLY_${user.user_id}_${Date.now()}`,
+                  razorpay_payment_id: `REWARD_ONLY_${
+                    user.user_id
+                  }_${Date.now()}`,
                   method: "reward",
                 },
                 {
@@ -234,10 +249,16 @@ const rewardRemaining =
   const handleIncreaseQuantity = (itemId: string | number | undefined) => {
     if (!itemId) return;
 
-    if (isFirstOrder && user?.status === "inactive") {
-      ShowToast.error("Quantity is limited to 1 for first order");
-      return;
-    }
+   if (isOtherOrder) {
+  ShowToast.error("Quantity is fixed to 1 for activation orders");
+  return;
+}
+
+if (isFirstOrder && user?.status === "inactive") {
+  ShowToast.error("Quantity is limited to 1 for first order");
+  return;
+}
+
 
     const item = cart.find(
       (item: CartItem) => String(item.product_id) === String(itemId)
@@ -266,6 +287,12 @@ const rewardRemaining =
     e: React.ChangeEvent<HTMLInputElement>,
     itemId: string | number
   ) => {
+
+    if (isOtherOrder) {
+  ShowToast.error("Quantity cannot be changed for activation orders");
+  return;
+}
+
     let value = e.target.value.replace(/\D/g, "");
     let num = Number(value);
     if (isNaN(num)) return;
@@ -521,7 +548,7 @@ const rewardRemaining =
                         </div>
 
                         {/* Cashback Reward */}
-                        {cashbackPoints > 0 && (
+                        {!isOtherOrder && cashbackPoints > 0 && (
                           <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
                             <label className="flex items-start gap-2 cursor-pointer">
                               <input
