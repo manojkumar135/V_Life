@@ -302,29 +302,35 @@ export default function AddOrderPage() {
   }, [user]);
 
   // Sync formData with user
- useEffect(() => {
-  // 🔒 DO NOT override beneficiary details
-  if (isOtherOrder) return;
+  useEffect(() => {
+    // 🔒 DO NOT override beneficiary details
+    if (isOtherOrder) return;
 
-  if (user) {
-    setFormData((prev) => ({
-      ...prev,
-      customerName: user.user_name || "",
-      customerEmail: user.mail || "",
-      customerContact: user.contact || "",
-      shippingAddress: address || "",
-    }));
-  }
-}, [user, address, isOtherOrder]);
-
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        customerName: user.user_name || "",
+        customerEmail: user.mail || "",
+        customerContact: user.contact || "",
+        shippingAddress: address || "",
+      }));
+    }
+  }, [user, address, isOtherOrder]);
 
   // Check if first order
   useEffect(() => {
     const checkFirstOrder = async () => {
       try {
-        const result = await hasFirstOrder(user.user_id);
+        const targetUserId =
+          isOtherOrder && orderContext?.beneficiary_id
+            ? orderContext.beneficiary_id
+            : user?.user_id;
 
-        // First order = user has NOT placed any order yet
+        if (!targetUserId) return;
+
+        const result = await hasFirstOrder(targetUserId);
+
+        // First order = no previous orders
         setIsFirstOrder(!result.hasFirstOrder);
       } catch (error) {
         console.error("Failed to check first order:", error);
@@ -332,10 +338,8 @@ export default function AddOrderPage() {
       }
     };
 
-    if (user?.user_id) {
-      checkFirstOrder();
-    }
-  }, [user?.user_id]);
+    checkFirstOrder();
+  }, [isOtherOrder, orderContext?.beneficiary_id, user?.user_id]);
 
   useEffect(() => {
     // 🔒 OTHER ORDER → do NOT sync global cart

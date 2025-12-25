@@ -114,10 +114,14 @@ export async function POST(request: Request) {
     const placedById = body.placed_by?.user_id || body.user_id;
 
     /* ---------------- FETCH USERS ---------------- */
-    const [hasOrder, beneficiary, placedBy] = await Promise.all([
-      Order.exists({ user_id: beneficiaryId }),
+    const [beneficiary, placedBy, hasCompletedOrder] = await Promise.all([
       User.findOne({ user_id: beneficiaryId }),
       User.findOne({ user_id: placedById }),
+      Order.exists({
+        user_id: beneficiaryId,
+        payment: "completed",
+        order_status: { $ne: "cancelled" },
+      }),
     ]);
 
     if (!beneficiary || !placedBy) {
@@ -127,7 +131,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const isFirstOrder = !hasOrder;
+    // ✅ FINAL isFirstOrder logic
+    const isFirstOrder =
+      beneficiary.user_status !== "active" && !hasCompletedOrder;
+
     const adminActivated =
       beneficiary.status_notes?.toLowerCase().includes("admin") ?? false;
 
@@ -178,15 +185,18 @@ export async function POST(request: Request) {
     /* ---------------- 2️⃣ CREATE HISTORY (PLACED BY) ---------------- */
     await History.create({
       transaction_id: body.payment_id || newOrder.order_id,
-      wallet_id: placedBy.wallet_id || "",
-      user_id: placedBy.user_id,
-      user_name: placedBy.user_name,
-      contact: placedBy.contact || "",
-      mail: placedBy.mail || "",
-      user_status: placedBy.user_status || "active",
-      pan_verified: placedBy.pan_verified || false,
-      rank: placedBy.rank,
+      wallet_id: beneficiary.wallet_id || "",
+      user_id: beneficiary.user_id,
+      user_name: beneficiary.user_name,
+      contact: beneficiary.contact || "",
+      mail: beneficiary.mail || "",
+      user_status: beneficiary.user_status || "inactive",
+      pan_verified: beneficiary.pan_verified || false,
+      rank: beneficiary.rank,
       order_id: newOrder.order_id,
+
+      placed_by: placedBy.user_id,
+      placed_by_name: placedBy.user_name,
 
       account_holder_name: placedBy.user_name,
       bank_name: "Razorpay",
@@ -196,7 +206,7 @@ export async function POST(request: Request) {
       date: newOrder.payment_date,
       time: newOrder.payment_time,
 
-      available_balance: placedBy.wallet_balance || 0,
+      available_balance: beneficiary.wallet_balance || 0,
       transaction_type: "Debit",
       status: "Completed",
 
@@ -211,8 +221,10 @@ export async function POST(request: Request) {
       first_payment: isFirstOrder,
       advance: false,
 
-      details: rewardUsed > 0 ? "Order Payment (Reward Used)" : "Order Payment",
-
+      details:
+        beneficiary.user_id === placedBy.user_id
+          ? "Order Payment"
+          : `Order placed by ${placedBy.user_id}`,
       created_by: placedBy.user_id,
     });
 

@@ -13,6 +13,9 @@ const HistorySchema = new mongoose.Schema(
     pan_verified: { type: Boolean, default: false },
 
     rank: { type: String },
+    placed_by: { type: String },
+    placed_by_name: { type: String },
+
 
     order_id: { type: String, },
     account_holder_name: { type: String, },

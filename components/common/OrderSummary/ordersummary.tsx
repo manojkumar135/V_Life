@@ -51,11 +51,10 @@ export default function OrderFormCartSection({
   const { user } = useVLife();
 
   useEffect(() => {
-  if (isOtherOrder) {
-    setUseCashback(false);
-  }
-}, [isOtherOrder]);
-
+    if (isOtherOrder) {
+      setUseCashback(false);
+    }
+  }, [isOtherOrder]);
 
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
@@ -96,11 +95,10 @@ export default function OrderFormCartSection({
   const maxCashbackUsable = Math.min(pvBasedCashback, totalAmount);
 
   const cashbackUsed = isOtherOrder
-  ? 0
-  : useCashback
+    ? 0
+    : useCashback
     ? Math.min(cashbackPoints, maxCashbackUsable)
     : 0;
-
 
   const cashbackCap = Math.min(cashbackPoints, maxCashbackUsable);
   const remainingAfterCashback = totalAmount - cashbackUsed;
@@ -113,9 +111,9 @@ export default function OrderFormCartSection({
   /* ---------------- LEGACY MAPPING (IMPORTANT) ---------------- */
 
   // backend still understands ONLY this
-const rewardDeduction = isOtherOrder
-  ? fortnightUsed
-  : cashbackUsed + fortnightUsed;
+  const rewardDeduction = isOtherOrder
+    ? fortnightUsed
+    : cashbackUsed + fortnightUsed;
 
   // total reward BEFORE usage (cashback + fortnight)
   const rewardPoints = cashbackPoints + fortnightPoints;
@@ -249,16 +247,15 @@ const rewardDeduction = isOtherOrder
   const handleIncreaseQuantity = (itemId: string | number | undefined) => {
     if (!itemId) return;
 
-   if (isOtherOrder) {
-  ShowToast.error("Quantity is fixed to 1 for activation orders");
-  return;
-}
+    if (isOtherOrder) {
+      ShowToast.error("Quantity is fixed to 1 for activation orders");
+      return;
+    }
 
-if (isFirstOrder && user?.status === "inactive") {
-  ShowToast.error("Quantity is limited to 1 for first order");
-  return;
-}
-
+    if (isFirstOrder && user?.status === "inactive") {
+      ShowToast.error("Quantity is limited to 1 for first order");
+      return;
+    }
 
     const item = cart.find(
       (item: CartItem) => String(item.product_id) === String(itemId)
@@ -287,11 +284,10 @@ if (isFirstOrder && user?.status === "inactive") {
     e: React.ChangeEvent<HTMLInputElement>,
     itemId: string | number
   ) => {
-
     if (isOtherOrder) {
-  ShowToast.error("Quantity cannot be changed for activation orders");
-  return;
-}
+      ShowToast.error("Quantity cannot be changed for activation orders");
+      return;
+    }
 
     let value = e.target.value.replace(/\D/g, "");
     let num = Number(value);
@@ -335,14 +331,14 @@ if (isFirstOrder && user?.status === "inactive") {
             Shopping Cart
           </button>
           <button
-            className={`ml-6 px-4 py-2 font-medium max-md:text-sm w-1/2  ${
+            className={`ml-6 px-4 py-2 font-medium max-md:text-sm w-1/2 ${
               activeTab === "customer"
                 ? "border-b-2 border-blue-600 text-blue-600"
                 : "text-gray-500 hover:text-gray-700 cursor-pointer"
             }`}
             onClick={() => setActiveTab("customer")}
           >
-            Customer Information
+            {isOtherOrder ? "Beneficiary Details" : "Customer Information"}
           </button>
         </div>
 
