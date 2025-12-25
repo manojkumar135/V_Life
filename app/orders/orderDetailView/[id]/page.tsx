@@ -44,6 +44,20 @@ interface OrderData {
   shippingAddress?: string;
   payableAmount?: number;
   rewardUsed: number;
+  placedBy?: {
+    user_id: string;
+    name?: string;
+    contact?: string;
+    mail?: string;
+  };
+
+  beneficiary?: {
+    user_id: string;
+    name?: string;
+    contact?: string;
+    mail?: string;
+    address?: string;
+  };
   rewardUsage: {
     cashback: {
       used: number;
@@ -109,6 +123,7 @@ export default function OrderDetailView() {
             payableAmount: raw.payable_amount,
             rewardUsed: Number(raw.reward_used) || 0,
             rewardUsage: raw.reward_usage,
+            placedBy: raw.placed_by,
           };
 
           setOrder(mappedOrder);
@@ -408,6 +423,17 @@ export default function OrderDetailView() {
               <span className="font-bold text-black ">Payment</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black">{order.payment}</span>
+
+              {order.placedBy?.user_id && (
+                <>
+                  <span className="font-bold text-black">Placed by</span>
+                  <span className="font-bold text-black text-center">:</span>
+                  <span className="font-normal text-black">
+                    {order.placedBy.user_id}
+                    {order.placedBy.name ? ` (${order.placedBy.name})` : ""}
+                  </span>
+                </>
+              )}
 
               <span className="font-bold text-black ">Address</span>
               <span className="font-bold text-black text-center">:</span>

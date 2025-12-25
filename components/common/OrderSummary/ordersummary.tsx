@@ -180,7 +180,7 @@ const rewardDeduction = isOtherOrder
           !formData.customerName ||
           !formData.customerEmail ||
           !formData.shippingAddress ||
-          !formData.contact
+          !formData.customerContact
         ) {
           ShowToast.warning("Please fill in all required customer information");
           return;
@@ -305,7 +305,7 @@ if (isFirstOrder && user?.status === "inactive") {
     !formData.customerName ||
     !formData.customerEmail ||
     !formData.shippingAddress ||
-    !formData.contact;
+    !formData.customerContact;
 
   const isDisabled = cart.length === 0 || payableAmount < 0;
 

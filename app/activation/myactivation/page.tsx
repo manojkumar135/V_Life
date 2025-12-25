@@ -120,6 +120,15 @@ export default function MyActivationsPage() {
     });
   };
 
+  const handleEdit = (id: string) => {
+    router.push(`/activation/activationview/${id}`);
+  };
+
+   const handleRowClick = (row: any) => {
+    console.log("Order clicked:", row);
+    // handle navigation or modal etc.
+  };
+
   /* ---------------- COLUMNS ---------------- */
   const columns: GridColDef[] = [
     {
@@ -288,9 +297,9 @@ export default function MyActivationsPage() {
           setCurrentPage={goToPage}
           checkboxSelection
           setSelectedRows={setSelectedRows}
-          onRowClick={(row) =>
-            router.push(`/activation/activationview/${row._id}`)
-          }
+          onIdClick={(id) => handleEdit(id)}
+                    onRowClick={handleRowClick}
+
         />
 
         <DateFilterModal

@@ -44,6 +44,21 @@ interface OrderData {
   shippingAddress?: string;
   payableAmount?: number;
   rewardUsed: number;
+  placedBy?: {
+    user_id: string;
+    name?: string;
+    contact?: string;
+    mail?: string;
+  };
+
+  beneficiary?: {
+    user_id: string;
+    name?: string;
+    contact?: string;
+    mail?: string;
+    address?: string;
+  };
+
   rewardUsage: {
     cashback: {
       used: number;
@@ -109,6 +124,7 @@ export default function ActivationView() {
             payableAmount: raw.payable_amount,
             rewardUsed: Number(raw.reward_used) || 0,
             rewardUsage: raw.reward_usage,
+            placedBy: raw.placed_by,
           };
 
           setOrder(mappedOrder);
@@ -134,6 +150,8 @@ export default function ActivationView() {
     );
   }
 
+  // console.log(order?.placed_by)
+
   if (!order) {
     return (
       <div className="p-6">
@@ -155,7 +173,7 @@ export default function ActivationView() {
         {/* Header - Order Info */}
         <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row gap-3 xl:items-center xl:pr-1">
           <button
-            onClick={() => router.push("/orders")}
+            onClick={() => router.push("/activation/myactivation")}
             className="flex items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
             aria-label="Go back to Orders"
           >
@@ -404,6 +422,17 @@ export default function ActivationView() {
               <span className="font-bold text-black ">Contact</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black">{order.contact}</span>
+
+              {order.placedBy?.user_id && (
+                <>
+                  <span className="font-bold text-black">Placed by</span>
+                  <span className="font-bold text-black text-center">:</span>
+                  <span className="font-normal text-black">
+                    {order.placedBy.user_id}
+                    {order.placedBy.name ? ` (${order.placedBy.name})` : ""}
+                  </span>
+                </>
+              )}
 
               <span className="font-bold text-black ">Payment</span>
               <span className="font-bold text-black text-center">:</span>

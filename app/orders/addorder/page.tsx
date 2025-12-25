@@ -53,7 +53,7 @@ interface CartItem {
 interface OrderFormData {
   customerName: string;
   customerEmail: string;
-  contact: string;
+  customerContact: string;
   shippingAddress: string;
   notes: string;
 }
@@ -104,7 +104,7 @@ export default function AddOrderPage() {
   const [orderContext, setOrderContext] = useState<OrderContext | null>(null);
   const isOtherOrder = orderContext?.order_mode === "OTHER";
 
-  console.log(orderContext);
+  // console.log(orderContext);
 
   useEffect(() => {
     const encryptedData = searchParams.get("data");
@@ -169,6 +169,8 @@ export default function AddOrderPage() {
   const [address, setAddress] = useState("");
   const [showCart, setShowCart] = useState(false);
   const [isFirstOrder, setIsFirstOrder] = useState(false);
+  const [beneficiaryUser, setBeneficiaryUser] = useState<any>(null);
+
   // const [advancePaid, setAdvancePaid] = useState(false);
   // const [advanceDetails, setAdvanceDetails] = useState({
   //   amount: 0,
@@ -180,7 +182,7 @@ export default function AddOrderPage() {
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
     customerEmail: user.mail || "",
-    contact: user.contact || "",
+    customerContact: user.contact || "",
     shippingAddress: address || "",
     notes: "",
   });
@@ -219,6 +221,34 @@ export default function AddOrderPage() {
         price_with_gst: calcPriceWithGST(unit_price, gst),
       };
     });
+
+  useEffect(() => {
+    if (orderContext?.order_mode === "OTHER" && orderContext?.beneficiary_id) {
+      fetchBeneficiary(orderContext.beneficiary_id);
+    }
+  }, [orderContext?.order_mode, orderContext?.beneficiary_id]);
+
+  const fetchBeneficiary = async (userId: string) => {
+    try {
+      const res = await axios.get(`/api/users-operations?user_id=${userId}`);
+
+      if (res.data.success) {
+        const data = res.data.data;
+        setBeneficiaryUser(data);
+
+        // 🔥 populate formData once
+        setFormData((prev) => ({
+          ...prev,
+          customerName: data.user_name || "",
+          customerContact: data.contact || "",
+          customerEmail: data.mail || "",
+          shippingAddress: data.address || "",
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch beneficiary", err);
+    }
+  };
 
   // Fetch products and create categories dynamically
   useEffect(() => {
@@ -272,17 +302,21 @@ export default function AddOrderPage() {
   }, [user]);
 
   // Sync formData with user
-  useEffect(() => {
-    if (user) {
-      setFormData((prev) => ({
-        ...prev,
-        customerName: user.user_name || "",
-        customerEmail: user.mail || "",
-        contact: user.contact || "",
-        shippingAddress: address || "",
-      }));
-    }
-  }, [user, address]);
+ useEffect(() => {
+  // 🔒 DO NOT override beneficiary details
+  if (isOtherOrder) return;
+
+  if (user) {
+    setFormData((prev) => ({
+      ...prev,
+      customerName: user.user_name || "",
+      customerEmail: user.mail || "",
+      customerContact: user.contact || "",
+      shippingAddress: address || "",
+    }));
+  }
+}, [user, address, isOtherOrder]);
+
 
   // Check if first order
   useEffect(() => {
@@ -316,20 +350,35 @@ export default function AddOrderPage() {
 
   // Fetch address
   useEffect(() => {
-    const fetchAddress = async () => {
+    const fetchAddress = async (userId: string) => {
       try {
         const res = await axios.post("/api/address-operations", {
-          user_id: user.user_id,
+          user_id: userId,
         });
-        setAddress(
-          res.data.success ? res.data.address : "No address available"
-        );
+
+        const addr = res.data.success
+          ? res.data.address
+          : "No address available";
+
+        setAddress(addr);
+
+        // 🔥 keep formData in sync
+        setFormData((prev) => ({
+          ...prev,
+          shippingAddress: addr || "",
+        }));
       } catch {
         setAddress("Error fetching address");
       }
     };
-    if (user.user_id) fetchAddress();
-  }, [user.user_id]);
+
+    // 🔑 DECISION
+    if (isOtherOrder && orderContext?.beneficiary_id) {
+      fetchAddress(orderContext.beneficiary_id);
+    } else if (user?.user_id) {
+      fetchAddress(user.user_id);
+    }
+  }, [isOtherOrder, orderContext?.beneficiary_id, user?.user_id]);
 
   const handleInputChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -567,7 +616,7 @@ export default function AddOrderPage() {
         infinity: user.infinity,
         user_name: formData.customerName || user.user_name,
         user_status: user.status,
-        contact: formData.contact || user.contact,
+        contact: formData.customerContact || user.contact,
         mail: formData.customerEmail || user.mail,
         address: formData.shippingAddress || address,
         description: formData.notes,
@@ -582,6 +631,8 @@ export default function AddOrderPage() {
         order_bv: getTotalBV(),
         order_pv: getTotalPV(),
         total_gst: calcTotalGST(cart),
+        order_mode: orderContext?.order_mode ?? "SELF",
+
         order_status: "pending",
         amount: getPriceWithoutGST(),
         reward_used: rewardUsed,
@@ -602,20 +653,25 @@ export default function AddOrderPage() {
           mail: user.mail,
         },
 
+        /* ---------------- BENEFICIARY ---------------- */
         beneficiary: {
-          user_id: user.user_id, // who the order belongs to
-          name: formData.customerName || user.user_name,
-          contact: formData.contact || user.contact,
-          mail: formData.customerEmail || user.mail,
-          address: formData.shippingAddress || address,
+          user_id: isOtherOrder ? orderContext?.beneficiary_id : user.user_id,
+          name: formData.customerName,
+          contact: formData.customerContact,
+          mail: formData.customerEmail,
+          address: formData.shippingAddress,
         },
 
+        /* ---------------- REWARD USAGE ---------------- */
         reward_usage: {
-          cashback: {
-            before: rewardMeta.cashbackPoints,
-            used: rewardMeta.cashbackUsed,
-            after: rewardMeta.cashbackPoints - rewardMeta.cashbackUsed,
-          },
+          cashback: isOtherOrder
+            ? { before: 0, used: 0, after: 0 }
+            : {
+                before: rewardMeta.cashbackPoints,
+                used: rewardMeta.cashbackUsed,
+                after: rewardMeta.cashbackPoints - rewardMeta.cashbackUsed,
+              },
+
           fortnight: {
             before: rewardMeta.fortnightPoints,
             used: rewardMeta.fortnightUsed,
@@ -649,7 +705,11 @@ export default function AddOrderPage() {
         }
 
         ShowToast.success("Order created successfully!");
-        router.push("/orders");
+        if (isOtherOrder) {
+          router.push("/activation/myactivation");
+        } else {
+          router.push("/orders");
+        }
       } else {
         ShowToast.error(response.data.message || "Failed to create order");
       }

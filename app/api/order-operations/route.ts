@@ -98,24 +98,29 @@ interface OrderPayload {
 
 // ----------------- POST -----------------
 export async function POST(request: Request) {
-  // console.info("🟢 [ORDER] Request started");
-
   try {
     await connectDB();
-    const body: OrderPayload = await request.json();
+    const body = await request.json();
 
     /* ---------------- NORMALIZE OPTIONAL FIELDS ---------------- */
     const rewardUsed = Number(body.reward_used ?? 0);
     const rewardRemaining = Number(body.reward_remaining ?? 0);
 
-    /* ---------------- FETCH USER & ORDER STATUS ---------------- */
-    const [hasOrder, user] = await Promise.all([
-      Order.exists({ user_id: body.user_id }),
-      User.findOne({ user_id: body.user_id }),
+    /* ============================================================
+       🔑 IDENTIFY BENEFICIARY & PLACED BY (CRITICAL FIX)
+    ============================================================ */
+    const beneficiaryId = body.beneficiary?.user_id || body.user_id;
+
+    const placedById = body.placed_by?.user_id || body.user_id;
+
+    /* ---------------- FETCH USERS ---------------- */
+    const [hasOrder, beneficiary, placedBy] = await Promise.all([
+      Order.exists({ user_id: beneficiaryId }),
+      User.findOne({ user_id: beneficiaryId }),
+      User.findOne({ user_id: placedById }),
     ]);
 
-    if (!user) {
-      console.error("❌ [ORDER] User not found", body.user_id);
+    if (!beneficiary || !placedBy) {
       return NextResponse.json(
         { success: false, message: "User not found" },
         { status: 404 }
@@ -124,16 +129,20 @@ export async function POST(request: Request) {
 
     const isFirstOrder = !hasOrder;
     const adminActivated =
-      user.status_notes?.toLowerCase().includes("admin") ?? false;
+      beneficiary.status_notes?.toLowerCase().includes("admin") ?? false;
 
     const shouldTriggerMLM = isFirstOrder && !adminActivated;
 
-    // console.info("👤 [ORDER] User loaded", {
-    //   user_id: user.user_id,
-    //   isFirstOrder,
-    //   adminActivated,
-    //   shouldTriggerMLM,
-    // });
+    /* ---------------- SAFETY: OTHER ORDER ---------------- */
+    if (body.order_mode === "OTHER" && body.items?.length !== 1) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Activation order must contain exactly one product",
+        },
+        { status: 400 }
+      );
+    }
 
     /* ---------------- GENERATE ORDER ID ---------------- */
     const order_id = await generateUniqueCustomId("OR", Order, 8, 8);
@@ -142,42 +151,44 @@ export async function POST(request: Request) {
     const amount =
       body.amount ??
       body.items.reduce(
-        (sum, item) =>
+        (sum: number, item: any) =>
           sum + (item.dealer_price || item.unit_price) * item.quantity,
         0
       );
 
     /* ---------------- CALCULATE BV / PV ---------------- */
     const totalBV = body.items.reduce(
-      (sum, item) => sum + (item.bv || 0) * item.quantity,
+      (sum: number, item: any) => sum + (item.bv || 0) * item.quantity,
       0
     );
 
     const totalPV = body.items.reduce(
-      (sum, item) => sum + (item.pv || 0) * item.quantity,
+      (sum: number, item: any) => sum + (item.pv || 0) * item.quantity,
       0
     );
 
-    // console.info("📊 [ORDER] Calculated", { amount, totalBV, totalPV });
-
     /* ---------------- 1️⃣ CREATE ORDER ---------------- */
-    const newOrder = await Order.create({ ...body, order_id, amount });
-    // console.info("✅ [ORDER] Order created", newOrder.order_id, isFirstOrder);
+    const newOrder = await Order.create({
+      ...body,
+      order_id,
+      user_id: beneficiary.user_id, // ✅ beneficiary owns order
+      amount,
+    });
 
-    /* ---------------- 2️⃣ CREATE HISTORY ---------------- */
+    /* ---------------- 2️⃣ CREATE HISTORY (PLACED BY) ---------------- */
     await History.create({
       transaction_id: body.payment_id || newOrder.order_id,
-      wallet_id: user.wallet_id || "",
-      user_id: user.user_id,
-      user_name: user.user_name,
-      contact: user.contact || "",
-      mail: user.mail || "",
-      user_status: user.user_status || "active",
-      pan_verified: user.pan_verified || false,
-      rank: user.rank,
+      wallet_id: placedBy.wallet_id || "",
+      user_id: placedBy.user_id,
+      user_name: placedBy.user_name,
+      contact: placedBy.contact || "",
+      mail: placedBy.mail || "",
+      user_status: placedBy.user_status || "active",
+      pan_verified: placedBy.pan_verified || false,
+      rank: placedBy.rank,
       order_id: newOrder.order_id,
 
-      account_holder_name: user.user_name,
+      account_holder_name: placedBy.user_name,
       bank_name: "Razorpay",
       account_number: "N/A",
       ifsc_code: "N/A",
@@ -185,7 +196,7 @@ export async function POST(request: Request) {
       date: newOrder.payment_date,
       time: newOrder.payment_time,
 
-      available_balance: user.wallet_balance || 0,
+      available_balance: placedBy.wallet_balance || 0,
       transaction_type: "Debit",
       status: "Completed",
 
@@ -202,41 +213,19 @@ export async function POST(request: Request) {
 
       details: rewardUsed > 0 ? "Order Payment (Reward Used)" : "Order Payment",
 
-      created_by: user.user_id,
+      created_by: placedBy.user_id,
     });
 
-    // console.info("🧾 [ORDER] History created");
+    /* ---------------- 3️⃣ UPDATE BV / PV (BENEFICIARY) ---------------- */
+    beneficiary.bv = (beneficiary.bv || 0) + totalBV;
+    beneficiary.pv = (beneficiary.pv || 0) + totalPV;
+    beneficiary.self_bv = (beneficiary.self_bv || 0) + totalBV;
+    beneficiary.self_pv = (beneficiary.self_pv || 0) + totalPV;
 
-    /* ---------------- 3️⃣ UPDATE USER BV / PV ---------------- */
-    user.bv = (user.bv || 0) + totalBV;
-    user.pv = (user.pv || 0) + totalPV;
-    user.self_bv = (user.self_bv || 0) + totalBV;
-    user.self_pv = (user.self_pv || 0) + totalPV;
-
-    /* ---------------- REWARD DEDUCTION ---------------- */
-    // if (rewardUsed > 0) {
-    //   const newBalance = Math.max(0, (user.reward || 0) - rewardUsed);
-    //   user.reward = newBalance;
-
-    //   user.reward_history.push({
-    //     type: "debit",
-    //     source: "order",
-    //     reference_id: newOrder.order_id,
-    //     used: rewardUsed,
-    //     balance_after: newBalance,
-    //     remarks: `Reward used for order ${newOrder.order_id}`,
-    //   });
-
-    // console.info("🎁 [ORDER] Reward deducted", {
-    //   used: rewardUsed,
-    //   balance: newBalance,
-    // });
-    // }
-
+    /* ---------------- REWARD DEDUCTION (PLACED BY) ---------------- */
     const rewardUsage = body.reward_usage;
-    const rewardOwnerId = body.placed_by?.user_id || body.user_id;
+    const rewardOwnerId = placedBy.user_id;
 
-    // 🔹 Cashback deduction
     if (rewardUsage?.cashback?.used > 0) {
       await useRewardScore({
         user_id: rewardOwnerId,
@@ -248,7 +237,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // 🔹 Fortnight deduction
     if (rewardUsage?.fortnight?.used > 0) {
       await useRewardScore({
         user_id: rewardOwnerId,
@@ -260,14 +248,13 @@ export async function POST(request: Request) {
       });
     }
 
-    /* ---------------- 🎁 REWARD EARNING (IN) ---------------- */
-    if (isFirstOrder && user.user_status !== "active") {
-      // 🔹 First order → Cashback reward
+    /* ---------------- 🎁 REWARD EARNING (BENEFICIARY) ---------------- */
+    if (isFirstOrder && beneficiary.user_status !== "active") {
       const cashbackPoints = 2 * newOrder.amount;
 
       if (cashbackPoints > 0) {
         await addRewardScore({
-          user_id: user.user_id,
+          user_id: beneficiary.user_id,
           points: cashbackPoints,
           source: "order",
           reference_id: newOrder.order_id,
@@ -276,12 +263,11 @@ export async function POST(request: Request) {
         });
       }
     } else {
-      // 🔹 Repeat order → Daily reward based on PV
-      const dailyPoints = 10 * totalPV; // or newOrder.order_pv
+      const dailyPoints = 10 * totalPV;
 
       if (dailyPoints > 0) {
         await addRewardScore({
-          user_id: user.user_id,
+          user_id: beneficiary.user_id,
           points: dailyPoints,
           source: "order",
           reference_id: newOrder.order_id,
@@ -291,27 +277,22 @@ export async function POST(request: Request) {
       }
     }
 
-    /* ---------------- ACTIVATE USER ---------------- */
+    /* ---------------- ACTIVATE BENEFICIARY (AS REQUESTED) ---------------- */
     let justActivated = false;
 
-    if (isFirstOrder && user.user_status !== "active") {
-      // console.info("🚀 [ORDER] Activating user", user.user_id);
-      await user.save();
-      await activateUser(user);
+    if (isFirstOrder && beneficiary.user_status !== "active") {
+      await beneficiary.save();
+      await activateUser(beneficiary); // does NOT save
+      await beneficiary.save();
       justActivated = true;
     } else {
-      await user.save();
+      await beneficiary.save();
     }
 
-    /* 🔥 RELOAD USER AFTER ACTIVATION */
-    const freshUser = await User.findOne({ user_id: user.user_id });
-
-    // console.info("🔄 [ORDER] Fresh user snapshot", {
-    //   user_id: freshUser?.user_id,
-    //   status: freshUser?.user_status,
-    //   referBy: freshUser?.referBy,
-    //   infinity: freshUser?.infinity,
-    // });
+    /* ---------------- RELOAD BENEFICIARY ---------------- */
+    const freshUser = await User.findOne({
+      user_id: beneficiary.user_id,
+    });
 
     /* ---------------- FAST RESPONSE ---------------- */
     const response = NextResponse.json(
@@ -319,20 +300,13 @@ export async function POST(request: Request) {
       { status: 201 }
     );
 
-    /* ---------------- BACKGROUND TASKS ---------------- */
+    /* ---------------- BACKGROUND MLM ---------------- */
     void (async () => {
-      // console.info("⚙️ [BG] Started", {
-      //   user: freshUser?.user_id,
-      //   referBy: freshUser?.referBy,
-      //   justActivated,
-      // });
-
       try {
         if (!freshUser?.referBy) return;
 
         const referrerId = freshUser.referBy;
 
-        /* 🔥 0️⃣ ADD PAID DIRECT (CRITICAL FIX) */
         if (justActivated) {
           await User.updateOne(
             { user_id: referrerId },
@@ -342,52 +316,21 @@ export async function POST(request: Request) {
             }
           );
         }
+
         if (shouldTriggerMLM) {
-          /* 1️⃣ Infinity rebuild */
           await updateInfinityTeam(referrerId);
           await propagateInfinityUpdateToAncestors(referrerId);
 
-          /* 2️⃣ Rank check (handled fully inside rankEngine) */
           const referrer = await User.findOne({ user_id: referrerId });
           if (referrer) {
             await checkAndUpgradeRank(referrer);
           }
         }
 
-        /* 3️⃣ Direct BV / PV */
         await User.updateOne(
           { user_id: referrerId },
           { $inc: { direct_bv: totalBV, direct_pv: totalPV } }
         );
-
-        /* 4️⃣ Infinity BV */
-        if (freshUser.infinity) {
-          const infinitySponsor = await User.findOne({
-            user_id: freshUser.infinity,
-          });
-
-          if (infinitySponsor) {
-            const rankPercentages: Record<string, number> = {
-              "1": 0.25,
-              "2": 0.35,
-              "3": 0.4,
-              "4": 0.45,
-              "5": 0.5,
-            };
-
-            const pct =
-              rankPercentages[String(infinitySponsor.rank || "1")] ?? 0;
-
-            const infinityBV = totalBV * pct;
-
-            if (infinityBV > 0) {
-              await User.updateOne(
-                { user_id: infinitySponsor.user_id },
-                { $inc: { infinity_bv: infinityBV } }
-              );
-            }
-          }
-        }
       } catch (err) {
         console.error("❌ [BG] Infinity / Rank error", err);
       }
@@ -395,12 +338,12 @@ export async function POST(request: Request) {
 
     /* ---------------- ADMIN ALERT ---------------- */
     await Alert.create({
-      user_id: user.user_id,
-      user_contact: user.contact || "",
-      user_email: user.mail || "",
-      user_status: user.user_status || "active",
+      user_id: placedBy.user_id,
+      user_contact: placedBy.contact || "",
+      user_email: placedBy.mail || "",
+      user_status: placedBy.user_status || "active",
       title: "New Order Placed",
-      description: `A new order has been placed by user ID ${user.user_id}.`,
+      description: `Order ${newOrder.order_id} placed for ${beneficiary.user_id}`,
       role: "admin",
       link: "/orders",
       related_id: newOrder.order_id,
@@ -410,7 +353,6 @@ export async function POST(request: Request) {
       delivered_via: "system",
     });
 
-    // console.info("📣 [ORDER] Completed successfully");
     return response;
   } catch (error: any) {
     console.error("🔥 [ORDER] Fatal error", error);
