@@ -72,6 +72,8 @@ export default function OrderFormCartSection({
   const cashbackPoints = Number(user?.cashbackReward || 0);
   const fortnightPoints = Number(user?.fortnightReward || 0);
 
+  console.log(fortnightPoints,"fortnightPoints")
+
   const [useCashback, setUseCashback] = useState(false);
   const [useFortnight, setUseFortnight] = useState(false);
 
@@ -534,7 +536,7 @@ export default function OrderFormCartSection({
                   <div className="px-6 py-2 bg-white -mt-4">
                     {/* Subtotal + Reward section only if reward exists */}
                     {((!isOtherOrder && rewardPoints > 0) ||
-                      (isOtherOrder && fortnightPoints > 0)) && (
+                      ( fortnightPoints > 0)) && (
                       <>
                         {/* Subtotal */}
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
