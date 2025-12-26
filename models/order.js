@@ -77,6 +77,9 @@ const OrderSchema = new mongoose.Schema(
     last_modified_at: { type: Date },
     order_status: { type: String, default: "pending" }, // pending, paid, shipped, delivered, canceled
     bonus_checked: { type: Boolean, default: false },
+    direct_bonus_checked: { type: Boolean, default: false },
+matching_bonus_checked: { type: Boolean, default: false },
+
 
     // who placed / paid for the order
     placed_by: {

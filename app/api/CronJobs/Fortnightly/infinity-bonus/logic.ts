@@ -296,7 +296,7 @@ export async function runInfinityBonus() {
 
       await addRewardScore({
         user_id: sponsor.user_id,
-        points: rewardAmount,
+        points: withdrawAmount,
         source:
           payout.name === "Matching Bonus"
             ? "infinity_matching_bonus"

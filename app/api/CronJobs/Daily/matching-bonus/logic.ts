@@ -481,7 +481,7 @@ export async function runMatchingBonus() {
 
         await addRewardScore({
           user_id: u.user_id,
-          points: rewardAmount,
+          points: withdrawAmount,
           source: "matching_bonus",
           reference_id: payout.payout_id,
           remarks: `Matching bonus for cycle ${formattedDate}`,

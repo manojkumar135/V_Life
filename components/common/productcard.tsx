@@ -64,12 +64,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleView = () => {
-    router.push(`/products/productdetailview/${_id}`);
+  const params = new URLSearchParams();
 
-    // if (status === "active") {
-    //   router.push(`/products/productdetailview/${_id}`);
-    // }
-  };
+  if (typeof window !== "undefined") {
+    const currentParams = new URLSearchParams(window.location.search);
+    currentParams.forEach((value, key) => {
+      params.set(key, value); // 🔥 preserve order context
+    });
+  }
+
+  router.push(`/products/productdetailview/${_id}?${params.toString()}`);
+};
+
 
   const isDisabled = status !== "active" || disabled;
 

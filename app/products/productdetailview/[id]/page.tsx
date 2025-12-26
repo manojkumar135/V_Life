@@ -57,7 +57,10 @@ export default function ProductViewPage() {
     fetchProduct();
   }, [productId]);
 
-  const goBack = () => router.push("/orders/addorder");
+const goBack = () => {
+  const params = new URLSearchParams(window.location.search);
+  router.push(`/orders/addorder?${params.toString()}`);
+};
 
   if (!product || loading) {
     return (

@@ -153,7 +153,11 @@ export default function AddOrderPage() {
     setLoading(true);
 
     try {
-      router.replace("/orders"); // replace avoids back navigation issues
+      if (isOtherOrder) {
+        router.replace("/activation/myactivation");
+      } else {
+        router.replace("/orders");
+      }
     } finally {
       setLoading(false);
     }
@@ -176,6 +180,8 @@ export default function AddOrderPage() {
   //   amount: 0,
   //   remaining: 0,
   // });
+
+  // console.log(isFirstOrder,"isFirstOrder")
 
   const isRestrictedFirstOrder = isFirstOrder && user?.status === "inactive";
 
@@ -329,6 +335,7 @@ export default function AddOrderPage() {
         if (!targetUserId) return;
 
         const result = await hasFirstOrder(targetUserId);
+        // console.log(result,!result.hasFirstOrder)
 
         // First order = no previous orders
         setIsFirstOrder(!result.hasFirstOrder);
@@ -572,6 +579,12 @@ export default function AddOrderPage() {
   const getTotalPV = () =>
     cart.reduce((total, item) => total + (item.pv ?? 0) * item.quantity, 0);
 
+  const referBySource = isOtherOrder ? beneficiaryUser?.referBy : user.referBy;
+
+  const infinitySource = isOtherOrder
+    ? beneficiaryUser?.infinity
+    : user.infinity;
+
   const createOrder = async (
     payableAmount: number,
     rewardUsed: number,
@@ -616,8 +629,8 @@ export default function AddOrderPage() {
       const payload = {
         user_id: user.user_id,
         rank: user.rank || "none",
-        referBy: user.referBy,
-        infinity: user.infinity,
+        referBy: referBySource,
+        infinity: infinitySource,
         user_name: formData.customerName || user.user_name,
         user_status: user.status,
         contact: formData.customerContact || user.contact,
@@ -647,6 +660,8 @@ export default function AddOrderPage() {
         advance_deducted: 0,
         is_first_order: isFirstOrder,
         bonus_checked: false,
+        direct_bonus_checked: false,
+        matching_bonus_checked: false,
 
         /* ---------------- NEW FIELDS (ADDED) ---------------- */
 
@@ -684,14 +699,12 @@ export default function AddOrderPage() {
         },
       };
 
-      // ✅ Add referBy only if exists
-      if (user.referBy && user.referBy.trim() !== "") {
-        payload.referBy = user.referBy;
+      if (referBySource && referBySource.trim() !== "") {
+        payload.referBy = referBySource;
       }
 
-      // ✅ Add infinity only if exists
-      if (user.infinity && user.infinity.trim() !== "") {
-        payload.infinity = user.infinity;
+      if (infinitySource && infinitySource.trim() !== "") {
+        payload.infinity = infinitySource;
       }
 
       const response = await axios.post("/api/order-operations", payload, {

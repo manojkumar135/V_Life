@@ -133,6 +133,7 @@ async function checkFirstOrder(user_id: string) {
 
   // 🔹 First order check
   const hasFirstOrder = await Order.exists({ user_id });
+  console.log(hasFirstOrder, "hasFirstOrder");
 
   return {
     hasFirstOrder: !!hasFirstOrder,
@@ -188,7 +189,8 @@ export async function getOrdersInWindow() {
   // Get candidate orders that are not processed for direct sales bonus
   // We fetch recent orders and then filter by converted UTC date range
   const orders = await Order.find({
-    bonus_checked: { $ne: true },
+    direct_bonus_checked: { $ne: true },
+    // payment: "completed",
     // optionally filter payment flag if you have: payment: "paid"
   }).lean();
 
@@ -215,6 +217,7 @@ export async function getOrdersInWindow() {
 export async function runDirectSalesBonus() {
   try {
     const orders = await getOrdersInWindow();
+    // console.log(orders, "orders for now");
 
     if (!orders || orders.length === 0) {
       // nothing to process
@@ -230,7 +233,7 @@ export async function runDirectSalesBonus() {
           // mark as checked so it won't be reconsidered
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { bonus_checked: true, last_modified_at: new Date() } }
+            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
           );
           continue;
         }
@@ -242,7 +245,7 @@ export async function runDirectSalesBonus() {
           // mark order as checked to avoid reprocessing
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { bonus_checked: true, last_modified_at: new Date() } }
+            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
           );
           continue;
         }
@@ -251,14 +254,14 @@ export async function runDirectSalesBonus() {
         // const advancePaid = await hasAdvancePaid(referBy, 10000);
         const firstOrder = await checkFirstOrder(referBy);
         // if (!advancePaid.hasPermission) continue;
-        // console.log(firstOrder.hasPermission, firstOrder,"getting")
+        console.log(firstOrder.hasPermission, firstOrder, "getting");
 
         if (!firstOrder.hasPermission) {
-          // console.log(!firstOrder.hasPermission)
+          console.log(!firstOrder.hasPermission);
           // mark order as checked
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { bonus_checked: true, last_modified_at: new Date() } }
+            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
           );
           continue;
         }
@@ -268,7 +271,7 @@ export async function runDirectSalesBonus() {
         if (orderBV <= 0) {
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { bonus_checked: true, last_modified_at: new Date() } }
+            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
           );
           continue;
         }
@@ -278,7 +281,7 @@ export async function runDirectSalesBonus() {
         if (totalAmount <= 0) {
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { bonus_checked: true, last_modified_at: new Date() } }
+            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
           );
           continue;
         }
@@ -446,10 +449,9 @@ export async function runDirectSalesBonus() {
             last_modified_at: now,
           });
 
-
           await addRewardScore({
             user_id: referBy,
-            points: rewardAmount,
+            points: withdrawAmount,
             source: "direct_sales_bonus",
             reference_id: order.order_id,
             remarks: `Direct sales bonus for order ${order.order_id}`,
