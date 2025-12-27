@@ -10,52 +10,64 @@ import { useVLife } from "@/store/context";
 import { IoIosArrowBack } from "react-icons/io";
 import { useRouter } from "next/navigation";
 
-type AmountSummary = {
-  income: number;
-  purchases: number;
-  tax: number;
+/* ---------------------- TYPES ---------------------- */
+
+type RewardSummary = {
+  daily: number;
+  fortnight: number;
+  cashback: number;
 };
+
+/* ---------------------- PAGE ---------------------- */
 
 export default function ReportsPage() {
   const { user } = useVLife();
   const user_id = user?.user_id;
+  const router = useRouter();
 
-  const [amountSummary, setAmountSummary] = useState<AmountSummary>({
-    income: 0,
-    purchases: 0,
-    tax: 0,
+  const [rewardSummary, setRewardSummary] = useState<RewardSummary>({
+    daily: 0,
+    fortnight: 0,
+    cashback: 0,
   });
 
-  // Fetch Summary Data (Correct Logic)
+  /* ---------------- FETCH REWARD POINTS ---------------- */
+
   useEffect(() => {
-    const fetchAmountSummary = async () => {
+    const fetchRewardPoints = async () => {
       if (!user_id) return;
+
       try {
         const res = await axios.get(
-          `/api/dashboard-operations/amount-count?user_id=${user_id}&role=${user.role}`
+          `/api/dashboard-operations/reward-points?user_id=${user_id}`
         );
+
         if (res.data.success) {
-          setAmountSummary(res.data.data);
+          setRewardSummary(res.data.data);
         }
       } catch (err) {
-        console.error("Error fetching amount summary:", err);
+        console.error("Error fetching reward points:", err);
       }
     };
-    fetchAmountSummary();
-  }, [user_id, user?.role]);
 
-  const router = useRouter();
+    fetchRewardPoints();
+  }, [user_id]);
+
+  /* ---------------------- UI ---------------------- */
 
   return (
     <Layout>
       <div className="w-full p-4">
+        {/* Header */}
         <div className="flex items-center mb-6 max-md:mb-2">
           <IoIosArrowBack
             size={25}
             className="mr-2 cursor-pointer"
             onClick={() => router.push("/wallet")}
           />
-          <p className="text-xl max-md:text-[1rem] font-semibold">Reports</p>
+          <p className="text-xl max-md:text-[1rem] font-semibold">
+            Reports
+          </p>
         </div>
 
         {/* Summary Cards */}
@@ -64,29 +76,29 @@ export default function ReportsPage() {
             icon={
               <RiMoneyRupeeCircleLine className="text-green-600" size={35} />
             }
-            label="Income"
-            amount={`₹ ${amountSummary.income.toFixed(2)}`}
+            label="Daily Rewards"
+            amount={`₹ ${rewardSummary.daily.toFixed(2)}`}
             className="bg-green-50 border-green-200"
           />
 
           <Card
             icon={<FaWallet className="text-pink-600" size={30} />}
-            label="Expense"
-            amount={`₹ ${amountSummary.purchases.toFixed(2)}`}
+            label="Fortnight Rewards"
+            amount={`₹ ${rewardSummary.fortnight.toFixed(2)}`}
             className="bg-pink-50 border-pink-200"
           />
 
           <Card
             icon={<FaPercent className="text-yellow-600" size={30} />}
-            label="Tax Deducted"
-            amount={`₹ ${amountSummary.tax.toFixed(2)}`}
+            label="Cashback Points"
+            amount={`₹ ${rewardSummary.cashback.toFixed(2)}`}
             className="bg-yellow-50 border-yellow-200"
           />
         </div>
 
-        {/* Table Coming Later */}
+        {/* Table / More Details Later */}
         <div className="mt-6">
-          {/* <p className="text-gray-600">More report details coming here...</p> */}
+          {/* future expansion */}
         </div>
       </div>
     </Layout>
@@ -110,7 +122,9 @@ const Card = ({
     className={`flex items-center justify-between shadow rounded-lg p-4 border ${className}`}
   >
     <div className="flex items-center gap-4">
-      <div className="bg-transparent p-2 rounded-full">{icon}</div>
+      <div className="bg-transparent p-2 rounded-full">
+        {icon}
+      </div>
       <div>
         <p className="text-sm text-gray-500">{label}</p>
         <p className="text-xl font-semibold">{amount}</p>

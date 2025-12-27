@@ -274,20 +274,21 @@ export async function POST(request: Request) {
           type: "cashback",
         });
       }
-    } else {
-      const dailyPoints = 10 * totalPV;
+    } 
+    // else {
+    //   const dailyPoints = 10 * totalPV;
 
-      if (dailyPoints > 0) {
-        await addRewardScore({
-          user_id: beneficiary.user_id,
-          points: dailyPoints,
-          source: "order",
-          reference_id: newOrder.order_id,
-          remarks: `Cashback reward for order ${newOrder.order_id}`,
-          type: "cashback",
-        });
-      }
-    }
+    //   if (dailyPoints > 0) {
+    //     await addRewardScore({
+    //       user_id: beneficiary.user_id,
+    //       points: dailyPoints,
+    //       source: "order",
+    //       reference_id: newOrder.order_id,
+    //       remarks: `Cashback reward for order ${newOrder.order_id}`,
+    //       type: "cashback",
+    //     });
+    //   }
+    // }
 
     /* ---------------- ACTIVATE BENEFICIARY (AS REQUESTED) ---------------- */
     let justActivated = false;
