@@ -1,7 +1,7 @@
 import { Score } from "@/models/score";
 import { User } from "@/models/user";
 
-export type RewardType = "daily" | "fortnight" | "cashback";
+export type RewardType = "daily" | "fortnight" | "cashback" | "reward";
 
 interface RewardScorePayload {
   user_id: string;
@@ -23,18 +23,20 @@ export async function addRewardScore({
   if (!user_id || points <= 0) return;
 
   const now = new Date();
-  const rewardKey: RewardType = type;
+  const rewardKey = type;
+
+  const affectsScore = rewardKey !== "cashback";
+  const affectsUser = rewardKey === "daily" || rewardKey === "fortnight" || rewardKey === "reward";
 
   /* =====================================================
-     1️⃣ UPDATE USER (ONLY DAILY / FORTNIGHT)
-     👉 NO USER FETCH
+     1️⃣ UPDATE USER (NO FETCH)
   ===================================================== */
-  if (rewardKey === "daily" || rewardKey === "fortnight") {
+  if (affectsUser) {
     await User.findOneAndUpdate(
       { user_id },
       {
         $inc: {
-          score: points,
+          ...(affectsScore && { score: points }),
           reward: points,
         },
       }
@@ -42,13 +44,13 @@ export async function addRewardScore({
   }
 
   /* =====================================================
-     2️⃣ UPDATE SCORE IF EXISTS
+     2️⃣ UPDATE SCORE (ATOMIC IF EXISTS)
   ===================================================== */
   const updated = await Score.findOneAndUpdate(
     { user_id },
     {
       $inc: {
-        ...(rewardKey !== "cashback" && { score: points }),
+        ...(affectsScore && { score: points }),
         [`${rewardKey}.earned`]: points,
         [`${rewardKey}.balance`]: points,
       },
@@ -57,6 +59,9 @@ export async function addRewardScore({
           source,
           reference_id,
           points,
+          balance_after: {
+            $add: [`$${rewardKey}.balance`, points],
+          },
           remarks,
           created_at: now,
         },
@@ -69,77 +74,42 @@ export async function addRewardScore({
   if (updated) return;
 
   /* =====================================================
-     3️⃣ CREATE SCORE IF NOT EXISTS
+     3️⃣ CREATE SCORE DOCUMENT
   ===================================================== */
+  const emptyBlock = {
+    earned: 0,
+    used: 0,
+    balance: 0,
+    history: { in: [], out: [] },
+  };
+
+  const activeBlock = {
+    earned: points,
+    used: 0,
+    balance: points,
+    history: {
+      in: [
+        {
+          source,
+          reference_id,
+          points,
+          balance_after: points,
+          remarks,
+          created_at: now,
+        },
+      ],
+      out: [],
+    },
+  };
+
   await Score.create({
     user_id,
-    score: rewardKey === "cashback" ? 0 : points,
+    score: affectsScore ? points : 0,
 
-    daily:
-      rewardKey === "daily"
-        ? {
-            earned: points,
-            used: 0,
-            balance: points,
-            history: {
-              in: [
-                {
-                  source,
-                  reference_id,
-                  points,
-                  balance_after: points,
-                  remarks,
-                  created_at: now,
-                },
-              ],
-              out: [],
-            },
-          }
-        : { earned: 0, used: 0, balance: 0, history: { in: [], out: [] } },
-
-    fortnight:
-      rewardKey === "fortnight"
-        ? {
-            earned: points,
-            used: 0,
-            balance: points,
-            history: {
-              in: [
-                {
-                  source,
-                  reference_id,
-                  points,
-                  balance_after: points,
-                  remarks,
-                  created_at: now,
-                },
-              ],
-              out: [],
-            },
-          }
-        : { earned: 0, used: 0, balance: 0, history: { in: [], out: [] } },
-
-    cashback:
-      rewardKey === "cashback"
-        ? {
-            earned: points,
-            used: 0,
-            balance: points,
-            history: {
-              in: [
-                {
-                  source,
-                  reference_id,
-                  points,
-                  balance_after: points,
-                  remarks,
-                  created_at: now,
-                },
-              ],
-              out: [],
-            },
-          }
-        : { earned: 0, used: 0, balance: 0, history: { in: [], out: [] } },
+    daily: rewardKey === "daily" ? activeBlock : emptyBlock,
+    fortnight: rewardKey === "fortnight" ? activeBlock : emptyBlock,
+    cashback: rewardKey === "cashback" ? activeBlock : emptyBlock,
+    reward: rewardKey === "reward" ? activeBlock : emptyBlock,
 
     updated_at: now,
   });

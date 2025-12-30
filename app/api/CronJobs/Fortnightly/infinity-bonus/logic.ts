@@ -306,6 +306,18 @@ export async function runInfinityBonus() {
         type: "fortnight",
       });
 
+      await addRewardScore({
+        user_id: sponsor.user_id,
+        points: rewardAmount,
+        source:
+          payout.name === "Matching Bonus"
+            ? "infinity_matching_bonus"
+            : "infinity_sales_bonus",
+        reference_id: infinityPayout.payout_id,
+        remarks: `${infinityTitle} (reward) from ${user.user_id}`,
+        type: "reward",
+      });
+
       await DailyPayout.updateOne(
         { _id: payout._id },
         { $set: { is_checked: true } }

@@ -233,7 +233,12 @@ export async function runDirectSalesBonus() {
           // mark as checked so it won't be reconsidered
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
+            {
+              $set: {
+                direct_bonus_checked: true,
+                last_modified_at: new Date(),
+              },
+            }
           );
           continue;
         }
@@ -245,7 +250,12 @@ export async function runDirectSalesBonus() {
           // mark order as checked to avoid reprocessing
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
+            {
+              $set: {
+                direct_bonus_checked: true,
+                last_modified_at: new Date(),
+              },
+            }
           );
           continue;
         }
@@ -261,7 +271,12 @@ export async function runDirectSalesBonus() {
           // mark order as checked
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
+            {
+              $set: {
+                direct_bonus_checked: true,
+                last_modified_at: new Date(),
+              },
+            }
           );
           continue;
         }
@@ -271,7 +286,12 @@ export async function runDirectSalesBonus() {
         if (orderBV <= 0) {
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
+            {
+              $set: {
+                direct_bonus_checked: true,
+                last_modified_at: new Date(),
+              },
+            }
           );
           continue;
         }
@@ -281,7 +301,12 @@ export async function runDirectSalesBonus() {
         if (totalAmount <= 0) {
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true, last_modified_at: new Date() } }
+            {
+              $set: {
+                direct_bonus_checked: true,
+                last_modified_at: new Date(),
+              },
+            }
           );
           continue;
         }
@@ -456,6 +481,14 @@ export async function runDirectSalesBonus() {
             reference_id: order.order_id,
             remarks: `Direct sales bonus for order ${order.order_id}`,
             type: "daily",
+          });
+          await addRewardScore({
+            user_id: referBy,
+            points: rewardAmount,
+            source: "direct_sales_bonus",
+            reference_id: order.order_id,
+            remarks: `Direct sales bonus (reward) for order ${order.order_id}`,
+            type: "reward",
           });
 
           await Alert.create({

@@ -61,8 +61,8 @@ export async function POST(req: Request) {
     // ⭐ Fetch only important attributes (score, rank, club)
     const userData = await User.findOne(
       { user_id: loginUser.user_id },
-      { score: 1, reward: 1,rank: 1, club: 1, _id: 0 }
-    ).lean<{ score: number; rank: string; club: string,reward:number }>();
+      { score: 1, reward: 1, rank: 1, club: 1, _id: 0 }
+    ).lean<{ score: number; rank: string; club: string; reward: number }>();
 
     // Convert login doc to plain object
     const loginObj = loginUser.toObject();
@@ -74,24 +74,28 @@ export async function POST(req: Request) {
     loginObj.rank = userData?.rank ?? loginObj.rank ?? "none";
     loginObj.club = userData?.club ?? loginObj.club ?? "none";
 
-
-     const scoreData = await Score.findOne(
+    const scoreData = await Score.findOne(
       { user_id: loginUser.user_id },
       {
         "daily.balance": 1,
         "fortnight.balance": 1,
         "cashback.balance": 1,
+        "reward.balance": 1,
+
         _id: 0,
       }
     ).lean<{
       daily?: { balance: number };
       fortnight?: { balance: number };
       cashback?: { balance: number };
+      reward?: { balance: number };
     }>();
 
     loginObj.dailyReward = scoreData?.daily?.balance ?? 0;
     loginObj.fortnightReward = scoreData?.fortnight?.balance ?? 0;
     loginObj.cashbackReward = scoreData?.cashback?.balance ?? 0;
+    loginObj.rewardPoints = scoreData?.reward?.balance ?? 0;
+
     // console.log("Refreshed user data:", loginObj);
 
     // 🎟 Generate new short-lived access token

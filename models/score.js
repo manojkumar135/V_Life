@@ -96,10 +96,10 @@ const ScoreSchema = new mongoose.Schema(
   {
     user_id: { type: String, required: true, unique: true },
     user_name: { type: String },
-    user_status:{type:String},
-    gender:{type:String},
-    mail:{type:String},
-    contact:{type:String},
+    user_status: { type: String },
+    gender: { type: String },
+    mail: { type: String },
+    contact: { type: String },
 
     score: { type: Number, default: 0 },
 
@@ -121,6 +121,14 @@ const ScoreSchema = new mongoose.Schema(
 
     /* CASHBACK */
     cashback: {
+      earned: { type: Number, default: 0 },
+      used: { type: Number, default: 0 },
+      balance: { type: Number, default: 0 },
+      history: { type: RewardTxnSchema, default: () => ({}) },
+    },
+
+    /* ✅ REWARD (WALLET STYLE) */
+    reward: {
       earned: { type: Number, default: 0 },
       used: { type: Number, default: 0 },
       balance: { type: Number, default: 0 },

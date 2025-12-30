@@ -1,7 +1,8 @@
 import { Score } from "@/models/score";
 import { User } from "@/models/user";
 
-export type RewardType = "daily" | "fortnight" | "cashback";
+export type RewardType = "daily" | "fortnight" | "cashback" | "reward";
+
 
 interface RewardBlock {
   earned: number;
@@ -13,6 +14,7 @@ interface ScoreDoc {
   daily: RewardBlock;
   fortnight: RewardBlock;
   cashback: RewardBlock;
+  reward: RewardBlock;
 }
 
 interface UseRewardPayload {
@@ -35,59 +37,60 @@ export async function useRewardScore({
   if (!user_id || points <= 0) return;
 
   const now = new Date();
-  const rewardKey: RewardType = type;
+  const rewardKey = type;
+
+  const affectsScore = rewardKey !== "cashback";
+  const affectsUser =
+    rewardKey === "daily" ||
+    rewardKey === "fortnight" ||
+    rewardKey === "reward";
 
   /* =====================================================
-     1️⃣ FETCH SCORE BALANCE
+     1️⃣ ATOMIC BALANCE CHECK + DEDUCTION
+     👉 NO RACE CONDITION
   ===================================================== */
-  const scoreDoc = await Score.findOne({ user_id })
-    .select(`${rewardKey}.balance`)
-    .lean<ScoreDoc>();
-
-  if (!scoreDoc) throw new Error("Score record not found");
-
-  const currentBalance = scoreDoc[rewardKey].balance;
-  if (currentBalance < points) {
-    throw new Error("Insufficient reward balance");
-  }
-
-  const newBalance = currentBalance - points;
-
-  /* =====================================================
-     2️⃣ UPDATE SCORE
-  ===================================================== */
-  await Score.findOneAndUpdate(
-    { user_id },
+  const updated = await Score.findOneAndUpdate(
+    {
+      user_id,
+      [`${rewardKey}.balance`]: { $gte: points },
+    },
     {
       $inc: {
         [`${rewardKey}.used`]: points,
         [`${rewardKey}.balance`]: -points,
-        ...(rewardKey !== "cashback" && { score: -points }),
+        ...(affectsScore && { score: -points }),
       },
       $push: {
         [`${rewardKey}.history.out`]: {
           module,
           reference_id,
           points,
-          balance_after: newBalance,
           remarks,
+          balance_after: {
+            $subtract: [`$${rewardKey}.balance`, points],
+          },
           created_at: now,
         },
       },
       $set: { updated_at: now },
-    }
+    },
+    { new: true }
   );
 
+  if (!updated) {
+    throw new Error("Insufficient reward balance");
+  }
+
   /* =====================================================
-     3️⃣ UPDATE USER (ONLY DAILY / FORTNIGHT)
+     2️⃣ MIRROR USER (DAILY / FORTNIGHT / REWARD)
   ===================================================== */
-  if (rewardKey === "daily" || rewardKey === "fortnight") {
+  if (affectsUser) {
     await User.findOneAndUpdate(
       { user_id },
       {
         $inc: {
           reward: -points,
-          score: -points,
+          ...(affectsScore && { score: -points }),
         },
       }
     );

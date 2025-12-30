@@ -27,10 +27,11 @@ interface MatchStats {
 
 export default function RewardsPage() {
   const { user, setUser } = useVLife();
+  // console.log(user)
   const [rewards, setRewards] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<{ [key: string]: number }>({});
-  const [scoreLeft, setScoreLeft] = useState(user?.dailyReward || 0);
+  const [scoreLeft, setScoreLeft] = useState(user?.rewardPoints || 0);
   const [matchesLeft, setMatchesLeft] = useState(0);
 
   const [showModal, setShowModal] = useState(false);
@@ -145,8 +146,8 @@ export default function RewardsPage() {
       }
     });
 
-    setScoreLeft((user?.dailyReward || 0) - used);
-  }, [selected, rewards, user?.dailyReward]);
+    setScoreLeft((user?.rewardPoints || 0) - used);
+  }, [selected, rewards, user?.rewardPoints]);
 
   useEffect(() => {
     let usedMatches = 0;

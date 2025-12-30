@@ -63,8 +63,8 @@ export async function POST(request: Request) {
         points: total_score_used,
         module: "booking",
         reference_id: booking_id,
-        remarks: `Score reward used for booking ${booking_id}`,
-        type: "daily", // 🔒 ALWAYS DAILY
+        remarks: `Reward used for booking ${booking_id}`,
+        type: "reward", // 🔒 ALWAYS DAILY
       });
     }
 

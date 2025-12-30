@@ -488,6 +488,15 @@ export async function runMatchingBonus() {
           type: "daily",
         });
 
+        await addRewardScore({
+  user_id: u.user_id,
+  points: rewardAmount,
+  source: "matching_bonus",
+  reference_id: payout.payout_id,
+  remarks: `Matching bonus (reward) for cycle ${formattedDate}`,
+  type: "reward",
+});
+
         // ✅ Create alert for user
         await Alert.create({
           user_id: u.user_id,
