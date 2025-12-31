@@ -54,7 +54,13 @@ interface OrderFormData {
   customerName: string;
   customerEmail: string;
   customerContact: string;
-  shippingAddress: string;
+  door_no: string;
+  street: string;
+  landmark: string;
+  city: string;
+  state: string;
+  country: string;
+  pincode: string;
   notes: string;
 }
 
@@ -189,7 +195,13 @@ export default function AddOrderPage() {
     customerName: user.user_name || "",
     customerEmail: user.mail || "",
     customerContact: user.contact || "",
-    shippingAddress: address || "",
+    door_no: "",
+    street: "",
+    landmark: "",
+    city: "",
+    state: "",
+    country: "",
+    pincode: "",
     notes: "",
   });
 
@@ -228,11 +240,13 @@ export default function AddOrderPage() {
       };
     });
 
+  const targetUserId = orderContext?.beneficiary_id || user?.user_id;
+
   useEffect(() => {
-    if (orderContext?.order_mode === "OTHER" && orderContext?.beneficiary_id) {
-      fetchBeneficiary(orderContext.beneficiary_id);
-    }
-  }, [orderContext?.order_mode, orderContext?.beneficiary_id]);
+    if (!targetUserId) return;
+
+    fetchBeneficiary(targetUserId);
+  }, [targetUserId]);
 
   const fetchBeneficiary = async (userId: string) => {
     try {
@@ -240,6 +254,7 @@ export default function AddOrderPage() {
 
       if (res.data.success) {
         const data = res.data.data;
+        // console.log(data);
         setBeneficiaryUser(data);
 
         // 🔥 populate formData once
@@ -248,7 +263,13 @@ export default function AddOrderPage() {
           customerName: data.user_name || "",
           customerContact: data.contact || "",
           customerEmail: data.mail || "",
-          shippingAddress: data.address || "",
+          // shippingAddress: data.address || "",
+          door_no: data.address || "",
+          landmark: data.landmark || "",
+          city: data.locality || "",
+          state: data.state || "",
+          country: data.country || "",
+          pincode: data.pincode || "",
         }));
       }
     } catch (err) {
@@ -585,6 +606,18 @@ export default function AddOrderPage() {
     ? beneficiaryUser?.infinity
     : user.infinity;
 
+const fullAddress = [
+  formData.door_no,
+  formData.street,
+  formData.landmark,
+  formData.city,
+  formData.state,
+  formData.country,
+]
+  .filter(Boolean)             
+  .join(", ")
+  + (formData.pincode ? ` - ${formData.pincode}` : "");
+
   const createOrder = async (
     payableAmount: number,
     rewardUsed: number,
@@ -635,7 +668,15 @@ export default function AddOrderPage() {
         user_status: user.status,
         contact: formData.customerContact || user.contact,
         mail: formData.customerEmail || user.mail,
-        address: formData.shippingAddress || address,
+        door_no: formData.door_no,
+        street: formData.street,
+        landmark: formData.landmark,
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        pincode: formData.pincode,
+
+        address: fullAddress,
         description: formData.notes,
         payment: "completed",
         payment_date: formatDate(new Date()),
@@ -678,7 +719,7 @@ export default function AddOrderPage() {
           name: formData.customerName,
           contact: formData.customerContact,
           mail: formData.customerEmail,
-          address: formData.shippingAddress,
+          address: fullAddress,
         },
 
         /* ---------------- REWARD USAGE ---------------- */

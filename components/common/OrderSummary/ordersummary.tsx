@@ -72,7 +72,7 @@ export default function OrderFormCartSection({
   const cashbackPoints = Number(user?.cashbackReward || 0);
   const fortnightPoints = Number(user?.fortnightReward || 0);
 
-  console.log(fortnightPoints,"fortnightPoints")
+  // console.log(fortnightPoints, "fortnightPoints");
 
   const [useCashback, setUseCashback] = useState(false);
   const [useFortnight, setUseFortnight] = useState(false);
@@ -179,17 +179,22 @@ export default function OrderFormCartSection({
         if (
           !formData.customerName ||
           !formData.customerEmail ||
-          !formData.shippingAddress ||
-          !formData.customerContact
+          !formData.customerContact ||
+          !formData.door_no ||
+          !formData.landmark ||
+          !formData.city ||
+          !formData.state ||
+          !formData.country ||
+          !formData.pincode
         ) {
           ShowToast.warning("Please fill in all required customer information");
           return;
         }
 
-        if (formData.shippingAddress.length < 20) {
-          ShowToast.error("Shipping address must be Valid Address");
-          return;
-        }
+        // if (formData.shippingAddress.length < 20) {
+        //   ShowToast.error("Shipping address must be Valid Address");
+        //   return;
+        // }
       } else if (activeTab === "cart" && cart.length === 0) {
         ShowToast.error("Your cart is empty");
         return;
@@ -302,8 +307,14 @@ export default function OrderFormCartSection({
   const isCustomerInfoMissing =
     !formData.customerName ||
     !formData.customerEmail ||
-    !formData.shippingAddress ||
-    !formData.customerContact;
+    !formData.customerContact||
+    !formData.door_no ||
+  !formData.landmark ||
+  !formData.city ||
+  !formData.state ||
+  !formData.country ||
+  !formData.pincode
+    ;
 
   const isDisabled = cart.length === 0 || payableAmount < 0;
 
@@ -536,7 +547,7 @@ export default function OrderFormCartSection({
                   <div className="px-6 py-2 bg-white -mt-4">
                     {/* Subtotal + Reward section only if reward exists */}
                     {((!isOtherOrder && rewardPoints > 0) ||
-                      ( fortnightPoints > 0)) && (
+                      fortnightPoints > 0) && (
                       <>
                         {/* Subtotal */}
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
@@ -673,6 +684,7 @@ export default function OrderFormCartSection({
               placeholder="Full Name"
               value={formData.customerName || user.user_name || ""}
               onChange={handleInputChange}
+              labelClassName="text-[13px]"
               required
             />
             <InputField
@@ -682,6 +694,7 @@ export default function OrderFormCartSection({
               placeholder="1234567890"
               value={formData.customerContact || user.contact || ""}
               onChange={handleInputChange}
+              labelClassName="text-[13px]"
               required
             />
             <InputField
@@ -691,17 +704,85 @@ export default function OrderFormCartSection({
               placeholder="email@example.com"
               value={formData.customerEmail || user.mail || ""}
               onChange={handleInputChange}
+              labelClassName="text-[13px]"
               required
             />
-            <TextareaField
-              label="Shipping Address"
-              name="shippingAddress"
-              placeholder="Full shipping address"
-              value={formData.shippingAddress || ""}
-              onChange={handleInputChange}
-              className="w-full h-15 max-md:h-20"
-              required
-            />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-5 gap-y-1 mt-2">
+              <InputField
+                label="D.No & Street"
+                name="door_no"
+                value={formData.door_no}
+                onChange={handleInputChange}
+                required
+                className="h-8"
+                labelClassName="text-[13px]"
+              />
+
+              {/* <InputField
+                label="Street"
+                name="street"
+                value={formData.street}
+                onChange={handleInputChange}
+                required
+              /> */}
+
+              <InputField
+                label="Landmark"
+                name="landmark"
+                value={formData.landmark}
+                onChange={handleInputChange}
+                required
+                className="h-8"
+                labelClassName="text-[13px]"
+              />
+
+              <InputField
+                label="City / Village"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                required
+                className="h-8"
+                labelClassName="text-[13px]"
+              />
+
+              <InputField
+                label="State"
+                name="state"
+                value={formData.state}
+                onChange={handleInputChange}
+                required
+                className="h-8"
+                labelClassName="text-[13px]"
+              />
+
+              <InputField
+                label="Country"
+                name="country"
+                value={formData.country}
+                onChange={handleInputChange}
+                required
+                className="h-8"
+                labelClassName="text-[13px]"
+              />
+
+              {/* 👇 Full row even on large screens */}
+              <InputField
+                label="Pincode"
+                name="pincode"
+                type="text"
+                maxLength={6}
+                value={formData.pincode}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, "");
+                  setFormData((p: any) => ({ ...p, pincode: v }));
+                }}
+                required
+                className="h-8"
+                labelClassName="text-[13px]"
+              />
+            </div>
+
             <TextareaField
               label="Notes"
               name="notes"

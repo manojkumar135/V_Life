@@ -47,6 +47,14 @@ const OrderSchema = new mongoose.Schema(
     referBy: { type: String, },
     infinity: { type: String, },
 
+    door_no: { type: String,  },
+    // street: { type: String, },
+    landmark: { type: String, },
+    city: { type: String,  },
+    state: { type: String, required: true },
+    country: { type: String, required: true },
+    pincode: { type: String, required: true },
+
     address: { type: String, },
     description: { type: String },
 
@@ -78,7 +86,7 @@ const OrderSchema = new mongoose.Schema(
     order_status: { type: String, default: "pending" }, // pending, paid, shipped, delivered, canceled
     bonus_checked: { type: Boolean, default: false },
     direct_bonus_checked: { type: Boolean, default: false },
-matching_bonus_checked: { type: Boolean, default: false },
+    matching_bonus_checked: { type: Boolean, default: false },
 
 
     // who placed / paid for the order
