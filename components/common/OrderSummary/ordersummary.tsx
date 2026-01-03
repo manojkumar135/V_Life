@@ -13,6 +13,8 @@ import { useRouter } from "next/navigation";
 import { IoRemove, IoAdd, IoTrashOutline } from "react-icons/io5";
 import Loader from "@/components/common/loader";
 
+import { useRef } from "react";
+
 // Define CartItem interface
 interface CartItem {
   product_id: string | number;
@@ -56,12 +58,17 @@ export default function OrderFormCartSection({
     }
   }, [isOtherOrder]);
 
+  const otpRefs = useRef<HTMLInputElement[]>([]);
+
   const [activeTab, setActiveTab] = useState<"cart" | "customer">("cart");
   const [showPayment, setShowPayment] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"qr" | "upi" | "card">(
-    "qr"
-  );
+
+  const [otpPopup, setOtpPopup] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
+  const [timer, setTimer] = useState(0);
+
   const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
   const [advanceDetails, setAdvanceDetails] = useState({
     amount: 0,
@@ -307,16 +314,88 @@ export default function OrderFormCartSection({
   const isCustomerInfoMissing =
     !formData.customerName ||
     !formData.customerEmail ||
-    !formData.customerContact||
+    !formData.customerContact ||
     !formData.door_no ||
-  !formData.landmark ||
-  !formData.city ||
-  !formData.state ||
-  !formData.country ||
-  !formData.pincode
-    ;
-
+    !formData.landmark ||
+    !formData.city ||
+    !formData.state ||
+    !formData.country ||
+    !formData.pincode;
   const isDisabled = cart.length === 0 || payableAmount < 0;
+
+  const sendOtp = async () => {
+    try {
+      setLoading(true); // ⏳ SHOW LOADER
+
+      await axios.post("/api/sendOTP", {
+        email: user.mail,
+      });
+
+      ShowToast.success("OTP sent to your email");
+
+      setOtp(new Array(6).fill(""));
+      startTimer();
+
+      setOtpPopup(true); // ✅ OPEN MODAL AFTER OTP SENT
+    } catch {
+      ShowToast.error("Failed to send OTP");
+    } finally {
+      setLoading(false); // ⛔ STOP LOADER
+    }
+  };
+
+  const startTimer = () => {
+    setTimer(300); // ✅ 5 minutes = 300 seconds
+
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const verifyOtp = async () => {
+    if (otp.join("").length !== 6) return;
+
+    try {
+      setLoading(true);
+
+      const res = await axios.post("/api/verifyOTP", {
+        email: user.mail,
+        otp: otp.join(""),
+      });
+
+      if (!res.data.success) {
+        ShowToast.error("Invalid OTP");
+        return;
+      }
+
+      ShowToast.success("OTP verified");
+
+      setOtpVerified(true);
+      setUseFortnight(true);
+      setOtpPopup(false);
+    } catch {
+      ShowToast.error("OTP verification failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (isOtherOrder && useFortnight && !otpVerified) {
+    ShowToast.warning("Please verify OTP to use Fortnight points");
+    return;
+  }
 
   return (
     <div className="relative">
@@ -605,11 +684,18 @@ export default function OrderFormCartSection({
                               <input
                                 type="checkbox"
                                 checked={useFortnight}
-                                onChange={() =>
-                                  setUseFortnight((prev) => !prev)
-                                }
+                                onChange={async () => {
+                                  // If using others order & OTP not verified → trigger OTP
+                                  if (isOtherOrder && !otpVerified) {
+                                    // setOtpPopup(true);
+                                    await sendOtp(); // reuse function
+                                    return;
+                                  }
+                                  setUseFortnight((prev) => !prev);
+                                }}
                                 className="w-4 h-4 mt-1 accent-blue-600 cursor-pointer"
                               />
+
                               <div className="flex flex-col">
                                 <span className="text-[13px]">
                                   Use Fortnight Reward Points
@@ -807,6 +893,87 @@ export default function OrderFormCartSection({
           </form>
         )}
       </div>
+
+      {otpPopup && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="relative bg-white p-7 rounded-xl w-[380px] shadow-xl text-center space-y-4">
+            <h2 className="text-xl font-bold">Verify OTP</h2>
+
+            <p className="text-gray-600 text-sm">
+              Enter the 6-digit code sent to
+              <br />
+              <span className="font-semibold">
+                {user.mail.replace(/^(.{3}).*@/, "$1***@")}
+              </span>
+            </p>
+
+            {/* OTP Inputs */}
+            <div className="flex justify-center gap-2 mb-4">
+              {otp.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={(el) => {
+                    if (el) otpRefs.current[index] = el;
+                  }}
+                  type="text"
+                  maxLength={1}
+                  inputMode="numeric"
+                  className="w-10 h-10 border border-gray-400 rounded text-center text-lg font-semibold"
+                  value={digit}
+                  onChange={(e) => {
+                    if (!/^\d*$/.test(e.target.value)) return;
+
+                    const copy = [...otp];
+                    copy[index] = e.target.value;
+                    setOtp(copy);
+
+                    // ✅ AUTO MOVE NEXT
+                    if (e.target.value && index < otp.length - 1) {
+                      otpRefs.current[index + 1]?.focus();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    // ✅ BACKSPACE MOVE PREVIOUS
+                    if (e.key === "Backspace" && !otp[index] && index > 0) {
+                      otpRefs.current[index - 1]?.focus();
+                    }
+                  }}
+                />
+              ))}
+            </div>
+
+            <SubmitButton
+              type="button"
+              disabled={otp.join("").length !== 6}
+              onClick={verifyOtp}
+            >
+              Verify OTP
+            </SubmitButton>
+
+            <p className="text-sm text-gray-600">
+              {timer > 0 ? (
+                <>Resend OTP in {formatTime(timer)}</>
+              ) : (
+                <button className="text-blue-600 underline" onClick={sendOtp}>
+                  Resend OTP
+                </button>
+              )}
+            </p>
+
+            {/* Close icon */}
+            <button
+              onClick={() => {
+                setOtpPopup(false);
+                setOtp(new Array(6).fill(""));
+                setTimer(0);
+              }}
+              className="absolute top-2 right-3 text-red-600 text-3xl"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Payment Modal */}
       {showPayment && (
