@@ -12,6 +12,9 @@ import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 import showToast from "@/components/common/Toast/toast";
 import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
+import NewsTicker from "@/components/NewsTicker";
+import LoginWelcomePopup from "@/components/LoginWelcomePopup";
+
 import CryptoJS from "crypto-js";
 
 import {
@@ -40,7 +43,7 @@ interface DashboardSummary {
   directTeamSales: number;
   infinityTeamSales: number;
   daysAfterActivation: number;
-  cashbackPoints:number;
+  cashbackPoints: number;
 }
 
 interface CycleStats {
@@ -96,6 +99,8 @@ const DashboardPage: React.FC = () => {
   const SECRET_KEY = process.env.NEXT_PUBLIC_REF_KEY || "";
 
   const [showAlert, setShowAlert] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [cycles, setCycles] = useState<CycleStats | null>(null);
   const [amountSummary, setAmountSummary] = useState({
@@ -105,6 +110,16 @@ const DashboardPage: React.FC = () => {
   });
 
   // console.log(cycles);
+
+useEffect(() => {
+  const shouldShow = sessionStorage.getItem("showLoginPopup");
+
+  if (shouldShow === "true") {
+    setShowPopup(true);
+    sessionStorage.removeItem("showLoginPopup"); // ✅ show once only
+  }
+}, []);
+
 
   useEffect(() => {
     const checkFirstOrder = async () => {
@@ -220,7 +235,12 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="min-h-full px-4 py-6 text-black">
+      <LoginWelcomePopup
+  open={showPopup}
+  onClose={() => setShowPopup(false)}
+/>
+
+      <div className="min-h-full px-4 pt-6 pb-3 text-black">
         <AlertBox
           visible={showAlert}
           title="Action Required!"
@@ -367,6 +387,10 @@ const DashboardPage: React.FC = () => {
 
             <TimeRemainingCard />
 
+            <div className="block lg:hidden">
+              <NewsTicker />
+            </div>
+
             {/* Product Card */}
             {/* <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-44 2xl:h-120"> */}
             {/* For screens up to lg */}
@@ -443,18 +467,20 @@ const DashboardPage: React.FC = () => {
                 <LinkButton text="SHOPPING LINK" onClick={handleShopping} />
               </InfoCard>
             </div>
-
+            <div className="hidden lg:block">
+              <NewsTicker />
+            </div>
             {/* My Business Summary */}
-            <div className="bg-gray-50 rounded-2xl shadow-md border border-gray-100">
+            <div className="bg-gray-50 rounded-2xl shadow-md border border-gray-100  my-0 py-0">
               <div
-                className="bg-gray-500  text-white
+                className="bg-gray-700  text-white
                max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans"
               >
                 MY BUSINESS SUMMARY
               </div>
 
               {/* Dashboard Boxes */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-2 gap-5 p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-2 gap-4 p-4">
                 <DashBox
                   icon={<FaRupeeSign />}
                   title="Total Payout"
@@ -541,7 +567,7 @@ const InfoCard = ({
 }) => (
   <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden h-46">
     <div
-      className="bg-gray-500
+      className="bg-gray-700
                  text-white text-md text-center font-semibold py-2 font-sans"
     >
       {title}

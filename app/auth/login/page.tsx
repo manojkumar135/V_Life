@@ -49,6 +49,8 @@ export default function LoginPage() {
 
         // console.log("Login response:", res.data.data.score);
         if (res.data.success) {
+          const userData = res.data.data;
+
           setUser({
             login_id: res.data.data.login_id,
             user_id: res.data.data.user_id,
@@ -68,8 +70,14 @@ export default function LoginPage() {
           //   setTheme(res.data.data.theme as ThemeType);
           // }
 
-          ShowToast.success("Login successful!");
-          router.push("/dashboards");
+          // ShowToast.success("Login successful!");
+            sessionStorage.setItem("showLoginPopup", "true");
+
+          if (userData.role === "admin") {
+            router.push("/AdminDashboard");
+          } else {
+            router.push("/dashboards");
+          }
         } else {
           ShowToast.error(res.data.message || "Login failed");
         }

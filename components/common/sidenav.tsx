@@ -31,10 +31,13 @@ export default function SideNav({
 
   const menuItems = [
     {
-      href: "/dashboards",
+      href:
+        user?.role === "admin"
+          ? "/AdminDashboard"
+          : "/dashboards",
       icon: <LuLayoutDashboard />,
       label: "My Profile",
-      match: ["dashboard"],
+      match: ["dashboard","AdminDashboard"],
     },
     {
       href:
