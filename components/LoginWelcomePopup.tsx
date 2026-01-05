@@ -9,22 +9,22 @@ interface Props {
 }
 
 const LoginWelcomePopup: React.FC<Props> = ({ open, onClose }) => {
-  const { settings } = useNewPopSettings();
+  const { settings, loading } = useNewPopSettings();
 
-  // 🔒 respect admin toggle
+  // 🔒 Wait for settings + respect admin toggle
+  if (loading) return null;
   if (!open || !settings.popup_enabled) return null;
 
   return (
     <>
-      {/* 🔹 Overlay (click closes modal) */}
+      {/* Overlay */}
       <div
         className="fixed inset-0 z-[9998] bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* 🔹 Popup wrapper */}
+      {/* Popup */}
       <div className="fixed inset-0 z-[9999] flex justify-center items-start pt-5 px-4">
-        {/* 🔧 STOP click propagation HERE */}
         <div
           onClick={(e) => e.stopPropagation()}
           className="
@@ -39,7 +39,7 @@ const LoginWelcomePopup: React.FC<Props> = ({ open, onClose }) => {
           "
           style={{ maxHeight: "85vh" }}
         >
-          {/* ❌ Close */}
+          {/* Close */}
           <button
             onClick={onClose}
             className="
@@ -64,14 +64,14 @@ const LoginWelcomePopup: React.FC<Props> = ({ open, onClose }) => {
             ×
           </button>
 
-          {/* 🔹 Header */}
+          {/* Header */}
           <div className="px-6 py-2">
             <h2 className="text-md font-bold text-gray-800 uppercase">
               Welcome to Maverick
             </h2>
           </div>
 
-          {/* 🔹 Image Container */}
+          {/* Image */}
           <div
             className="
               mx-2
@@ -91,7 +91,7 @@ const LoginWelcomePopup: React.FC<Props> = ({ open, onClose }) => {
         </div>
       </div>
 
-      {/* 🔹 Animation */}
+      {/* Animation */}
       <style>{`
         @keyframes slideDown {
           0% {

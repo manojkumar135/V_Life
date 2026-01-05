@@ -4,7 +4,7 @@ const NewPopSchema = new mongoose.Schema(
   {
     news_text: {
       type: String,
-      trim: true,
+      // trim: true,
     },
     popup_image: {
       type: String,
@@ -16,6 +16,10 @@ const NewPopSchema = new mongoose.Schema(
     },
     updated_by: {
       type: String,
+    },
+    updated_at: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }

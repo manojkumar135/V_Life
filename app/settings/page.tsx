@@ -20,6 +20,7 @@ import { toTitleCase } from "@/utils/convertString";
 import InviteForm from "@/components/invite";
 import ProfileSection from "@/components/profile";
 import OfficeDetails from "@/components/office";
+import NewsPop from "@/components/NewsPop";
 
 // Validation Schema
 const profileSchema = Yup.object().shape({
@@ -298,6 +299,7 @@ const Page = () => {
 
             if (user?.role === "admin") {
               sections.push("Office Address");
+              sections.push("News & Popup");
             }
 
             sections.push(
@@ -327,6 +329,9 @@ const Page = () => {
 
                 <AccordionDetails>
                   {section === "Office Address" && <OfficeDetails />}
+
+                  {section === "News & Popup" && <NewsPop />}
+
                   {section === "Welcome Letter" && (
                     <p className="text-gray-600 text-sm">
                       To view welcome letter,&nbsp;&nbsp;

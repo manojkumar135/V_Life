@@ -4,16 +4,25 @@ import React, { useState, useMemo } from "react";
 import { useNewPopSettings } from "@/hooks/useNewPopSettings";
 
 const NewsTicker = () => {
-  const { settings } = useNewPopSettings();
+  const { settings, loading } = useNewPopSettings();
   const [paused, setPaused] = useState(false);
 
-  // 🔥 Split multiline text into items
+  // ✅ Hooks FIRST (rule-safe)
   const items = useMemo(() => {
     return settings.news_text
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
   }, [settings.news_text]);
+
+  // 🔒 Wait for settings
+  if (loading) return null;
+
+  // 🔒 MASTER TOGGLE
+  if (!settings.popup_enabled) return null;
+
+  // 🔒 Safety
+  if (items.length === 0) return null;
 
   return (
     <div className="-mb-3 w-full">
@@ -41,17 +50,23 @@ const NewsTicker = () => {
             >
               {/* STRIP 1 */}
               {items.map((text, i) => (
-                <span key={`a-${i}`} className="mx-6 flex items-center gap-2">
+                <span
+                  key={`a-${i}`}
+                  className="mx-6 flex items-center gap-2"
+                >
                   <span>{text}</span>
-                  <span className="opacity-70"></span>
+                  <span className="opacity-70 px-2">|</span>
                 </span>
               ))}
 
               {/* STRIP 2 (CLONE) */}
               {items.map((text, i) => (
-                <span key={`b-${i}`} className="mx-6 flex items-center gap-2">
+                <span
+                  key={`b-${i}`}
+                  className="mx-6 flex items-center gap-2"
+                >
                   <span>{text}</span>
-                  <span className="opacity-70"></span>
+                  <span className="opacity-70 px-2">|</span>
                 </span>
               ))}
             </div>

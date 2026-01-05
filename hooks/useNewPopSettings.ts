@@ -14,7 +14,6 @@ const DEFAULTS = {
   popup_enabled: true,
 };
 
-
 export const useNewPopSettings = () => {
   const [settings, setSettings] = useState(DEFAULTS);
   const [loading, setLoading] = useState(true);
@@ -23,20 +22,31 @@ export const useNewPopSettings = () => {
     const load = async () => {
       try {
         const res = await axios.get("/api/newpop-operations");
-        if (res.data?.data) {
-          setSettings({
-            news_text: res.data.data.news_text || DEFAULTS.news_text,
-            popup_image: res.data.data.popup_image || DEFAULTS.popup_image,
-            popup_enabled:
-              res.data.data.popup_enabled ?? DEFAULTS.popup_enabled,
-          });
-        }
+        const data = res.data?.data;
+
+        setSettings({
+          news_text:
+            data?.news_text && data.news_text.trim()
+              ? data.news_text
+              : DEFAULTS.news_text,
+
+          popup_image:
+            data?.popup_image && data.popup_image.trim()
+              ? data.popup_image
+              : DEFAULTS.popup_image,
+
+          popup_enabled:
+            typeof data?.popup_enabled === "boolean"
+              ? data.popup_enabled
+              : DEFAULTS.popup_enabled,
+        });
       } catch {
         setSettings(DEFAULTS);
       } finally {
         setLoading(false);
       }
     };
+
     load();
   }, []);
 

@@ -57,7 +57,7 @@ export default function AdminDashboard() {
       {/* 🔴 NO space-y HERE */}
       <div className="px-3 md:px-4 pb-6 text-black ">
         {/* News ticker isolated */}
-        <div className="max-w-[100vw] md:max-w-[85vw] xl:max-w-[90vw] mb-5">
+        <div className="max-w-[100vw] md:max-w-[85vw] xl:max-w-[90vw] mb-5 mx-auto">
           <NewsTicker />
         </div>
 
