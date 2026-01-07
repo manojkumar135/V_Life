@@ -1,23 +1,65 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Layout from "@/layout/Layout";
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 
 import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
 import NewsTicker from "@/components/NewsTicker";
 import LoginWelcomePopup from "@/components/LoginWelcomePopup";
 
+import { FiFilter } from "react-icons/fi";
+import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
+import Loader from "@/components/common/loader";
+
+/* =====================================================
+   TYPES
+===================================================== */
+interface AdminDashboardData {
+  sales: {
+    totalSales: number;
+    firstOrder: number;
+    reorder: number;
+  };
+  orders: {
+    totalOrders: number;
+    pendingOrders: number;
+    completedOrders: number;
+  };
+  team: {
+    totalRegistered: number;
+    normalActivations: number;
+    adminActivations: number;
+    deactivatedIds: number;
+  };
+  wallet: {
+    totalGeneratedPayout: number;
+    totalReleasedPayout: number;
+    totalPendingPayout: number;
+    generatedRewardPoints: number;
+  };
+}
+
 export default function AdminDashboard() {
   const { user } = useVLife();
   const router = useRouter();
 
-  const [showAlert, setShowAlert] = React.useState(false);
-  const [showPopup, setShowPopup] = React.useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
+  const [loading, setLoading] = useState(false);
 
+  const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
+
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [dateFilter, setDateFilter] = useState<any>(null);
+
+  /* =====================================================
+     LOGIN POPUP
+  ===================================================== */
   useEffect(() => {
     const shouldShow = sessionStorage.getItem("showLoginPopup");
     if (shouldShow === "true") {
@@ -26,20 +68,64 @@ export default function AdminDashboard() {
     }
   }, []);
 
+  /* =====================================================
+     FIRST ORDER CHECK
+  ===================================================== */
   useEffect(() => {
     if (!user?.user_id) return;
 
-    const checkFirstOrder = async () => {
+    (async () => {
       try {
         const res = await hasFirstOrder(user.user_id);
-        if (!res.hasPermission) setShowAlert(true);
+        setShowAlert(!res.hasPermission);
       } catch {
         setShowAlert(true);
       }
-    };
-
-    checkFirstOrder();
+    })();
   }, [user?.user_id]);
+
+  /* =====================================================
+     FETCH ADMIN DASHBOARD DATA
+  ===================================================== */
+  const fetchAdminDashboard = useCallback(async () => {
+    if (!user?.user_id) return;
+
+    try {
+      setLoading(true);
+
+      const params: any = {
+        user_id: user.user_id,
+      };
+
+      // single date
+      if (dateFilter?.type === "on") {
+        params.date = dateFilter.date;
+      }
+
+      // date range
+      if (dateFilter?.type === "range") {
+        params.from = dateFilter.from;
+        params.to = dateFilter.to;
+      }
+
+      const res = await axios.get("/api/admindashboard-operations", { params });
+
+      if (res.data.success) {
+        setDashboard(res.data.data);
+      } else {
+        setDashboard(null);
+      }
+    } catch (err) {
+      console.error("Admin dashboard fetch error:", err);
+      setDashboard(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.user_id, dateFilter]);
+
+  useEffect(() => {
+    fetchAdminDashboard();
+  }, [fetchAdminDashboard]);
 
   return (
     <Layout>
@@ -54,32 +140,48 @@ export default function AdminDashboard() {
         onClose={() => setShowAlert(false)}
       />
 
-      {/* 🔴 NO space-y HERE */}
-      <div className="px-3 md:px-4 pb-6 text-black ">
-        {/* News ticker isolated */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
+
+      {/* Floating Filter Button */}
+      <div className="fixed bottom-5 right-6 z-20">
+        <button
+          title="Filter"
+          onClick={() => setShowFilterModal(true)}
+          className="w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
+          text-white flex items-center justify-center shadow-lg"
+        >
+          <FiFilter size={20} />
+        </button>
+      </div>
+
+      <div className="px-3 md:px-4 pb-6 text-black">
         <div className="max-w-[100vw] md:max-w-[85vw] xl:max-w-[90vw] mb-5 mx-auto">
           <NewsTicker />
         </div>
 
-        {/* TOP SECTION */}
+        {/* ================= TOP SECTION ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <AdminCard title="My Sales">
-            <StatRow label="Total Sales" value="₹ 0.00" />
-            <StatRow label="First Order" value="₹ 0.00" />
-            <StatRow label="Re-Order" value="₹ 0.00" />
+            <StatRow label="Total Sales" value={`₹ ${dashboard?.sales.totalSales.toFixed(2) || "0.00"}`} />
+            <StatRow label="First Order" value={`₹ ${dashboard?.sales.firstOrder.toFixed(2) || "0.00"}`} />
+            <StatRow label="Re-Order" value={`₹ ${dashboard?.sales.reorder.toFixed(2) || "0.00"}`} />
           </AdminCard>
 
           <AdminCard title="My Orders">
-            <StatRow label="Total Orders" value="0" />
-            <StatRow label="Pending Orders" value="0" />
-            <StatRow label="Dispatched Orders" value="0" />
+            <StatRow label="Total Orders" value={dashboard?.orders.totalOrders || 0} />
+            <StatRow label="Pending Orders" value={dashboard?.orders.pendingOrders || 0} />
+            <StatRow label="Dispatched Orders" value={dashboard?.orders.completedOrders || 0} />
           </AdminCard>
 
           <AdminCard title="My Team">
-            <StatRow label="Total Registered" value="0" />
-            <StatRow label="Total Activations" value="0" />
-            <StatRow label="Admin Activations" value="0" />
-            <StatRow label="Blocked IDs" value="0" />
+            <StatRow label="Total Registered" value={dashboard?.team.totalRegistered || 0} />
+            <StatRow label="Activations" value={dashboard?.team.normalActivations || 0} />
+            <StatRow label="Admin Activations" value={dashboard?.team.adminActivations || 0} />
+            <StatRow label="Deactivated IDs" value={dashboard?.team.deactivatedIds || 0} />
           </AdminCard>
 
           <AdminCard title="My Tickets">
@@ -88,27 +190,38 @@ export default function AdminDashboard() {
           </AdminCard>
         </div>
 
-        {/* WALLET */}
+        {/* ================= WALLET ================= */}
         <div className="mb-8">
           <SectionHeader title="My Wallet & Payout" />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-            <MiniCard title="Total Payout Generated" value="₹ 0.00" />
-            <MiniCard title="Total Released Payout" value="₹ 0.00" />
-            <MiniCard title="Total Pending Payout" value="₹ 0.00" />
+            <MiniCard
+              title="Total Payout Generated"
+              value={`₹ ${dashboard?.wallet.totalGeneratedPayout.toFixed(2) || "0.00"}`}
+            />
+            <MiniCard
+              title="Total Released Payout"
+              value={`₹ ${dashboard?.wallet.totalReleasedPayout.toFixed(2) || "0.00"}`}
+            />
+            <MiniCard
+              title="Total Pending Payout"
+              value={`₹ ${dashboard?.wallet.totalPendingPayout.toFixed(2) || "0.00"}`}
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-            <MiniCard title="Generated Reward Points" value="0" />
+            <MiniCard
+              title="Generated Reward Points"
+              value={dashboard?.wallet.generatedRewardPoints || 0}
+            />
             <MiniCard title="Released Reward Points" value="0" />
             <MiniCard title="Pending Reward Points" value="0" />
           </div>
         </div>
 
-        {/* CYCLE CLOSINGS */}
+        {/* ================= CYCLE ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TimeRemainingCard />
-
           <AdminCard title="Cycle Closings">
             <StatRow label="Current PV (Left Team)" value="0" />
             <StatRow label="Current PV (Right Team)" value="0" />
@@ -117,11 +230,21 @@ export default function AdminDashboard() {
           </AdminCard>
         </div>
       </div>
+
+      {/* Date Filter Modal */}
+      <DateFilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onSubmit={(filter) => {
+          setDateFilter(filter);
+          setShowFilterModal(false);
+        }}
+      />
     </Layout>
   );
 }
 
-/* ===== Reusable ===== */
+/* ================= REUSABLE ================= */
 
 const AdminCard = ({ title, children }: any) => (
   <div className="bg-white rounded-xl border border-gray-300 shadow-sm">
