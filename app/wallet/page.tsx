@@ -10,6 +10,8 @@ import { useVLife } from "@/store/context";
 import { FaPercent } from "react-icons/fa";
 import { MdOutlineVerifiedUser } from "react-icons/md";
 import { FaCrown } from "react-icons/fa";
+import { FaRegUserCircle } from "react-icons/fa";
+
 
 const page = () => {
   const router = useRouter();
@@ -86,6 +88,18 @@ const page = () => {
             <FaCrown  size={32} />
             <span className="mt-2 text-lg font-semibold">Royality Club</span>
           </div>
+
+          
+          {/* Profile Management */}
+          {user.role === "admin" && (
+            <div
+              onClick={() => router.push("/profileedit")}
+              className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            >
+              <FaRegUserCircle size={32} />
+              <span className="mt-2 text-lg font-semibold">Profile Management</span>
+            </div>
+          )}
           {/* Convert Card */}
           {/* <div className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer">
             <Shuffle size={32} />
