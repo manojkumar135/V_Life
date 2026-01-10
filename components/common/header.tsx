@@ -292,7 +292,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
           {/* Tooltip */}
           <div
-            className={`absolute top-10 -translate-x-1/2 flex flex-col items-center bg-gray-800 text-white text-xs rounded-md px-2 py-1 whitespace-nowrap transition-all duration-300 ${
+            className={`absolute z-100 top-10 -translate-x-1/2 flex flex-col items-center bg-gray-800 text-white text-xs rounded-md px-2 py-1 whitespace-nowrap transition-all duration-300 ${
               showTooltip
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 pointer-events-none -translate-y-1"

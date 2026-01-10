@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Layout from "@/layout/Layout";
+
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
@@ -165,26 +166,72 @@ export default function AdminDashboard() {
 
         {/* ================= TOP SECTION ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <AdminCard title="My Sales">
-            <StatRow label="Total Sales" value={`₹ ${dashboard?.sales.totalSales.toFixed(2) || "0.00"}`} />
-            <StatRow label="First Order" value={`₹ ${dashboard?.sales.firstOrder.toFixed(2) || "0.00"}`} />
-            <StatRow label="Re-Order" value={`₹ ${dashboard?.sales.reorder.toFixed(2) || "0.00"}`} />
+          <AdminCard
+            title="My Sales"
+            footerLabel="View Report"
+            footerLink="/orders"
+          >
+            <StatRow
+              label="Total Sales"
+              value={`₹ ${dashboard?.sales.totalSales.toFixed(2) || "0.00"}`}
+            />
+            <StatRow
+              label="First Order"
+              value={`₹ ${dashboard?.sales.firstOrder.toFixed(2) || "0.00"}`}
+            />
+            <StatRow
+              label="Re-Order"
+              value={`₹ ${dashboard?.sales.reorder.toFixed(2) || "0.00"}`}
+            />
           </AdminCard>
 
-          <AdminCard title="My Orders">
-            <StatRow label="Total Orders" value={dashboard?.orders.totalOrders || 0} />
-            <StatRow label="Pending Orders" value={dashboard?.orders.pendingOrders || 0} />
-            <StatRow label="Dispatched Orders" value={dashboard?.orders.completedOrders || 0} />
+          <AdminCard
+            title="My Orders"
+            footerLabel="View Report"
+            footerLink="/orders"
+          >
+            <StatRow
+              label="Total Orders"
+              value={dashboard?.orders.totalOrders || 0}
+            />
+            <StatRow
+              label="Pending Orders"
+              value={dashboard?.orders.pendingOrders || 0}
+            />
+            <StatRow
+              label="Dispatched Orders"
+              value={dashboard?.orders.completedOrders || 0}
+            />
           </AdminCard>
 
-          <AdminCard title="My Team">
-            <StatRow label="Total Registered" value={dashboard?.team.totalRegistered || 0} />
-            <StatRow label="Activations" value={dashboard?.team.normalActivations || 0} />
-            <StatRow label="Admin Activations" value={dashboard?.team.adminActivations || 0} />
-            <StatRow label="Deactivated IDs" value={dashboard?.team.deactivatedIds || 0} />
+          <AdminCard
+            title="My Team"
+            footerLabel="View Report"
+            footerLink="/administration/users"
+          >
+            <StatRow
+              label="Total Registered"
+              value={dashboard?.team.totalRegistered || 0}
+            />
+            <StatRow
+              label="Activations"
+              value={dashboard?.team.normalActivations || 0}
+            />
+            <StatRow
+              label="Admin Activations"
+              value={dashboard?.team.adminActivations || 0}
+            />
+            <StatRow
+              label="Deactivated IDs"
+              value={dashboard?.team.deactivatedIds || 0}
+            />
           </AdminCard>
 
-          <AdminCard title="My Tickets">
+          <AdminCard
+            title="My Tickets"
+            footerLabel="View Report"
+            footerLink="/administration/users"
+          >
             <StatRow label="Open Tickets" value="0" />
             <StatRow label="Closed Tickets" value="0" />
           </AdminCard>
@@ -197,15 +244,21 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
             <MiniCard
               title="Total Payout Generated"
-              value={`₹ ${dashboard?.wallet.totalGeneratedPayout.toFixed(2) || "0.00"}`}
+              value={`₹ ${
+                dashboard?.wallet.totalGeneratedPayout.toFixed(2) || "0.00"
+              }`}
             />
             <MiniCard
               title="Total Released Payout"
-              value={`₹ ${dashboard?.wallet.totalReleasedPayout.toFixed(2) || "0.00"}`}
+              value={`₹ ${
+                dashboard?.wallet.totalReleasedPayout.toFixed(2) || "0.00"
+              }`}
             />
             <MiniCard
               title="Total Pending Payout"
-              value={`₹ ${dashboard?.wallet.totalPendingPayout.toFixed(2) || "0.00"}`}
+              value={`₹ ${
+                dashboard?.wallet.totalPendingPayout.toFixed(2) || "0.00"
+              }`}
             />
           </div>
 
@@ -246,14 +299,33 @@ export default function AdminDashboard() {
 
 /* ================= REUSABLE ================= */
 
-const AdminCard = ({ title, children }: any) => (
-  <div className="bg-white rounded-xl border border-gray-300 shadow-sm">
-    <div className="bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded-t-xl">
-      {title}
+const AdminCard = ({ title, children, footerLabel, footerLink }: any) => {
+  const router = useRouter();
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-300 shadow-sm flex flex-col h-full">
+      {/* Header */}
+      <div className="bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded-t-xl">
+        {title}
+      </div>
+
+      {/* Body */}
+      <div className="px-4 py-2 space-y-2 flex-1">{children}</div>
+
+      {/* Footer (optional) */}
+      {footerLabel && footerLink && (
+        <div className=" px-4 pb-2 text-right">
+          <button
+            onClick={() => router.push(footerLink)}
+            className="text-sm  text-blue-600 hover:text-blue-800 underline transition cursor-pointer"
+          >
+            {footerLabel}
+          </button>
+        </div>
+      )}
     </div>
-    <div className="p-4 space-y-2">{children}</div>
-  </div>
-);
+  );
+};
 
 const SectionHeader = ({ title }: any) => (
   <div className="bg-gray-800 text-white text-center py-2 rounded-lg font-semibold">

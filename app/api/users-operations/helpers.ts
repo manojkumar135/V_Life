@@ -449,20 +449,25 @@ async function createTreeNode(
 export async function createUserAndLogin(
   body: CreateUserInput
 ): Promise<CreatedResult> {
-  const { mail, contact, user_name, referBy, team, parent,gender } = body;
+  const { mail, contact, user_name, referBy, team, parent, gender } = body;
 
   if (!mail || !contact || !user_name || !referBy || !team)
     throw new Error("Required fields missing");
 
   // duplicates
-  const existingUser = await User.findOne({
-    $or: [{ mail }, { contact }],
-  }).lean();
-  const existingLogin = await Login.findOne({
-    $or: [{ mail }, { contact }],
-  }).lean();
-  if (existingUser || existingLogin)
-    throw new Error("Email or Contact already exists");
+  const existingEmailUser = await User.findOne({ mail }).lean();
+  const existingEmailLogin = await Login.findOne({ mail }).lean();
+
+  if (existingEmailUser || existingEmailLogin) {
+    throw new Error("Email already exists");
+  }
+
+  const existingContactUser = await User.findOne({ contact }).lean();
+  const existingContactLogin = await Login.findOne({ contact }).lean();
+
+  if (existingContactUser || existingContactLogin) {
+    throw new Error("Contact number already exists");
+  }
 
   // referrer exists
   const referrer: any = await User.findOne({ user_id: referBy }).lean();

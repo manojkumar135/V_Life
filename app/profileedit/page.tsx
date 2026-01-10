@@ -72,6 +72,9 @@ export default function ProfileEditPage() {
   const [loading, setLoading] = useState(false);
   const [panVerified, setPanVerified] = useState(false);
   const [value, setValue] = useState("");
+  const [userMeta, setUserMeta] = useState<any>(null);
+
+  // console.log(userMeta)
 
   const [initialValues, setInitialValues] = useState<any>({
     userId: "",
@@ -116,9 +119,12 @@ export default function ProfileEditPage() {
 
   const searchUser = async (q: string) => {
     if (!q) return;
+
     try {
       setLoading(true);
-      const { data } = await axios.get(`/api/users-operations?search=${q}`);
+
+      const { data } = await axios.get(`/api/getuser-operations?search=${q}`);
+
       if (!data?.data) {
         ShowToast.error("User not found");
         return;
@@ -126,46 +132,54 @@ export default function ProfileEditPage() {
 
       const u = data.data;
 
+      /* 🔹 SAVE FULL USER OBJECT */
+      setUserMeta(u);
+
+      /* 🔹 MAP TO FORMIK */
       setInitialValues({
-        userId: u.user_id,
-        fullName: u.user_name || "",
-        email: u.mail || "",
-        contact: u.contact || "",
-        dob: u.dob?.split("T")[0] || "",
-        gender: u.gender || "",
-        bloodGroup: u.blood || "",
+  userId: u.user_id,
+  fullName: u.user_name || "",
+  email: u.mail || "",
+  contact: u.contact || "",
+  dob: u.dob?.split("T")[0] || "",
+  gender: u.gender || "",
+  bloodGroup: u.blood || "", // ✅ BLOOD FIXED
 
-        address: u.address || "",
-        landmark: u.landmark || "",
-        pincode: u.pincode || "",
-        country: u.country || "",
-        state: u.state || "",
-        city: u.district || "",
-        locality: u.locality || "",
+  address: u.address || "",
+  landmark: u.landmark || "",
+  pincode: u.pincode || "",
+  country: u.country || "",
+  state: u.state || "",
+  city: u.district || "",
+  locality: u.locality || "",
 
-        nomineeName: u.nominee_name || "",
-        nomineeRelation: u.nominee_relation || "",
-        nomineeContact: u.alternate_contact || "",
+  nomineeName: u.nominee_name || "",
+  nomineeRelation: u.nominee_relation || "",
+  nomineeContact: u.alternate_contact || "",
 
-        accountHolderName: u.bank?.account_holder_name || "",
-        bankName: u.bank?.bank_name || "",
-        accountNumber: u.bank?.account_number || "",
-        ifscCode: u.bank?.ifsc_code || "",
-        gstNumber: u.bank?.gst_number || "",
+  /* ✅ BANK (FLAT) */
+  accountHolderName: u.account_holder_name || "",
+  bankName: u.bank_name || "",
+  accountNumber: u.account_number || "",
+  ifscCode: u.ifsc_code || "",
+  gstNumber: u.gst || "",
 
-        panNumber: u.pan?.pan_number || "",
-        panName: u.pan?.pan_name || "",
-        panDob: u.pan?.pan_dob || "",
-        panFile: u.pan?.pan_file || null,
+  /* ✅ PAN (FLAT) */
+  panNumber: u.pan_number || "",
+  panName: u.pan_name || "",
+  panDob: u.pan_dob || "",
+  panFile: u.pan_file || null,
 
-        aadharNumber: u.aadhar?.aadhar_number || "",
-        aadharFront: u.aadhar?.aadhar_front || null,
-        aadharBack: u.aadhar?.aadhar_back || null,
+  /* ✅ AADHAR (FLAT) */
+  aadharNumber: u.aadhar_number || "",
+  aadharFront: u.aadhar_file || null,
+  aadharBack: null,
 
-        cancelledCheque: u.bank?.cheque || null,
-      });
+  cancelledCheque: null,
+});
 
-      setPanVerified(u.pan?.pan_verified || false);
+
+setPanVerified(Boolean(u.pan_verified));
     } finally {
       setLoading(false);
     }
@@ -173,68 +187,68 @@ export default function ProfileEditPage() {
 
   /* ---------------- SUBMIT ---------------- */
 
-  const handleSubmit = async (values: any) => {
-    try {
-      setLoading(true);
+  // const handleSubmit = async (values: any) => {
+  //   try {
+  //     setLoading(true);
 
-      const res = await axios.patch("/api/users-operations", {
-        user_id: values.userId,
+  //     const res = await axios.patch("/api/users-operations", {
+  //       user_id: values.userId,
 
-        profile: {
-          user_name: values.fullName,
-          mail: values.email,
-          contact: values.contact,
-          dob: values.dob,
-          gender: values.gender,
-          blood: values.bloodGroup,
-        },
+  //       profile: {
+  //         user_name: values.fullName,
+  //         mail: values.email,
+  //         contact: values.contact,
+  //         dob: values.dob,
+  //         gender: values.gender,
+  //         blood: values.bloodGroup,
+  //       },
 
-        address: {
-          address: values.address,
-          landmark: values.landmark,
-          pincode: values.pincode,
-          country: values.country,
-          state: values.state,
-          district: values.city,
-          locality: values.locality,
-        },
+  //       address: {
+  //         address: values.address,
+  //         landmark: values.landmark,
+  //         pincode: values.pincode,
+  //         country: values.country,
+  //         state: values.state,
+  //         district: values.city,
+  //         locality: values.locality,
+  //       },
 
-        nominee: {
-          nominee_name: values.nomineeName,
-          nominee_relation: values.nomineeRelation,
-          alternate_contact: values.nomineeContact,
-        },
+  //       nominee: {
+  //         nominee_name: values.nomineeName,
+  //         nominee_relation: values.nomineeRelation,
+  //         alternate_contact: values.nomineeContact,
+  //       },
 
-        bank: {
-          account_holder_name: values.accountHolderName,
-          bank_name: values.bankName,
-          account_number: values.accountNumber,
-          ifsc_code: values.ifscCode,
-          cheque: values.cancelledCheque,
-        },
+  //       bank: {
+  //         account_holder_name: values.accountHolderName,
+  //         bank_name: values.bankName,
+  //         account_number: values.accountNumber,
+  //         ifsc_code: values.ifscCode,
+  //         cheque: values.cancelledCheque,
+  //       },
 
-        pan: {
-          pan_number: values.panNumber,
-          pan_name: values.panName,
-          pan_dob: values.panDob,
-          pan_file: values.panFile,
-          pan_verified: panVerified,
-        },
+  //       pan: {
+  //         pan_number: values.panNumber,
+  //         pan_name: values.panName,
+  //         pan_dob: values.panDob,
+  //         pan_file: values.panFile,
+  //         pan_verified: panVerified,
+  //       },
 
-        aadhar: {
-          aadhar_number: values.aadharNumber,
-          aadhar_front: values.aadharFront,
-          aadhar_back: values.aadharBack,
-        },
-      });
+  //       aadhar: {
+  //         aadhar_number: values.aadharNumber,
+  //         aadhar_front: values.aadharFront,
+  //         aadhar_back: values.aadharBack,
+  //       },
+  //     });
 
-      res.data.success
-        ? ShowToast.success("Profile updated successfully")
-        : ShowToast.error("Update failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     res.data.success
+  //       ? ShowToast.success("Profile updated successfully")
+  //       : ShowToast.error("Update failed");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const handleSearch = () => {
     if (!value.trim()) {
@@ -249,7 +263,7 @@ export default function ProfileEditPage() {
   return (
     <Layout>
       {loading && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center backdrop-blur-sm">
           <Loader />
         </div>
       )}
@@ -268,41 +282,40 @@ export default function ProfileEditPage() {
             />
             <p className="text-md font-semibold">Edit Profile</p>
           </div>
-<div className="md:w-[380px] flex items-center gap-2">
-  {/* INPUT */}
-  <div className="relative flex-1">
-    <FaSearch
-      size={14}
-      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-    />
+          <div className="md:w-[380px] flex items-center gap-2">
+            {/* INPUT */}
+            <div className="relative flex-1">
+              <FaSearch
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              />
 
-    <input
-      type="text"
-      placeholder="Search by User ID ..."
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-      className="w-full h-8 pl-9 pr-4 text-sm border rounded-lg
+              <input
+                type="text"
+                placeholder="Search by User ID ..."
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                className="w-full h-8 pl-9 pr-4 text-sm border rounded-lg
         focus:outline-none focus:ring-1 focus:ring-primary"
-    />
-  </div>
+              />
+            </div>
 
-  {/* BUTTON */}
-  <button
-    onClick={handleSearch}
-    className="h-8 px-4 max-lg:px-2 rounded-lg bg-[#106187]
+            {/* BUTTON */}
+            <button
+              onClick={handleSearch}
+              className="h-8 px-4 max-lg:px-2 rounded-lg bg-[#106187]
       text-white font-semibold hover:bg-[#0e5676] transition
       flex items-center justify-center"
-  >
-    <span className="hidden lg:block text-sm">Search</span>
-    <FaSearch className="block lg:hidden" size={16} />
-  </button>
-</div>
-
+            >
+              <span className="hidden lg:block text-sm">Search</span>
+              <FaSearch className="block lg:hidden" size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="bg-slate-100 min-h-screen max-md:px-1.5 pt-5">
+      <div className="bg-slate-100 min-h-screen max-md:px-1.5 pt-4">
         <Formik
           enableReinitialize
           initialValues={initialValues}
@@ -310,12 +323,14 @@ export default function ProfileEditPage() {
           onSubmit={handleSubmit}
         >
           {({ values, setFieldValue }) => (
-            <Form className="max-w-6xl  space-y-6 mx-2 lg:!mx-10">
+            <Form className="max-w-6xl  space-y-6 mx-2 lg:!mx-6">
               {/* BASIC INFO */}
               <Card
                 title="Basic Information"
                 desc="Personal details"
-                icon={<LuCircleUser size={28} />}
+                icon={<LuCircleUser size={20} />}
+                userStatus={userMeta?.user_status}
+                statusNotes={userMeta?.status_notes}
               >
                 <Grid>
                   <InputField label="User ID" value={values.userId} disabled />
@@ -526,34 +541,108 @@ export default function ProfileEditPage() {
   );
 }
 
+const getStatusConfig = (user_status?: string, status_notes?: string) => {
+  if (!user_status) return null;
+
+  if (user_status === "active" && status_notes !== "Activated by Admin") {
+    return {
+      label: "Active",
+      color: "bg-green-100 text-green-700 border-green-300",
+    };
+  }
+
+  if (user_status === "inactive" && status_notes !== "Deactivated by Admin") {
+    return {
+      label: "Inactive",
+      color: "bg-red-100 text-red-700 border-red-300",
+    };
+  }
+
+  if (user_status === "active" && status_notes === "Activated by Admin") {
+    return {
+      label: "Active",
+      color: "bg-orange-100 text-orange-700 border-orange-300",
+    };
+  }
+
+  if (user_status === "inactive" && status_notes === "Deactivated by Admin") {
+    return {
+      label: "Inactive",
+      color: "bg-gray-200 text-gray-800 border-gray-400",
+    };
+  }
+
+  return null;
+};
+
 /* ---------------- UI HELPERS ---------------- */
 
 const Card = ({
   title,
   desc,
   icon,
+  userStatus,
+  statusNotes,
   children,
 }: {
   title: string;
   desc: string;
   icon?: React.ReactNode;
+  userStatus?: string;
+  statusNotes?: string;
   children: React.ReactNode;
-}) => (
-  <div className="bg-white rounded-xl border shadow-sm p-6">
-    <div className="flex items-start gap-3 mb-4">
-      {icon && (
-        <span className="text-primary text-2xl flex-shrink-0">{icon}</span>
-      )}
+}) => {
+  const status = getStatusConfig(userStatus, statusNotes);
 
-      <div className="flex flex-col">
-        <h3 className="text-md font-semibold leading-tight">{title}</h3>
-        <p className="text-[12px] text-gray-500 leading-snug">{desc}</p>
-      </div>
+  return (
+    <div className="bg-white rounded-xl border shadow-sm p-6">
+      <div className="mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          {/* LEFT SIDE */}
+          <div className="flex items-start gap-3">
+            {icon && (
+              <span className="text-primary text-xl flex-shrink-0">{icon}</span>
+            )}
+
+            <div>
+              <h3 className="text-md font-semibold leading-snug">{title}</h3>
+              <p className="text-xs text-gray-500 leading-snug">{desc}</p>
+            </div>
+          </div>
+
+          {/* RIGHT STATUS */}
+          {status && (
+  <div className="flex justify-end">
+    <div className="flex items-center gap-2 text-xs font-medium">
+      {/* LABEL */}
+      <span className="text-gray-600">Status :</span>
+
+      {/* DOT + VALUE */}
+      <span
+        className={`flex items-center gap-1.5 
+        ${status.color
+          .split(" ")
+          .find((c) => c.startsWith("text-"))}`}
+      >
+        {/* DOT */}
+        <span className="w-3 h-3 rounded-full bg-current" />
+
+        {/* VALUE */}
+        <span className="font-semibold">
+          {status.label}
+        </span>
+      </span>
     </div>
-
-    {children}
   </div>
-);
+)}
+
+        </div>
+      </div>
+
+      {children}
+    </div>
+  );
+};
 
 const Grid = ({ children }: { children: React.ReactNode }) => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">{children}</div>
