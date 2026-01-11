@@ -23,11 +23,7 @@ export async function GET(request: Request) {
     }
 
     const user = (await User.findOne({
-      $or: [
-        { user_id: search },
-        { mail: search },
-        { contact: search },
-      ],
+      $or: [{ user_id: search }, { mail: search }, { contact: search }],
     }).lean()) as any;
 
     if (!user) {
@@ -62,7 +58,6 @@ export async function GET(request: Request) {
   }
 }
 
-
 /* =====================================================
    PATCH : Update User and/or Wallet
 ===================================================== */
@@ -70,8 +65,7 @@ export async function PATCH(request: Request) {
   try {
     await connectDB();
 
-    const body = await request.json();
-    const { user_id, userUpdates, walletUpdates } = body;
+    const { user_id, userUpdates, walletUpdates } = await request.json();
 
     if (!user_id) {
       return NextResponse.json(
@@ -80,23 +74,40 @@ export async function PATCH(request: Request) {
       );
     }
 
+    const cleanObject = (obj: any) =>
+      Object.fromEntries(
+        Object.entries(obj || {}).filter(
+          ([_, v]) => v !== "" && v !== null && v !== undefined
+        )
+      );
+
+    const cleanUserUpdates = cleanObject(userUpdates);
+    const cleanWalletUpdates = cleanObject(walletUpdates);
+
+    // normalize pan_verified
+    if ("pan_verified" in cleanWalletUpdates) {
+      cleanWalletUpdates.pan_verified =
+        cleanWalletUpdates.pan_verified === true ||
+        cleanWalletUpdates.pan_verified === "true";
+    }
+
     let updatedUser = null;
     let updatedWallet = null;
 
     /* ---------- Update User ---------- */
-    if (userUpdates && Object.keys(userUpdates).length > 0) {
+    if (Object.keys(cleanUserUpdates).length) {
       updatedUser = await User.findOneAndUpdate(
         { user_id },
-        { $set: userUpdates },
+        { $set: cleanUserUpdates },
         { new: true }
       );
     }
 
     /* ---------- Update Wallet ---------- */
-    if (walletUpdates && Object.keys(walletUpdates).length > 0) {
+    if (Object.keys(cleanWalletUpdates).length) {
       updatedWallet = await Wallet.findOneAndUpdate(
         { user_id },
-        { $set: walletUpdates },
+        { $set: cleanWalletUpdates },
         { new: true, upsert: true }
       );
     }
@@ -112,10 +123,7 @@ export async function PATCH(request: Request) {
       {
         success: true,
         message: "Updated successfully",
-        data: {
-          user: updatedUser,
-          wallet: updatedWallet,
-        },
+        data: { user: updatedUser, wallet: updatedWallet },
       },
       { status: 200 }
     );
