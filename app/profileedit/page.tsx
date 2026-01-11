@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Add useEffect import
 import Layout from "@/layout/Layout";
 import axios from "axios";
 import { useVLife } from "@/store/context";
@@ -25,41 +25,141 @@ import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 /* ---------------- VALIDATION ---------------- */
 
-const Schema = (isAdmin: boolean) =>
-  Yup.object({
-    fullName: Yup.string().required("Required"),
+export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
+  Yup.object().shape({
+    /* ---------------- BASIC INFO ---------------- */
+
+    fullName: Yup.string()
+      .trim()
+      .min(3, "* Full Name must be at least 3 characters")
+      .required("* Full Name is required"),
 
     email: isAdmin
-      ? Yup.string().email("Invalid email").required("Required")
-      : Yup.string(),
+      ? Yup.string()
+          .email("* Invalid email address")
+          .transform((val) => (val ? val.toLowerCase() : val))
+          .required("* Email is required")
+      : Yup.string().nullable(),
 
     contact: isAdmin
       ? Yup.string()
-          .matches(/^[0-9]{10}$/, "10 digits")
-          .required("Required")
-      : Yup.string(),
+          .matches(/^[0-9]{10}$/, "* Contact must be 10 digits")
+          .required("* Contact is required")
+      : Yup.string().nullable(),
 
-    gender: Yup.string().required("Required"),
-    dob: Yup.string().required("Required"),
+    dob: Yup.date()
+      .required("* Date of Birth is required")
+      .max(new Date(), "* Date of Birth cannot be in the future")
+      .test("age", "* You must be at least 18 years old", (value) => {
+        if (!value) return false;
+        const today = new Date();
+        const birthDate = new Date(value);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+        return age >= 18;
+      }),
 
-    accountHolderName: Yup.string().required("Required"),
-    bankName: Yup.string().required("Required"),
+    gender: Yup.string().required("* Gender is required"),
+
+    bloodGroup: Yup.string().nullable(),
+
+    /* ---------------- ADDRESS ---------------- */
+
+    address: Yup.string().nullable(),
+    landmark: Yup.string().nullable(),
+
+    pincode: Yup.string()
+      .matches(/^[0-9]{6}$/, "* Pincode must be 6 digits")
+      .nullable(),
+
+    country: Yup.string().nullable(),
+    state: Yup.string().nullable(),
+    city: Yup.string().nullable(),
+    locality: Yup.string().nullable(),
+
+    /* ---------------- NOMINEE ---------------- */
+
+    nomineeName: Yup.string().nullable(),
+    nomineeRelation: Yup.string().nullable(),
+
+    nomineeContact: Yup.string()
+      .matches(/^[0-9]{10}$/, "* Alternate contact must be 10 digits")
+      .nullable(),
+
+    /* ---------------- BANK (REQUIRED) ---------------- */
+
+    accountHolderName: Yup.string().required(
+      "* Account Holder Name is required"
+    ),
+
+    bankName: Yup.string().required("* Bank Name is required"),
+
     accountNumber: Yup.string()
-      .matches(/^\d{9,18}$/, "9–18 digits")
-      .required("Required"),
-    ifscCode: Yup.string()
-      .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC")
-      .required("Required"),
+      .matches(/^\d{9,18}$/, "* Account number must be 9–18 digits")
+      .required("* Account Number is required"),
 
-    panNumber: Yup.string()
-      .matches(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "Invalid PAN")
-      .required("Required"),
-    panName: Yup.string().required("Required"),
-    panDob: Yup.string().required("Required"),
+    ifscCode: Yup.string()
+      .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "* Invalid IFSC code")
+      .required("* IFSC Code is required"),
+
+    cancelledCheque: Yup.mixed<string | File>()
+      .required("* Cancelled cheque is required")
+      .test(
+        "fileType-cheque",
+        "* Cheque must be an image or PDF",
+        (value) =>
+          typeof value === "string" ||
+          (value instanceof File &&
+            ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+      ),
+
+    /* ---------------- AADHAAR (REQUIRED) ---------------- */
 
     aadharNumber: Yup.string()
-      .matches(/^\d{12}$/, "12 digits")
-      .required("Required"),
+      .matches(/^\d{12}$/, "* Aadhaar must be 12 digits")
+      .required("* Aadhaar Number is required"),
+
+    aadharFront: Yup.mixed<string | File>()
+      .required("* Aadhaar front is required")
+      .test(
+        "fileType-aadharFront",
+        "* Aadhaar front must be an image or PDF",
+        (value) =>
+          typeof value === "string" ||
+          (value instanceof File &&
+            ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+      ),
+
+    aadharBack: Yup.mixed<string | File>()
+      .required("* Aadhaar back is required")
+      .test(
+        "fileType-aadharBack",
+        "* Aadhaar back must be an image or PDF",
+        (value) =>
+          typeof value === "string" ||
+          (value instanceof File &&
+            ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+      ),
+
+    /* ---------------- PAN (CRITICAL FIX) ---------------- */
+
+    panNumber: Yup.string()
+      .trim()
+      .uppercase()
+      .matches(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "* Invalid PAN format (ABCDE1234F)")
+      .required("* PAN Number is required"),
+
+    panFile: Yup.mixed<string | File>()
+      .required("* PAN document is required")
+      .test(
+        "fileType-pan",
+        "* PAN must be an image or PDF",
+        (value) =>
+          typeof value === "string" ||
+          (value instanceof File &&
+            ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+      ),
   });
 
 /* ---------------- PAGE ---------------- */
@@ -71,10 +171,15 @@ export default function ProfileEditPage() {
 
   const [loading, setLoading] = useState(false);
   const [panVerified, setPanVerified] = useState(false);
+  const [panChecking, setPanChecking] = useState(false);
   const [value, setValue] = useState("");
   const [userMeta, setUserMeta] = useState<any>(null);
 
-  // console.log(userMeta)
+  // ✅ dbValues stores original backend data
+  const [dbValues, setDbValues] = useState<any>(null);
+
+  // ✅ ADD THIS: Form reset key to force Formik remount
+  const [formKey, setFormKey] = useState(0);
 
   const [initialValues, setInitialValues] = useState<any>({
     userId: "",
@@ -115,140 +220,303 @@ export default function ProfileEditPage() {
     cancelledCheque: null,
   });
 
+  // ✅ Auto-reset form when dbValues changes (refresh)
+  useEffect(() => {
+    if (dbValues) {
+      setInitialValues(dbValues);
+      // 🔥 CRITICAL: Force Formik to remount when we get new data
+      setFormKey((prev) => prev + 1);
+    }
+  }, [dbValues]);
+
+  const checkPanDuplicate = async (pan: string) => {
+    try {
+      setPanChecking(true);
+      const res = await axios.get(`/api/panfind-operations?pan=${pan}`);
+      return res.data?.exists === true;
+    } catch (err) {
+      console.error(err);
+      return false;
+    } finally {
+      setPanChecking(false);
+    }
+  };
+
+  const verifyPan = async (pan: string) => {
+    try {
+      setPanChecking(true);
+
+      const res = await axios.post("/api/pancheck-operations", {
+        pan_number: pan,
+      });
+
+      const panData = res.data?.data?.data;
+
+      if (res.data.success && panData?.status === "valid") {
+        setPanVerified(true);
+        ShowToast.success("PAN Verified successfully");
+      } else {
+        setPanVerified(false);
+        ShowToast.error("Invalid PAN Number");
+      }
+    } catch (err) {
+      console.error(err);
+      setPanVerified(false);
+      ShowToast.error("PAN verification failed");
+    } finally {
+      setPanChecking(false);
+    }
+  };
+
+  const handleVerifyPan = async (pan: string) => {
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+      ShowToast.error("Enter a valid PAN before verifying");
+      return;
+    }
+
+    const exists = await checkPanDuplicate(pan);
+    if (exists) {
+      ShowToast.error("PAN already exists");
+      return;
+    }
+
+    await verifyPan(pan);
+  };
+
   /* ---------------- SEARCH ---------------- */
 
   const searchUser = async (q: string) => {
     if (!q) return;
 
-    try {
-      setLoading(true);
+    setLoading(true);
+    const startTime = Date.now();
 
+    try {
       const { data } = await axios.get(`/api/getuser-operations?search=${q}`);
 
-      if (!data?.data) {
+      if (!data?.success || !data?.data) {
         ShowToast.error("User not found");
+        setUserMeta(null);
+        setDbValues(null);
+        setInitialValues({
+          userId: "",
+          fullName: "",
+          email: "",
+          contact: "",
+          dob: "",
+          gender: "",
+          bloodGroup: "",
+
+          address: "",
+          landmark: "",
+          pincode: "",
+          country: "",
+          state: "",
+          city: "",
+          locality: "",
+
+          nomineeName: "",
+          nomineeRelation: "",
+          nomineeContact: "",
+
+          accountHolderName: "",
+          bankName: "",
+          accountNumber: "",
+          ifscCode: "",
+          gstNumber: "",
+
+          panNumber: "",
+          panName: "",
+          panDob: "",
+          panFile: null,
+
+          aadharNumber: "",
+          aadharFront: null,
+          aadharBack: null,
+
+          cancelledCheque: null,
+        });
+        setFormKey((prev) => prev + 1); // 🔥 Reset form
         return;
       }
 
       const u = data.data;
 
-      /* 🔹 SAVE FULL USER OBJECT */
       setUserMeta(u);
 
-      /* 🔹 MAP TO FORMIK */
+      const mappedValues = {
+        userId: u.user_id,
+        fullName: u.user_name || "",
+        email: u.mail || "",
+        contact: u.contact || "",
+        dob: u.dob?.split("T")[0] || "",
+        gender: u.gender || "",
+        bloodGroup: u.blood || "",
+
+        address: u.address || "",
+        landmark: u.landmark || "",
+        pincode: u.pincode || "",
+        country: u.country || "",
+        state: u.state || "",
+        city: u.district || "",
+        locality: u.locality || "",
+
+        nomineeName: u.nominee_name || "",
+        nomineeRelation: u.nominee_relation || "",
+        nomineeContact: u.alternate_contact || "",
+
+        accountHolderName: u.account_holder_name || "",
+        bankName: u.bank_name || "",
+        accountNumber: u.account_number || "",
+        ifscCode: u.ifsc_code || "",
+        gstNumber: u.gst || "",
+
+        panNumber: u.pan_number || "",
+        panName: u.pan_name || "",
+        panDob: u.pan_dob || "",
+        panFile: u.pan_file || null,
+
+        aadharNumber: u.aadhar_number || "",
+        aadharFront: u.aadhar_file || null,
+        aadharBack: null,
+
+        cancelledCheque: null,
+      };
+
+      // ✅ ALWAYS set dbValues to original backend data
+      setDbValues(mappedValues);
+      setInitialValues(mappedValues);
+      setPanVerified(Boolean(u.pan_verified));
+    } catch (error) {
+      ShowToast.error("User not found");
+
+      // ✅ Reset BOTH states on error
+      setUserMeta(null);
+      setPanVerified(false);
+      setDbValues(null);
+
       setInitialValues({
-  userId: u.user_id,
-  fullName: u.user_name || "",
-  email: u.mail || "",
-  contact: u.contact || "",
-  dob: u.dob?.split("T")[0] || "",
-  gender: u.gender || "",
-  bloodGroup: u.blood || "", // ✅ BLOOD FIXED
+        userId: "",
+        fullName: "",
+        email: "",
+        contact: "",
+        dob: "",
+        gender: "",
+        bloodGroup: "",
 
-  address: u.address || "",
-  landmark: u.landmark || "",
-  pincode: u.pincode || "",
-  country: u.country || "",
-  state: u.state || "",
-  city: u.district || "",
-  locality: u.locality || "",
+        address: "",
+        landmark: "",
+        pincode: "",
+        country: "",
+        state: "",
+        city: "",
+        locality: "",
 
-  nomineeName: u.nominee_name || "",
-  nomineeRelation: u.nominee_relation || "",
-  nomineeContact: u.alternate_contact || "",
+        nomineeName: "",
+        nomineeRelation: "",
+        nomineeContact: "",
 
-  /* ✅ BANK (FLAT) */
-  accountHolderName: u.account_holder_name || "",
-  bankName: u.bank_name || "",
-  accountNumber: u.account_number || "",
-  ifscCode: u.ifsc_code || "",
-  gstNumber: u.gst || "",
+        accountHolderName: "",
+        bankName: "",
+        accountNumber: "",
+        ifscCode: "",
+        gstNumber: "",
 
-  /* ✅ PAN (FLAT) */
-  panNumber: u.pan_number || "",
-  panName: u.pan_name || "",
-  panDob: u.pan_dob || "",
-  panFile: u.pan_file || null,
+        panNumber: "",
+        panName: "",
+        panDob: "",
+        panFile: null,
 
-  /* ✅ AADHAR (FLAT) */
-  aadharNumber: u.aadhar_number || "",
-  aadharFront: u.aadhar_file || null,
-  aadharBack: null,
+        aadharNumber: "",
+        aadharFront: null,
+        aadharBack: null,
 
-  cancelledCheque: null,
-});
-
-
-setPanVerified(Boolean(u.pan_verified));
+        cancelledCheque: null,
+      });
+      setFormKey((prev) => prev + 1); // 🔥 Reset form
     } finally {
-      setLoading(false);
+      const elapsed = Date.now() - startTime;
+      const remaining = 2000 - elapsed;
+
+      setTimeout(
+        () => {
+          setLoading(false);
+        },
+        remaining > 0 ? remaining : 0
+      );
     }
   };
 
   /* ---------------- SUBMIT ---------------- */
 
-  // const handleSubmit = async (values: any) => {
-  //   try {
-  //     setLoading(true);
+  const handleSubmit = async (values: any) => {
+    if (isAdmin && !panVerified) {
+      ShowToast.error("Please verify PAN before saving");
+      return;
+    }
 
-  //     const res = await axios.patch("/api/users-operations", {
-  //       user_id: values.userId,
+    try {
+      setLoading(true);
 
-  //       profile: {
-  //         user_name: values.fullName,
-  //         mail: values.email,
-  //         contact: values.contact,
-  //         dob: values.dob,
-  //         gender: values.gender,
-  //         blood: values.bloodGroup,
-  //       },
+      const userUpdates = {
+        user_name: values.fullName,
+        mail: values.email,
+        contact: values.contact,
+        dob: values.dob,
+        gender: values.gender,
+        blood: values.bloodGroup,
 
-  //       address: {
-  //         address: values.address,
-  //         landmark: values.landmark,
-  //         pincode: values.pincode,
-  //         country: values.country,
-  //         state: values.state,
-  //         district: values.city,
-  //         locality: values.locality,
-  //       },
+        address: values.address,
+        landmark: values.landmark,
+        pincode: values.pincode,
+        country: values.country,
+        state: values.state,
+        district: values.city,
+        locality: values.locality,
 
-  //       nominee: {
-  //         nominee_name: values.nomineeName,
-  //         nominee_relation: values.nomineeRelation,
-  //         alternate_contact: values.nomineeContact,
-  //       },
+        nominee_name: values.nomineeName,
+        nominee_relation: values.nomineeRelation,
+        alternate_contact: values.nomineeContact,
+      };
 
-  //       bank: {
-  //         account_holder_name: values.accountHolderName,
-  //         bank_name: values.bankName,
-  //         account_number: values.accountNumber,
-  //         ifsc_code: values.ifscCode,
-  //         cheque: values.cancelledCheque,
-  //       },
+      const walletUpdates = {
+        user_name: values.fullName,
+        contact: values.contact,
 
-  //       pan: {
-  //         pan_number: values.panNumber,
-  //         pan_name: values.panName,
-  //         pan_dob: values.panDob,
-  //         pan_file: values.panFile,
-  //         pan_verified: panVerified,
-  //       },
+        account_holder_name: values.accountHolderName,
+        bank_name: values.bankName,
+        account_number: values.accountNumber,
+        ifsc_code: values.ifscCode,
 
-  //       aadhar: {
-  //         aadhar_number: values.aadharNumber,
-  //         aadhar_front: values.aadharFront,
-  //         aadhar_back: values.aadharBack,
-  //       },
-  //     });
+        aadhar_number: values.aadharNumber,
+        pan_number: values.panNumber,
+        pan_name: values.panName,
+        pan_dob: values.panDob,
+        pan_verified: panVerified,
+      };
 
-  //     res.data.success
-  //       ? ShowToast.success("Profile updated successfully")
-  //       : ShowToast.error("Update failed");
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+      const res = await axios.patch("/api/getuser-operations", {
+        user_id: values.userId,
+        userUpdates,
+        walletUpdates,
+      });
+
+      // ✅ Update dbValues only on successful save
+      if (res.data.success) {
+        ShowToast.success("Profile updated successfully");
+
+        // 🔥 CRITICAL: Refresh from backend after save
+        // This will fetch fresh data and reset the form
+        searchUser(values.userId);
+      } else {
+        ShowToast.error("Update failed");
+      }
+    } catch (error: any) {
+      ShowToast.error(error?.response?.data?.message || "Update failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSearch = () => {
     if (!value.trim()) {
@@ -259,6 +527,38 @@ setPanVerified(Boolean(u.pan_verified));
   };
 
   /* ---------------- RENDER ---------------- */
+
+  const validatePanField = async (
+    pan: string,
+    setFieldError: any,
+    setPanVerified: any
+  ) => {
+    setPanVerified(false);
+
+    if (!pan) {
+      setFieldError("panNumber", "* PAN Number is required");
+      return;
+    }
+
+    if (pan.length < 10) {
+      setFieldError("panNumber", "");
+      return;
+    }
+
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+      setFieldError("panNumber", "* Invalid PAN format (ABCDE1234F)");
+      return;
+    }
+
+    const exists = await checkPanDuplicate(pan);
+    if (exists) {
+      setFieldError("panNumber", "* PAN already exists");
+      return;
+    }
+
+    // ✅ VALID PAN
+    setFieldError("panNumber", "");
+  };
 
   return (
     <Layout>
@@ -316,14 +616,26 @@ setPanVerified(Boolean(u.pan_verified));
       </div>
 
       <div className="bg-slate-100 min-h-screen max-md:px-1.5 pt-4">
+        {/* 🔥 KEY CHANGES HERE: Add key prop to Formik to force remount */}
         <Formik
+          key={formKey} // 🔥 THIS FORCES FORMIK TO REMOUNT
           enableReinitialize
           initialValues={initialValues}
-          validationSchema={Schema(isAdmin)}
+          validationSchema={ProfileEditSchema(isAdmin, panVerified)}
+          validateOnChange={false}
+          validateOnBlur={true}
           onSubmit={handleSubmit}
         >
-          {({ values, setFieldValue }) => (
-            <Form className="max-w-6xl  space-y-6 mx-2 lg:!mx-6">
+          {({
+            values,
+            errors,
+            touched,
+            setFieldValue,
+            setFieldError,
+            setFieldTouched, // ✅ ADD THIS
+            handleBlur,
+          }) => (
+            <Form className="max-w-6xl space-y-6 mx-2 lg:!mx-6">
               {/* BASIC INFO */}
               <Card
                 title="Basic Information"
@@ -333,35 +645,61 @@ setPanVerified(Boolean(u.pan_verified));
                 statusNotes={userMeta?.status_notes}
               >
                 <Grid>
-                  <InputField label="User ID" value={values.userId} disabled />
+                  <InputField
+                    label="User ID"
+                    name="userId"
+                    value={values.userId}
+                    disabled
+                    required
+                    error={touched.userId ? (errors as any).userId : ""}
+                  />
                   <InputField
                     label="Full Name"
+                    name="fullName"
                     value={values.fullName}
+                    required
                     disabled={!isAdmin}
+                    error={touched.fullName ? (errors as any).fullName : ""}
                     onChange={(e) => setFieldValue("fullName", e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <InputField
                     label="Email"
+                    name="email"
                     value={values.email}
+                    required
                     disabled={!isAdmin}
+                    error={touched.email ? (errors as any).email : ""}
                     onChange={(e) => setFieldValue("email", e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <InputField
                     label="Contact"
+                    name="contact"
                     value={values.contact}
+                    required
                     disabled={!isAdmin}
+                    error={touched.contact ? (errors as any).contact : ""}
                     onChange={(e) => setFieldValue("contact", e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <DateField
                     label="DOB"
+                    name="dob"
                     value={values.dob}
+                    required
                     disabled={!isAdmin}
+                    error={touched.dob ? (errors as any).dob : ""}
                     onChange={(e: any) => setFieldValue("dob", e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <SelectField
                     label="Gender"
+                    name="gender"
+                    required
                     value={values.gender}
                     disabled={!isAdmin}
+                    error={touched.gender ? (errors as any).gender : ""}
                     options={[
                       { value: "male", label: "Male" },
                       { value: "female", label: "Female" },
@@ -370,6 +708,28 @@ setPanVerified(Boolean(u.pan_verified));
                     onChange={(e: any) =>
                       setFieldValue("gender", e.target.value || e.value)
                     }
+                    onBlur={handleBlur}
+                  />
+                  <SelectField
+                    label="Blood Group"
+                    name="bloodGroup"
+                    value={values.bloodGroup}
+                    disabled={!isAdmin}
+                    error={touched.bloodGroup ? (errors as any).bloodGroup : ""}
+                    onChange={(e: any) =>
+                      setFieldValue("bloodGroup", e.target?.value || e.value)
+                    }
+                    onBlur={handleBlur}
+                    options={[
+                      { value: "A+", label: "A+" },
+                      { value: "A-", label: "A-" },
+                      { value: "B+", label: "B+" },
+                      { value: "B-", label: "B-" },
+                      { value: "O+", label: "O+" },
+                      { value: "O-", label: "O-" },
+                      { value: "AB+", label: "AB+" },
+                      { value: "AB-", label: "AB-" },
+                    ]}
                   />
                 </Grid>
               </Card>
@@ -383,26 +743,59 @@ setPanVerified(Boolean(u.pan_verified));
                 <Grid>
                   <InputField
                     label="Address"
+                    name="address"
                     value={values.address}
+                    error={touched.address ? (errors as any).address : ""}
                     onChange={(e) => setFieldValue("address", e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <InputField
                     label="Landmark"
+                    name="landmark"
                     value={values.landmark}
+                    error={touched.landmark ? (errors as any).landmark : ""}
                     onChange={(e) => setFieldValue("landmark", e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <InputField
                     label="Pincode"
+                    name="pincode"
                     value={values.pincode}
+                    error={touched.pincode ? (errors as any).pincode : ""}
                     onChange={(e) => setFieldValue("pincode", e.target.value)}
+                    onBlur={handleBlur}
                   />
-                  <InputField label="Country" value={values.country} disabled />
-                  <InputField label="State" value={values.state} disabled />
-                  <InputField label="City" value={values.city} disabled />
+                  <InputField
+                    label="Country"
+                    name="country"
+                    value={values.country}
+                    disabled
+                    error={touched.country ? (errors as any).country : ""}
+                    onBlur={handleBlur}
+                  />
+                  <InputField
+                    label="State"
+                    name="state"
+                    value={values.state}
+                    disabled
+                    error={touched.state ? (errors as any).state : ""}
+                    onBlur={handleBlur}
+                  />
+                  <InputField
+                    label="City"
+                    name="city"
+                    value={values.city}
+                    disabled
+                    error={touched.city ? (errors as any).city : ""}
+                    onBlur={handleBlur}
+                  />
                   <InputField
                     label="Locality"
+                    name="locality"
                     value={values.locality}
                     disabled
+                    error={touched.locality ? (errors as any).locality : ""}
+                    onBlur={handleBlur}
                   />
                 </Grid>
               </Card>
@@ -416,24 +809,43 @@ setPanVerified(Boolean(u.pan_verified));
                 <Grid>
                   <InputField
                     label="Nominee Name"
+                    name="nomineeName"
                     value={values.nomineeName}
+                    error={
+                      touched.nomineeName ? (errors as any).nomineeName : ""
+                    }
                     onChange={(e) =>
                       setFieldValue("nomineeName", e.target.value)
                     }
+                    onBlur={handleBlur}
                   />
                   <InputField
                     label="Relation"
+                    name="nomineeRelation"
                     value={values.nomineeRelation}
+                    error={
+                      touched.nomineeRelation
+                        ? (errors as any).nomineeRelation
+                        : ""
+                    }
                     onChange={(e) =>
                       setFieldValue("nomineeRelation", e.target.value)
                     }
+                    onBlur={handleBlur}
                   />
                   <InputField
                     label="Alternate Contact"
+                    name="nomineeContact"
                     value={values.nomineeContact}
+                    error={
+                      touched.nomineeContact
+                        ? (errors as any).nomineeContact
+                        : ""
+                    }
                     onChange={(e) =>
                       setFieldValue("nomineeContact", e.target.value)
                     }
+                    onBlur={handleBlur}
                   />
                 </Grid>
               </Card>
@@ -443,85 +855,195 @@ setPanVerified(Boolean(u.pan_verified));
                 title="KYC & Banking"
                 desc="Identity and bank verification"
                 icon={<RiBankFill size={28} />}
+                panVerified={userMeta?.pan_verified}
               >
                 <Grid>
+                  {isAdmin && userMeta?.wallet_id && (
+                    <InputField
+                      label="Wallet ID"
+                      name="walletId"
+                      value={userMeta.wallet_id}
+                      required
+                      disabled
+                    />
+                  )}
                   <InputField
-                    label="Aadhaar Number"
-                    value={values.aadharNumber}
-                    onChange={(e) =>
-                      setFieldValue("aadharNumber", e.target.value)
-                    }
+                    label="Bank Name"
+                    name="bankName"
+                    value={values.bankName}
+                    required
+                    disabled={!isAdmin}
+                    error={touched.bankName ? (errors as any).bankName : ""}
+                    onChange={(e) => setFieldValue("bankName", e.target.value)}
+                    onBlur={handleBlur}
                   />
-                  <FileInput
-                    label="Aadhaar Front"
-                    value={values.aadharFront}
-                    name="aadharFront"
-                    onChange={(e) =>
-                      setFieldValue("aadharFront", e.currentTarget.files?.[0])
-                    }
-                  />
-                  <FileInput
-                    label="Aadhaar Back"
-                    name="aadharBack"
-                    value={values.aadharBack}
-                    onChange={(e) =>
-                      setFieldValue("aadharBack", e.currentTarget.files?.[0])
-                    }
-                  />
-
                   <InputField
                     label="Account Holder Name"
+                    name="accountHolderName"
                     value={values.accountHolderName}
+                    required
                     disabled={!isAdmin}
+                    error={
+                      touched.accountHolderName
+                        ? (errors as any).accountHolderName
+                        : ""
+                    }
                     onChange={(e) =>
                       setFieldValue("accountHolderName", e.target.value)
                     }
-                  />
-                  <InputField
-                    label="Bank Name"
-                    value={values.bankName}
-                    disabled={!isAdmin}
-                    onChange={(e) => setFieldValue("bankName", e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <InputField
                     label="Account Number"
+                    name="accountNumber"
                     value={values.accountNumber}
+                    required
                     disabled={!isAdmin}
+                    error={
+                      touched.accountNumber ? (errors as any).accountNumber : ""
+                    }
                     onChange={(e) =>
                       setFieldValue("accountNumber", e.target.value)
                     }
+                    onBlur={handleBlur}
                   />
                   <InputField
                     label="IFSC Code"
+                    name="ifscCode"
                     value={values.ifscCode}
+                    required
                     disabled={!isAdmin}
+                    error={touched.ifscCode ? (errors as any).ifscCode : ""}
                     onChange={(e) => setFieldValue("ifscCode", e.target.value)}
+                    onBlur={handleBlur}
                   />
                   <FileInput
                     label="Cancelled Cheque"
-                    value={values.cancelledCheque}
                     name="cancelledCheque"
+                    value={values.cancelledCheque}
+                    required
+                    error={
+                      touched.cancelledCheque
+                        ? (errors as any).cancelledCheque
+                        : ""
+                    }
                     onChange={(e) =>
                       setFieldValue(
                         "cancelledCheque",
                         e.currentTarget.files?.[0]
                       )
                     }
+                    onBlur={handleBlur}
+                  />
+                  <InputField
+                    label="Aadhaar Number"
+                    name="aadharNumber"
+                    value={values.aadharNumber}
+                    required
+                    error={
+                      touched.aadharNumber ? (errors as any).aadharNumber : ""
+                    }
+                    onChange={(e) =>
+                      setFieldValue("aadharNumber", e.target.value)
+                    }
+                    onBlur={handleBlur}
+                  />
+                  <FileInput
+                    label="Aadhaar Front"
+                    name="aadharFront"
+                    value={values.aadharFront}
+                    required
+                    error={
+                      touched.aadharFront ? (errors as any).aadharFront : ""
+                    }
+                    onChange={(e) =>
+                      setFieldValue("aadharFront", e.currentTarget.files?.[0])
+                    }
+                    onBlur={handleBlur}
+                  />
+                  <FileInput
+                    label="Aadhaar Back"
+                    name="aadharBack"
+                    required
+                    value={values.aadharBack}
+                    error={touched.aadharBack ? (errors as any).aadharBack : ""}
+                    onChange={(e) =>
+                      setFieldValue("aadharBack", e.currentTarget.files?.[0])
+                    }
+                    onBlur={handleBlur}
                   />
 
-                  <InputField
-                    label="PAN Number"
-                    value={values.panNumber}
-                    disabled={!isAdmin}
-                    onChange={(e) => setFieldValue("panNumber", e.target.value)}
-                  />
+                  {/* PAN FIELD */}
+                  <div className="relative w-full">
+                    <InputField
+                      label="PAN Number"
+                      name="panNumber"
+                      required
+                      value={values.panNumber}
+                      readOnly={!isAdmin}
+                      maxLength={10}
+                      error={touched.panNumber ? (errors as any).panNumber : ""}
+                      onChange={async (e) => {
+                        const pan = e.target.value.toUpperCase();
+                        setFieldValue("panNumber", pan);
+                        await validatePanField(
+                          pan,
+                          setFieldError,
+                          setPanVerified
+                        );
+                      }}
+                      onBlur={async () => {
+                        // 🔥 THIS IS THE FIX
+                        setFieldTouched("panNumber", true, true);
+
+                        await validatePanField(
+                          values.panNumber,
+                          setFieldError,
+                          setPanVerified
+                        );
+                      }}
+                      className="pr-28"
+                    />
+
+                    {/* VERIFY BUTTON */}
+                    {isAdmin &&
+                      values.panNumber.length === 10 &&
+                      /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(values.panNumber) &&
+                      !panChecking &&
+                      !panVerified &&
+                      !errors.panNumber && (
+                        <button
+                          type="button"
+                          onClick={() => handleVerifyPan(values.panNumber)}
+                          className="absolute right-2 top-[32px] bg-[#106187] text-white px-3 py-1 rounded h-[26px] text-xs"
+                        >
+                          Verify
+                        </button>
+                      )}
+
+                    {/* CHECKING */}
+                    {panChecking && (
+                      <span className="absolute right-3 top-[38px] text-[11px] text-gray-500">
+                        Checking…
+                      </span>
+                    )}
+
+                    {/* VERIFIED ICON */}
+                    {panVerified && !panChecking && (
+                      <RiVerifiedBadgeFill className="absolute right-3 top-[34px] text-green-600 text-xl" />
+                    )}
+                  </div>
+
                   <FileInput
                     label="PAN Document"
                     name="panFile"
+                    required
                     value={values.panFile}
+                    error={touched.panFile ? (errors as any).panFile : ""}
                     onChange={(e) =>
                       setFieldValue("panFile", e.currentTarget.files?.[0])
                     }
+                    onBlur={handleBlur}
                   />
                 </Grid>
               </Card>
@@ -575,6 +1097,20 @@ const getStatusConfig = (user_status?: string, status_notes?: string) => {
   return null;
 };
 
+const getPanStatusConfig = (pan_verified?: boolean | string) => {
+  const verified = pan_verified === true || pan_verified === "true";
+
+  return verified
+    ? {
+        label: "Verified",
+        color: "text-green-600",
+      }
+    : {
+        label: "Not Verified",
+        color: "text-red-600",
+      };
+};
+
 /* ---------------- UI HELPERS ---------------- */
 
 const Card = ({
@@ -583,6 +1119,7 @@ const Card = ({
   icon,
   userStatus,
   statusNotes,
+  panVerified,
   children,
 }: {
   title: string;
@@ -590,9 +1127,12 @@ const Card = ({
   icon?: React.ReactNode;
   userStatus?: string;
   statusNotes?: string;
+  panVerified?: boolean | string;
   children: React.ReactNode;
 }) => {
   const status = getStatusConfig(userStatus, statusNotes);
+  const panStatus =
+    panVerified !== undefined ? getPanStatusConfig(panVerified) : null;
 
   return (
     <div className="bg-white rounded-xl border shadow-sm p-6">
@@ -612,30 +1152,35 @@ const Card = ({
 
           {/* RIGHT STATUS */}
           {status && (
-  <div className="flex justify-end">
-    <div className="flex items-center gap-2 text-xs font-medium">
-      {/* LABEL */}
-      <span className="text-gray-600">Status :</span>
+            <div className="flex justify-end">
+              <div className="flex items-center gap-2 text-xs font-medium">
+                {/* LABEL */}
+                <span className="text-gray-600">Status :</span>
 
-      {/* DOT + VALUE */}
-      <span
-        className={`flex items-center gap-1.5 
-        ${status.color
-          .split(" ")
-          .find((c) => c.startsWith("text-"))}`}
-      >
-        {/* DOT */}
-        <span className="w-3 h-3 rounded-full bg-current" />
+                {/* DOT + VALUE */}
+                <span
+                  className={`flex items-center gap-1.5 
+        ${status.color.split(" ").find((c) => c.startsWith("text-"))}`}
+                >
+                  {/* DOT */}
+                  <span className="w-3 h-3 rounded-full bg-current" />
 
-        {/* VALUE */}
-        <span className="font-semibold">
-          {status.label}
-        </span>
-      </span>
-    </div>
-  </div>
-)}
+                  {/* VALUE */}
+                  <span className="font-semibold">{status.label}</span>
+                </span>
+              </div>
+            </div>
+          )}
 
+          {/* PAN STATUS */}
+          {panStatus && (
+            <div className="flex items-center gap-1.5 text-xs font-medium">
+              <RiVerifiedBadgeFill className={`${panStatus.color}`} size={14} />
+              <span className={`font-semibold ${panStatus.color}`}>
+                {panStatus.label}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

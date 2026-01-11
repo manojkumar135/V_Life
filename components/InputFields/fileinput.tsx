@@ -154,7 +154,7 @@ const FileInput: React.FC<FileInputProps> = ({
 
         <div
           className={`text-red-500 text-xs mt-1 ${
-            error ? "opacity-100 h-4" : "opacity-0 h-4"
+            error ? "opacity-100 h-2" : "opacity-0 h-2"
           } transition-opacity`}
         >
           {error || "\u00A0"}
