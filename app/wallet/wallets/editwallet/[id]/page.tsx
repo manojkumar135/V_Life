@@ -437,6 +437,14 @@ export default function EditWalletPage() {
     }
   };
 
+  const resetPanVerification = (setFieldValue: any) => {
+  setPanVerified(false);
+  setFieldValue("panVerify", false);
+  setFieldValue("panCategory", "");
+  setFieldValue("aadharSeeding", false);
+};
+
+
   return (
     <Layout>
       {loading && (
@@ -591,9 +599,11 @@ export default function EditWalletPage() {
                       label="PAN Number"
                       name="panNumber"
                       value={values.panNumber}
-                      onChange={(e) =>
-                        setFieldValue("panNumber", e.target.value)
-                      }
+                      onChange={(e) => {
+  setFieldValue("panNumber", e.target.value.toUpperCase());
+  resetPanVerification(setFieldValue);
+}}
+
                       onBlur={handleBlur}
                       error={touched.panNumber ? errors.panNumber : ""}
                       disabled={!isAdmin}
@@ -602,7 +612,11 @@ export default function EditWalletPage() {
                       label="Name as in PAN"
                       name="panName"
                       value={values.panName}
-                      onChange={(e) => setFieldValue("panName", e.target.value)}
+                     onChange={(e) => {
+  setFieldValue("panName", e.target.value);
+  resetPanVerification(setFieldValue);
+}}
+
                       onBlur={handleBlur}
                       error={touched.panName ? errors.panName : ""}
                       disabled={!isAdmin}
@@ -613,7 +627,11 @@ export default function EditWalletPage() {
                       name="panDob"
                       value={values.panDob}
                       className="uppercase"
-                      onChange={(e) => setFieldValue("panDob", e.target.value)}
+                      onChange={(e) => {
+  setFieldValue("panDob", e.target.value);
+  resetPanVerification(setFieldValue);
+}}
+
                       onBlur={handleBlur}
                       error={touched.panDob ? errors.panDob : ""}
                       disabled={!isAdmin}

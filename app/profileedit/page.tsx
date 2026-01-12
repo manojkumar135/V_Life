@@ -450,10 +450,10 @@ export default function ProfileEditPage() {
   /* ---------------- SUBMIT ---------------- */
 
   const handleSubmit = async (values: any) => {
-    if (isAdmin && !panVerified) {
-      ShowToast.error("Please verify PAN before saving");
-      return;
-    }
+    // if (isAdmin && !panVerified) {
+    //   ShowToast.error("Please verify PAN before saving");
+    //   return;
+    // }
 
     try {
       setLoading(true);
@@ -615,7 +615,7 @@ export default function ProfileEditPage() {
         </div>
       </div>
 
-      <div className="bg-slate-100 min-h-screen max-md:px-1.5 pt-4">
+      <div className="bg-slate-100 min-h-screen max-md:px-1.5 pt-4 mb-5">
         {/* 🔥 KEY CHANGES HERE: Add key prop to Formik to force remount */}
         <Formik
           key={formKey} // 🔥 THIS FORCES FORMIK TO REMOUNT
@@ -985,7 +985,12 @@ export default function ProfileEditPage() {
                       error={touched.panNumber ? (errors as any).panNumber : ""}
                       onChange={async (e) => {
                         const pan = e.target.value.toUpperCase();
+
                         setFieldValue("panNumber", pan);
+
+                        // 🔥 PAN changed → mark unverified
+                        setPanVerified(false);
+
                         await validatePanField(
                           pan,
                           setFieldError,
@@ -1048,9 +1053,9 @@ export default function ProfileEditPage() {
                 </Grid>
               </Card>
 
-              {isAdmin && (
+              {isAdmin && values.userId && (
                 <div className="flex justify-end">
-                  <SubmitButton className="px-10 mb-10" type="submit">
+                  <SubmitButton className="px-10 mb-6" type="submit">
                     Save
                   </SubmitButton>
                 </div>
