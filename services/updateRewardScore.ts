@@ -26,7 +26,10 @@ export async function addRewardScore({
   const rewardKey = type;
 
   const affectsScore = rewardKey !== "cashback";
-  const affectsUser = rewardKey === "daily" || rewardKey === "fortnight" || rewardKey === "reward";
+  const affectsUser =
+    rewardKey === "daily" ||
+    rewardKey === "fortnight" ||
+    rewardKey === "reward";
 
   /* =====================================================
      1️⃣ UPDATE USER (NO FETCH)
@@ -44,7 +47,20 @@ export async function addRewardScore({
   }
 
   /* =====================================================
-     2️⃣ UPDATE SCORE (ATOMIC IF EXISTS)
+     2️⃣ FETCH CURRENT BALANCE (REQUIRED)
+  ===================================================== */
+  const scoreDoc = await Score.findOne(
+    { user_id },
+    { [`${rewardKey}.balance`]: 1 }
+  );
+
+  const previousBalance =
+    scoreDoc?.[rewardKey]?.balance ?? 0;
+
+  const newBalance = previousBalance + points;
+
+  /* =====================================================
+     3️⃣ UPDATE SCORE (SAFE & ATOMIC)
   ===================================================== */
   const updated = await Score.findOneAndUpdate(
     { user_id },
@@ -59,9 +75,7 @@ export async function addRewardScore({
           source,
           reference_id,
           points,
-          balance_after: {
-            $add: [`$${rewardKey}.balance`, points],
-          },
+          balance_after: newBalance, // ✅ NUMBER ONLY
           remarks,
           created_at: now,
         },
@@ -74,7 +88,7 @@ export async function addRewardScore({
   if (updated) return;
 
   /* =====================================================
-     3️⃣ CREATE SCORE DOCUMENT
+     4️⃣ CREATE SCORE DOCUMENT (FIRST TIME)
   ===================================================== */
   const emptyBlock = {
     earned: 0,

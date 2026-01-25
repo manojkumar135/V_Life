@@ -153,9 +153,16 @@ export default function InfinityTeam() {
       headerName: "Rank",
       flex: 0.8,
       renderCell: (params: any) =>
-        params.value && params.value !== "none" ? `${params.value} Star` : "-",
+        params.value && params.value !== "none"
+  ? !isNaN(params.value)
+    ? "Star"
+    : `${params.value} Star`
+  : "-"
+
     },
     { field: "bv", headerName: "BV", flex: 0.6 },
+        { field: "pv", headerName: "PV", flex: 0.6 },
+
         { field: "cumulativeBV", headerName: "C.BV", flex: 0.6 },
 
 

@@ -145,13 +145,19 @@ export default function DirectTeam() {
 
     { field: "team", headerName: "Team", flex: 1 },
     { field: "bv", headerName: "BV", flex: 1 },
+    { field: "pv", headerName: "PV", flex: 1 },
 
     {
       field: "rank",
       headerName: "Rank",
       flex: 1,
       renderCell: (params: any) =>
-        params.value && params.value !== "none" ? `${params.value} Star` : "-",
+        params.value && params.value !== "none"
+  ? !isNaN(params.value)
+    ? "Star"
+    : `${params.value} Star`
+  : "-"
+
     },
 
     { field: "user_status", headerName: "Status", flex: 1 },

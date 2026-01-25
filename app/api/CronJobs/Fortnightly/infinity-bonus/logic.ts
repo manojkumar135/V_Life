@@ -8,6 +8,7 @@ import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { checkIs5StarRank, updateClub } from "@/services/getrank";
 import { addRewardScore } from "@/services/updateRewardScore";
+import { getInfinityBonusPercentage } from "@/services/infinityBonusRules";
 
 // ---------------- Helper Functions ----------------
 function formatDate(date: Date): string {
@@ -53,7 +54,7 @@ async function getLast15DaysEligiblePayouts() {
   // console.log(filtered )
 
   console.log(
-    `[Infinity Bonus] Found ${filtered.length} payouts (Matching + Direct Sales) in last 15 days`
+    `[Infinity Bonus] Found ${filtered.length} payouts (Matching + Direct Sales) in last 15 days`,
   );
   // console.log(filtered)
   return filtered;
@@ -102,28 +103,36 @@ export async function runInfinityBonus() {
 
       if (!sponsor) {
         console.log(
-          `⚠️ No sponsor found for ${user.user_id}, skipping Infinity Bonus.`
+          `⚠️ No sponsor found for ${user.user_id}, skipping Infinity Bonus.`,
         );
         continue;
       }
 
       console.log(sponsor);
-      const rank = sponsor.rank;
-      if (!rank || rank === "none") {
+      // const rank = sponsor.rank;
+      // if (!rank || rank === "none") {
+      //   console.log(
+      //     `⚠️ Sponsor ${sponsor.user_id} has no rank, skipping Infinity Bonus.`
+      //   );
+      //   continue;
+      // }
+
+      // const rankPercentages: Record<string, number> = {
+      //   "1": 0.25,
+      //   "2": 0.35,
+      //   "3": 0.4,
+      //   "4": 0.45,
+      //   "5": 0.5,
+      // };
+      // const bonusPercentage = rankPercentages[rank] || 0;
+      const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id);
+
+      if (bonusPercentage === 0) {
         console.log(
-          `⚠️ Sponsor ${sponsor.user_id} has no rank, skipping Infinity Bonus.`
+          `⚠️ Sponsor ${sponsor.user_id} not eligible for Infinity Bonus`,
         );
         continue;
       }
-
-      const rankPercentages: Record<string, number> = {
-        "1": 0.25,
-        "2": 0.35,
-        "3": 0.4,
-        "4": 0.45,
-        "5": 0.5,
-      };
-      const bonusPercentage = rankPercentages[rank] || 0;
       const wallet = await Wallet.findOne({ user_id: sponsor.user_id });
 
       const now = new Date();
@@ -233,7 +242,7 @@ export async function runInfinityBonus() {
         const updatedClub = await updateClub(
           sponsor.user_id,
           totalPayout,
-          isFiveStar
+          isFiveStar,
         );
 
         if (updatedClub) {
@@ -320,7 +329,7 @@ export async function runInfinityBonus() {
 
       await DailyPayout.updateOne(
         { _id: payout._id },
-        { $set: { is_checked: true } }
+        { $set: { is_checked: true } },
       );
 
       await Alert.create({
@@ -344,7 +353,7 @@ export async function runInfinityBonus() {
 
       totalCreated++;
       console.log(
-        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (${payout.name} from ${user.user_id})`
+        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (${payout.name} from ${user.user_id})`,
       );
     }
 
@@ -362,7 +371,7 @@ export async function runInfinityBonus() {
     }
 
     console.log(
-      `\n✅ [Infinity Bonus] Completed. Total payouts created: ${totalCreated}`
+      `\n✅ [Infinity Bonus] Completed. Total payouts created: ${totalCreated}`,
     );
   } catch (err) {
     console.error("❌ [Infinity Bonus] Error:", err);

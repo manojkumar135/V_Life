@@ -81,7 +81,7 @@ export default function LeftTeam() {
         setLoading(false);
       }
     },
-    [user?.user_id, query, usersData]
+    [user?.user_id, query, usersData],
   );
 
   useEffect(() => {
@@ -131,7 +131,7 @@ export default function LeftTeam() {
         ShowToast.success(
           `User ${user_id} status changed to ${
             new_status.charAt(0).toUpperCase() + new_status.slice(1)
-          }`
+          }`,
         );
         setUsersData((prev: User[]) =>
           prev.map((u) =>
@@ -141,8 +141,8 @@ export default function LeftTeam() {
                   user_status: res.data.data.new_status,
                   status_notes: res.data.data.status_notes,
                 }
-              : u
-          )
+              : u,
+          ),
         );
       }
     } catch (error) {
@@ -164,6 +164,7 @@ export default function LeftTeam() {
           { field: "leftBV", headerName: "BV 1", flex: 1 },
           { field: "rightBV", headerName: "BV 2", flex: 1 },
           { field: "cumulativeBV ", headerName: "Cumulative", flex: 1 },
+          { field: "pv", headerName: "PV", flex: 1 },
         ]
       : []),
     {
@@ -171,7 +172,11 @@ export default function LeftTeam() {
       headerName: "Rank",
       flex: 1,
       renderCell: (params: any) =>
-        params.value && params.value !== "none" ? `${params.value} Star` : "-",
+        params.value && params.value !== "none"
+          ? !isNaN(params.value)
+            ? "Star"
+            : `${params.value} Star`
+          : "-",
     },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];

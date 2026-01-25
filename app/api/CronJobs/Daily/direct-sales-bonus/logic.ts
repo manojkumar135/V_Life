@@ -15,6 +15,10 @@ import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { checkIs5StarRank, updateClub } from "@/services/getrank";
 
+import { isUserFirstOrder, referralBonusAlreadyPaid } from "./helpers";
+
+import { releaseReferralBonus } from "./referralBonus";
+
 /**
  * Helper - format date as DD-MM-YYYY
  */
@@ -47,8 +51,8 @@ export function getCurrentWindow() {
         now.getUTCDate(),
         0,
         0,
-        0
-      )
+        0,
+      ),
     );
     end = new Date(
       Date.UTC(
@@ -58,8 +62,8 @@ export function getCurrentWindow() {
         5,
         59,
         59,
-        999
-      )
+        999,
+      ),
     ); // 11:59 AM IST = 5:59 UTC
   } else {
     // 12:00 PM - 11:59 PM IST
@@ -70,8 +74,8 @@ export function getCurrentWindow() {
         now.getUTCDate(),
         6,
         0,
-        0
-      )
+        0,
+      ),
     ); // 12:00 PM IST = 6:00 UTC
     end = new Date(
       Date.UTC(
@@ -81,8 +85,8 @@ export function getCurrentWindow() {
         17,
         59,
         59,
-        999
-      )
+        999,
+      ),
     ); // 11:59 PM IST = 17:59 UTC
   }
 
@@ -142,8 +146,8 @@ async function checkFirstOrder(user_id: string) {
     reason: activatedByAdmin
       ? "Activated by admin"
       : hasFirstOrder
-      ? "First order placed"
-      : "No orders placed",
+        ? "First order placed"
+        : "No orders placed",
   };
 }
 
@@ -163,7 +167,7 @@ export function orderToUTCDate(order: any) {
 
   // JS Date.UTC handles negative minutes/hours as expected (it will roll back date)
   return new Date(
-    Date.UTC(year, month - 1, day, utcHours, utcMinutes, seconds)
+    Date.UTC(year, month - 1, day, utcHours, utcMinutes, seconds),
   );
 }
 
@@ -238,7 +242,7 @@ export async function runDirectSalesBonus() {
                 direct_bonus_checked: true,
                 last_modified_at: new Date(),
               },
-            }
+            },
           );
           continue;
         }
@@ -255,7 +259,7 @@ export async function runDirectSalesBonus() {
                 direct_bonus_checked: true,
                 last_modified_at: new Date(),
               },
-            }
+            },
           );
           continue;
         }
@@ -276,7 +280,7 @@ export async function runDirectSalesBonus() {
                 direct_bonus_checked: true,
                 last_modified_at: new Date(),
               },
-            }
+            },
           );
           continue;
         }
@@ -291,7 +295,7 @@ export async function runDirectSalesBonus() {
                 direct_bonus_checked: true,
                 last_modified_at: new Date(),
               },
-            }
+            },
           );
           continue;
         }
@@ -306,7 +310,7 @@ export async function runDirectSalesBonus() {
                 direct_bonus_checked: true,
                 last_modified_at: new Date(),
               },
-            }
+            },
           );
           continue;
         }
@@ -408,7 +412,7 @@ export async function runDirectSalesBonus() {
           const updatedClub = await updateClub(
             node.user_id,
             totalPayout,
-            isFiveStar
+            isFiveStar,
           );
 
           if (updatedClub) {
@@ -511,27 +515,40 @@ export async function runDirectSalesBonus() {
           });
         }
 
+        // 🔹 Referral Bonus – First Order Only
+        const isFirst = await isUserFirstOrder(order.user_id);
+        const alreadyPaid = await referralBonusAlreadyPaid(order.order_id);
+
+        if (isFirst && order.referBy && !alreadyPaid) {
+          await releaseReferralBonus({
+            sponsorId: order.referBy,
+            buyerId: order.user_id,
+            orderId: order.order_id,
+          });
+        }
+
         // Mark order as processed for direct sales bonus
         await Order.findOneAndUpdate(
           { order_id: order.order_id },
-          { $set: { bonus_checked: true, last_modified_at: new Date() } }
+          { $set: { bonus_checked: true, last_modified_at: new Date() } },
         );
 
-        await History.findOneAndUpdate(
-          { order_id: order.order_id },
-          { $set: { ischecked: true, last_modified_at: new Date() } }
-        );
+      await History.updateOne(
+  { order_id: order.order_id },
+  { $set: { ischecked: true, last_modified_at: new Date() } }
+);
+
       } catch (errInner) {
         console.error(
           "[Direct Sales Bonus] error processing order:",
           order?.order_id,
-          errInner
+          errInner,
         );
         // mark as checked to avoid infinite retry if you prefer, or leave to manual
         try {
           await Order.findOneAndUpdate(
             { order_id: order.order_id },
-            { $set: { bonus_checked: true, last_modified_at: new Date() } }
+            { $set: { bonus_checked: true, last_modified_at: new Date() } },
           );
         } catch {}
       }

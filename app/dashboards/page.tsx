@@ -64,6 +64,7 @@ interface LinkButtonProps {
 
 const rankImages: Record<string, string> = {
   no: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761374765/Untitled_design_2_buhazb.png",
+  star: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1769360047/Gemini_Generated_Image_qg6njaqg6njaqg6n_a8dpp6.png",
   1: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367318/ChatGPT_Image_Oct_25_2025_09_53_33_AM_b6tic2.png",
   2: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367492/ChatGPT_Image_Oct_20_2025_09_19_12_PM_lykzu7.png",
   3: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367549/ChatGPT_Image_Oct_20_2025_09_21_04_PM_fpgj0v.png",
@@ -92,6 +93,10 @@ const rankImages: Record<string, string> = {
 
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
+
+  const isNumericRank = !isNaN(Number(user?.rank));
+  const hasRank = user?.rank && user.rank !== "none" && user.rank !== "0";
+
   // console.log(user);
   const user_id = user?.user_id || "";
   const router = useRouter();
@@ -111,15 +116,14 @@ const DashboardPage: React.FC = () => {
 
   // console.log(cycles);
 
-useEffect(() => {
-  const shouldShow = sessionStorage.getItem("showLoginPopup");
+  useEffect(() => {
+    const shouldShow = sessionStorage.getItem("showLoginPopup");
 
-  if (shouldShow === "true") {
-    setShowPopup(true);
-    sessionStorage.removeItem("showLoginPopup"); // ✅ show once only
-  }
-}, []);
-
+    if (shouldShow === "true") {
+      setShowPopup(true);
+      sessionStorage.removeItem("showLoginPopup"); // ✅ show once only
+    }
+  }, []);
 
   useEffect(() => {
     const checkFirstOrder = async () => {
@@ -150,7 +154,7 @@ useEffect(() => {
       if (!user_id) return;
       try {
         const res = await axios.get(
-          `/api/dashboard-operations/purchase-count?user_id=${user_id}`
+          `/api/dashboard-operations/purchase-count?user_id=${user_id}`,
         );
 
         // console.log("Dashboard Summary Response:", res.data);
@@ -174,7 +178,7 @@ useEffect(() => {
       try {
         const role = user?.role || "user";
         const res = await axios.get(
-          `/api/dashboard-operations/amount-count?user_id=${user_id}&role=${user.role}`
+          `/api/dashboard-operations/amount-count?user_id=${user_id}&role=${user.role}`,
         );
         if (res.data.success) {
           setAmountSummary(res.data.data);
@@ -214,12 +218,12 @@ useEffect(() => {
     // Encrypt using AES
     const encrypted = CryptoJS.AES.encrypt(
       JSON.stringify(payload),
-      SECRET_KEY
+      SECRET_KEY,
     ).toString();
 
     // URL encoded encrypted string
     const link = `https://v-life-gules.vercel.app/auth/register?ref=${encodeURIComponent(
-      encrypted
+      encrypted,
     )}`;
 
     // Copy URL to clipboard
@@ -235,10 +239,7 @@ useEffect(() => {
 
   return (
     <Layout>
-      <LoginWelcomePopup
-  open={showPopup}
-  onClose={() => setShowPopup(false)}
-/>
+      <LoginWelcomePopup open={showPopup} onClose={() => setShowPopup(false)} />
 
       <div className="min-h-full px-4 pt-6 pb-3 text-black">
         <AlertBox
@@ -418,23 +419,30 @@ useEffect(() => {
                   {/* --- Dynamic Rank Image --- */}
                   <img
                     src={
-                      rankImages[
-                        user?.rank && user.rank !== "none" && user.rank !== "0"
-                          ? user.rank
-                          : "no"
-                      ]
+                      !hasRank
+                        ? rankImages["no"]
+                        : isNumericRank
+                          ? rankImages["star"]
+                          : rankImages[user!.rank]
                     }
                     alt="Rank Badge"
                     className="h-26 -mt-2 mx-auto"
                   />
-                  <p className="text-black text-center text-sm font-semibold items-end">
-                    {user?.rank && user.rank !== "0" && user.rank !== "none" ? (
-                      <>
+
+                  <p className="text-black text-center text-sm font-semibold">
+                    {hasRank ? (
+                      isNumericRank ? (
                         <span className="text-black text-lg font-extrabold">
-                          {user.rank}
-                        </span>{" "}
-                        {!isNaN(Number(user.rank)) && "STAR"}
-                      </>
+                          STAR
+                        </span>
+                      ) : (
+                        <>
+                          <span className="text-black text-lg font-extrabold">
+                            {user!.rank}
+                          </span>{" "}
+                          STAR
+                        </>
+                      )
                     ) : (
                       <>
                         <span className="text-black text-lg font-bold">NO</span>{" "}
