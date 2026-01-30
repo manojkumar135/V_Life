@@ -6,7 +6,7 @@ import { History } from "@/models/history";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
-import { checkIs5StarRank, updateClub } from "@/services/getrank";
+import { updateClub } from "@/services/clubrank";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { getInfinityBonusPercentage } from "@/services/infinityBonusRules";
 
@@ -234,38 +234,51 @@ export async function runInfinityBonus() {
         last_modified_at: now,
       });
 
-      const isFiveStar = await checkIs5StarRank(sponsor.user_id);
       const totalPayout = await getTotalPayout(sponsor.user_id);
 
-      // ⭐⭐ Only run updateClub if BOTH are true
-      if (isFiveStar && totalPayout >= 100000) {
-        const updatedClub = await updateClub(
-          sponsor.user_id,
-          totalPayout,
-          isFiveStar,
-        );
+// 🔹 capture BEFORE state
+const beforeUser = (await User.findOne({ user_id: sponsor.user_id })
+  .select("rank club")
+  .lean()) as any;
 
-        if (updatedClub) {
-          await Alert.create({
-            user_id: sponsor.user_id,
-            title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
-            description: `Congrats! Welcome to the ${updatedClub.newClub} Club`,
-            priority: "high",
-            read: false,
-            link: "/dashboards",
+const updatedClub = await updateClub(
+  sponsor.user_id,
+  totalPayout
+);
 
-            user_name: sponsor.name,
-            user_contact: sponsor.contact,
-            user_email: sponsor.mail,
-            user_status: sponsor.status || "active",
-            related_id: payout.payout_id,
+if (updatedClub && beforeUser) {
 
-            role: "user",
-            date: formatDate(now),
-            created_at: now,
-          });
-        }
-      }
+  // 🎉 CLUB ENTRY ALERT
+  if (beforeUser.club !== updatedClub.newClub) {
+    await Alert.create({
+      user_id: sponsor.user_id,
+      title: `🎉 ${updatedClub.newClub} Club Achieved`,
+      description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
+      priority: "high",
+      read: false,
+      link: "/dashboards",
+      role: "user",
+      date: formatDate(now),
+      created_at: now,
+    });
+  }
+
+  // 🎖️ RANK ACHIEVEMENT ALERT
+  if (beforeUser.rank !== updatedClub.newRank) {
+    await Alert.create({
+      user_id: sponsor.user_id,
+      title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+      description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
+      priority: "high",
+      read: false,
+      link: "/dashboards",
+      role: "user",
+      date: formatDate(now),
+      created_at: now,
+    });
+  }
+}
+
 
       await History.create({
         transaction_id: infinityPayout.transaction_id,

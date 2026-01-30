@@ -4,6 +4,8 @@ import { User } from "@/models/user";
 import TreeNode from "@/models/tree";
 import { History } from "@/models/history";
 import { Alert } from "@/models/alert";
+import { addRewardScore } from "@/services/updateRewardScore";
+import { updateClub } from "@/services/clubrank";
 
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
@@ -130,6 +132,27 @@ export async function releaseReferralBonus({
     last_modified_at: now,
   });
 
+  // ✅ Add withdraw points (daily)
+await addRewardScore({
+  user_id: sponsorId,
+  points: withdraw,
+  source: "referral_bonus",
+  reference_id: orderId,
+  remarks: `Referral bonus for first order ${orderId}`,
+  type: "daily",
+});
+
+// ✅ Add reward points
+await addRewardScore({
+  user_id: sponsorId,
+  points: reward,
+  source: "referral_bonus",
+  reference_id: orderId,
+  remarks: `Referral bonus (reward) for first order ${orderId}`,
+  type: "reward",
+});
+
+
   await Alert.create({
     user_id: sponsorId,
     title: "Referral Bonus Earned 🎉",
@@ -141,4 +164,51 @@ export async function releaseReferralBonus({
     date: formatDate(now),
     created_at: now,
   });
+
+  // 🔹 UPDATE CLUB & RANK AFTER REFERRAL BONUS
+const totalPayout = await getTotalPayout(sponsorId);
+
+// capture BEFORE state
+const beforeUser =( await User.findOne({ user_id: sponsorId })
+  .select("rank club")
+  .lean()) as any;
+
+const updatedClub = await updateClub(
+  sponsorId,
+  totalPayout
+);
+
+if (updatedClub && beforeUser) {
+
+  // 🎉 CLUB ENTRY ALERT
+  if (beforeUser.club !== updatedClub.newClub) {
+    await Alert.create({
+      user_id: sponsorId,
+      title: `🎉 ${updatedClub.newClub} Club Achieved`,
+      description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
+      role: "user",
+      priority: "high",
+      read: false,
+      link: "/dashboards",
+      date: formatDate(now),
+      created_at: now,
+    });
+  }
+
+  // 🎖️ RANK ACHIEVEMENT ALERT
+  if (beforeUser.rank !== updatedClub.newRank) {
+    await Alert.create({
+      user_id: sponsorId,
+      title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+      description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
+      role: "user",
+      priority: "high",
+      read: false,
+      link: "/dashboards",
+      date: formatDate(now),
+      created_at: now,
+    });
+  }
+}
+
 }

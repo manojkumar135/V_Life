@@ -13,7 +13,7 @@ import { addRewardScore } from "@/services/updateRewardScore";
 import { Alert } from "@/models/alert";
 
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
-import { checkIs5StarRank, updateClub } from "@/services/getrank";
+import { updateClub } from "@/services/clubrank";
 
 import { isUserFirstOrder, referralBonusAlreadyPaid } from "./helpers";
 
@@ -404,38 +404,48 @@ export async function runDirectSalesBonus() {
           last_modified_at: now,
         });
 
-        const isFiveStar = await checkIs5StarRank(node.user_id);
         const totalPayout = await getTotalPayout(node.user_id);
 
-        // ⭐⭐ Only run updateClub if BOTH are true
-        if (isFiveStar && totalPayout >= 100000) {
-          const updatedClub = await updateClub(
-            node.user_id,
-            totalPayout,
-            isFiveStar,
-          );
+        // capture BEFORE state
+        const beforeUser = (await User.findOne({ user_id: node.user_id })
+          .select("rank club")
+          .lean()) as any;
 
-          if (updatedClub) {
+        const updatedClub = await updateClub(node.user_id, totalPayout);
+
+        // 🔔 ALERTS (RANK + CLUB)
+        if (updatedClub && beforeUser) {
+          // 🎉 CLUB ENTRY ALERT
+          if (beforeUser.club !== updatedClub.newClub) {
             await Alert.create({
               user_id: node.user_id,
-              title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
-              description: `Congrats! Welcome to the ${updatedClub.newClub} Club`,
+              title: `🎉 ${updatedClub.newClub} Club Achieved`,
+              description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
               priority: "high",
               read: false,
               link: "/dashboards",
+              role: "user",
+              date: formattedDate,
+              created_at: now,
+            });
+          }
 
-              user_name: node.name,
-              user_contact: node.contact,
-              user_email: node.mail,
-              user_status: node.status || "active",
-              related_id: payout.payout_id,
-
+          // 🎖️ RANK ACHIEVEMENT ALERT
+          if (beforeUser.rank !== updatedClub.newRank) {
+            await Alert.create({
+              user_id: node.user_id,
+              title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+              description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
+              priority: "high",
+              read: false,
+              link: "/dashboards",
               role: "user",
               date: formattedDate,
               created_at: now,
             });
           }
         }
+
         // Create History record if payout created
         if (payout) {
           totalPayouts++;
@@ -533,11 +543,10 @@ export async function runDirectSalesBonus() {
           { $set: { bonus_checked: true, last_modified_at: new Date() } },
         );
 
-      await History.updateOne(
-  { order_id: order.order_id },
-  { $set: { ischecked: true, last_modified_at: new Date() } }
-);
-
+        await History.updateOne(
+          { order_id: order.order_id },
+          { $set: { ischecked: true, last_modified_at: new Date() } },
+        );
       } catch (errInner) {
         console.error(
           "[Direct Sales Bonus] error processing order:",

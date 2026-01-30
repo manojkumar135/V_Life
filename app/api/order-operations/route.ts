@@ -13,7 +13,8 @@ import { useRewardScore } from "@/services/useRewardScore";
 
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { activateUser } from "@/services/userActivation";
-import { checkAndUpgradeRank } from "@/services/rankEngine";
+import { getTotalPayout } from "@/services/totalpayout";
+import { updateClub } from "@/services/clubrank";
 
 import {
   updateInfinityTeam,
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
     if (!beneficiary || !placedBy) {
       return NextResponse.json(
         { success: false, message: "User not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -147,7 +148,7 @@ export async function POST(request: Request) {
           success: false,
           message: "Activation order must contain exactly one product",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -160,18 +161,18 @@ export async function POST(request: Request) {
       body.items.reduce(
         (sum: number, item: any) =>
           sum + (item.dealer_price || item.unit_price) * item.quantity,
-        0
+        0,
       );
 
     /* ---------------- CALCULATE BV / PV ---------------- */
     const totalBV = body.items.reduce(
       (sum: number, item: any) => sum + (item.bv || 0) * item.quantity,
-      0
+      0,
     );
 
     const totalPV = body.items.reduce(
       (sum: number, item: any) => sum + (item.pv || 0) * item.quantity,
-      0
+      0,
     );
 
     /* ---------------- 1️⃣ CREATE ORDER ---------------- */
@@ -274,7 +275,7 @@ export async function POST(request: Request) {
           type: "cashback",
         });
       }
-    } 
+    }
     // else {
     //   const dailyPoints = 10 * totalPV;
 
@@ -310,7 +311,7 @@ export async function POST(request: Request) {
     /* ---------------- FAST RESPONSE ---------------- */
     const response = NextResponse.json(
       { success: true, data: newOrder, addedBV: totalBV },
-      { status: 201 }
+      { status: 201 },
     );
 
     /* ---------------- BACKGROUND MLM ---------------- */
@@ -326,23 +327,21 @@ export async function POST(request: Request) {
             {
               $addToSet: { paid_directs: freshUser.user_id },
               $inc: { paid_directs_count: 1 },
-            }
+            },
           );
         }
 
-        if (shouldTriggerMLM) {
+        if (shouldTriggerMLM && referrerId) {
           await updateInfinityTeam(referrerId);
           await propagateInfinityUpdateToAncestors(referrerId);
 
-          const referrer = await User.findOne({ user_id: referrerId });
-          if (referrer) {
-            await checkAndUpgradeRank(referrer);
-          }
+          const totalPayout = await getTotalPayout(referrerId);
+          await updateClub(referrerId, totalPayout);
         }
 
         await User.updateOne(
           { user_id: referrerId },
-          { $inc: { direct_bv: totalBV, direct_pv: totalPV } }
+          { $inc: { direct_bv: totalBV, direct_pv: totalPV } },
         );
       } catch (err) {
         console.error("❌ [BG] Infinity / Rank error", err);
@@ -371,7 +370,7 @@ export async function POST(request: Request) {
     console.error("🔥 [ORDER] Fatal error", error);
     return NextResponse.json(
       { success: false, message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -405,13 +404,13 @@ export async function GET(request: Request) {
       if (!order) {
         return NextResponse.json(
           { success: false, message: "Order not found", data: [] },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
       return NextResponse.json(
         { success: true, data: [order] },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -428,7 +427,7 @@ export async function GET(request: Request) {
               message: "user_id is required for role=user",
               data: [],
             },
-            { status: 400 }
+            { status: 400 },
           );
         }
         baseQuery.user_id = user_id;
@@ -437,7 +436,7 @@ export async function GET(request: Request) {
       } else {
         return NextResponse.json(
           { success: false, message: "Invalid role", data: [] },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -558,7 +557,7 @@ export async function GET(request: Request) {
     console.error("GET order error:", error);
     return NextResponse.json(
       { success: false, message: error.message || "Server error", data: [] },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -573,7 +572,7 @@ export async function PUT(request: Request) {
     if (!updateId) {
       return NextResponse.json(
         { success: false, message: "ID or order_id is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -586,25 +585,25 @@ export async function PUT(request: Request) {
       updatedOrder = await Order.findOneAndUpdate(
         { order_id: updateId },
         rest,
-        { new: true }
+        { new: true },
       );
     }
 
     if (!updatedOrder) {
       return NextResponse.json(
         { success: false, message: "Order not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return NextResponse.json(
       { success: true, data: updatedOrder },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -631,7 +630,7 @@ export async function DELETE(request: Request) {
     if (!deletedOrder) {
       return NextResponse.json(
         { success: false, message: "Order not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -639,7 +638,7 @@ export async function DELETE(request: Request) {
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

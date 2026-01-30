@@ -1,33 +1,33 @@
 // services/infinityBonusRules.ts
 
-import { Rank } from "@/models/rank";
+import { getDirectPV } from "@/services/directPV";
 
 /**
- * Infinity Bonus Percentage Rules
- * --------------------------------
- * - 1_star (left + right)           → 0.25
- * - 1_star + 2_star (both sides)    → 0.50
- * - Anything else                   → 0
+ * Infinity Bonus Percentage Rules (Direct PV Based)
+ * ------------------------------------------------
+ * - < 100 PV on either side        → 0
+ * - ≥ 100 PV on both sides         → 0.25
+ * - ≥ 200 PV on both sides         → 0.50 (max)
  */
 export async function getInfinityBonusPercentage(
-  userId: string,
+  userId: string
 ): Promise<number> {
-  const rankDoc = (await Rank.findOne({ user_id: userId }).lean()) as any;
-  if (!rankDoc?.ranks) return 0;
+  const { leftDirectPV, rightDirectPV } = await getDirectPV(userId);
 
-  const hasBothSides = (users: any[] = []) => {
-    const teams = users.map((u) => u.team);
-    return teams.includes("left") && teams.includes("right");
-  };
+  // ❌ Less than minimum requirement
+  if (leftDirectPV < 100 || rightDirectPV < 100) {
+    return 0;
+  }
 
-  const oneStarUsers = rankDoc.ranks["1_star"]?.qualified_users || [];
-  const twoStarUsers = rankDoc.ranks["2_star"]?.qualified_users || [];
+  // ✅ Highest slab first (cap)
+  if (leftDirectPV >= 200 && rightDirectPV >= 200) {
+    return 0.5;
+  }
 
-  const has1Star = hasBothSides(oneStarUsers);
-  const has2Star = hasBothSides(twoStarUsers);
-
-  if (has1Star && has2Star) return 0.5;
-  if (has1Star) return 0.25;
+  // ✅ Base qualification
+  if (leftDirectPV >= 100 && rightDirectPV >= 100) {
+    return 0.25;
+  }
 
   return 0;
 }

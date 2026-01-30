@@ -9,7 +9,7 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 // import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
 import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
-import { checkIs5StarRank, updateClub } from "@/services/getrank";
+import { updateClub } from "@/services/clubrank";
 import { addRewardScore } from "@/services/updateRewardScore";
 
 function formatDate(date: Date): string {
@@ -53,8 +53,8 @@ async function checkFirstOrder(user_id: string) {
     reason: activatedByAdmin
       ? "Activated by admin"
       : hasFirstOrder
-      ? "First order placed"
-      : "No orders placed",
+        ? "First order placed"
+        : "No orders placed",
   };
 }
 
@@ -76,20 +76,19 @@ export function getCurrentWindow() {
   if (hour < 12) {
     // 🌅 12:00 AM – 11:59 AM IST
     startIST = new Date(Date.UTC(year, month, date, 0, 0, 0));
-    endIST   = new Date(Date.UTC(year, month, date, 11, 59, 59, 999));
+    endIST = new Date(Date.UTC(year, month, date, 11, 59, 59, 999));
   } else {
     // 🌇 12:00 PM – 11:59 PM IST
     startIST = new Date(Date.UTC(year, month, date, 12, 0, 0));
-    endIST   = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
+    endIST = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
   }
 
   // Convert IST → UTC for MongoDB
   const startUTC = new Date(startIST.getTime() - 5.5 * 60 * 60 * 1000);
-  const endUTC   = new Date(endIST.getTime() - 5.5 * 60 * 60 * 1000);
+  const endUTC = new Date(endIST.getTime() - 5.5 * 60 * 60 * 1000);
 
   return { start: startUTC, end: endUTC };
 }
-
 
 function generateTransactionId(prefix = "MB") {
   const now = new Date();
@@ -160,7 +159,7 @@ export function historyToUTCDate(history: any): Date {
 function getTeamUserIdsFromMap(
   allNodesMap: Map<string, any>,
   rootUserId: string,
-  side: "left" | "right"
+  side: "left" | "right",
 ): string[] {
   const result: string[] = [];
   const queue: string[] = [];
@@ -201,13 +200,13 @@ export async function getUserTeamsAndHistories() {
 
   // DEBUG: helpful diagnostics for missing records
   console.log(
-    `[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`
+    `[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`,
   );
   console.log(`[Matching Bonus] historiesInWindow count: ${historiesInWindow}`);
 
   const treeNodes = (await TreeNode.find({}).lean()) as any[];
   const allNodesMap = new Map<string, any>(
-    treeNodes.map((n: any) => [n.user_id, n])
+    treeNodes.map((n: any) => [n.user_id, n]),
   );
 
   const result: Array<{
@@ -226,19 +225,19 @@ export async function getUserTeamsAndHistories() {
     const leftTeamIds = getTeamUserIdsFromMap(
       allNodesMap,
       node.user_id,
-      "left"
+      "left",
     );
     const rightTeamIds = getTeamUserIdsFromMap(
       allNodesMap,
       node.user_id,
-      "right"
+      "right",
     );
 
     const leftHistories = historiesInWindow.filter((h) =>
-      leftTeamIds.includes(h.user_id)
+      leftTeamIds.includes(h.user_id),
     );
     const rightHistories = historiesInWindow.filter((h) =>
-      rightTeamIds.includes(h.user_id)
+      rightTeamIds.includes(h.user_id),
     );
 
     result.push({
@@ -272,11 +271,11 @@ export async function runMatchingBonus() {
 
     const orders = await Order.find(
       { order_id: { $in: allOrderIds } },
-      { order_id: 1, order_pv: 1 }
+      { order_id: 1, order_pv: 1 },
     ).lean();
 
     const orderPvMap = new Map(
-      orders.map((o) => [o.order_id, Number(o.order_pv || 0)])
+      orders.map((o) => [o.order_id, Number(o.order_pv || 0)]),
     );
 
     for (const u of teamsAndHistories) {
@@ -407,32 +406,40 @@ export async function runMatchingBonus() {
         last_modified_at: now,
       });
 
-      const isFiveStar = await checkIs5StarRank(u.user_id);
       const totalPayout = await getTotalPayout(u.user_id);
 
-      // ⭐⭐ Only run updateClub if BOTH are true
-      if (isFiveStar && totalPayout >= 100000) {
-        const updatedClub = await updateClub(
-          u.user_id,
-          totalPayout,
-          isFiveStar
-        );
+      // 🔹 capture BEFORE state
+      const beforeUser = (await User.findOne({ user_id: u.user_id })
+        .select("rank club")
+        .lean()) as any;
 
-        if (updatedClub) {
+      const updatedClub = await updateClub(u.user_id, totalPayout);
+
+      if (updatedClub && beforeUser) {
+        // 🎉 CLUB ENTRY ALERT (ONLY WHEN CLUB CHANGES)
+        if (beforeUser.club !== updatedClub.newClub) {
           await Alert.create({
             user_id: u.user_id,
-            title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
-            description: `Congrats! Welcome to the ${updatedClub.newClub} Club`,
+            title: `🎉 ${updatedClub.newClub} Club Achieved`,
+            description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
             priority: "high",
             read: false,
             link: "/dashboards",
+            role: "user",
+            date: formattedDate,
+            created_at: now,
+          });
+        }
 
-            user_name: u.name,
-            user_contact: u.contact,
-            user_email: u.mail,
-            user_status: u.status || "active",
-            related_id: payout.payout_id,
-
+        // 🎖️ RANK ACHIEVEMENT ALERT (EVERY RANK CHANGE)
+        if (beforeUser.rank !== updatedClub.newRank) {
+          await Alert.create({
+            user_id: u.user_id,
+            title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+            description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
+            priority: "high",
+            read: false,
+            link: "/dashboards",
             role: "user",
             date: formattedDate,
             created_at: now,
@@ -489,13 +496,13 @@ export async function runMatchingBonus() {
         });
 
         await addRewardScore({
-  user_id: u.user_id,
-  points: rewardAmount,
-  source: "matching_bonus",
-  reference_id: payout.payout_id,
-  remarks: `Matching bonus (reward) for cycle ${formattedDate}`,
-  type: "reward",
-});
+          user_id: u.user_id,
+          points: rewardAmount,
+          source: "matching_bonus",
+          reference_id: payout.payout_id,
+          remarks: `Matching bonus (reward) for cycle ${formattedDate}`,
+          type: "reward",
+        });
 
         // ✅ Create alert for user
         await Alert.create({
@@ -523,12 +530,12 @@ export async function runMatchingBonus() {
       if (historyIds.length > 0) {
         await History.updateMany(
           { _id: { $in: historyIds } },
-          { $set: { ischecked: true } }
+          { $set: { ischecked: true } },
         ).exec();
       }
 
       console.log(
-        `[Matching Bonus] Payout created for ${u.user_id} status=${payout?.status} histories marked: ${historyIds.length}`
+        `[Matching Bonus] Payout created for ${u.user_id} status=${payout?.status} histories marked: ${historyIds.length}`,
       );
     }
     if (totalPayouts > 0) {
@@ -544,7 +551,7 @@ export async function runMatchingBonus() {
         created_at: new Date(),
       });
       console.log(
-        `[Matching Bonus] Admin alert created for ${totalPayouts} payouts`
+        `[Matching Bonus] Admin alert created for ${totalPayouts} payouts`,
       );
     }
   } catch (err) {
