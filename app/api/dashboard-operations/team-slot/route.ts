@@ -66,17 +66,18 @@ export async function GET(request: Request) {
     /* ---------------- HISTORIES IN WINDOW ---------------- */
     const historiesInWindow = await History.find({
       first_payment: true,
-      first_order: true,
       ischecked: false,
       created_at: { $gte: start, $lte: end },
+      $or: [
+        { first_order: true }, // normal order
+        { advance: true },     // advance activation
+      ],
     }).lean();
-
-    // console.log(historiesInWindow)
 
     if (!historiesInWindow.length) {
       return NextResponse.json({
         success: true,
-        message: "No active advance payments in current window",
+        message: "No active payments in current window",
         leftTeam: 0,
         rightTeam: 0,
         timeRemaining: getTimeRemaining(end),
@@ -90,13 +91,17 @@ export async function GET(request: Request) {
     const leftTeamIds = getTeamUserIdsFromMap(allNodesMap, user_id, "left");
     const rightTeamIds = getTeamUserIdsFromMap(allNodesMap, user_id, "right");
 
-    /* ---------------- ORDERS LOOKUP ---------------- */
-    const orderIds = historiesInWindow.map(h => h.order_id);
+    /* ---------------- ORDER PV LOOKUP (ONLY FOR ORDERS) ---------------- */
+    const orderIds = historiesInWindow
+      .filter(h => !h.advance && h.order_id)
+      .map(h => h.order_id);
 
-    const orders = await Order.find(
-      { order_id: { $in: orderIds } },
-      { order_id: 1, order_pv: 1 }
-    ).lean();
+    const orders = orderIds.length
+      ? await Order.find(
+          { order_id: { $in: orderIds } },
+          { order_id: 1, order_pv: 1 }
+        ).lean()
+      : [];
 
     const orderPvMap = new Map(
       orders.map(o => [o.order_id, Number(o.order_pv || 0)])
@@ -107,7 +112,14 @@ export async function GET(request: Request) {
     let rightPV = 0;
 
     for (const h of historiesInWindow) {
-      const pv = orderPvMap.get(h.order_id) || 0;
+      let pv = 0;
+
+      if (h.advance) {
+        // 🔥 FIXED ADVANCE PV
+        pv = 100;
+      } else if (h.order_id) {
+        pv = orderPvMap.get(h.order_id) || 0;
+      }
 
       if (leftTeamIds.includes(h.user_id)) {
         leftPV += pv;
@@ -135,3 +147,4 @@ export async function GET(request: Request) {
     });
   }
 }
+

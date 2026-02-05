@@ -13,18 +13,20 @@ import ShowToast from "@/components/common/Toast/toast";
 import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
-// import AlertBox from "@/components/Alerts/advanceAlert";
-import { hasAdvancePaid } from "@/services/hasAdvancePaid";
+import AlertBox from "@/components/Alerts/advanceAlert";
+ import { hasAdvancePaid } from "@/services/hasAdvancePaid";
+import { hasFirstOrder } from "@/services/hasFirstOrder";
+
 import { FaPlusCircle, FaMinusCircle, FaEye, FaDownload } from "react-icons/fa";
 import { handleDownload } from "@/utils/handleDownload";
 import dynamic from "next/dynamic";
-import { dummyPreviewPDF, dummyDownloadPDF } from "@/lib/dummyInvoiceActions";
-
+import { handleDownloadPDF } from "@/lib/invoiceDownload";
+import { handlePreviewPDF } from "@/lib/invoicePreview";
 const PdfPreview = dynamic(() => import("@/components/PDF/PdfPreview"), {
   ssr: false,
 });
 
-export default function AdvanceHistoryPage() {
+export default function FirstOrderPage() {
   const router = useRouter();
   const { user } = useVLife();
 
@@ -39,7 +41,7 @@ export default function AdvanceHistoryPage() {
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
   const [showAlert, setShowAlert] = useState(false);
-  const [advancePaid, setAdvancePaid] = useState(false);
+  const [hasPermission, setHasPermission] = useState(false);
 
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
@@ -48,7 +50,7 @@ export default function AdvanceHistoryPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pdfScale, setPdfScale] = useState<number>(1);
 
-  const API_URL = "/api/get-advance";
+  const API_URL = "/api/get-firstorders";
 
   // 🔹 Mobile responsive scaling PDF
   useEffect(() => {
@@ -60,7 +62,7 @@ export default function AdvanceHistoryPage() {
   const handleExport = () => {
     handleDownload({
       rows: selectedRows,
-      fileName: "advance_payments",
+      fileName: "first orders",
       format: "xlsx",
       excludeHeaders: [
         "_id",
@@ -76,14 +78,39 @@ export default function AdvanceHistoryPage() {
   };
 
   // 🔹 Check initial advance payment status
-  useEffect(() => {
-    if (!user?.user_id) return;
-    (async () => {
-      const paid = await hasAdvancePaid(user?.user_id, 15000);
-      setAdvancePaid(paid.hasPermission);
-      setShowAlert(!paid.hasPermission);
-    })();
-  }, [user?.user_id]);
+ useEffect(() => {
+  if (!user?.user_id) return;
+
+  let isMounted = true;
+
+  (async () => {
+    try {
+      // 1️⃣ Check first order
+      const firstOrderRes = await hasFirstOrder(user.user_id);
+
+      // 2️⃣ Check advance
+      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+
+      if (!isMounted) return;
+
+      const hasPermission =
+        firstOrderRes.hasFirstOrder ||
+        advanceRes.hasPermission ||
+        firstOrderRes.activatedByAdmin;
+
+      setHasPermission(hasPermission);
+      setShowAlert(!hasPermission);
+
+    } catch (err) {
+      console.error("Permission check error:", err);
+      if (isMounted) setShowAlert(true);
+    }
+  })();
+
+  return () => {
+    isMounted = false;
+  };
+}, [user?.user_id]);
 
   // 🔹 Fetch Advance payments
   const fetchHistory = useCallback(async () => {
@@ -144,7 +171,8 @@ export default function AdvanceHistoryPage() {
   /** ======================== TABLE COLUMNS ========================= */
 
   const columns: GridColDef[] = [
-    { field: "transaction_id", headerName: "Transaction ID", flex: 0.8 },
+    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
+    { field: "order_id", headerName: "Order ID", flex: 0.8 },
 
     user?.role === "admin" && {
       field: "user_id",
@@ -193,33 +221,32 @@ export default function AdvanceHistoryPage() {
     // },
 
     {
-      field: "invoice",
+      field: "download",
       headerName: "Invoice",
-      flex: 0.7,
-      renderCell: (params: any) => (
-        <div className="flex gap-6 mt-1 items-center justify-center">
-          {/* Preview */}
+      flex: 0.8,
+      // sortable: false,
+      // filterable: false,
+      renderCell: (params: GridRenderCellParams) => (
+        <div className="flex max-lg:gap-8 max-lg:min-w-[150px] gap-8 xl:items-center xl:justify-center mt-2">
+          {/* Preview Icon */}
           <button
+            title="Preview Invoice"
             className="text-[#106187] cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
-              dummyPreviewPDF(
-                params.row._id,
-                setLoading,
-                setPreviewUrl
-              );
+              handlePreviewPDF(params.row.order_id, setLoading, setPreviewUrl);
               setShowPreview(true);
             }}
           >
             <FaEye size={16} />
           </button>
-
           {/* Download */}
           <button
+            title="Download Invoice"
             className="text-[#106187] cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
-              dummyDownloadPDF(params.row._id, setLoading);
+              handleDownloadPDF(params.row.order_id, setLoading);
             }}
           >
             <FaDownload size={15} />
@@ -248,19 +275,15 @@ export default function AdvanceHistoryPage() {
 
   return (
     <Layout>
-      {/* <AlertBox
+      {/* ALERT */}
+      <AlertBox
         visible={showAlert}
         title="Prepaid Required"
-        message={
-          <>
-            You must pay <span className="font-semibold text-lg">₹10,000</span>{" "}
-            to activate your account.
-          </>
-        }
-        buttonLabel="Pay Now"
+        message={<>To activate your account, please place an order</>}
+        buttonLabel="ORDER NOW"
         buttonAction={() => router.push("/historys/payAdvance")}
         onClose={() => setShowAlert(false)}
-      /> */}
+      />
 
       <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5 ">
         {loading && (
@@ -271,13 +294,13 @@ export default function AdvanceHistoryPage() {
 
         {/* Header */}
         <HeaderWithActions
-          title="Advances"
+          title="First Orders"
           search={query}
           setSearch={setQuery}
           showBack={user.role !== "user"}
           showPagination
           showMoreOptions
-          showAddButton={!advancePaid}
+          showAddButton={!hasPermission}
           addLabel="Make Payment"
           onAdd={() => router.push("/historys/payAdvance")}
           onBack={() => router.push("/historys/adminhistory")}

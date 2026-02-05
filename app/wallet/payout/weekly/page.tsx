@@ -12,7 +12,7 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
-// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+ import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
@@ -41,15 +41,35 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
  useEffect(() => {
   if (!user?.user_id) return;
 
+  let isMounted = true;
+
   (async () => {
     try {
-      const res = await hasFirstOrder(user.user_id);
-      setHasPermission(res.hasPermission);
+      // 1️⃣ Check first order
+      const firstOrderRes = await hasFirstOrder(user.user_id);
+
+      // 2️⃣ Check advance
+      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+
+      if (!isMounted) return;
+
+      const hasPermission =
+        firstOrderRes.hasFirstOrder ||
+        advanceRes.hasPermission ||
+        firstOrderRes.activatedByAdmin;
+
+      setHasPermission(hasPermission);
+      // setShowAlert(!hasPermission);
+
     } catch (err) {
-      console.error("Error checking first order status:", err);
-      setHasPermission(false);
+      console.error("Permission check error:", err);
+      // if (isMounted) setShowAlert(true);
     }
   })();
+
+  return () => {
+    isMounted = false;
+  };
 }, [user?.user_id]);
 
 

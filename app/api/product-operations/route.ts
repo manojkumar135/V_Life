@@ -32,59 +32,46 @@ export async function GET(request: Request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id") || searchParams.get("product_id");
-    const search = searchParams.get("search");
 
-    if (id) {
-      let product;
-      if (mongoose.Types.ObjectId.isValid(id)) {
-        product = await Product.findById(id);
-      } else {
-        product = await Product.findOne({ product_id: id });
-      }
+    const pv = Number(searchParams.get("pv"));
+    const isFirstOrder = searchParams.get("is_first_order") === "true";
+    const isAdvancePaid = searchParams.get("is_advance_paid") === "true";
+    const userStatus = searchParams.get("user_status");
+    const orderMode = searchParams.get("order_mode");
 
-      if (!product) {
-        return NextResponse.json(
-          { success: false, message: "Product not found" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json({ success: true, data: product }, { status: 200 });
+    let products = await Product.find({}).lean();
+
+    // 🔒 1️⃣ PV locked (activation / button flow)
+    if (pv && pv > 0) {
+      products = products.filter((p) => Number(p.pv) === pv);
     }
 
-    // ✅ build query for search
-    let query: any = {};
-
-    if (search) {
-      const searchTerms = search
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      query.$or = searchTerms.flatMap((term) => {
-        const regex = new RegExp("^" + term, "i");
-        return [
-          { product_id: regex },
-          { name: regex },
-          { description: regex },
-          { category: regex },
-          { status: regex },
-        ];
-      });
+    // 🆕 2️⃣ ADVANCE PAID + FIRST ORDER
+    else if (isAdvancePaid) {
+      products = products.filter(
+        (p) => Number(p.pv) >= 100 && Number(p.dealer_price) >= 15000
+      );
     }
 
-    const products = await Product.find(query).sort({ created_at: -1 }).lean().exec();
-    // console.log(products)
+    // 🔓 3️⃣ SELF + FIRST ORDER + INACTIVE
+    else if (orderMode === "SELF" && isFirstOrder && userStatus === "inactive") {
+      products = products.filter(
+        (p) => Number(p.pv) === 50 || Number(p.pv) === 100
+      );
+    }
 
-    return NextResponse.json({ success: true, data: products }, { status: 200 });
-  } catch (error: any) {
-    console.error("GET products error:", error);
     return NextResponse.json(
-      { success: false, message: error.message || "Server error" },
+      { success: true, data: products },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error.message },
       { status: 500 }
     );
   }
 }
+
 
 // 🔹 PUT - Replace a product
 export async function PUT(request: Request) {

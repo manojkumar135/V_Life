@@ -8,7 +8,7 @@ import PaymentModal from "@/components/common/PaymentModal/paymentmodal";
 import ShowToast from "@/components/common/Toast/toast";
 import axios from "axios";
 import { useVLife } from "@/store/context";
-// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { useRouter } from "next/navigation";
 import { IoRemove, IoAdd, IoTrashOutline } from "react-icons/io5";
 import Loader from "@/components/common/loader";
@@ -52,6 +52,62 @@ export default function OrderFormCartSection({
 }: any) {
   const { user } = useVLife();
 
+  const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
+  const [advanceDetails, setAdvanceDetails] = useState({
+    amount: 0,
+    remaining: 0,
+  });
+
+  useEffect(() => {
+    if (!user?.user_id) return;
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const res = await hasAdvancePaid(user.user_id, 15000);
+
+        if (!mounted) return;
+
+        setHasPaidAdvance(res.hasAdvance);
+
+        if (res.hasAdvance) {
+          setAdvanceDetails({
+            amount: 15000,
+            remaining: Math.max(0, getTotalPrice() - 15000),
+          });
+        } else {
+          setAdvanceDetails({
+            amount: 0,
+            remaining: getTotalPrice(),
+          });
+        }
+      } catch (err) {
+        if (!mounted) return;
+
+        setHasPaidAdvance(false);
+        setAdvanceDetails({
+          amount: 0,
+          remaining: getTotalPrice(),
+        });
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.user_id, cart]);
+
+  const isAdvancePaidFirstOrder =
+    isFirstOrder && hasPaidAdvance && !isOtherOrder;
+
+  useEffect(() => {
+    if (isAdvancePaidFirstOrder) {
+      setUseCashback(false);
+      setUseFortnight(false);
+    }
+  }, [isAdvancePaidFirstOrder]);
+
   useEffect(() => {
     if (isOtherOrder) {
       setUseCashback(false);
@@ -68,12 +124,6 @@ export default function OrderFormCartSection({
   const [otpVerified, setOtpVerified] = useState(false);
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
   const [timer, setTimer] = useState(0);
-
-  const [hasPaidAdvance, setHasPaidAdvance] = useState(false);
-  const [advanceDetails, setAdvanceDetails] = useState({
-    amount: 0,
-    remaining: 0,
-  });
 
   const [useReward, setUseReward] = useState(false);
   const cashbackPoints = Number(user?.cashbackReward || 0);
@@ -103,19 +153,23 @@ export default function OrderFormCartSection({
   // Cashback can NEVER exceed order value
   const maxCashbackUsable = Math.min(pvBasedCashback, totalAmount);
 
-  const cashbackUsed = isOtherOrder
+  const cashbackUsed = isAdvancePaidFirstOrder
     ? 0
-    : useCashback
-    ? Math.min(cashbackPoints, maxCashbackUsable)
-    : 0;
+    : isOtherOrder
+      ? 0
+      : useCashback
+        ? Math.min(cashbackPoints, maxCashbackUsable)
+        : 0;
 
   const cashbackCap = Math.min(cashbackPoints, maxCashbackUsable);
   const remainingAfterCashback = totalAmount - cashbackUsed;
 
   // Fortnight (no cap)
-  const fortnightUsed = useFortnight
-    ? Math.min(fortnightPoints, remainingAfterCashback)
-    : 0;
+  const fortnightUsed = isAdvancePaidFirstOrder
+    ? 0
+    : useFortnight
+      ? Math.min(fortnightPoints, remainingAfterCashback)
+      : 0;
 
   /* ---------------- LEGACY MAPPING (IMPORTANT) ---------------- */
 
@@ -130,7 +184,9 @@ export default function OrderFormCartSection({
   // ✅ FIXED: total reward remaining AFTER usage
   const rewardRemaining = rewardPoints - (cashbackUsed + fortnightUsed);
 
-  const payableAmount = Math.max(0, totalAmount - rewardDeduction);
+  const payableAmount = isAdvancePaidFirstOrder
+    ? Math.max(0, totalAmount - advanceDetails.amount)
+    : Math.max(0, totalAmount - rewardDeduction);
 
   // GST = dealer_price * gst%
   const calcUnitPriceWithGST = (item: CartItem) => {
@@ -207,6 +263,11 @@ export default function OrderFormCartSection({
         return;
       }
 
+      if (isAdvancePaidFirstOrder && totalAmount < 15000) {
+        ShowToast.error("First order with advance must be at least ₹15,000");
+        return;
+      }
+
       // 🟢 FINAL DECISION (TERNARY)
       payableAmount === 0
         ? await (async () => {
@@ -226,7 +287,7 @@ export default function OrderFormCartSection({
                   cashbackUsed,
                   fortnightPoints,
                   fortnightUsed,
-                }
+                },
               );
 
               ShowToast.success("Order placed successfully using rewards");
@@ -272,7 +333,7 @@ export default function OrderFormCartSection({
     }
 
     const item = cart.find(
-      (item: CartItem) => String(item.product_id) === String(itemId)
+      (item: CartItem) => String(item.product_id) === String(itemId),
     );
     if (item && item.quantity < 99) {
       updateQuantity(String(item.product_id), item.quantity + 1);
@@ -282,7 +343,7 @@ export default function OrderFormCartSection({
   const handleDecreaseQuantity = (itemId: string | number | undefined) => {
     if (!itemId) return;
     const item = cart.find(
-      (item: CartItem) => String(item.product_id) === String(itemId)
+      (item: CartItem) => String(item.product_id) === String(itemId),
     );
     if (item && item.quantity > 1) {
       updateQuantity(String(item.product_id), item.quantity - 1);
@@ -296,7 +357,7 @@ export default function OrderFormCartSection({
 
   const handleQuantityChange = (
     e: React.ChangeEvent<HTMLInputElement>,
-    itemId: string | number
+    itemId: string | number,
   ) => {
     if (isOtherOrder) {
       ShowToast.error("Quantity cannot be changed for activation orders");
@@ -624,6 +685,29 @@ export default function OrderFormCartSection({
 "
                 >
                   <div className="px-6 py-2 bg-white -mt-4">
+                    {/* 🔴 Advance Paid Info (First Order with Advance) */}
+                    {isAdvancePaidFirstOrder && advanceDetails.amount > 0 && (
+                      <>
+                        <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
+                          <span className="font-semibold">Subtotal</span>
+                          <span className="font-semibold">
+                            ₹ {totalAmount.toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center text-sm text-red-600 font-semibold mt-1">
+                          <span>Advance Paid</span>
+                          <span>- ₹ {advanceDetails.amount.toFixed(2)}</span>
+                        </div>
+
+                        {/* <p className="text-xs text-red-500 mt-1">
+                          Advance amount has been adjusted in this order
+                        </p> */}
+
+                        <div className="border-t border-gray-300 my-2"></div>
+                      </>
+                    )}
+
                     {/* Subtotal + Reward section only if reward exists */}
                     {((!isOtherOrder && rewardPoints > 0) ||
                       fortnightPoints > 0) && (
@@ -998,7 +1082,7 @@ export default function OrderFormCartSection({
                   cashbackUsed,
                   fortnightPoints,
                   fortnightUsed,
-                }
+                },
               );
 
               setShowPayment(false);

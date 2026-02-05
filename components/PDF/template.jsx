@@ -330,10 +330,18 @@ export default function InvoiceTemplate({ data }) {
           </View>
 
           {/* ---- ADVANCE DEDUCTED ---- */}
+          {(data.order.is_first_order && data.order?.advance_deducted > 0) && (
+            <View style={[styles.totalsRow]}>
+              <Text>Advance Deducted:</Text>
+              <Text style={styles.deduction}>
+                {`- \u20B9 ${data.order.advance_deducted.toFixed(2)}`}
+              </Text>
+            </View>
+          )}
+
+
           {data.order.reward_used > 0 && (
             <>
-
-
               {/* Cashback */}
               {data.order.reward_usage?.cashback?.used > 0 && (
                 <View style={styles.totalsRow}>
@@ -357,9 +365,6 @@ export default function InvoiceTemplate({ data }) {
 
             </>
           )}
-
-
-
 
           <View style={[styles.totalsBottomBorder]}>
 

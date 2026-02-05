@@ -7,7 +7,7 @@ import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
-// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { Alert } from "@/models/alert";
@@ -132,8 +132,7 @@ async function checkFirstOrder(user_id: string) {
   const note = user?.status_notes?.toLowerCase()?.trim();
   const activatedByAdmin =
     note === "activated by admin" ||
-    note === "activated" ||
-    note === "activated automatically after advance payment";
+    note === "activated" 
 
   // 🔹 First order check
   const hasFirstOrder = await Order.exists({ user_id });

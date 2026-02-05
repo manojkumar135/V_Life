@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     // 2️⃣ Admin activation check (status_notes)
     const note = user.status_notes?.toLowerCase()?.trim();
     const activatedByAdmin =
-      note === "activated by admin" || note === "activated" || note==="activated automatically after advance payment";
+      note === "activated by admin" || note === "activated" ;
 
     // 3️⃣ User status check
     const isActive = user.user_status === "active";

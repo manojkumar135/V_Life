@@ -6,7 +6,7 @@ import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { Order } from "@/models/order";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
-// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+// import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { updateClub } from "@/services/clubrank";
@@ -193,9 +193,10 @@ export async function getUserTeamsAndHistories() {
 
   // Select histories using created_at (UTC) window to avoid fragile parsing
   const historiesInWindow = (await History.find({
-    first_order: true,
+    status: "Completed",
     ischecked: false,
     created_at: { $gte: start, $lte: end },
+    $or: [{ first_order: true }, { advance: true }],
   }).lean()) as any[];
 
   // DEBUG: helpful diagnostics for missing records
@@ -282,13 +283,22 @@ export async function runMatchingBonus() {
       let leftPV = 0;
       let rightPV = 0;
 
-      for (const h of u.left_histories) {
-        leftPV += orderPvMap.get(h.order_id) || 0;
-      }
+    for (const h of u.left_histories) {
+  if (h.advance === true) {
+    leftPV += 100; // ✅ fixed PV for advance
+  } else {
+    leftPV += orderPvMap.get(h.order_id) || 0;
+  }
+}
 
-      for (const h of u.right_histories) {
-        rightPV += orderPvMap.get(h.order_id) || 0;
-      }
+for (const h of u.right_histories) {
+  if (h.advance === true) {
+    rightPV += 100; // ✅ fixed PV for advance
+  } else {
+    rightPV += orderPvMap.get(h.order_id) || 0;
+  }
+}
+
 
       // 🔒 cap at 100 PV per side
       const effectiveLeftPV = Math.min(leftPV, 100);

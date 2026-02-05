@@ -6,6 +6,8 @@ import Layout from "@/layout/Layout";
 import { useRouter } from "next/navigation";
 import { BiTransferAlt } from "react-icons/bi";
 import { LuHandCoins } from "react-icons/lu";
+import { GiCash } from "react-icons/gi";
+
 import { useVLife } from "@/store/context";
 
 const page = () => {
@@ -27,14 +29,22 @@ const page = () => {
             </span>
           </div>
 
-          {/* Withdraw Card */}
           <div
-            onClick={() => router.push("/historys/advancehistory")}
+            onClick={() => router.push("/historys/firstorderhistory")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <LuHandCoins size={36} />
             <span className="mt-2 text-lg font-semibold">First Orders</span>
           </div>
+
+ <div
+            onClick={() => router.push("/historys/advancehistory")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <GiCash size={36} />
+            <span className="mt-2 text-lg font-semibold">Advance Payments</span>
+          </div>
+
          
         </div>
       </div>

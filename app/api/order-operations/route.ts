@@ -103,6 +103,9 @@ export async function POST(request: Request) {
     await connectDB();
     const body = await request.json();
 
+    const advanceUsed = Boolean(body.advance_used);
+    const advanceDeducted = Number(body.advance_deducted || 0);
+
     /* ---------------- NORMALIZE OPTIONAL FIELDS ---------------- */
     const rewardUsed = Number(body.reward_used ?? 0);
     const rewardRemaining = Number(body.reward_remaining ?? 0);
@@ -220,8 +223,8 @@ export async function POST(request: Request) {
 
       first_order: isFirstOrder,
       first_payment: isFirstOrder,
-      advance: false,
-
+      advance: advanceUsed,
+      advance_amount: advanceDeducted,
       details:
         beneficiary.user_id === placedBy.user_id
           ? "Order Payment"

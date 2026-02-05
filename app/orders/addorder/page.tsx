@@ -14,6 +14,7 @@ import SubmitButton from "@/components/common/submitbutton";
 import { IoMdAdd } from "react-icons/io";
 import Loader from "@/components/common/loader";
 import { formatDate } from "@/components/common/formatDate";
+import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 import CryptoJS from "crypto-js";
 import { useSearchParams } from "next/navigation";
@@ -105,12 +106,45 @@ export default function AddOrderPage() {
   const { user, setUser, updateUserCart } = useVLife();
   const router = useRouter();
 
+  const [isFirstOrderUser, setIsFirstOrderUser] = useState(false);
+  const [isAdminActivated, setIsAdminActivated] = useState(false);
+  const [isAdvancePaidUser, setIsAdvancePaidUser] = useState(false);
+
+  console.log(isFirstOrderUser, "isFirstOrderUser");
+  console.log(isAdvancePaidUser, "isAdvancePaidUser");
+  console.log(isAdminActivated, "isAdminActivated");
+
   const searchParams = useSearchParams();
   const [decodedAmount, setDecodedAmount] = useState<number | null>(null);
   const [orderContext, setOrderContext] = useState<OrderContext | null>(null);
   const isOtherOrder = orderContext?.order_mode === "OTHER";
 
   // console.log(orderContext);
+
+  useEffect(() => {
+    if (!user?.user_id) return;
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const firstOrderRes = await hasFirstOrder(user.user_id);
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+
+        if (!mounted) return;
+
+        setIsFirstOrderUser(!firstOrderRes.hasFirstOrder);
+        setIsAdminActivated(firstOrderRes.activatedByAdmin);
+        setIsAdvancePaidUser(advanceRes.hasAdvance);
+      } catch (err) {
+        console.error("Advance / first order check failed", err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.user_id]);
 
   useEffect(() => {
     const encryptedData = searchParams.get("data");
@@ -132,7 +166,7 @@ export default function AddOrderPage() {
 
       const bytes = CryptoJS.AES.decrypt(
         decodeURIComponent(encryptedData),
-        secretKey
+        secretKey,
       );
 
       const decryptedString = bytes.toString(CryptoJS.enc.Utf8);
@@ -217,7 +251,7 @@ export default function AddOrderPage() {
     cart.reduce(
       (sum, item) =>
         sum + calcWholeGST(item.unit_price, item.gst ?? 0, item.quantity),
-      0
+      0,
     );
 
   // Normalize cart from user items
@@ -278,55 +312,8 @@ export default function AddOrderPage() {
   };
 
   // Fetch products and create categories dynamically
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get("/api/product-operations");
-        // console.log(res.data);
-        if (res.data.success && Array.isArray(res.data.data)) {
-          const products = res.data.data;
 
-          // Create category map
-          const categoryMap: Record<string, Product[]> = {};
-          products.forEach((prod: any) => {
-            const cat = prod.category || "Uncategorized";
-            if (!categoryMap[cat]) categoryMap[cat] = [];
-            categoryMap[cat].push(prod);
-          });
 
-          // Convert to array of categories
-          const categoriesArray: Category[] = Object.entries(categoryMap).map(
-            ([name, products]) => ({ name, products })
-          );
-
-          setCategories(categoriesArray);
-
-          // Determine active category
-          let initialCategory = categoriesArray[0]?.name || "";
-          if (user.category) {
-            const found = categoriesArray.find(
-              (cat) => cat.name === user.category
-            );
-            if (found) initialCategory = found.name;
-          }
-
-          setActiveCategory(initialCategory);
-
-          // Update context with initial active category if different
-          if (user.category !== initialCategory) {
-            setUser({ category: initialCategory });
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch products:", error);
-        ShowToast.error("Failed to load products");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, [user]);
 
   // Sync formData with user
   useEffect(() => {
@@ -413,7 +400,7 @@ export default function AddOrderPage() {
   }, [isOtherOrder, orderContext?.beneficiary_id, user?.user_id]);
 
   const handleInputChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -430,30 +417,109 @@ export default function AddOrderPage() {
     }
   };
 
-  const isProductAllowed = (product: any) => {
-    // ⛔ Block render until payload is ready
-    if (!orderContext) return false;
+  const isAdvancePaidFirstOrder =
+    isFirstOrderUser && isAdvancePaidUser && !isAdminActivated;
 
-    const productPV = Number(product.pv);
-    const lockedPV = Number(orderContext.pv);
+  // console.log(isAdvancePaidFirstOrder, "isAdvancePaidFirstOrder");
 
-    // 🔒 PV explicitly chosen (SELF or OTHER)
-    if (lockedPV && lockedPV > 0) {
-      return productPV === lockedPV;
+  const isProductFetchReady =
+  !!user?.user_id &&
+  orderContext !== null &&
+  typeof isFirstOrder === "boolean" &&
+  typeof isAdvancePaidFirstOrder === "boolean";
+
+
+  useEffect(() => {
+  if (!isProductFetchReady) return;
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+
+      const res = await axios.get("/api/product-operations", {
+        params: {
+          order_mode: orderContext!.order_mode,
+          pv: orderContext!.pv ?? null,
+          is_first_order: isFirstOrder,
+          is_advance_paid: isAdvancePaidFirstOrder,
+          user_status: user!.status,
+        },
+      });
+
+      if (res.data.success && Array.isArray(res.data.data)) {
+        const products = res.data.data;
+
+        const categoryMap: Record<string, Product[]> = {};
+        products.forEach((prod: any) => {
+          const cat = prod.category || "Uncategorized";
+          if (!categoryMap[cat]) categoryMap[cat] = [];
+          categoryMap[cat].push(prod);
+        });
+
+        const categoriesArray: Category[] = Object.entries(categoryMap).map(
+          ([name, products]) => ({ name, products }),
+        );
+
+        setCategories(categoriesArray);
+
+        const initialCategory =
+          categoriesArray.find((c) => c.name === user?.category)?.name ||
+          categoriesArray[0]?.name ||
+          "";
+
+        setActiveCategory(initialCategory);
+
+        if (user?.category !== initialCategory) {
+          setUser({ category: initialCategory });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch products", err);
+      ShowToast.error("Failed to load products");
+    } finally {
+      setLoading(false);
     }
-
-    // 🔓 SELF first order (inactive) → allow 50 & 100
-    if (
-      orderContext.order_mode === "SELF" &&
-      isFirstOrder &&
-      user?.status === "inactive"
-    ) {
-      return productPV === 50 || productPV === 100;
-    }
-
-    // 🔓 Normal flow → allow all
-    return true;
   };
+
+  fetchProducts();
+}, [
+  isProductFetchReady,
+  orderContext?.order_mode,
+  orderContext?.pv,
+  isFirstOrder,
+  isAdvancePaidFirstOrder,
+  user?.status,
+]);
+
+  // const isProductAllowed = (product: any) => {
+  //   if (!orderContext) return false;
+
+  //   const productPV = Number(product.pv);
+  //   const lockedPV = Number(orderContext.pv);
+  //   const dealerPrice = Number(product.dealer_price);
+
+  //   // 🔒 1️⃣ PV explicitly passed
+  //   if (lockedPV && lockedPV > 0) {
+  //     return productPV === lockedPV;
+  //   }
+
+  //   // 🆕 2️⃣ ADVANCE PAID + FIRST ORDER
+  //   if (isAdvancePaidFirstOrder) {
+  //     return productPV >= 100 && dealerPrice >= 15000;
+  //   }
+
+  //   // 🔓 3️⃣ SELF + FIRST ORDER + INACTIVE
+  //   if (
+  //     orderContext.order_mode === "SELF" &&
+  //     isFirstOrder &&
+  //     user?.status === "inactive"
+  //   ) {
+  //     return productPV === 50 || productPV === 100;
+  //   }
+
+  //   // 🔓 4️⃣ Normal flow
+  //   return true;
+  // };
 
   const addToCart = async (product: Product) => {
     if (isRestrictedFirstOrder) {
@@ -468,7 +534,7 @@ export default function AddOrderPage() {
     const productId = product.product_id;
 
     const existingItem = updatedCart.find(
-      (item) => item.product_id === productId
+      (item) => item.product_id === productId,
     );
 
     if (existingItem) {
@@ -477,7 +543,7 @@ export default function AddOrderPage() {
       existingItem.whole_gst = calcWholeGST(
         existingItem.unit_price,
         existingItem.gst ?? 0,
-        existingItem.quantity
+        existingItem.quantity,
       );
     } else {
       updatedCart.push({
@@ -497,7 +563,7 @@ export default function AddOrderPage() {
         whole_gst: calcWholeGST(product.dealer_price, product.gst ?? 0, 1),
         price_with_gst: calcPriceWithGST(
           product.dealer_price,
-          product.gst ?? 0
+          product.gst ?? 0,
         ),
 
         cgst: product.cgst ?? 0,
@@ -544,12 +610,12 @@ export default function AddOrderPage() {
             whole_gst: calcWholeGST(
               item.dealer_price,
               item.gst ?? 0,
-              newQuantity
+              newQuantity,
             ),
             price_with_gst: calcPriceWithGST(item.dealer_price, item.gst ?? 0),
             gst_amount: calcGSTAmount(item.dealer_price, item.gst ?? 0),
           }
-        : item
+        : item,
     );
 
     setCart(updatedCart);
@@ -606,17 +672,17 @@ export default function AddOrderPage() {
     ? beneficiaryUser?.infinity
     : user.infinity;
 
-const fullAddress = [
-  formData.door_no,
-  formData.street,
-  formData.landmark,
-  formData.city,
-  formData.state,
-  formData.country,
-]
-  .filter(Boolean)             
-  .join(", ")
-  + (formData.pincode ? ` - ${formData.pincode}` : "");
+  const fullAddress =
+    [
+      formData.door_no,
+      formData.street,
+      formData.landmark,
+      formData.city,
+      formData.state,
+      formData.country,
+    ]
+      .filter(Boolean)
+      .join(", ") + (formData.pincode ? ` - ${formData.pincode}` : "");
 
   const createOrder = async (
     payableAmount: number,
@@ -628,7 +694,7 @@ const fullAddress = [
       cashbackUsed: number;
       fortnightPoints: number;
       fortnightUsed: number;
-    }
+    },
   ) => {
     try {
       // console.log(cart);
@@ -698,7 +764,11 @@ const fullAddress = [
         total_amount: getTotalPrice(),
         final_amount: payableAmount,
         payable_amount: payableAmount,
-        advance_deducted: 0,
+        advance_deducted: isAdvancePaidFirstOrder
+          ? Math.min(15000, getTotalPrice())
+          : 0,
+
+        advance_used: isAdvancePaidFirstOrder,
         is_first_order: isFirstOrder,
         bonus_checked: false,
         direct_bonus_checked: false,
@@ -797,7 +867,7 @@ const fullAddress = [
   const visibleCategories = categories
     .map((cat) => ({
       ...cat,
-      products: cat.products.filter(isProductAllowed),
+      products: cat.products,
     }))
     .filter((cat) => cat.products.length > 0);
 

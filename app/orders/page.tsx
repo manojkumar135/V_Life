@@ -13,7 +13,7 @@ import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { useVLife } from "@/store/context";
 import { IoClose } from "react-icons/io5";
 import AlertBox from "@/components/Alerts/advanceAlert";
-// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 
 import ShowToast from "@/components/common/Toast/toast";
@@ -80,20 +80,39 @@ export default function OrdersPage() {
     });
   };
 
-  useEffect(() => {
-    if (!user_id) return;
+ useEffect(() => {
+  if (!user?.user_id) return;
 
-    (async () => {
-      try {
-        const res = await hasFirstOrder(user_id);
-        setHasPermission(res.hasPermission);
-        setShowAlert(!res.hasPermission);
-      } catch (err) {
-        console.error("Error checking first order status:", err);
-        setShowAlert(true);
-      }
-    })();
-  }, [user_id]);
+  let isMounted = true;
+
+  (async () => {
+    try {
+      // 1️⃣ Check first order
+      const firstOrderRes = await hasFirstOrder(user.user_id);
+
+      // 2️⃣ Check advance
+      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+
+      if (!isMounted) return;
+
+      const hasPermission =
+        firstOrderRes.hasFirstOrder ||
+        advanceRes.hasPermission ||
+        firstOrderRes.activatedByAdmin;
+
+      setHasPermission(hasPermission);
+      setShowAlert(!hasPermission);
+
+    } catch (err) {
+      console.error("Permission check error:", err);
+      if (isMounted) setShowAlert(true);
+    }
+  })();
+
+  return () => {
+    isMounted = false;
+  };
+}, [user?.user_id]);
 
   // Fetch orders from API
   const fetchOrders = useCallback(

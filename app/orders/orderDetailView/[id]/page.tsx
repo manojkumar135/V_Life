@@ -163,6 +163,9 @@ export default function OrderDetailView() {
     );
   }
 
+  const hasAdvance =
+    Boolean(order.isFirstOrder) && (order.advanceDeducted ?? 0) > 0;
+
   // console.log(order);
   return (
     <Layout>
@@ -277,7 +280,7 @@ export default function OrderDetailView() {
                       <div className="col-span-2 text-right font-bold text-gray-900">
                         ₹{" "}
                         {((item.price_with_gst || 0) * item.quantity).toFixed(
-                          2
+                          2,
                         )}
                       </div>
                     </div>
@@ -324,7 +327,7 @@ export default function OrderDetailView() {
                         <div className=" text-right font-bold text-gray-700">
                           ₹{" "}
                           {((item.price_with_gst || 0) * item.quantity).toFixed(
-                            2
+                            2,
                           )}
                         </div>
                       </div>
@@ -338,17 +341,22 @@ export default function OrderDetailView() {
 
         {/* Footer */}
         <div className="flex-none border-t pt-4 lg:px-10 bg-white py-3 space-y-2">
-          {/* Show ONLY when reward_used > 1 */}
-          {/* Reward Used – Detailed */}
-          {order.rewardUsed > 0 && (
+          {/* ✅ FIRST ORDER + ADVANCE */}
+          {hasAdvance && (
             <>
-              {/* Total Amount */}
               <div className="flex justify-between items-center text-sm text-gray-700">
-                <span>Total Amount</span>
+                <span>Subtotal</span>
                 <span className="font-semibold">
                   ₹ {order.subtotal.toFixed(2)}
                 </span>
               </div>
+
+              <div className="flex justify-between items-center text-sm text-red-600">
+                <span>Advance Paid</span>
+                <span>- ₹ {order.advanceDeducted!.toFixed(2)}</span>
+              </div>
+
+              {/* Reward deductions */}
               {order.rewardUsage?.cashback?.used > 0 && (
                 <div className="flex justify-between items-center text-sm text-red-600 pl-2">
                   <span>Cashback</span>
@@ -364,16 +372,58 @@ export default function OrderDetailView() {
               )}
 
               <div className="border-t border-gray-200 my-2"></div>
+
+              <div className="flex justify-between items-center sm:text-lg font-semibold">
+                <span>Total Paid</span>
+                <span className="text-green-600">
+                  ₹ {(order.payableAmount ?? order.totalAmount).toFixed(2)}
+                </span>
+              </div>
             </>
           )}
 
-          {/* Always show payable / paid */}
-          <div className="flex justify-between items-center sm:text-lg font-semibold mb-1 text-sm">
-            <span className="text-md">Total Paid</span>
-            <span className="text-green-600">
-              ₹ {(order.payableAmount ?? order.totalAmount).toFixed(2)}
-            </span>
-          </div>
+          {/* ✅ NORMAL ORDER (NO ADVANCE) */}
+          {!hasAdvance && (
+            <>
+              {order.rewardUsed > 0 && (
+                <>
+                  <div className="flex justify-between items-center text-sm text-gray-700">
+                    <span>Total Amount</span>
+                    <span className="font-semibold">
+                      ₹ {order.subtotal.toFixed(2)}
+                    </span>
+                  </div>
+
+                  {order.rewardUsage?.cashback?.used > 0 && (
+                    <div className="flex justify-between items-center text-sm text-red-600 pl-2">
+                      <span>Cashback</span>
+                      <span>
+                        - ₹ {order.rewardUsage.cashback.used.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  {order.rewardUsage?.fortnight?.used > 0 && (
+                    <div className="flex justify-between items-center text-sm text-red-600 pl-2">
+                      <span>Fortnight</span>
+                      <span>
+                        - ₹ {order.rewardUsage.fortnight.used.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="border-t border-gray-200 my-2"></div>
+                </>
+              )}
+
+              <div className="flex justify-between items-center sm:text-lg font-semibold">
+                <span>Total Paid</span>
+                <span className="text-green-600">
+                  ₹ {(order.payableAmount ?? order.totalAmount).toFixed(2)}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

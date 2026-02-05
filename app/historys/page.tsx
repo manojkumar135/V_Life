@@ -11,7 +11,7 @@ import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
 import { FaPlusCircle, FaMinusCircle } from "react-icons/fa";
-// import { hasAdvancePaid } from "@/utils/hasAdvancePaid";
+import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
@@ -63,27 +63,39 @@ export default function TransactionHistory() {
 
   // ✅ Check if advance is paid
   useEffect(() => {
-    if (!user?.user_id) return;
+  if (!user?.user_id) return;
 
-    let isMounted = true;
+  let isMounted = true;
 
-    (async () => {
-      try {
-        const res = await hasFirstOrder(user.user_id);
-        if (!isMounted) return;
+  (async () => {
+    try {
+      // 1️⃣ Check first order
+      const firstOrderRes = await hasFirstOrder(user.user_id);
 
-        setHasPermission(res.hasPermission);
-        setShowAlert(!res.hasPermission);
-      } catch (err) {
-        console.error("Error checking first order status:", err);
-        if (isMounted) setShowAlert(true);
-      }
-    })();
+      // 2️⃣ Check advance
+      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.user_id]);
+      if (!isMounted) return;
+
+      const hasPermission =
+        firstOrderRes.hasFirstOrder ||
+        advanceRes.hasPermission ||
+        firstOrderRes.activatedByAdmin;
+
+      setHasPermission(hasPermission);
+      setShowAlert(!hasPermission);
+
+    } catch (err) {
+      console.error("Permission check error:", err);
+      if (isMounted) setShowAlert(true);
+    }
+  })();
+
+  return () => {
+    isMounted = false;
+  };
+}, [user?.user_id]);
+
 
   // ✅ Fetch transactions with date filters
   const fetchHistory = useCallback(async () => {

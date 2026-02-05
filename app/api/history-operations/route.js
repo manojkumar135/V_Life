@@ -12,9 +12,11 @@ import { Wallet } from "@/models/wallet";
 import mongoose from "mongoose";
 import { Alert } from "@/models/alert";
 
+import { getTotalPayout } from "@/services/totalpayout";
+import { updateClub } from "@/services/clubrank";
+
 import {
   updateInfinityTeam,
-  rebuildInfinity,
   propagateInfinityUpdateToAncestors,
 } from "@/services/infinity";
 
@@ -261,7 +263,6 @@ async function checkAndUpgradeRank(user) {
 
 
 
-
 // ✅ POST - Create payment record
 // api/history-operations/route.ts (POST ONLY)
 
@@ -269,26 +270,234 @@ export async function POST(request) {
   try {
     await connectDB();
     const body = await request.json();
+    const date = new Date();
 
-    // History is PURE ledger now
-    body.first_payment = false;
-    body.advance = false;
+    // ------------------------------------
+    // Ledger defaults (UNCHANGED)
+    // ------------------------------------
     body.ischecked = false;
 
+    // ------------------------------------
+    // SIMPLE ADVANCE LOGIC (UNCHANGED)
+    // ------------------------------------
+    if (body.source === "advance") {
+      body.advance = true;
+      body.first_payment = true;
+      body.first_order = false;
+    } else {
+      body.advance = false;
+      body.first_payment = false;
+    }
+
+    // ------------------------------------
+    // Create history (UNCHANGED)
+    // ------------------------------------
     const history = await History.create(body);
 
+    // ------------------------------------
+    // ADVANCE PAYMENT FLOW
+    // ------------------------------------
+    if (body.source === "advance" && body.first_payment === true) {
+      const user = await User.findOne({ user_id: body.user_id });
+      if (!user) {
+        return NextResponse.json(
+          { success: false, message: "User not found" },
+          { status: 404 }
+        );
+      }
+
+      const activatedDate = `${String(date.getDate()).padStart(2, "0")}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}-${date.getFullYear()}`;
+
+      const wasInactive = user.user_status !== "active";
+      const qualifiesForPV = Number(body.amount) >= 15000;
+      const earnedPV = qualifiesForPV ? 100 : 0;
+
+      console.log(
+        "🧾 ADVANCE:",
+        body.user_id,
+        "wasInactive:",
+        wasInactive,
+        "earnedPV:",
+        earnedPV
+      );
+
+      // ------------------------------------
+      // ACTIVATE USER (UNCHANGED)
+      // ------------------------------------
+      if (wasInactive) {
+        const updateData = {
+          user_status: "active",
+          status: "active",
+          status_notes: "Activated automatically after advance payment",
+          activated_date: activatedDate,
+          last_modified_at: new Date(),
+        };
+
+        await Promise.all([
+          User.updateOne({ user_id: body.user_id }, { $set: updateData }),
+          Login.updateMany({ user_id: body.user_id }, { $set: updateData }),
+          TreeNode.updateOne({ user_id: body.user_id }, { $set: updateData }),
+          Wallet.updateOne({ user_id: body.user_id }, { $set: updateData }),
+        ]);
+      }
+
+      // ------------------------------------
+      // PV UPDATE (UNCHANGED)
+      // ------------------------------------
+      if (wasInactive && earnedPV > 0) {
+        await User.updateOne(
+          { user_id: body.user_id },
+          {
+            $inc: {
+              pv: earnedPV,
+              self_pv: earnedPV,
+            },
+          }
+        );
+      }
+
+      // ------------------------------------
+      // FAST RESPONSE (UNCHANGED)
+      // ------------------------------------
+      const response = NextResponse.json(
+        { success: true, data: history },
+        { status: 201 }
+      );
+
+      // ------------------------------------
+      // BACKGROUND MLM / INFINITY / CLUB
+      // ------------------------------------
+      void (async () => {
+        try {
+          if (!wasInactive) {
+            console.log("⛔ MLM skipped (user already active)");
+            return;
+          }
+
+          const freshUser = await User.findOne({
+            user_id: body.user_id,
+          }).lean();
+
+          if (!freshUser?.referBy) {
+            console.log("⚠️ No referBy found for", body.user_id);
+            return;
+          }
+
+          const referrerId = freshUser.referBy;
+          console.log("👤 Referrer:", referrerId);
+
+          // ------------------------------------
+          // PAID DIRECTS
+          // ------------------------------------
+          await User.updateOne(
+            { user_id: referrerId },
+            {
+              $addToSet: { paid_directs: freshUser.user_id },
+              $inc: { paid_directs_count: 1 },
+            }
+          );
+          console.log("✅ Paid direct added");
+
+          // ------------------------------------
+          // DIRECT PV
+          // ------------------------------------
+          if (earnedPV > 0) {
+            await User.updateOne(
+              { user_id: referrerId },
+              { $inc: { direct_pv: earnedPV } }
+            );
+            console.log("✅ Direct PV added:", earnedPV);
+          }
+
+          // ------------------------------------
+          // INFINITY UPDATE
+          // ------------------------------------
+          console.log("🔁 updateInfinityTeam()");
+          await updateInfinityTeam(referrerId);
+
+          // console.log("🔁 propagateInfinityUpdateToAncestors()");
+          // await propagateInfinityUpdateToAncestors(referrerId);
+
+          // ------------------------------------
+          // CLUB UPDATE
+          // ------------------------------------
+          console.log("🧮 getTotalPayout()");
+          const totalPayout = await getTotalPayout(referrerId);
+
+          console.log(
+            "💰 TOTAL PAYOUT:",
+            totalPayout,
+            "FOR:",
+            referrerId
+          );
+
+          console.log("🏆 updateClub()");
+          await updateClub(referrerId, totalPayout);
+
+          console.log("✅ updateClub finished");
+        } catch (err) {
+          console.error("❌ [ADVANCE MLM ERROR]", err);
+        }
+      })();
+
+      // ------------------------------------
+      // USER ACTIVATION ALERT (UNCHANGED)
+      // ------------------------------------
+      await Alert.create({
+        user_id: user.user_id,
+        user_name: user.user_name || "",
+        user_contact: user.user_contact || "",
+        user_email: user.user_email || "",
+        user_status: "active",
+        role: "user",
+        priority: "high",
+        title: "🎉 Account Activated!",
+        description: `Hi ${user.user_name}, your account is now active. You can start placing orders and earning rewards.`,
+        type: "activation",
+        link: "/orders",
+        read: false,
+        date: activatedDate,
+      });
+
+      // ------------------------------------
+      // ✅ ADMIN ALERT — ADVANCE PAYMENT
+      // ------------------------------------
+      await Alert.create({
+        user_id: body.user_id,
+        user_name: user.user_name || "",
+        user_contact: user.user_contact || "",
+        user_email: user.user_email || "",
+        user_status: "active",
+        role: "admin",
+        priority: "high",
+        title: "Advance Payment Received",
+        description: `User ${user.user_id} paid advance of ₹${body.amount}.`,
+        type: "advance_payment",
+        link: "/admin/history",
+        read: false,
+        date: activatedDate,
+      });
+
+      return response;
+    }
+
+    // ------------------------------------
+    // NON-ADVANCE RESPONSE (UNCHANGED)
+    // ------------------------------------
     return NextResponse.json(
       { success: true, data: history },
       { status: 201 }
     );
   } catch (error) {
+    console.error("Error creating history:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }
     );
   }
 }
-
 
 // GET - Fetch all history records OR single history record by id / transaction_id
 

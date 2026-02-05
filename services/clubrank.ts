@@ -4,6 +4,8 @@ import { User } from "@/models/user";
 import { connectDB } from "@/lib/mongodb";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
+import { Wallet } from "@/models/wallet"; 
+
 import mongoose from "mongoose";
 
 import { getInfinityBV } from "@/services/infinityBV";
@@ -21,6 +23,7 @@ export async function updateClub(
   const session = await mongoose.startSession();
   session.startTransaction();
 
+  console.log(user_id,totalPayout)
   try {
     const user = await User.findOne({ user_id }).session(session);
     if (!user) return null;
@@ -153,6 +156,18 @@ export async function updateClub(
     await User.updateOne({ user_id }, { $set: update }, { session });
     await Login.updateOne({ user_id }, { $set: update }, { session });
     await TreeNode.updateOne({ user_id }, { $set: update }, { session });
+await Wallet.updateOne(
+  { user_id },
+  {
+    $set: {
+      club: newClub,
+      rank: newRank,
+      last_modified_at: new Date(),
+    },
+  },
+  { session }
+);
+
 
     await session.commitTransaction();
     return { starRank, newClub, newRank };

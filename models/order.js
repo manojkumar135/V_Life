@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { boolean } from "yup";
 
 const OrderItemSchema = new mongoose.Schema(
   {
@@ -67,6 +68,7 @@ const OrderSchema = new mongoose.Schema(
     total_amount: { type: Number, },
     final_amount: { type: Number, },
     advance_deducted: { type: Number, default: 0 }, // amount deducted from advance
+    advance_used:{ type: Boolean, default: false },
     is_first_order: { type: Boolean, default: false },
     reward_used: { type: Number, default: 0 },
     reward_remaining: { type: Number, default: 0 },

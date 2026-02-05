@@ -3,59 +3,61 @@ import { pdf } from "@react-pdf/renderer";
 import InvoiceTemplate from "@/components/PDF/template";
 
 /**
- * Convert history + user → invoice-compatible object
+ * Convert history + user + office → invoice-compatible object
+ * (WITHOUT touching InvoiceTemplate)
  */
-function mapHistoryToInvoice(record: any, user: any) {
+function mapHistoryToInvoice(record: any, user: any, office: any) {
   const amount = Number(record.amount || 0);
-  console.log(record,user)
 
   return {
-    // invoice header
-    order_id: record.transaction_id,
-    payment_date: record.date,
-    order_type: "N/A",
+    order: {
+      order_id: record.transaction_id,
+      payment_date: record.date,
+      order_type: record.source === "advance" ? "ADVANCE" : "N/A",
 
-    // GST optional
-    gst_no: user?.gst || user?.gst_no || "N/A",
+      gst_no: user?.gst || user?.gst_no || "N/A",
 
-    // user (priority: user API > history)
-    user_id: record.user_id,
-    user_name: user?.name || record.user_name || "-",
-    mail:  user?.mail || record.email || "",
-    contact: user?.contact || user?.phone || record.mobile || "",
-    address: user?.address || "8/165-111/C, LAKE VIEW ROAD, BC RAMAIAH ST, FIRST LANE, RAJEEVNAGAR, ONGOLE, AP - 523002.",
+      user_id: record.user_id,
+      user_name: user?.name || record.user_name || "-",
+      mail: user?.mail || record.email || "",
+      contact: user?.contact || user?.phone || record.mobile || "",
+      address:
+        user?.address ||
+        "8/165-111/C, LAKE VIEW ROAD, BC RAMAIAH ST, FIRST LANE, RAJEEVNAGAR, ONGOLE, AP - 523002.",
 
-    // Product Entry
-    items: [
-      {
-        name: "Cloth",
-        product_code: "ADV-001",
-        hsn_code: "9997",
-        quantity: 1,
-        dealer_price: 10000,
-        whole_gst: 0,
-        gst: 0,
-        cgst: 0,
-        sgst: 0,
-        igst: 0,
-        gst_amount: 0,
-      },
-    ],
+      items: [
+        {
+          name: "Ionizer Advance Payment",
+          product_code: "ADV-001",
+          hsn_code: "9997",
+          quantity: 1,
+          dealer_price: amount,
+          whole_gst: 0,
+          gst: 0,
+          cgst: 0,
+          sgst: 0,
+          igst: 0,
+          gst_amount: 0,
+        },
+      ],
 
-    // invoice totals
-    total_amount: amount,
-    total_gst: 0,
-    final_amount: amount,
+      total_amount: amount,
+      total_gst: 0,
+      final_amount: amount,
 
-    // template signals
-    is_first_order: false,
-    // advance_deducted: amount,
+      reward_used: 0,
+      reward_usage: {},
+
+      is_first_order: false,
+    },
+
+    office, // keep full office object
   };
 }
 
-/**
- * 🟢 PREVIEW PDF
- */
+/* =========================================================
+   🟢 PREVIEW PDF
+========================================================= */
 export async function dummyPreviewPDF(
   transaction_id: string,
   setLoading: (v: boolean) => void,
@@ -64,24 +66,36 @@ export async function dummyPreviewPDF(
   try {
     setLoading(true);
 
-    // 1. History record
-    const { data: historyRes } = await axios.get(`/api/history-operations?id=${transaction_id}`);
+    // 1️⃣ History
+    const { data: historyRes } = await axios.get(
+      `/api/history-operations?id=${transaction_id}`
+    );
     const record = historyRes?.data?.[0];
     if (!record) throw new Error("History record not found");
 
-    // 2. User record
-    const { data: userRes } = await axios.get(`/api/users-operations?user_id=${record.user_id}`);
+    // 2️⃣ User
+    const { data: userRes } = await axios.get(
+      `/api/users-operations?user_id=${record.user_id}`
+    );
     const user = userRes?.data || {};
-    // console.log(userRes)
 
-    const invoiceData = mapHistoryToInvoice(record, user);
+    // 3️⃣ Office
+    const { data: officeRes } = await axios.get(`/api/office-operations`);
+    const office = officeRes?.data || {};
+// console.log("office in dummyInvoiceActions:", office,officeRes);
+    // 🔥 CRITICAL FIX — inject global office (NO template edit)
+    (globalThis as any).office = office;
 
-    // generate pdf + preview
-    const blob = await pdf(<InvoiceTemplate data={invoiceData} />).toBlob();
+    // 4️⃣ Map data
+    const invoiceData = mapHistoryToInvoice(record, user, office);
+
+    // 5️⃣ Generate PDF
+    const blob = await pdf(
+      <InvoiceTemplate data={invoiceData} />
+    ).toBlob();
+
     const url = URL.createObjectURL(blob);
-
     setPreviewUrl(url);
-
   } catch (error) {
     console.error("Dummy invoice preview error:", error);
   } finally {
@@ -89,9 +103,9 @@ export async function dummyPreviewPDF(
   }
 }
 
-/**
- * 📥 DOWNLOAD PDF
- */
+/* =========================================================
+   📥 DOWNLOAD PDF
+========================================================= */
 export async function dummyDownloadPDF(
   transaction_id: string,
   setLoading?: (v: boolean) => void
@@ -99,20 +113,34 @@ export async function dummyDownloadPDF(
   try {
     if (setLoading) setLoading(true);
 
-    // 1. history
-    const { data: historyRes } = await axios.get(`/api/history-operations?id=${transaction_id}`);
+    // 1️⃣ History
+    const { data: historyRes } = await axios.get(
+      `/api/history-operations?id=${transaction_id}`
+    );
     const record = historyRes?.data?.[0];
     if (!record) throw new Error("History record not found");
 
-    // 2. user
-    const { data: userRes } = await axios.get(`/api/users-operations?user_id=${record.user_id}`);
-    const user = userRes?.data|| {};
+    // 2️⃣ User
+    const { data: userRes } = await axios.get(
+      `/api/users-operations?user_id=${record.user_id}`
+    );
+    const user = userRes?.data || {};
 
-    const invoiceData = mapHistoryToInvoice(record, user);
+    // 3️⃣ Office
+    const { data: officeRes } = await axios.get(`/api/office-operations`);
+    const office = officeRes?.data?.data || {};
 
-    const blob = await pdf(<InvoiceTemplate data={invoiceData} />).toBlob();
+    // 🔥 SAME FIX HERE
+    (globalThis as any).office = office;
 
-    // download file
+    // 4️⃣ Map
+    const invoiceData = mapHistoryToInvoice(record, user, office);
+
+    // 5️⃣ Generate PDF
+    const blob = await pdf(
+      <InvoiceTemplate data={invoiceData} />
+    ).toBlob();
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
@@ -124,7 +152,6 @@ export async function dummyDownloadPDF(
     document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
-
   } catch (error) {
     console.error("Dummy invoice download error:", error);
   } finally {
