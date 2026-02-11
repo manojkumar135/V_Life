@@ -6,6 +6,7 @@ import Layout from "@/layout/Layout";
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
+import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
@@ -75,14 +76,33 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!user?.user_id) return;
 
+    let isMounted = true;
+
     (async () => {
       try {
-        const res = await hasFirstOrder(user.user_id);
-        setShowAlert(!res.hasPermission);
-      } catch {
-        setShowAlert(true);
+        // 1️⃣ Check first order
+        const firstOrderRes = await hasFirstOrder(user.user_id);
+
+        // 2️⃣ Check advance
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+
+        if (!isMounted) return;
+
+        const hasPermission =
+          firstOrderRes.hasFirstOrder ||
+          advanceRes.hasPermission ||
+          firstOrderRes.activatedByAdmin;
+
+        setShowAlert(!hasPermission);
+      } catch (err) {
+        console.error("Permission check error:", err);
+        if (isMounted) setShowAlert(true);
       }
     })();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user?.user_id]);
 
   /* =====================================================

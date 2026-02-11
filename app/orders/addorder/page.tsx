@@ -110,11 +110,17 @@ export default function AddOrderPage() {
   const [isAdminActivated, setIsAdminActivated] = useState(false);
   const [isAdvancePaidUser, setIsAdvancePaidUser] = useState(false);
 
-  console.log(isFirstOrderUser, "isFirstOrderUser");
-  console.log(isAdvancePaidUser, "isAdvancePaidUser");
-  console.log(isAdminActivated, "isAdminActivated");
+  const [advanceUsed, setAdvanceUsed] = useState(false);
+
+  // console.log(isFirstOrderUser, "isFirstOrderUser");
+  // console.log(isAdvancePaidUser, "isAdvancePaidUser");
+  // console.log(isAdminActivated, "isAdminActivated");
 
   const searchParams = useSearchParams();
+
+  const flow = searchParams.get("flow");
+  const isUseAdvanceFlow = flow === "USE_ADVANCE";
+
   const [decodedAmount, setDecodedAmount] = useState<number | null>(null);
   const [orderContext, setOrderContext] = useState<OrderContext | null>(null);
   const isOtherOrder = orderContext?.order_mode === "OTHER";
@@ -136,6 +142,7 @@ export default function AddOrderPage() {
         setIsFirstOrderUser(!firstOrderRes.hasFirstOrder);
         setIsAdminActivated(firstOrderRes.activatedByAdmin);
         setIsAdvancePaidUser(advanceRes.hasAdvance);
+        setAdvanceUsed(advanceRes.advanceUsed);
       } catch (err) {
         console.error("Advance / first order check failed", err);
       }
@@ -145,6 +152,8 @@ export default function AddOrderPage() {
       mounted = false;
     };
   }, [user?.user_id]);
+
+  const shouldShowAdvanceChoice = isAdvancePaidUser && !advanceUsed;
 
   useEffect(() => {
     const encryptedData = searchParams.get("data");
@@ -313,8 +322,6 @@ export default function AddOrderPage() {
 
   // Fetch products and create categories dynamically
 
-
-
   // Sync formData with user
   useEffect(() => {
     // 🔒 DO NOT override beneficiary details
@@ -357,15 +364,21 @@ export default function AddOrderPage() {
   }, [isOtherOrder, orderContext?.beneficiary_id, user?.user_id]);
 
   useEffect(() => {
-    // 🔒 OTHER ORDER → do NOT sync global cart
+    // OTHER ORDER → always fresh
     if (isOtherOrder) {
-      setCart([]); // always start fresh
+      setCart([]);
       return;
     }
 
-    // 🔓 SELF ORDER → sync from user cart
+    // 🔥 USE ADVANCE FLOW → start with empty cart
+    if (isUseAdvanceFlow) {
+      setCart([]);
+      return;
+    }
+
+    // NORMAL SELF ORDER → load saved cart
     setCart(normalizeCart(user.items ?? []));
-  }, [isOtherOrder]);
+  }, [isOtherOrder, isUseAdvanceFlow]);
 
   // Fetch address
   useEffect(() => {
@@ -417,79 +430,84 @@ export default function AddOrderPage() {
     }
   };
 
-  const isAdvancePaidFirstOrder =
-    isFirstOrderUser && isAdvancePaidUser && !isAdminActivated;
+  // const isAdvancePaidFirstOrder =
+  //   isFirstOrderUser && isAdvancePaidUser && !isAdminActivated;
 
   // console.log(isAdvancePaidFirstOrder, "isAdvancePaidFirstOrder");
 
   const isProductFetchReady =
-  !!user?.user_id &&
-  orderContext !== null &&
-  typeof isFirstOrder === "boolean" &&
-  typeof isAdvancePaidFirstOrder === "boolean";
-
+    !!user?.user_id &&
+    orderContext !== null &&
+    typeof isFirstOrder === "boolean" &&
+    typeof isAdvancePaidUser  === "boolean";
 
   useEffect(() => {
-  if (!isProductFetchReady) return;
+    if (!isProductFetchReady) return;
 
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
 
-      const res = await axios.get("/api/product-operations", {
-        params: {
-          order_mode: orderContext!.order_mode,
-          pv: orderContext!.pv ?? null,
-          is_first_order: isFirstOrder,
-          is_advance_paid: isAdvancePaidFirstOrder,
-          user_status: user!.status,
-        },
-      });
-
-      if (res.data.success && Array.isArray(res.data.data)) {
-        const products = res.data.data;
-
-        const categoryMap: Record<string, Product[]> = {};
-        products.forEach((prod: any) => {
-          const cat = prod.category || "Uncategorized";
-          if (!categoryMap[cat]) categoryMap[cat] = [];
-          categoryMap[cat].push(prod);
+        const res = await axios.get("/api/product-operations", {
+          params: {
+            order_mode: orderContext!.order_mode,
+            pv: isUseAdvanceFlow ? 100 : (orderContext!.pv ?? null),
+            is_first_order: isFirstOrder,
+            is_advance_paid: isAdvancePaidUser,
+            is_use_advance: isUseAdvanceFlow, // ✅ NEW
+            user_status: user!.status,
+          },
         });
 
-        const categoriesArray: Category[] = Object.entries(categoryMap).map(
-          ([name, products]) => ({ name, products }),
-        );
+        if (res.data.success && Array.isArray(res.data.data)) {
+          const products = res.data.data;
 
-        setCategories(categoriesArray);
+          const categoryMap: Record<string, Product[]> = {};
 
-        const initialCategory =
-          categoriesArray.find((c) => c.name === user?.category)?.name ||
-          categoriesArray[0]?.name ||
-          "";
+          products.forEach((prod: any) => {
+            const cat = prod.category || "Uncategorized";
+            if (!categoryMap[cat]) categoryMap[cat] = [];
+            categoryMap[cat].push(prod);
+          });
 
-        setActiveCategory(initialCategory);
+          const categoriesArray: Category[] = Object.entries(categoryMap).map(
+            ([name, products]) => ({
+              name,
+              products,
+            }),
+          );
 
-        if (user?.category !== initialCategory) {
-          setUser({ category: initialCategory });
+          setCategories(categoriesArray);
+
+          const initialCategory =
+            categoriesArray.find((c) => c.name === user?.category)?.name ||
+            categoriesArray[0]?.name ||
+            "";
+
+          setActiveCategory(initialCategory);
+
+          if (user?.category !== initialCategory) {
+            setUser({ category: initialCategory });
+          }
         }
+      } catch (err) {
+        console.error("Failed to fetch products", err);
+        ShowToast.error("Failed to load products");
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch products", err);
-      ShowToast.error("Failed to load products");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  fetchProducts();
-}, [
-  isProductFetchReady,
-  orderContext?.order_mode,
-  orderContext?.pv,
-  isFirstOrder,
-  isAdvancePaidFirstOrder,
-  user?.status,
-]);
+    fetchProducts();
+  }, [
+    isProductFetchReady,
+    orderContext?.order_mode,
+    orderContext?.pv,
+    isFirstOrder,
+    // isAdvancePaidFirstOrder,
+    isUseAdvanceFlow, 
+    user?.status,
+  ]);
 
   // const isProductAllowed = (product: any) => {
   //   if (!orderContext) return false;
@@ -699,6 +717,15 @@ export default function AddOrderPage() {
     try {
       // console.log(cart);
       setLoading(true);
+
+      // 🔥 Safe GST State Check (Exact match only)
+      const normalize = (str: string) => str?.toLowerCase().trim();
+
+      // Company registered state variations
+      const COMPANY_STATES = ["andhra pradesh", "andhra"];
+
+      const isIntraState = COMPANY_STATES.includes(normalize(formData.state));
+
       const orderItems = cart.map((item) => ({
         product_id: String(item.id),
         product: String(item.id),
@@ -715,9 +742,10 @@ export default function AddOrderPage() {
         gst_amount: item.gst_amount ?? 0,
         whole_gst: item.whole_gst ?? 0,
         price_with_gst: item.price_with_gst ?? 0,
-        cgst: item.cgst ?? 0,
-        sgst: item.sgst ?? 0,
-        igst: item.igst ?? 0,
+        cgst: isIntraState ? (item.cgst ?? 0) : 0,
+        sgst: isIntraState ? (item.sgst ?? 0) : 0,
+        igst: isIntraState ? 0 : (item.igst ?? 0),
+
         hsn_code: item.hsn_code ?? "",
         product_code: item.product_code ?? "",
 
@@ -764,11 +792,13 @@ export default function AddOrderPage() {
         total_amount: getTotalPrice(),
         final_amount: payableAmount,
         payable_amount: payableAmount,
-        advance_deducted: isAdvancePaidFirstOrder
-          ? Math.min(15000, getTotalPrice())
-          : 0,
+       advance_deducted: isUseAdvanceFlow
+  ? Math.min(15000, getTotalPrice())
+  : 0,
 
-        advance_used: isAdvancePaidFirstOrder,
+advance_used: isUseAdvanceFlow,
+
+
         is_first_order: isFirstOrder,
         bonus_checked: false,
         direct_bonus_checked: false,
@@ -1061,6 +1091,7 @@ export default function AddOrderPage() {
               setFormData={setFormData}
               handleInputChange={handleInputChange}
               isFirstOrder={isFirstOrder}
+              isUseAdvanceFlow={isUseAdvanceFlow}
               createOrder={createOrder}
               onPaymentSuccess={handlePaymentSuccess}
             />
@@ -1070,3 +1101,10 @@ export default function AddOrderPage() {
     </Layout>
   );
 }
+
+// const gstRate = item.gst ?? 0;
+// const halfGst = gstRate / 2;
+
+// cgst: isIntraState ? halfGst : 0,
+// sgst: isIntraState ? halfGst : 0,
+// igst: isIntraState ? 0 : gstRate,

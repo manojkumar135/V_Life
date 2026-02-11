@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { History } from "@/models/history";
 import { User } from "@/models/user";
+import { Order } from "@/models/order"; // ✅ NEW IMPORT
 
 export async function GET(request: Request) {
   try {
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     const user_id = searchParams.get("user_id");
-    const minAmount = Number(searchParams.get("minAmount") || 10000);
+    const minAmount = Number(searchParams.get("minAmount") || 15000);
 
     if (!user_id) {
       return NextResponse.json(
@@ -34,7 +35,7 @@ export async function GET(request: Request) {
       note === "activated by admin" ||
       note === "activated";
 
-    // 3️⃣ Advance payment check (IMPORTANT FIX)
+    // 3️⃣ Advance payment check
     const advanceRecord = await History.findOne({
       user_id,
       advance: true,
@@ -44,17 +45,27 @@ export async function GET(request: Request) {
 
     const hasAdvance = !!advanceRecord;
 
+    // 4️⃣ NEW: Check if advance already used in any order
+    const advanceUsedOrder = await Order.findOne({
+      user_id,
+      advance_used: true,
+    });
+
+    const advanceUsed = !!advanceUsedOrder;
+
     return NextResponse.json(
       {
         success: true,
         hasAccess,
         hasAdvance,
         hasPermission: hasAccess || hasAdvance,
+        advanceUsed, // ✅ NEW FIELD
         data: {
           user_id: user.user_id,
           user_name: user.user_name,
           hasAccess,
           hasAdvance,
+          advanceUsed, // ✅ INCLUDED IN DATA
           reason: hasAccess
             ? "Activated by admin"
             : hasAdvance

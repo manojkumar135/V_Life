@@ -14,6 +14,8 @@ import { Alert } from "@/models/alert";
 
 import { getTotalPayout } from "@/services/totalpayout";
 import { updateClub } from "@/services/clubrank";
+import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
+
 
 import {
   updateInfinityTeam,
@@ -437,6 +439,9 @@ export async function POST(request) {
           await updateClub(referrerId, totalPayout);
 
           console.log("✅ updateClub finished");
+          await checkAndReleasePromotionalBonus(referrerId);
+          console.log("✅ PromotionalBonus finished");
+
         } catch (err) {
           console.error("❌ [ADVANCE MLM ERROR]", err);
         }

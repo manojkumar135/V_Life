@@ -10,6 +10,7 @@ import { TiTick } from "react-icons/ti";
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
+import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import showToast from "@/components/common/Toast/toast";
 import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
 import NewsTicker from "@/components/NewsTicker";
@@ -125,26 +126,38 @@ const DashboardPage: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const checkFirstOrder = async () => {
+   useEffect(() => {
+    if (!user?.user_id) return;
+  
+    let isMounted = true;
+  
+    (async () => {
       try {
-        const res = await hasFirstOrder(user_id);
-
-        if (!res.hasPermission) {
-          setShowAlert(true);
-        } else {
-          setShowAlert(false);
-        }
+        // 1️⃣ Check first order
+        const firstOrderRes = await hasFirstOrder(user.user_id);
+  
+        // 2️⃣ Check advance
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+  
+        if (!isMounted) return;
+  
+        const hasPermission =
+          firstOrderRes.hasFirstOrder ||
+          advanceRes.hasPermission ||
+          firstOrderRes.activatedByAdmin;
+  
+        setShowAlert(!hasPermission);
+  
       } catch (err) {
-        console.error("Error checking first order:", err);
-        setShowAlert(true); // safe fallback
+        console.error("Permission check error:", err);
+        if (isMounted) setShowAlert(true);
       }
+    })();
+  
+    return () => {
+      isMounted = false;
     };
-
-    if (user_id) {
-      checkFirstOrder();
-    }
-  }, [user_id]);
+  }, [user?.user_id]);
 
   // console.log(showAlert)
   // console.log(user.rank);

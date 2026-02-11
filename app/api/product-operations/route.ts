@@ -33,37 +33,81 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
 
-    const pv = Number(searchParams.get("pv"));
+    const productId = searchParams.get("product_id");
+
+    const pvParam = searchParams.get("pv");
+    const pv = pvParam ? Number(pvParam) : null;
+
     const isFirstOrder = searchParams.get("is_first_order") === "true";
     const isAdvancePaid = searchParams.get("is_advance_paid") === "true";
+    const isUseAdvance = searchParams.get("is_use_advance") === "true";
     const userStatus = searchParams.get("user_status");
     const orderMode = searchParams.get("order_mode");
 
-    let products = await Product.find({}).lean();
+    // =====================================================
+    // 1️⃣ FETCH SINGLE PRODUCT (EDIT PAGE FIX)
+    // =====================================================
+    if (productId) {
+      let product;
 
-    // 🔒 1️⃣ PV locked (activation / button flow)
-    if (pv && pv > 0) {
-      products = products.filter((p) => Number(p.pv) === pv);
-    }
+      if (mongoose.Types.ObjectId.isValid(productId)) {
+        product = await Product.findById(productId).lean();
+      }
 
-    // 🆕 2️⃣ ADVANCE PAID + FIRST ORDER
-    else if (isAdvancePaid) {
-      products = products.filter(
-        (p) => Number(p.pv) >= 100 && Number(p.dealer_price) >= 15000
+      if (!product) {
+        product = await Product.findOne({ product_id: productId }).lean();
+      }
+
+      if (!product) {
+        return NextResponse.json(
+          { success: false, message: "Product not found", data: null },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json(
+        { success: true, data: product },
+        { status: 200 }
       );
     }
 
-    // 🔓 3️⃣ SELF + FIRST ORDER + INACTIVE
-    else if (orderMode === "SELF" && isFirstOrder && userStatus === "inactive") {
-      products = products.filter(
-        (p) => Number(p.pv) === 50 || Number(p.pv) === 100
-      );
+    // =====================================================
+    // 2️⃣ BUILD DYNAMIC QUERY (NO PRE-FETCH ALL)
+    // =====================================================
+
+    let query: any = { status: "active" };
+
+    // 🔥 1️⃣ USE ADVANCE FLOW → STRICT 100 PV + ₹15000+
+    if (isUseAdvance) {
+      query.pv = 100;
+      query.dealer_price = { $gte: 15000 };
     }
+
+    // 🔒 2️⃣ ACTIVATION BUTTON FLOW (50 / 100 PV)
+    else if (pv !== null && pv > 0) {
+      query.pv = pv;
+    }
+
+    // 🔓 3️⃣ FIRST ORDER + INACTIVE + NO ADVANCE
+    else if (
+      !isAdvancePaid &&
+      orderMode === "SELF" &&
+      isFirstOrder &&
+      userStatus === "inactive"
+    ) {
+      query.pv = { $in: [50, 100] };
+    }
+
+    // ✅ 4️⃣ ALL OTHER CASES → NO PV RESTRICTION
+    // (query remains { status: "active" })
+
+    const products = await Product.find(query).lean();
 
     return NextResponse.json(
       { success: true, data: products },
       { status: 200 }
     );
+
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message },
@@ -71,6 +115,7 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 
 // 🔹 PUT - Replace a product

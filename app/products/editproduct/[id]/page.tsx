@@ -75,7 +75,7 @@ const ProductSchema = Yup.object().shape({
       (value) =>
         !value ||
         typeof value === "string" ||
-        (value instanceof File && value.type.startsWith("image/"))
+        (value instanceof File && value.type.startsWith("image/")),
     ),
 });
 
@@ -119,26 +119,26 @@ export default function EditProductPage() {
       try {
         setLoading(true);
         const { data } = await axios.get(
-          `/api/product-operations?product_id=${productId}`
+          `/api/product-operations?product_id=${productId}`,
         );
         if (data?.data) {
           const product = data.data;
+          // console.log(product);
           setInitialValues({
             productid: product.product_id || "",
             name: product.name || "",
             description: product.description || "",
-            mrp: product.mrp || "",
-            dealerPrice: product.dealer_price || "",
-            bv: product.bv || "",
-            pv: product.pv || "",
+            mrp: product.mrp ?? "",
+            dealerPrice: product.dealer_price ?? "",
+            bv: product.bv ?? "",
+            pv: product.pv ?? "",
             hsnCode: product.hsn_code || "",
             productCode: product.product_code || "",
-            discount: product.discount || "",
-            gst: product.gst || "",
-            cgst: product.cgst || "",
-            sgst: product.sgst || "",
-            igst: product.igst || "",
-
+            gst: product.gst ?? "",
+            cgst: product.cgst ?? "",
+            sgst: product.sgst ?? "",
+            igst: product.igst ?? "",
+            discount: product.discount ?? "",
             category: product.category || "",
             status: product.status || "active",
             image: product.image || null,
@@ -176,7 +176,7 @@ export default function EditProductPage() {
 
   const handleSubmit = async (
     values: ProductFormData,
-    actions: FormikHelpers<ProductFormData>
+    actions: FormikHelpers<ProductFormData>,
   ) => {
     try {
       setLoading(true);
@@ -185,8 +185,8 @@ export default function EditProductPage() {
         typeof values.image === "string"
           ? values.image
           : values.image instanceof File
-          ? await uploadFile(values.image)
-          : null;
+            ? await uploadFile(values.image)
+            : null;
 
       if (!imageUrl) return;
 
@@ -202,7 +202,7 @@ export default function EditProductPage() {
           .join(" "),
         image: imageUrl,
         status: values.status,
-         pv: Number(values.pv),
+        pv: Number(values.pv),
 
         product_code: values.productCode,
         hsn_code: values.hsnCode,
@@ -217,7 +217,7 @@ export default function EditProductPage() {
 
       const res = await axios.patch(
         `/api/product-operations?product_id=${productId}`,
-        payload
+        payload,
       );
 
       if (res.data.success) {
@@ -230,7 +230,7 @@ export default function EditProductPage() {
       console.error("Update product error:", error);
       ShowToast.error(
         error.response?.data?.message ||
-          "Something went wrong while updating product"
+          "Something went wrong while updating product",
       );
     } finally {
       setLoading(false);

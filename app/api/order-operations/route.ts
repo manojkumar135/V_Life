@@ -15,6 +15,7 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { activateUser } from "@/services/userActivation";
 import { getTotalPayout } from "@/services/totalpayout";
 import { updateClub } from "@/services/clubrank";
+import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
 
 import {
   updateInfinityTeam,
@@ -340,6 +341,7 @@ export async function POST(request: Request) {
 
           const totalPayout = await getTotalPayout(referrerId);
           await updateClub(referrerId, totalPayout);
+          await checkAndReleasePromotionalBonus(referrerId);
         }
 
         await User.updateOne(

@@ -306,9 +306,18 @@ export default function InvoiceTemplate({ data }) {
                 <Text style={[styles.col, styles.cQty, { textAlign: "center" }]}>{item.quantity}</Text>
                 <Text style={[styles.col, styles.cPrice, { textAlign: "right" }]}>{`\u20B9 ${item.dealer_price.toFixed(2)}`}</Text>
                 <Text style={[styles.col, styles.cTaxable, { textAlign: "right" }]}>{`\u20B9 ${item.whole_gst.toFixed(2)}`}</Text>
-                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.igst.toFixed(1) || "0"}</Text>
-                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.cgst.toFixed(1) || "0"}</Text>
-                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>{item.sgst.toFixed(1) || "0"}</Text>
+                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>
+                  {item.cgst?.toFixed(1) || "0"}
+                </Text>
+
+                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>
+                  {item.sgst?.toFixed(1) || "0"}
+                </Text>
+
+                <Text style={[styles.col, styles.cGST, { textAlign: "right" }]}>
+                  {item.igst?.toFixed(1) || "0"}
+                </Text>
+
                 <Text style={[styles.col, styles.cTotal, { textAlign: "right" }]}>{`\u20B9 ${((item.dealer_price + item.gst_amount) * item.quantity).toFixed(2)}`}</Text>
               </View>
             );

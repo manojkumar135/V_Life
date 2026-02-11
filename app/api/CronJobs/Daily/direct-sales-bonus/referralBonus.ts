@@ -17,7 +17,7 @@ function formatDate(date: Date): string {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-const REFERRAL_AMOUNT = 1000;
+const REFERRAL_AMOUNT = 2500;
 
 export async function releaseReferralBonus({
   sponsorId,
@@ -48,15 +48,15 @@ export async function releaseReferralBonus({
     admin = 0;
 
   if (wallet?.pan_verified) {
-    withdraw = 800;
-    reward = 80;
-    tds = 20;
-    admin = 100;
+    withdraw = Math.round(REFERRAL_AMOUNT * 0.8); // 80%
+    reward = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
+    tds = Math.round(REFERRAL_AMOUNT * 0.02); // 2%
+    admin = Math.round(REFERRAL_AMOUNT * 0.1); // 10%
   } else {
-    withdraw = 620;
-    reward = 80;
-    tds = 200;
-    admin = 100;
+    withdraw = Math.round(REFERRAL_AMOUNT * 0.62); // 62%
+    reward = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
+    tds = Math.round(REFERRAL_AMOUNT * 0.2); // 20%
+    admin = Math.round(REFERRAL_AMOUNT * 0.1); // 10%
   }
 
   const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
@@ -133,30 +133,29 @@ export async function releaseReferralBonus({
   });
 
   // ✅ Add withdraw points (daily)
-await addRewardScore({
-  user_id: sponsorId,
-  points: withdraw,
-  source: "referral_bonus",
-  reference_id: orderId,
-  remarks: `Referral bonus for first order ${orderId}`,
-  type: "daily",
-});
+  await addRewardScore({
+    user_id: sponsorId,
+    points: withdraw,
+    source: "referral_bonus",
+    reference_id: orderId,
+    remarks: `Referral bonus for first order ${orderId}`,
+    type: "daily",
+  });
 
-// ✅ Add reward points
-await addRewardScore({
-  user_id: sponsorId,
-  points: reward,
-  source: "referral_bonus",
-  reference_id: orderId,
-  remarks: `Referral bonus (reward) for first order ${orderId}`,
-  type: "reward",
-});
-
+  // ✅ Add reward points
+  await addRewardScore({
+    user_id: sponsorId,
+    points: reward,
+    source: "referral_bonus",
+    reference_id: orderId,
+    remarks: `Referral bonus (reward) for first order ${orderId}`,
+    type: "reward",
+  });
 
   await Alert.create({
     user_id: sponsorId,
     title: "Referral Bonus Earned 🎉",
-    description: `You earned ₹1000 referral bonus for first order ${orderId}.`,
+    description: `You earned ₹${REFERRAL_AMOUNT} referral bonus for first order ${orderId}.`,
     role: "user",
     priority: "medium",
     read: false,
@@ -166,49 +165,44 @@ await addRewardScore({
   });
 
   // 🔹 UPDATE CLUB & RANK AFTER REFERRAL BONUS
-const totalPayout = await getTotalPayout(sponsorId);
+  const totalPayout = await getTotalPayout(sponsorId);
 
-// capture BEFORE state
-const beforeUser =( await User.findOne({ user_id: sponsorId })
-  .select("rank club")
-  .lean()) as any;
+  // capture BEFORE state
+  const beforeUser = (await User.findOne({ user_id: sponsorId })
+    .select("rank club")
+    .lean()) as any;
 
-const updatedClub = await updateClub(
-  sponsorId,
-  totalPayout
-);
+  const updatedClub = await updateClub(sponsorId, totalPayout);
 
-if (updatedClub && beforeUser) {
+  if (updatedClub && beforeUser) {
+    // 🎉 CLUB ENTRY ALERT
+    if (beforeUser.club !== updatedClub.newClub) {
+      await Alert.create({
+        user_id: sponsorId,
+        title: `🎉 ${updatedClub.newClub} Club Achieved`,
+        description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
+        role: "user",
+        priority: "high",
+        read: false,
+        link: "/dashboards",
+        date: formatDate(now),
+        created_at: now,
+      });
+    }
 
-  // 🎉 CLUB ENTRY ALERT
-  if (beforeUser.club !== updatedClub.newClub) {
-    await Alert.create({
-      user_id: sponsorId,
-      title: `🎉 ${updatedClub.newClub} Club Achieved`,
-      description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
-      role: "user",
-      priority: "high",
-      read: false,
-      link: "/dashboards",
-      date: formatDate(now),
-      created_at: now,
-    });
+    // 🎖️ RANK ACHIEVEMENT ALERT
+    if (beforeUser.rank !== updatedClub.newRank) {
+      await Alert.create({
+        user_id: sponsorId,
+        title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+        description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
+        role: "user",
+        priority: "high",
+        read: false,
+        link: "/dashboards",
+        date: formatDate(now),
+        created_at: now,
+      });
+    }
   }
-
-  // 🎖️ RANK ACHIEVEMENT ALERT
-  if (beforeUser.rank !== updatedClub.newRank) {
-    await Alert.create({
-      user_id: sponsorId,
-      title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
-      description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
-      role: "user",
-      priority: "high",
-      read: false,
-      link: "/dashboards",
-      date: formatDate(now),
-      created_at: now,
-    });
-  }
-}
-
 }

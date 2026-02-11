@@ -15,6 +15,8 @@ import Loader from "@/components/common/loader";
 
 import { useRef } from "react";
 
+import SelectField from "@/components/InputFields/selectinput";
+
 // Define CartItem interface
 interface CartItem {
   product_id: string | number;
@@ -33,6 +35,51 @@ interface CartItem {
   pv?: number;
 }
 
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
+
+const STATE_OPTIONS = INDIAN_STATES.map((state) => ({
+  label: state,
+  value: state,
+}));
+
+
 export default function OrderFormCartSection({
   cart,
   updateQuantity,
@@ -47,6 +94,8 @@ export default function OrderFormCartSection({
   setFormData,
   handleInputChange,
   isFirstOrder,
+  isUseAdvanceFlow,
+
   createOrder,
   onPaymentSuccess,
 }: any) {
@@ -69,7 +118,7 @@ export default function OrderFormCartSection({
 
         if (!mounted) return;
 
-        setHasPaidAdvance(res.hasAdvance);
+setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
 
         if (res.hasAdvance) {
           setAdvanceDetails({
@@ -98,15 +147,16 @@ export default function OrderFormCartSection({
     };
   }, [user?.user_id, cart]);
 
-  const isAdvancePaidFirstOrder =
-    isFirstOrder && hasPaidAdvance && !isOtherOrder;
+ const isAdvanceFlow = isUseAdvanceFlow;
+
 
   useEffect(() => {
-    if (isAdvancePaidFirstOrder) {
-      setUseCashback(false);
-      setUseFortnight(false);
-    }
-  }, [isAdvancePaidFirstOrder]);
+  if (isAdvanceFlow) {
+    setUseCashback(false);
+    setUseFortnight(false);
+  }
+}, [isAdvanceFlow]);
+
 
   useEffect(() => {
     if (isOtherOrder) {
@@ -153,7 +203,7 @@ export default function OrderFormCartSection({
   // Cashback can NEVER exceed order value
   const maxCashbackUsable = Math.min(pvBasedCashback, totalAmount);
 
-  const cashbackUsed = isAdvancePaidFirstOrder
+  const cashbackUsed = isAdvanceFlow
     ? 0
     : isOtherOrder
       ? 0
@@ -165,7 +215,7 @@ export default function OrderFormCartSection({
   const remainingAfterCashback = totalAmount - cashbackUsed;
 
   // Fortnight (no cap)
-  const fortnightUsed = isAdvancePaidFirstOrder
+  const fortnightUsed = isAdvanceFlow
     ? 0
     : useFortnight
       ? Math.min(fortnightPoints, remainingAfterCashback)
@@ -184,9 +234,10 @@ export default function OrderFormCartSection({
   // ✅ FIXED: total reward remaining AFTER usage
   const rewardRemaining = rewardPoints - (cashbackUsed + fortnightUsed);
 
-  const payableAmount = isAdvancePaidFirstOrder
-    ? Math.max(0, totalAmount - advanceDetails.amount)
-    : Math.max(0, totalAmount - rewardDeduction);
+ const payableAmount = isAdvanceFlow
+  ? Math.max(0, totalAmount - 15000)
+  : Math.max(0, totalAmount - rewardDeduction);
+
 
   // GST = dealer_price * gst%
   const calcUnitPriceWithGST = (item: CartItem) => {
@@ -263,10 +314,11 @@ export default function OrderFormCartSection({
         return;
       }
 
-      if (isAdvancePaidFirstOrder && totalAmount < 15000) {
-        ShowToast.error("First order with advance must be at least ₹15,000");
-        return;
-      }
+      if (isAdvanceFlow && totalAmount < 15000) {
+  ShowToast.error("Order must be at least ₹15,000 to use advance");
+  return;
+}
+
 
       // 🟢 FINAL DECISION (TERNARY)
       payableAmount === 0
@@ -686,7 +738,7 @@ export default function OrderFormCartSection({
                 >
                   <div className="px-6 py-2 bg-white -mt-4">
                     {/* 🔴 Advance Paid Info (First Order with Advance) */}
-                    {isAdvancePaidFirstOrder && advanceDetails.amount > 0 && (
+                    {(isAdvanceFlow && totalAmount >= 15000) && (
                       <>
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
                           <span className="font-semibold">Subtotal</span>
@@ -697,7 +749,7 @@ export default function OrderFormCartSection({
 
                         <div className="flex justify-between items-center text-sm text-red-600 font-semibold mt-1">
                           <span>Advance Paid</span>
-                          <span>- ₹ {advanceDetails.amount.toFixed(2)}</span>
+                          <span>- ₹ 15000.00</span>
                         </div>
 
                         {/* <p className="text-xs text-red-500 mt-1">
@@ -916,15 +968,22 @@ export default function OrderFormCartSection({
                 labelClassName="text-[13px]"
               />
 
-              <InputField
-                label="State"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                required
-                className="h-8"
-                labelClassName="text-[13px]"
-              />
+             <SelectField
+  label="State"
+  name="state"
+  value={formData.state}
+  options={STATE_OPTIONS}
+  required
+  onChange={(option) =>
+    setFormData((prev: any) => ({
+      ...prev,
+      state: option?.value || "",
+    }))
+  }
+  controlHeight="2rem"
+  labelClassName="text-[13px]"
+/>
+
 
               <InputField
                 label="Country"

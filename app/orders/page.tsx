@@ -310,9 +310,28 @@ export default function OrdersPage() {
     // handle navigation or modal etc.
   };
 
-  const handleAddOrder = () => {
+  const handleAddOrder = async () => {
+  if (!user?.user_id) {
     router.push("/orders/addorder");
-  };
+    return;
+  }
+
+  try {
+    const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+
+    // If advance paid AND not used → go to selection page
+    if (advanceRes.hasAdvance && !advanceRes.advanceUsed) {
+      router.push("/orders/order-mode");
+      return;
+    }
+
+    // Otherwise normal
+    router.push("/orders/addorder");
+  } catch (err) {
+    router.push("/orders/addorder");
+  }
+};
+
 
   return (
     <Layout>
