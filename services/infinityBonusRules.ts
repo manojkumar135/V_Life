@@ -13,6 +13,7 @@ export async function getInfinityBonusPercentage(
   userId: string
 ): Promise<number> {
   const { leftDirectPV, rightDirectPV } = await getDirectPV(userId);
+  // console.log(leftDirectPV, rightDirectPV)
 
   // ❌ Less than minimum requirement
   if (leftDirectPV < 100 || rightDirectPV < 100) {

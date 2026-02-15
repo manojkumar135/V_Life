@@ -267,7 +267,7 @@ export async function POST(request: Request) {
 
     /* ---------------- 🎁 REWARD EARNING (BENEFICIARY) ---------------- */
     if (isFirstOrder && beneficiary.user_status !== "active") {
-      const cashbackPoints = 2 * newOrder.amount;
+      const cashbackPoints = newOrder.amount;
 
       if (cashbackPoints > 0) {
         await addRewardScore({

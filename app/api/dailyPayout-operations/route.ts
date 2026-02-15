@@ -121,16 +121,22 @@ export async function GET(request: Request) {
       }
     }
 
-    // Date range filter
     if (from || to) {
-      const startDate = parseDate(from);
-      const endDate = parseDate(to);
-      if (startDate && endDate) {
-        const startFormatted = `${("0" + startDate.getDate()).slice(-2)}-${("0" + (startDate.getMonth() + 1)).slice(-2)}-${startDate.getFullYear()}`;
-        const endFormatted = `${("0" + endDate.getDate()).slice(-2)}-${("0" + (endDate.getMonth() + 1)).slice(-2)}-${endDate.getFullYear()}`;
-        conditions.push({ date: { $gte: startFormatted, $lte: endFormatted } });
-      }
-    }
+  const startDate = from ? new Date(from) : null;
+  const endDate = to ? new Date(to) : null;
+
+  if (startDate && endDate) {
+    endDate.setHours(23, 59, 59, 999);
+
+    conditions.push({
+      created_at: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    });
+  }
+}
+
 
     // ✅ Final query
     const finalQuery = conditions.length ? { $and: [baseQuery, ...conditions] } : baseQuery;

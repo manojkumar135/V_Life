@@ -126,6 +126,7 @@ export async function runInfinityBonus() {
       // };
       // const bonusPercentage = rankPercentages[rank] || 0;
       const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id);
+      // console.log(bonusPercentage,"bonusPercentage")
 
       if (bonusPercentage === 0) {
         console.log(
