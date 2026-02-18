@@ -30,6 +30,8 @@ interface ProductCardProps {
   onAddToCart: (product: any) => void;
   isInCart?: boolean;
   disabled?: boolean;
+  hideBV?: boolean;
+  hidePV?: boolean;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
@@ -55,6 +57,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
   isInCart = false,
   disabled = false,
+  hideBV = false,
+  hidePV = false,
 }) => {
   const router = useRouter();
   const { user } = useVLife();
@@ -64,18 +68,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleView = () => {
-  const params = new URLSearchParams();
+    const params = new URLSearchParams();
 
-  if (typeof window !== "undefined") {
-    const currentParams = new URLSearchParams(window.location.search);
-    currentParams.forEach((value, key) => {
-      params.set(key, value); // 🔥 preserve order context
-    });
-  }
+    if (typeof window !== "undefined") {
+      const currentParams = new URLSearchParams(window.location.search);
+      currentParams.forEach((value, key) => {
+        params.set(key, value); // 🔥 preserve order context
+      });
+    }
 
-  router.push(`/products/productdetailview/${_id}?${params.toString()}`);
-};
-
+    router.push(`/products/productdetailview/${_id}?${params.toString()}`);
+  };
 
   const isDisabled = status !== "active" || disabled;
 
@@ -107,12 +110,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
             />
           )}
           <div className="flex flex-col px-2">
-            <p className="text-xs mt-2 ">
-              BV (<span className="font-semibold">{bv}</span>)
-            </p>
-            <p className="text-xs mt-2">
-              PV (<span className="font-semibold">{pv}</span>)
-            </p>
+            {!hideBV && (
+              <p className="text-xs mt-2 ">
+                BV (<span className="font-semibold">{bv}</span>)
+              </p>
+            )}
+
+            {!hidePV && (
+              <p className="text-xs mt-2">
+                PV (<span className="font-semibold">{pv}</span>)
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -180,8 +188,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                   ? "Added"
                   : "Unavailable"
                 : isInCart
-                ? "Added"
-                : "Add to Cart"}
+                  ? "Added"
+                  : "Add to Cart"}
             </SubmitButton>
           </div>
         </div>

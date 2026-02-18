@@ -16,6 +16,8 @@ const HistorySchema = new mongoose.Schema(
     placed_by: { type: String },
     placed_by_name: { type: String },
 
+    name:{ type: String },
+title:{ type: String },
 
     order_id: { type: String, },
     account_holder_name: { type: String, },

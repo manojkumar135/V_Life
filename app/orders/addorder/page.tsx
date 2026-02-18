@@ -439,7 +439,7 @@ export default function AddOrderPage() {
     !!user?.user_id &&
     orderContext !== null &&
     typeof isFirstOrder === "boolean" &&
-    typeof isAdvancePaidUser  === "boolean";
+    typeof isAdvancePaidUser === "boolean";
 
   useEffect(() => {
     if (!isProductFetchReady) return;
@@ -505,7 +505,7 @@ export default function AddOrderPage() {
     orderContext?.pv,
     isFirstOrder,
     // isAdvancePaidFirstOrder,
-    isUseAdvanceFlow, 
+    isUseAdvanceFlow,
     user?.status,
   ]);
 
@@ -736,8 +736,8 @@ export default function AddOrderPage() {
         price: item.price,
         mrp: item.mrp,
         dealer_price: item.dealer_price,
-        bv: item.bv,
-        pv: item.pv ?? 0,
+        bv: isFirstOrder ? 0 : item.bv,
+pv: isUseAdvanceFlow ? 0 : (item.pv ?? 0),
         gst: item.gst ?? 0,
         gst_amount: item.gst_amount ?? 0,
         whole_gst: item.whole_gst ?? 0,
@@ -780,8 +780,8 @@ export default function AddOrderPage() {
         payment_signature: razorpayResponse.razorpay_signature,
         payment_type: razorpayResponse.method || "razorpay",
         items: orderItems,
-        order_bv: getTotalBV(),
-        order_pv: getTotalPV(),
+order_bv: isFirstOrder ? 0 : getTotalBV(),
+order_pv: isUseAdvanceFlow ? 0 : getTotalPV(),
         total_gst: calcTotalGST(cart),
         order_mode: orderContext?.order_mode ?? "SELF",
 
@@ -792,12 +792,11 @@ export default function AddOrderPage() {
         total_amount: getTotalPrice(),
         final_amount: payableAmount,
         payable_amount: payableAmount,
-       advance_deducted: isUseAdvanceFlow
-  ? Math.min(15000, getTotalPrice())
-  : 0,
+        advance_deducted: isUseAdvanceFlow
+          ? Math.min(15000, getTotalPrice())
+          : 0,
 
-advance_used: isUseAdvanceFlow,
-
+        advance_used: isUseAdvanceFlow,
 
         is_first_order: isFirstOrder,
         bonus_checked: false,
@@ -1007,6 +1006,8 @@ advance_used: isUseAdvanceFlow,
                 isInCart={
                   !!cart.find((item) => item.product_id === product.product_id)
                 }
+                hideBV={isFirstOrder}
+                hidePV={isUseAdvanceFlow}
               />
             ))}
           </div>

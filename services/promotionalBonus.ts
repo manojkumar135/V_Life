@@ -6,7 +6,7 @@ import { Alert } from "@/models/alert";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { getDirectPV } from "@/services/directPV";
 
-const PROMO_AMOUNT = 10000;
+const PROMO_AMOUNT = 8000;
 
 /* -----------------------------------------------------------
    Helper: Parse DD-MM-YYYY safely
@@ -24,7 +24,7 @@ function parseDDMMYYYY(dateStr: string): Date | null {
 }
 
 /* -----------------------------------------------------------
-   Helper: Format date as DD-MM-YYYY (Same as Direct Bonus)
+   Helper: Format date as DD-MM-YYYY
 ----------------------------------------------------------- */
 function formatDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, "0");
@@ -41,20 +41,29 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     const user = await User.findOne({ user_id: userId });
     if (!user || !user.activated_date) return;
 
-    /* -------------------------------------------------------
-       1️⃣ Already Released Protection
-    ------------------------------------------------------- */
-    const already = await History.findOne({
+    // 🔎 Check DailyPayout
+    const alreadyPayout = await DailyPayout.findOne({
       user_id: userId,
       title: "Promotional Bonus",
       transaction_type: "Credit",
       status: "Completed",
     });
 
-    if (already) return;
+    // 🔎 Check History
+    const alreadyHistory = await History.findOne({
+      user_id: userId,
+      title: "Promotional Bonus",
+      transaction_type: "Credit",
+      status: "Completed",
+    });
+
+    if (alreadyPayout || alreadyHistory) {
+      console.log("🚫 Promotional bonus already released for", userId);
+      return;
+    }
 
     /* -------------------------------------------------------
-       2️⃣ Check 30 Days Condition
+       2️⃣ Check 15 Days Condition
     ------------------------------------------------------- */
     const activationDate = parseDDMMYYYY(user.activated_date);
     if (!activationDate) return;
@@ -63,40 +72,53 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     const diffTime = today.getTime() - activationDate.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
-    if (diffDays < 0 || diffDays > 30) return;
+    if (diffDays < 0 || diffDays > 15) return;
 
     /* -------------------------------------------------------
        3️⃣ Get Direct PV Using Central Engine
     ------------------------------------------------------- */
-    const { leftDirectPV, rightDirectPV } =
-      await getDirectPV(userId);
+    const { leftDirectPV, rightDirectPV } = await getDirectPV(userId);
 
     if (leftDirectPV < 200 || rightDirectPV < 200) return;
 
     /* -------------------------------------------------------
-       4️⃣ Release Promotional Bonus
+       4️⃣ Prepare Wallet & Split Amount
     ------------------------------------------------------- */
     const wallet = await Wallet.findOne({ user_id: userId });
-    // if (!wallet) return;
 
-    const payout_id = await generateUniqueCustomId(
-      "PY",
-      DailyPayout,
-      8,
-      8
-    );
+    let withdraw = 0,
+      reward = 0,
+      tds = 0,
+      admin = 0;
+
+    if (wallet?.pan_verified) {
+      withdraw = Math.round(PROMO_AMOUNT * 0.8); // 80%
+      reward = Math.round(PROMO_AMOUNT * 0.08); // 8%
+      tds = Math.round(PROMO_AMOUNT * 0.02); // 2%
+      admin = Math.round(PROMO_AMOUNT * 0.1); // 10%
+    } else {
+      withdraw = Math.round(PROMO_AMOUNT * 0.62); // 62%
+      reward = Math.round(PROMO_AMOUNT * 0.08); // 8%
+      tds = Math.round(PROMO_AMOUNT * 0.2); // 20%
+      admin = Math.round(PROMO_AMOUNT * 0.1); // 10%
+    }
+
+    const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
 
     const now = new Date();
-    const formattedDate = formatDate(now);                 // ✅ DD-MM-YYYY
-    const formattedTime = now.toTimeString().slice(0, 5);  // ✅ HH:MM
+    const formattedDate = formatDate(now);
+    const formattedTime = now.toTimeString().slice(0, 5);
 
+    /* -------------------------------------------------------
+       5️⃣ Create Daily Payout
+    ------------------------------------------------------- */
     const payout = await DailyPayout.create({
       transaction_id: payout_id,
       payout_id,
 
       user_id: user.user_id,
       user_name: user.user_name,
-      rank: wallet?.rank ||user.rank,
+      rank: wallet?.rank || user.rank,
       wallet_id: wallet?.wallet_id,
       pan_verified: wallet?.pan_verified || false,
       mail: user.mail || "",
@@ -117,10 +139,10 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
 
       amount: PROMO_AMOUNT,
       totalamount: PROMO_AMOUNT,
-      withdraw_amount: PROMO_AMOUNT,
-      reward_amount: 0,
-      tds_amount: 0,
-      admin_charge: 0,
+      withdraw_amount: withdraw,
+      reward_amount: reward,
+      tds_amount: tds,
+      admin_charge: admin,
 
       to: user.user_id,
       from: "",
@@ -128,7 +150,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       status: "Completed",
 
       details:
-        "Promotional Bonus for achieving 200 PV on both sides within 30 days of activation",
+        "Promotional Bonus for achieving 200 PV on both sides within 15 days of activation",
 
       created_by: "system",
       last_modified_by: "system",
@@ -136,7 +158,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     });
 
     /* -------------------------------------------------------
-       5️⃣ Create History
+       6️⃣ Create History
     ------------------------------------------------------- */
     if (payout) {
       await History.create({
@@ -149,6 +171,10 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
         mail: payout.mail,
         contact: payout.contact,
         user_status: payout.user_status,
+
+        // ✅ ADD THESE TWO
+        name: "Promotional Bonus",
+        title: "Promotional Bonus",
 
         account_holder_name: payout.account_holder_name,
         bank_name: payout.bank_name,
@@ -183,13 +209,12 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     }
 
     /* -------------------------------------------------------
-       6️⃣ Create Alert
+       7️⃣ Create Alert
     ------------------------------------------------------- */
     await Alert.create({
       user_id: user.user_id,
       title: "🎉 Promotional Bonus Earned",
-      description:
-        "Congratulations! You earned ₹10,000 Promotional Bonus for achieving 200 PV on both sides within 30 days.",
+      description: `Congratulations! You earned ₹${PROMO_AMOUNT} Promotional Bonus for achieving 200 PV on both sides within 15 days.`,
       role: "user",
       priority: "high",
       read: false,

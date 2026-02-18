@@ -7,9 +7,9 @@ import { loadTreeMap, getUserTeamFromMap } from "@/services/getTeam";
  */
 export const getDirectPV = async (userId: string) => {
   // 1️⃣ Fetch user with paid_directs
-  const user = await User.findOne({ user_id: userId })
+  const user = (await User.findOne({ user_id: userId })
     .select("paid_directs")
-    .lean() as any;
+    .lean()) as any;
 
   if (!user) {
     throw new Error("User not found");
@@ -30,7 +30,7 @@ export const getDirectPV = async (userId: string) => {
   // 2️⃣ Fetch direct users PV
   const directUsers = await User.find(
     { user_id: { $in: paidDirectIds } },
-    { user_id: 1, pv: 1 }
+    { user_id: 1, pv: 1 },
   ).lean();
 
   if (!directUsers.length) {
@@ -49,16 +49,14 @@ export const getDirectPV = async (userId: string) => {
 
   // 4️⃣ Determine team and sum PV
   for (const direct of directUsers) {
-    const team = getUserTeamFromMap(
-      userId,
-      direct.user_id,
-      nodeMap
-    );
+    const team = getUserTeamFromMap(userId, direct.user_id, nodeMap);
 
     if (team === "left") {
       leftDirectPV += direct.pv ?? 0;
+      // console.log(direct, direct.pv);
     } else if (team === "right") {
       rightDirectPV += direct.pv ?? 0;
+      // console.log(direct, direct.pv);
     }
   }
 
@@ -66,7 +64,7 @@ export const getDirectPV = async (userId: string) => {
     leftDirectPV,
     rightDirectPV,
     leftDirectPV + rightDirectPV,
-    "directPv"
+    "directPv",
   );
 
   return {

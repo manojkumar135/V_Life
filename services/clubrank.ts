@@ -23,7 +23,7 @@ export async function updateClub(
   const session = await mongoose.startSession();
   session.startTransaction();
 
-  console.log(user_id,totalPayout)
+  console.log(user_id,totalPayout,"clubrank")
   try {
     const user = await User.findOne({ user_id }).session(session);
     if (!user) return null;
@@ -34,7 +34,8 @@ export async function updateClub(
     /* ⭐ STAR ENGINE — ONLY BEFORE EXECUTIVE */
     let starRank = 0;
 
-    if (user.club !== "Executive" && user.club !== "Diamond" && user.club !== "Royalty") {
+    if (user.club !== "Executive" && user.club !== "Diamond" && user.club !== "Royality") {
+      console.log("Into checkAndUpgradeRank")
       starRank = await checkAndUpgradeRank(user);
 
       if (starRank >= 1 && !user.club) {

@@ -419,8 +419,16 @@ export async function POST(request) {
           console.log("🔁 updateInfinityTeam()");
           await updateInfinityTeam(referrerId);
 
-          // console.log("🔁 propagateInfinityUpdateToAncestors()");
-          // await propagateInfinityUpdateToAncestors(referrerId);
+          console.log("🔁 propagateInfinityUpdateToAncestors()");
+
+          // ✅ Non-blocking call
+          propagateInfinityUpdateToAncestors(referrerId)
+            .then(() => {
+              console.log("✅ propagateInfinityUpdateToAncestors finished");
+            })
+            .catch((err) => {
+              console.error("❌ propagateInfinityUpdateToAncestors error:", err);
+            });
 
           // ------------------------------------
           // CLUB UPDATE
