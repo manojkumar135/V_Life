@@ -7,15 +7,21 @@ import { Wallet } from "@/models/wallet";
 import TreeNode from "@/models/tree";
 import { loadTreeMap, getUserTeamFromMap } from "@/services/getTeam";
 import { getDirectPV } from "@/services/directPV";
+import mongoose from "mongoose";
+
 
 /* -------------------------------------------------------------
    ⭐ STAR ENGINE (FINAL – CLEAN & BUSINESS SAFE)
 ------------------------------------------------------------- */
-export async function checkAndUpgradeRank(user: any): Promise<number> {
+export async function checkAndUpgradeRank(
+  user: any,
+  session?: mongoose.ClientSession
+): Promise<number> {
+  // console.log(user,"from rank engine")
   if (
     user.club === "Executive" ||
     user.club === "Diamond" ||
-    user.club === "Royalty"
+    user.club === "Royality"
   ) {
     return user.rank && !isNaN(Number(user.rank))
       ? Number(user.rank)
@@ -84,46 +90,47 @@ export async function checkAndUpgradeRank(user: any): Promise<number> {
   ----------------------------------------------------------- */
   const nodeMap = await loadTreeMap();
 
-  /* -----------------------------------------------------------
-     3️⃣ FETCH PAID DIRECTS
-  ----------------------------------------------------------- */
-  const directs = await User.find({
-    referBy: user.user_id,
-  })
-    .select("user_id user_name pv")
-    .lean();
+/* -----------------------------------------------------------
+   3️⃣ FETCH PAID DIRECTS (FIXED — USE paid_directs)
+----------------------------------------------------------- */
 
-  const paidUsers: any[] = [];
+// reload fresh user to ensure latest paid_directs
+const freshUser = (await User.findOne({
+  user_id: user.user_id,
+})
+.select("paid_directs")
+.lean()) as any;
 
-  for (const d of directs) {
-    if (!d.pv || d.pv <= 0) continue;
+const paidDirectIds: string[] = freshUser?.paid_directs ?? [];
 
-    const paid = await History.findOne({
+const directs = await User.find(
+  { user_id: { $in: paidDirectIds } },
+  { user_id: 1, user_name: 1, pv: 1 }
+).lean();
+
+const paidUsers: any[] = [];
+
+for (const d of directs) {
+
+  if (!d.pv || d.pv <= 0) continue;
+
+  const team = getUserTeamFromMap(
+    user.user_id,
+    d.user_id,
+    nodeMap
+  );
+
+  if (team === "left" || team === "right") {
+    paidUsers.push({
       user_id: d.user_id,
-      status: "Completed",
-      first_payment: true,
-      $or: [{ first_order: true }, { advance: true }],
-    }).lean();
-
-    // console.log(paid,"from rank engine")
-
-    if (!paid) continue;
-
-    const team = getUserTeamFromMap(
-      user.user_id,
-      d.user_id,
-      nodeMap
-    );
-
-    if (team === "left" || team === "right") {
-      paidUsers.push({
-        user_id: d.user_id,
-        user_name: d.user_name,
-        team,
-        pv: d.pv,
-      });
-    }
+      user_name: d.user_name,
+      team,
+      pv: d.pv,
+    });
   }
+}
+
+console.log(paidUsers, "rank engine FIXED");
 
   /* -----------------------------------------------------------
      4️⃣ REMOVE PREVIOUSLY USED USERS

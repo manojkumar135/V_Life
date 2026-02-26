@@ -220,7 +220,7 @@ export async function POST(request: Request) {
 
       available_balance: beneficiary.wallet_balance || 0,
       transaction_type: "Debit",
-      status: "pending",
+      status: "Completed",
 
       amount: body.payable_amount,
       payable_amount: body.payable_amount,

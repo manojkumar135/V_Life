@@ -41,7 +41,6 @@ title:{ type: String },
     advance: { type: Boolean, default: false },
     ischecked: { type: Boolean, default: false },
 
-
     from: { type: String, },
     to: { type: String, },
 

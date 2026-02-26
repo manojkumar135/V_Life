@@ -286,10 +286,15 @@ export default function AddOrderPage() {
   const targetUserId = orderContext?.beneficiary_id || user?.user_id;
 
   useEffect(() => {
-    if (!targetUserId) return;
+  // ✅ ONLY fetch beneficiary for OTHER order
+  if (!isOtherOrder) return;
 
-    fetchBeneficiary(targetUserId);
-  }, [targetUserId]);
+  const beneficiaryId = orderContext?.beneficiary_id;
+
+  if (!beneficiaryId) return;
+
+  fetchBeneficiary(beneficiaryId);
+}, [isOtherOrder, orderContext?.beneficiary_id]);
 
   const fetchBeneficiary = async (userId: string) => {
     try {

@@ -34,15 +34,29 @@ export async function updateClub(
     /* ⭐ STAR ENGINE — ONLY BEFORE EXECUTIVE */
     let starRank = 0;
 
-    if (user.club !== "Executive" && user.club !== "Diamond" && user.club !== "Royality") {
-      console.log("Into checkAndUpgradeRank")
-      starRank = await checkAndUpgradeRank(user);
+   if (
+  user.club !== "Executive" &&
+  user.club !== "Diamond" &&
+  user.club !== "Royality"
+) {
+  console.log("Into checkAndUpgradeRank");
 
-      if (starRank >= 1 && !user.club) {
-        newClub = "Star";
-        newRank = String(starRank);
-      }
-    }
+starRank = await checkAndUpgradeRank(user, session);
+  console.log(starRank,"clubrank")
+
+  const refreshedUser = await User.findOne({ user_id }).session(session);
+
+  if (
+    starRank >= 1 &&
+    (
+      !refreshedUser.club ||
+      refreshedUser.club === "none"
+    )
+  ) {
+    newClub = "Star";
+    newRank = String(starRank);
+  }
+}
 
     /* FETCH TEAM DATA */
     const { leftDirectPV, rightDirectPV } = await getDirectPV(user_id);
@@ -58,8 +72,8 @@ export async function updateClub(
       leftInfinityBV >= 50_00_00_000 &&
       rightInfinityBV >= 50_00_00_000
     ) {
-      newClub = "Royalty";
-      newRank = "Royalty";
+      newClub = "Royality";
+      newRank = "Royality";
     }
 
     /* =========================================================
