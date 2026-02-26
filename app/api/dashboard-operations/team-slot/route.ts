@@ -74,6 +74,8 @@ export async function GET(request: Request) {
       ],
     }).lean();
 
+    // console.log(historiesInWindow)
+
     if (!historiesInWindow.length) {
       return NextResponse.json({
         success: true,
@@ -96,6 +98,7 @@ export async function GET(request: Request) {
       .filter(h => !h.advance && h.order_id)
       .map(h => h.order_id);
 
+      // console.log(orderIds,"historiesInWindow")
     const orders = orderIds.length
       ? await Order.find(
           { order_id: { $in: orderIds } },
