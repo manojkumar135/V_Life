@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { WalletChangeRequest } from "@/models/walletChangeRequest";
 import { Wallet } from "@/models/wallet";
@@ -6,14 +6,14 @@ import { Login } from "@/models/login";
 import { releaseOnHoldPayouts } from "@/app/api/wallets-operations/walletHelpers";
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { request_id: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ request_id: string }> }
 ) {
   try {
 
     await connectDB();
 
-    const { request_id } = params;
+    const { request_id } = await params;
 
     const body = await request.json();
 
