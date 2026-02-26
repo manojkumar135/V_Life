@@ -6,7 +6,7 @@ import { Alert } from "@/models/alert";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { getDirectPV } from "@/services/directPV";
 
-const PROMO_AMOUNT = 8000;
+const PROMO_AMOUNT = 5000;
 
 /* -----------------------------------------------------------
    Helper: Parse DD-MM-YYYY safely
@@ -44,7 +44,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     // 🔎 Check DailyPayout
     const alreadyPayout = await DailyPayout.findOne({
       user_id: userId,
-      title: "Promotional Bonus",
+      title: "Quick Star Bonus",
       transaction_type: "Credit",
       status: "Completed",
     });
@@ -52,13 +52,13 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     // 🔎 Check History
     const alreadyHistory = await History.findOne({
       user_id: userId,
-      title: "Promotional Bonus",
+      title: "Quick Star Bonus",
       transaction_type: "Credit",
       status: "Completed",
     });
 
     if (alreadyPayout || alreadyHistory) {
-      console.log("🚫 Promotional bonus already released for", userId);
+      console.log("🚫 Quick Star bonus already released for", userId);
       return;
     }
 
@@ -72,14 +72,14 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     const diffTime = today.getTime() - activationDate.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
-    if (diffDays < 0 || diffDays > 15) return;
+    if (diffDays < 0 || diffDays > 7) return;
 
     /* -------------------------------------------------------
        3️⃣ Get Direct PV Using Central Engine
     ------------------------------------------------------- */
     const { leftDirectPV, rightDirectPV } = await getDirectPV(userId);
 
-    if (leftDirectPV < 200 || rightDirectPV < 200) return;
+    if (leftDirectPV < 100 || rightDirectPV < 100) return;
 
     /* -------------------------------------------------------
        4️⃣ Prepare Wallet & Split Amount
@@ -125,8 +125,8 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       contact: user.contact || "",
       user_status: user.user_status || "active",
 
-      name: "Promotional Bonus",
-      title: "Promotional Bonus",
+      name: "Quick Star Bonus",
+      title: "Quick Star Bonus",
 
       account_holder_name: wallet?.account_holder_name || "",
       bank_name: wallet?.bank_name || "",
@@ -150,7 +150,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       status: "Completed",
 
       details:
-        "Promotional Bonus for achieving 200 PV on both sides within 15 days of activation",
+        "Quick Star Bonus for achieving 100 PV on both sides within 7 days of activation",
 
       created_by: "system",
       last_modified_by: "system",
@@ -173,8 +173,8 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
         user_status: payout.user_status,
 
         // ✅ ADD THESE TWO
-        name: "Promotional Bonus",
-        title: "Promotional Bonus",
+        name: "Quick Star Bonus",
+        title: "Quick Star Bonus",
 
         account_holder_name: payout.account_holder_name,
         bank_name: payout.bank_name,
@@ -213,8 +213,8 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     ------------------------------------------------------- */
     await Alert.create({
       user_id: user.user_id,
-      title: "🎉 Promotional Bonus Earned",
-      description: `Congratulations! You earned ₹${PROMO_AMOUNT} Promotional Bonus for achieving 200 PV on both sides within 15 days.`,
+      title: "🎉 Quick Star Bonus Earned",
+      description: `Congratulations! You earned ₹${PROMO_AMOUNT} Quick Star Bonus for achieving 100 PV on both sides within 7 days.`,
       role: "user",
       priority: "high",
       read: false,
@@ -223,8 +223,8 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       created_at: now,
     });
 
-    console.log(`✅ Promotional Bonus Released for ${userId}`);
+    console.log(`✅ Quick Star Bonus Released for ${userId}`);
   } catch (error) {
-    console.error("❌ Promotional Bonus Error:", error);
+    console.error("❌ Quick Star Bonus Error:", error);
   }
 }

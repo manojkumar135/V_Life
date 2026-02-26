@@ -110,6 +110,11 @@ const OrderSchema = new mongoose.Schema(
 
     // detailed reward breakdown (informational)
     reward_usage: {
+       daily: {                                
+    used: { type: Number, default: 0 },
+    before: { type: Number, default: 0 },
+    after: { type: Number, default: 0 },
+  },
       fortnight: {
         used: { type: Number, default: 0 },
         before: { type: Number, default: 0 },

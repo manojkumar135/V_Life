@@ -56,7 +56,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   // Fetch on mount & when user changes
   useEffect(() => {
     if (user?.user_id) fetchAlerts();
-  }, [user]);
+  }, [user,showModal]);
 
   // ✅ Mark all alerts as seen when modal opens
   const markAllAsSeen = async () => {

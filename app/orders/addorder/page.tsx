@@ -712,6 +712,8 @@ export default function AddOrderPage() {
       cashbackUsed: number;
       fortnightPoints: number;
       fortnightUsed: number;
+      dailyPoints: number;
+      dailyUsed: number;
     },
   ) => {
     try {
@@ -737,7 +739,7 @@ export default function AddOrderPage() {
         mrp: item.mrp,
         dealer_price: item.dealer_price,
         bv: isFirstOrder ? 0 : item.bv,
-pv: isUseAdvanceFlow ? 0 : (item.pv ?? 0),
+        pv: isUseAdvanceFlow ? 0 : (item.pv ?? 0),
         gst: item.gst ?? 0,
         gst_amount: item.gst_amount ?? 0,
         whole_gst: item.whole_gst ?? 0,
@@ -780,8 +782,8 @@ pv: isUseAdvanceFlow ? 0 : (item.pv ?? 0),
         payment_signature: razorpayResponse.razorpay_signature,
         payment_type: razorpayResponse.method || "razorpay",
         items: orderItems,
-order_bv: isFirstOrder ? 0 : getTotalBV(),
-order_pv: isUseAdvanceFlow ? 0 : getTotalPV(),
+        order_bv: isFirstOrder ? 0 : getTotalBV(),
+        order_pv: isUseAdvanceFlow ? 0 : getTotalPV(),
         total_gst: calcTotalGST(cart),
         order_mode: orderContext?.order_mode ?? "SELF",
 
@@ -822,21 +824,34 @@ order_pv: isUseAdvanceFlow ? 0 : getTotalPV(),
         },
 
         /* ---------------- REWARD USAGE ---------------- */
-        reward_usage: {
-          cashback: isOtherOrder
-            ? { before: 0, used: 0, after: 0 }
-            : {
-                before: rewardMeta.cashbackPoints,
-                used: rewardMeta.cashbackUsed,
-                after: rewardMeta.cashbackPoints - rewardMeta.cashbackUsed,
-              },
+       reward_usage: {
+  cashback: isOtherOrder
+    ? { before: 0, used: 0, after: 0 }
+    : {
+        before: Number(rewardMeta.cashbackPoints || 0),
+        used: Number(rewardMeta.cashbackUsed || 0),
+        after:
+          Number(rewardMeta.cashbackPoints || 0) -
+          Number(rewardMeta.cashbackUsed || 0),
+      },
 
-          fortnight: {
-            before: rewardMeta.fortnightPoints,
-            used: rewardMeta.fortnightUsed,
-            after: rewardMeta.fortnightPoints - rewardMeta.fortnightUsed,
-          },
-        },
+  fortnight: {
+    before: Number(rewardMeta.fortnightPoints || 0),
+    used: Number(rewardMeta.fortnightUsed || 0),
+    after:
+      Number(rewardMeta.fortnightPoints || 0) -
+      Number(rewardMeta.fortnightUsed || 0),
+  },
+
+  daily: {
+    before: Number(rewardMeta.dailyPoints || 0),
+    used: Number(rewardMeta.dailyUsed || 0),
+    after:
+      Number(rewardMeta.dailyPoints || 0) -
+      Number(rewardMeta.dailyUsed || 0),
+  },
+},
+
       };
 
       if (referBySource && referBySource.trim() !== "") {

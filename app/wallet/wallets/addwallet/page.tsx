@@ -55,7 +55,7 @@ export default function AddWalletForm() {
   const { user } = useVLife();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [panVerified, setPanVerified] = useState(false);
+  const [panVerified, setPanVerified] = useState(true);
 
   const initialValues: WalletFormData = {
     userId: user.role === "user" ? user.user_id : "",
@@ -80,7 +80,7 @@ export default function AddWalletForm() {
     panNumber: "",
     panName: "",
     panDob: "",
-    panVerify: false,
+    panVerify: true,
     panCategory: "",
     aadharSeeding: false,
     panFile: null,

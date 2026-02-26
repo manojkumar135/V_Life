@@ -1,7 +1,12 @@
 import { Score } from "@/models/score";
 import { User } from "@/models/user";
 
-export type RewardType = "daily" | "fortnight" | "cashback" | "reward";
+export type RewardType =
+  | "daily"
+  | "fortnight"
+  | "cashback"
+  | "reward"
+  | "referral";
 
 interface RewardScorePayload {
   user_id: string;
@@ -29,7 +34,8 @@ export async function addRewardScore({
   const affectsUser =
     rewardKey === "daily" ||
     rewardKey === "fortnight" ||
-    rewardKey === "reward";
+    rewardKey === "reward" ||
+    rewardKey === "referral";
 
   /* =====================================================
      1️⃣ UPDATE USER (NO FETCH)
@@ -42,7 +48,7 @@ export async function addRewardScore({
           ...(affectsScore && { score: points }),
           reward: points,
         },
-      }
+      },
     );
   }
 
@@ -51,11 +57,10 @@ export async function addRewardScore({
   ===================================================== */
   const scoreDoc = await Score.findOne(
     { user_id },
-    { [`${rewardKey}.balance`]: 1 }
+    { [`${rewardKey}.balance`]: 1 },
   );
 
-  const previousBalance =
-    scoreDoc?.[rewardKey]?.balance ?? 0;
+  const previousBalance = scoreDoc?.[rewardKey]?.balance ?? 0;
 
   const newBalance = previousBalance + points;
 
@@ -82,7 +87,7 @@ export async function addRewardScore({
       },
       $set: { updated_at: now },
     },
-    { new: true }
+    { new: true },
   );
 
   if (updated) return;
@@ -124,6 +129,7 @@ export async function addRewardScore({
     fortnight: rewardKey === "fortnight" ? activeBlock : emptyBlock,
     cashback: rewardKey === "cashback" ? activeBlock : emptyBlock,
     reward: rewardKey === "reward" ? activeBlock : emptyBlock,
+    referral: rewardKey === "referral" ? activeBlock : emptyBlock,
 
     updated_at: now,
   });

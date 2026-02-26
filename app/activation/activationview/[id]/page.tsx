@@ -359,10 +359,10 @@ export default function ActivationView() {
                 </div>
               )}
 
-              {order.rewardUsage?.fortnight?.used > 0 && (
+              {order.rewardUsed> 0 && (
                 <div className="flex justify-between items-center text-sm text-red-600 pl-2">
-                  <span>Fortnight</span>
-                  <span>- ₹ {order.rewardUsage.fortnight.used.toFixed(2)}</span>
+                  <span>Rewards</span>
+                  <span>- ₹ {order.rewardUsed.toFixed(2)}</span>
                 </div>
               )}
 

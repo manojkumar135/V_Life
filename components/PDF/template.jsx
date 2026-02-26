@@ -364,9 +364,9 @@ export default function InvoiceTemplate({ data }) {
               {/* Fortnight */}
               {data.order.reward_usage?.fortnight?.used > 0 && (
                 <View style={styles.totalsRow}>
-                  <Text >Fortnight</Text>
+                  <Text >Reward Points</Text>
                   <Text style={styles.deduction}>
-                    {`- ₹ ${data.order.reward_usage.fortnight.used.toFixed(2)}`}
+                    {`- ₹ ${data.order.reward_used.toFixed(2)}`}
                   </Text>
                 </View>
               )}

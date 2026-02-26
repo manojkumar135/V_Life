@@ -316,7 +316,7 @@ export default function MyActivationsPage() {
       {showPreview && previewUrl && (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center backdrop-blur-sm">
           <button
-            className="absolute top-5 right-5 text-white bg-black rounded-full 
+            className="absolute top-5 right-15 max-md:right-3 text-white bg-black rounded-full 
             w-7 h-7 cursor-pointer border-white border-2 font-bold"
             onClick={() => {
               setShowPreview(false);

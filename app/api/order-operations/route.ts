@@ -84,13 +84,18 @@ interface OrderPayload {
     address?: string;
   };
 
-  reward_usage: {
+ reward_usage: {
     cashback: {
       before: number;
       used: number;
       after: number;
     };
     fortnight: {
+      before: number;
+      used: number;
+      after: number;
+    };
+    daily: {                 // ✅ ADD THIS BLOCK
       before: number;
       used: number;
       after: number;
@@ -110,6 +115,8 @@ export async function POST(request: Request) {
     /* ---------------- NORMALIZE OPTIONAL FIELDS ---------------- */
     const rewardUsed = Number(body.reward_used ?? 0);
     const rewardRemaining = Number(body.reward_remaining ?? 0);
+
+
 
     /* ============================================================
        🔑 IDENTIFY BENEFICIARY & PLACED BY (CRITICAL FIX)
@@ -213,7 +220,7 @@ export async function POST(request: Request) {
 
       available_balance: beneficiary.wallet_balance || 0,
       transaction_type: "Debit",
-      status: "Completed",
+      status: "pending",
 
       amount: body.payable_amount,
       payable_amount: body.payable_amount,
@@ -264,6 +271,17 @@ export async function POST(request: Request) {
         type: "fortnight",
       });
     }
+    if (rewardUsage?.daily?.used > 0) {
+  await useRewardScore({
+    user_id: rewardOwnerId,
+    points: rewardUsage.daily.used,
+    module: "order",
+    reference_id: newOrder.order_id,
+    remarks: `Daily reward used for order ${newOrder.order_id}`,
+    type: "daily",
+  });
+}
+
 
     /* ---------------- 🎁 REWARD EARNING (BENEFICIARY) ---------------- */
     if (isFirstOrder && beneficiary.user_status !== "active") {

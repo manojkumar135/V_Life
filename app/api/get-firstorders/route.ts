@@ -47,12 +47,13 @@ export async function GET(request: Request) {
     /* =======================
        2️⃣ BASE QUERY — FIRST ORDER HISTORY ONLY
     ======================= */
+    const completed="Completed"
     const baseQuery: any = {
       first_order: true,
       first_payment: true,
       advance: false,
       details: "Order Payment",
-      status: "Completed",
+      status: completed || "pending",
     };
 
     /* =======================

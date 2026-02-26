@@ -82,7 +82,7 @@ const page = () => {
 
           {/* Royal Club */}
           <div
-            onClick={() => router.push("/reports")}
+            onClick={() => router.push("/wallet/change-requests")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaCrown  size={32} />

@@ -142,7 +142,9 @@ export async function POST(request: NextRequest) {
     otpStorage[email] = { otp, expiry: Date.now() + 120000 }; // Store OTP with an expiry of 2 minutes
 
     // Send OTP email
+    
     await sendOTP(email, otp);
+    console.log(otp)
     console.log("OTP sent and stored for email:", email);
 
     return NextResponse.json(

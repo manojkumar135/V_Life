@@ -79,7 +79,6 @@ const STATE_OPTIONS = INDIAN_STATES.map((state) => ({
   value: state,
 }));
 
-
 export default function OrderFormCartSection({
   cart,
   updateQuantity,
@@ -118,7 +117,7 @@ export default function OrderFormCartSection({
 
         if (!mounted) return;
 
-setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
+        setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
 
         if (res.hasAdvance) {
           setAdvanceDetails({
@@ -147,16 +146,14 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
     };
   }, [user?.user_id, cart]);
 
- const isAdvanceFlow = isUseAdvanceFlow;
-
+  const isAdvanceFlow = isUseAdvanceFlow;
 
   useEffect(() => {
-  if (isAdvanceFlow) {
-    setUseCashback(false);
-    setUseFortnight(false);
-  }
-}, [isAdvanceFlow]);
-
+    if (isAdvanceFlow) {
+      setUseCashback(false);
+      setUseFortnight(false);
+    }
+  }, [isAdvanceFlow]);
 
   useEffect(() => {
     if (isOtherOrder) {
@@ -178,6 +175,8 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
   const [useReward, setUseReward] = useState(false);
   const cashbackPoints = Number(user?.cashbackReward || 0);
   const fortnightPoints = Number(user?.fortnightReward || 0);
+  const dailyPoints = Number(user?.dailyReward || 0);
+  // console.log(dailyPoints, "dailyPoints");
 
   // console.log(fortnightPoints, "fortnightPoints");
 
@@ -215,29 +214,42 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
   const remainingAfterCashback = totalAmount - cashbackUsed;
 
   // Fortnight (no cap)
-  const fortnightUsed = isAdvanceFlow
-    ? 0
-    : useFortnight
-      ? Math.min(fortnightPoints, remainingAfterCashback)
-      : 0;
+  let fortnightUsed = 0;
+  let dailyUsed = 0;
+
+  if (
+    !isAdvanceFlow &&
+    useFortnight &&
+    (fortnightPoints > 0 || dailyPoints > 0)
+  ) {
+    const remaining = remainingAfterCashback;
+
+    // 1️⃣ Use Fortnight first
+    fortnightUsed = Math.min(fortnightPoints, remaining);
+
+    // 2️⃣ Then use Daily if still remaining
+    const remainingAfterFortnight = remaining - fortnightUsed;
+
+    dailyUsed = Math.min(dailyPoints, remainingAfterFortnight);
+  }
 
   /* ---------------- LEGACY MAPPING (IMPORTANT) ---------------- */
 
   // backend still understands ONLY this
   const rewardDeduction = isOtherOrder
-    ? fortnightUsed
-    : cashbackUsed + fortnightUsed;
+    ? fortnightUsed + dailyUsed
+    : cashbackUsed + fortnightUsed + dailyUsed;
 
   // total reward BEFORE usage (cashback + fortnight)
-  const rewardPoints = cashbackPoints + fortnightPoints;
+  const rewardPoints = cashbackPoints + fortnightPoints + dailyPoints;
 
   // ✅ FIXED: total reward remaining AFTER usage
-  const rewardRemaining = rewardPoints - (cashbackUsed + fortnightUsed);
+  const rewardRemaining =
+    rewardPoints - (cashbackUsed + fortnightUsed + dailyUsed);
 
- const payableAmount = isAdvanceFlow
-  ? Math.max(0, totalAmount - 15000)
-  : Math.max(0, totalAmount - rewardDeduction);
-
+  const payableAmount = isAdvanceFlow
+    ? Math.max(0, totalAmount - 15000)
+    : Math.max(0, totalAmount - rewardDeduction);
 
   // GST = dealer_price * gst%
   const calcUnitPriceWithGST = (item: CartItem) => {
@@ -315,10 +327,9 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
       }
 
       if (isAdvanceFlow && totalAmount < 15000) {
-  ShowToast.error("Order must be at least ₹15,000 to use advance");
-  return;
-}
-
+        ShowToast.error("Order must be at least ₹15,000 to use advance");
+        return;
+      }
 
       // 🟢 FINAL DECISION (TERNARY)
       payableAmount === 0
@@ -339,6 +350,8 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
                   cashbackUsed,
                   fortnightPoints,
                   fortnightUsed,
+                  dailyPoints,
+                  dailyUsed,
                 },
               );
 
@@ -738,7 +751,7 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
                 >
                   <div className="px-6 py-2 bg-white -mt-4">
                     {/* 🔴 Advance Paid Info (First Order with Advance) */}
-                    {(isAdvanceFlow && totalAmount >= 15000) && (
+                    {isAdvanceFlow && totalAmount >= 15000 && (
                       <>
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
                           <span className="font-semibold">Subtotal</span>
@@ -762,7 +775,7 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
 
                     {/* Subtotal + Reward section only if reward exists */}
                     {((!isOtherOrder && rewardPoints > 0) ||
-                      fortnightPoints > 0) && (
+                      fortnightPoints + dailyPoints > 0) && (
                       <>
                         {/* Subtotal */}
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
@@ -814,17 +827,16 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
                         )}
 
                         {/* Fortnight Reward */}
-                        {fortnightPoints > 0 && (
+                        {/* Daily + Fortnight Reward */}
+                        {(fortnightPoints > 0 || dailyPoints > 0) && (
                           <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
                             <label className="flex items-start gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={useFortnight}
                                 onChange={async () => {
-                                  // If using others order & OTP not verified → trigger OTP
                                   if (isOtherOrder && !otpVerified) {
-                                    // setOtpPopup(true);
-                                    await sendOtp(); // reuse function
+                                    await sendOtp();
                                     return;
                                   }
                                   setUseFortnight((prev) => !prev);
@@ -834,17 +846,23 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
 
                               <div className="flex flex-col">
                                 <span className="text-[13px]">
-                                  Use Fortnight Reward Points
+                                  Use Reward Points (Daily + Fortnight)
                                 </span>
+
                                 <div className="text-[11px] text-gray-700">
-                                  {fortnightPoints <= remainingAfterCashback ? (
+                                  {Math.min(
+                                    fortnightPoints + dailyPoints,
+                                    remainingAfterCashback,
+                                  ) ===
+                                  fortnightPoints + dailyPoints ? (
                                     <>
-                                      You can use full {fortnightPoints} points
+                                      You can use full{" "}
+                                      {fortnightPoints + dailyPoints} points
                                     </>
                                   ) : (
                                     <>
                                       You can use {remainingAfterCashback} out
-                                      of {fortnightPoints} points
+                                      of {fortnightPoints + dailyPoints} points
                                     </>
                                   )}
                                 </div>
@@ -853,7 +871,7 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
 
                             {useFortnight && (
                               <span className="text-red-600 font-semibold text-right mt-3">
-                                - ₹ {fortnightUsed.toFixed(2)}
+                                - ₹ {(fortnightUsed + dailyUsed).toFixed(2)}
                               </span>
                             )}
                           </div>
@@ -968,22 +986,21 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
                 labelClassName="text-[13px]"
               />
 
-             <SelectField
-  label="State"
-  name="state"
-  value={formData.state}
-  options={STATE_OPTIONS}
-  required
-  onChange={(option) =>
-    setFormData((prev: any) => ({
-      ...prev,
-      state: option?.value || "",
-    }))
-  }
-  controlHeight="2rem"
-  labelClassName="text-[13px]"
-/>
-
+              <SelectField
+                label="State"
+                name="state"
+                value={formData.state}
+                options={STATE_OPTIONS}
+                required
+                onChange={(option) =>
+                  setFormData((prev: any) => ({
+                    ...prev,
+                    state: option?.value || "",
+                  }))
+                }
+                controlHeight="2rem"
+                labelClassName="text-[13px]"
+              />
 
               <InputField
                 label="Country"
@@ -1141,6 +1158,8 @@ setHasPaidAdvance(res.hasAdvance && !res.advanceUsed);
                   cashbackUsed,
                   fortnightPoints,
                   fortnightUsed,
+                  dailyPoints,
+                  dailyUsed,
                 },
               );
 

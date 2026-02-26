@@ -63,20 +63,6 @@ const WalletSchema = Yup.object().shape({
   panName: Yup.string().required("Name as in PAN is required"),
   panDob: Yup.date().required("Date of Birth as in PAN is required"),
 
-  // aadharFile and panFile can be existing URL string OR File (for edit page)
-  aadharFile: Yup.mixed<string | File>()
-    .required("Aadhaar file is required")
-    .test(
-      "fileType-aadhar",
-      "Aadhaar must be an image or PDF",
-      (value) =>
-        !value ||
-        typeof value === "string" ||
-        (value instanceof File &&
-          ["image/", "application/pdf"].some((type) =>
-            value.type.startsWith(type)
-          ))
-    ),
   panFile: Yup.mixed<string | File>()
     .required("PAN file is required")
     .test(
@@ -87,8 +73,8 @@ const WalletSchema = Yup.object().shape({
         typeof value === "string" ||
         (value instanceof File &&
           ["image/", "application/pdf"].some((type) =>
-            value.type.startsWith(type)
-          ))
+            value.type.startsWith(type),
+          )),
     ),
 
   // new optional fields validations: allow string (existing URL) or File
@@ -107,8 +93,8 @@ const WalletSchema = Yup.object().shape({
         typeof value === "string" ||
         (value instanceof File &&
           ["image/", "application/pdf"].some((type) =>
-            value.type.startsWith(type)
-          ))
+            value.type.startsWith(type),
+          )),
     ),
   bankBook: Yup.mixed<string | File>()
     .notRequired()
@@ -120,8 +106,8 @@ const WalletSchema = Yup.object().shape({
         typeof value === "string" ||
         (value instanceof File &&
           ["image/", "application/pdf"].some((type) =>
-            value.type.startsWith(type)
-          ))
+            value.type.startsWith(type),
+          )),
     ),
   aadharFront: Yup.mixed<string | File>()
     .required("Aadhaar front is required")
@@ -133,8 +119,8 @@ const WalletSchema = Yup.object().shape({
         typeof value === "string" ||
         (value instanceof File &&
           ["image/", "application/pdf"].some((type) =>
-            value.type.startsWith(type)
-          ))
+            value.type.startsWith(type),
+          )),
     ),
   aadharBack: Yup.mixed<string | File>()
     .required("Aadhaar back is required")
@@ -146,8 +132,8 @@ const WalletSchema = Yup.object().shape({
         typeof value === "string" ||
         (value instanceof File &&
           ["image/", "application/pdf"].some((type) =>
-            value.type.startsWith(type)
-          ))
+            value.type.startsWith(type),
+          )),
     ),
 });
 
@@ -160,7 +146,7 @@ export default function EditWalletPage() {
 
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [panVerified, setPanVerified] = useState(false);
+  const [panVerified, setPanVerified] = useState(true);
   const [initialValues, setInitialValues] = useState<WalletFormData>({
     walletId: "",
     userId: "",
@@ -179,62 +165,130 @@ export default function EditWalletPage() {
     panNumber: "",
     panName: "",
     panDob: "",
-    panVerify: false,
+    panVerify: true,
     panCategory: "",
     aadharSeeding: false,
     aadharFile: null,
     panFile: null,
   });
+  const [pendingRequest, setPendingRequest] = useState<any>(null);
 
   // Fetch wallet data
   useEffect(() => {
+
     if (!walletId) return;
 
     const fetchWallet = async () => {
+
       try {
+
         setLoading(true);
+
         const { data } = await axios.get(
           `/api/wallets-operations?wallet_id=${walletId}`
         );
-        if (data?.data) {
-          const wallet = data.data;
-          setInitialValues({
-            walletId: wallet.wallet_id || "",
-            userId: wallet.user_id || "",
-            userName: wallet.user_name || "",
-            contact: wallet.contact || "",
-            accountHolderName: wallet.account_holder_name || "",
-            bankName: wallet.bank_name || "",
-            accountNumber: wallet.account_number || "",
-            ifscCode: wallet.ifsc_code || "",
-            gstNumber: wallet.gst_number || null,
-            cheque: wallet.cheque || null,
-            bankBook: wallet.bank_book || null,
-            aadharFront: wallet.aadhar_front || null,
-            aadharBack: wallet.aadhar_back || null,
-            aadharNumber: wallet.aadhar_number || "",
-            panNumber: wallet.pan_number || "",
-            panName: wallet.pan_name || "",
-            panDob: wallet.pan_dob || "",
-            panVerify: wallet.pan_verified || false,
-            panCategory: wallet.pan_category || "",
-            aadharSeeding: wallet.aadhar_seeding || false,
-            aadharFile: wallet.aadhar_file || null,
-            panFile: wallet.pan_file || null,
-          });
-          setPanVerified(wallet.pan_verified || false);
-        } else {
+
+        if (!data?.data) {
           ShowToast.error("Wallet not found");
+          return;
         }
-      } catch (error) {
-        console.error("Error fetching wallet:", error);
-        ShowToast.error("Failed to fetch wallet details.");
-      } finally {
-        setLoading(false);
+
+        const wallet = data.data;
+
+        /*
+        FETCH PENDING REQUEST FIRST
+        */
+        const pending = await fetchPendingRequest(wallet.user_id);
+
+        /*
+        USE pending.new_values IF EXISTS
+        ELSE USE wallet values
+        */
+        const source = pending?.new_values || wallet;
+
+        setInitialValues({
+
+          walletId: wallet.wallet_id || "",
+          userId: wallet.user_id || "",
+          userName: wallet.user_name || "",
+          contact: wallet.contact || "",
+
+          accountHolderName:
+            source.account_holder_name || "",
+
+          bankName:
+            source.bank_name || "",
+
+          accountNumber:
+            source.account_number || "",
+
+          ifscCode:
+            source.ifsc_code || "",
+
+          gstNumber:
+            source.gst_number || null,
+
+          cheque:
+            source.cheque || null,
+
+          bankBook:
+            source.bank_book || null,
+
+          aadharFront:
+            source.aadhar_front || null,
+
+          aadharBack:
+            source.aadhar_back || null,
+
+          aadharNumber:
+            source.aadhar_number || "",
+
+          panNumber:
+            source.pan_number || "",
+
+          panName:
+            source.pan_name || "",
+
+          panDob:
+            source.pan_dob || "",
+
+          panVerify:
+            source.pan_verified || false,
+
+          panCategory:
+            source.pan_category || "",
+
+          aadharSeeding:
+            source.aadhar_seeding || false,
+
+          aadharFile:
+            source.aadhar_file || null,
+
+          panFile:
+            source.pan_file || null,
+
+        });
+
+        setPanVerified(source.pan_verified || false);
+
       }
+      catch (error) {
+
+        console.error(error);
+
+        ShowToast.error("Failed to fetch wallet");
+
+      }
+      finally {
+
+        setLoading(false);
+
+      }
+
     };
 
     fetchWallet();
+
   }, [walletId]);
 
   const uploadFile = async (file: File): Promise<string | null> => {
@@ -258,7 +312,7 @@ export default function EditWalletPage() {
     panNumber: string,
     panName: string,
     panDob: string,
-    setFieldValue: (field: string, value: any) => void
+    setFieldValue: (field: string, value: any) => void,
   ) => {
     try {
       setVerifying(true);
@@ -288,7 +342,7 @@ export default function EditWalletPage() {
           setFieldValue("panCategory", panData.category || "");
           setFieldValue(
             "aadharSeeding",
-            panData.aadhaar_seeding_status === "y" ? true : false
+            panData.aadhaar_seeding_status === "y" ? true : false,
           );
         } else {
           // ❌ Invalid PAN
@@ -322,10 +376,41 @@ export default function EditWalletPage() {
     }
   };
 
+
+const fetchPendingRequest = async (userId: string) => {
+
+  try {
+
+    const res = await axios.get(
+      `/api/wallet-change-requests?user_id=${userId}&status=pending`,
+    );
+
+    if (res.data.success && res.data.data.length > 0) {
+
+      setPendingRequest(res.data.data[0]);
+
+      return res.data.data[0]; // IMPORTANT
+
+    }
+
+    return null;
+
+  }
+  catch (error) {
+
+    console.error(error);
+
+    return null;
+
+  }
+
+};
+
   const handleSubmit = async (
     values: WalletFormData,
-    actions: FormikHelpers<WalletFormData>
+    actions: FormikHelpers<WalletFormData>,
   ) => {
+    console.log("getting");
     try {
       setLoading(true);
 
@@ -412,11 +497,12 @@ export default function EditWalletPage() {
         aadhar_seeding: values.aadharSeeding,
         pan_file: panFileUrl,
         last_modified_by: user?.user_id || "admin",
+        requested_role: user.role,
       };
 
       const res = await axios.patch(
         `/api/wallets-operations?wallet_id=${walletId}`,
-        payload
+        payload,
       );
 
       if (res.data.success) {
@@ -429,7 +515,7 @@ export default function EditWalletPage() {
       console.error("Update wallet error:", error);
       ShowToast.error(
         error.response?.data?.message ||
-          "Something went wrong while updating wallet."
+          "Something went wrong while updating wallet.",
       );
     } finally {
       setLoading(false);
@@ -438,12 +524,11 @@ export default function EditWalletPage() {
   };
 
   const resetPanVerification = (setFieldValue: any) => {
-  setPanVerified(false);
-  setFieldValue("panVerify", false);
-  setFieldValue("panCategory", "");
-  setFieldValue("aadharSeeding", false);
-};
-
+    setPanVerified(false);
+    setFieldValue("panVerify", false);
+    setFieldValue("panCategory", "");
+    setFieldValue("aadharSeeding", false);
+  };
 
   return (
     <Layout>
@@ -510,7 +595,7 @@ export default function EditWalletPage() {
                     error={
                       touched.accountHolderName ? errors.accountHolderName : ""
                     }
-                    disabled={!isAdmin}
+                    // disabled={!isAdmin}
                   />
                   <InputField
                     label="Bank Name"
@@ -519,7 +604,7 @@ export default function EditWalletPage() {
                     onChange={(e) => setFieldValue("bankName", e.target.value)}
                     onBlur={handleBlur}
                     error={touched.bankName ? errors.bankName : ""}
-                    disabled={!isAdmin}
+                    // disabled={!isAdmin}
                   />
                   <InputField
                     label="Account Number"
@@ -530,7 +615,7 @@ export default function EditWalletPage() {
                     }
                     onBlur={handleBlur}
                     error={touched.accountNumber ? errors.accountNumber : ""}
-                    disabled={!isAdmin}
+                    // disabled={!isAdmin}
                   />
                   <InputField
                     label="IFSC Code"
@@ -539,7 +624,7 @@ export default function EditWalletPage() {
                     onChange={(e) => setFieldValue("ifscCode", e.target.value)}
                     onBlur={handleBlur}
                     error={touched.ifscCode ? errors.ifscCode : ""}
-                    disabled={!isAdmin}
+                    // disabled={!isAdmin}
                   />
                   <FileInput
                     label="Cancelled Cheque"
@@ -549,7 +634,7 @@ export default function EditWalletPage() {
                     onChange={(e) =>
                       setFieldValue(
                         "cheque",
-                        e.currentTarget.files?.[0] || values.cheque
+                        e.currentTarget.files?.[0] || values.cheque,
                       )
                     }
                     onBlur={handleBlur}
@@ -563,7 +648,7 @@ export default function EditWalletPage() {
                     onChange={(e) =>
                       setFieldValue(
                         "bankBook",
-                        e.currentTarget.files?.[0] || values.bankBook
+                        e.currentTarget.files?.[0] || values.bankBook,
                       )
                     }
                     onBlur={handleBlur}
@@ -577,7 +662,7 @@ export default function EditWalletPage() {
                     onChange={(e) => setFieldValue("gstNumber", e.target.value)}
                     onBlur={handleBlur}
                     error={touched.gstNumber ? (errors as any).gstNumber : ""}
-                    disabled={!isAdmin}
+                    // disabled={!isAdmin}
                   />
                 </div>
 
@@ -600,26 +685,27 @@ export default function EditWalletPage() {
                       name="panNumber"
                       value={values.panNumber}
                       onChange={(e) => {
-  setFieldValue("panNumber", e.target.value.toUpperCase());
-  resetPanVerification(setFieldValue);
-}}
-
+                        setFieldValue(
+                          "panNumber",
+                          e.target.value.toUpperCase(),
+                        );
+                        resetPanVerification(setFieldValue);
+                      }}
                       onBlur={handleBlur}
                       error={touched.panNumber ? errors.panNumber : ""}
-                      disabled={!isAdmin}
+                      // disabled={!isAdmin}
                     />
                     <InputField
                       label="Name as in PAN"
                       name="panName"
                       value={values.panName}
-                     onChange={(e) => {
-  setFieldValue("panName", e.target.value);
-  resetPanVerification(setFieldValue);
-}}
-
+                      onChange={(e) => {
+                        setFieldValue("panName", e.target.value);
+                        resetPanVerification(setFieldValue);
+                      }}
                       onBlur={handleBlur}
                       error={touched.panName ? errors.panName : ""}
-                      disabled={!isAdmin}
+                      // disabled={!isAdmin}
                     />
                     <InputField
                       label="Date of Birth as in PAN"
@@ -628,13 +714,12 @@ export default function EditWalletPage() {
                       value={values.panDob}
                       className="uppercase"
                       onChange={(e) => {
-  setFieldValue("panDob", e.target.value);
-  resetPanVerification(setFieldValue);
-}}
-
+                        setFieldValue("panDob", e.target.value);
+                        resetPanVerification(setFieldValue);
+                      }}
                       onBlur={handleBlur}
                       error={touched.panDob ? errors.panDob : ""}
-                      disabled={!isAdmin}
+                      // disabled={!isAdmin}
                     />
                     <FileInput
                       label="Upload PAN"
@@ -643,7 +728,7 @@ export default function EditWalletPage() {
                       onChange={(e) =>
                         setFieldValue(
                           "panFile",
-                          e.currentTarget.files?.[0] || values.panFile
+                          e.currentTarget.files?.[0] || values.panFile,
                         )
                       }
                       onBlur={handleBlur}
@@ -668,7 +753,7 @@ export default function EditWalletPage() {
                               values.panNumber,
                               values.panName,
                               values.panDob,
-                              setFieldValue
+                              setFieldValue,
                             )
                           }
                         >
@@ -693,7 +778,7 @@ export default function EditWalletPage() {
                     error={
                       touched.aadharNumber ? (errors as any).aadharNumber : ""
                     }
-                    disabled={!isAdmin}
+                    // disabled={!isAdmin}
                   />
                   <FileInput
                     label="Aadhar Front"
@@ -703,7 +788,7 @@ export default function EditWalletPage() {
                     onChange={(e) =>
                       setFieldValue(
                         "aadharFront",
-                        e.currentTarget.files?.[0] || values.aadharFront
+                        e.currentTarget.files?.[0] || values.aadharFront,
                       )
                     }
                     onBlur={handleBlur}
@@ -720,7 +805,7 @@ export default function EditWalletPage() {
                     onChange={(e) =>
                       setFieldValue(
                         "aadharBack",
-                        e.currentTarget.files?.[0] || values.aadharBack
+                        e.currentTarget.files?.[0] || values.aadharBack,
                       )
                     }
                     onBlur={handleBlur}
@@ -729,12 +814,21 @@ export default function EditWalletPage() {
                   />
                 </div>
 
-                {/* Submit */}
-                {isAdmin && (
-                  <div className="flex justify-end mt-6">
-                    <SubmitButton type="submit">UPDATE</SubmitButton>
+                {pendingRequest && (
+                  <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg">
+                    <span className="font-semibold">NOTE : </span>
+                    Your changes are under review by admin. 
                   </div>
                 )}
+
+                {/* Submit */}
+                {
+                  <div className="flex justify-end mt-6">
+                    <SubmitButton type="submit">
+                      {pendingRequest ? "Update Request" : "Update Wallet"}
+                    </SubmitButton>{" "}
+                  </div>
+                }
               </Form>
             )}
           </Formik>

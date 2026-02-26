@@ -135,6 +135,13 @@ const ScoreSchema = new mongoose.Schema(
       history: { type: RewardTxnSchema, default: () => ({}) },
     },
 
+    //referral
+    referral: {
+      earned: { type: Number, default: 0 },
+      used: { type: Number, default: 0 },
+      balance: { type: Number, default: 0 },
+      history: { type: RewardTxnSchema, default: () => ({}) },
+    },
     updated_at: {
       type: Date,
       default: Date.now,

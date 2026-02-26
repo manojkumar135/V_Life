@@ -1,8 +1,12 @@
 import { Score } from "@/models/score";
 import { User } from "@/models/user";
 
-export type RewardType = "daily" | "fortnight" | "cashback" | "reward";
-
+export type RewardType =
+  | "daily"
+  | "fortnight"
+  | "cashback"
+  | "reward"
+  | "referral";
 
 interface RewardBlock {
   earned: number;
@@ -43,12 +47,14 @@ export async function useRewardScore({
   const affectsUser =
     rewardKey === "daily" ||
     rewardKey === "fortnight" ||
-    rewardKey === "reward";
+    rewardKey === "reward" ||
+    rewardKey === "referral";
 
   /* =====================================================
      1️⃣ ATOMIC BALANCE CHECK + DEDUCTION
-     👉 NO RACE CONDITION
+     👉 Prevents race condition
   ===================================================== */
+
   const updated = await Score.findOneAndUpdate(
     {
       user_id,
@@ -60,18 +66,6 @@ export async function useRewardScore({
         [`${rewardKey}.balance`]: -points,
         ...(affectsScore && { score: -points }),
       },
-      $push: {
-        [`${rewardKey}.history.out`]: {
-          module,
-          reference_id,
-          points,
-          remarks,
-          balance_after: {
-            $subtract: [`$${rewardKey}.balance`, points],
-          },
-          created_at: now,
-        },
-      },
       $set: { updated_at: now },
     },
     { new: true }
@@ -82,8 +76,33 @@ export async function useRewardScore({
   }
 
   /* =====================================================
-     2️⃣ MIRROR USER (DAILY / FORTNIGHT / REWARD)
+     2️⃣ SAFE BALANCE_AFTER (REAL NUMBER)
+     👉 Fixes CastError
   ===================================================== */
+
+  const newBalance =
+    updated?.[rewardKey as keyof typeof updated]?.balance ?? 0;
+
+  await Score.updateOne(
+    { user_id },
+    {
+      $push: {
+        [`${rewardKey}.history.out`]: {
+          module,
+          reference_id,
+          points,
+          remarks,
+          balance_after: newBalance, // ✅ REAL NUMBER
+          created_at: now,
+        },
+      },
+    }
+  );
+
+  /* =====================================================
+     3️⃣ MIRROR USER (DAILY / FORTNIGHT / REWARD / REFERRAL)
+  ===================================================== */
+
   if (affectsUser) {
     await User.findOneAndUpdate(
       { user_id },

@@ -17,7 +17,7 @@ function formatDate(date: Date): string {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-const REFERRAL_AMOUNT = 2000;
+const REFERRAL_AMOUNT = 2500;
 
 export async function releaseReferralBonus({
   sponsorId,
@@ -139,7 +139,7 @@ export async function releaseReferralBonus({
     source: "referral_bonus",
     reference_id: orderId,
     remarks: `Referral bonus for first order ${orderId}`,
-    type: "daily",
+    type: "referral",
   });
 
   // ✅ Add reward points

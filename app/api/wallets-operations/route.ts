@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Wallet } from "@/models/wallet";
 import { Login } from "@/models/login";
 import mongoose from "mongoose";
+import { WalletChangeRequest } from "@/models/walletChangeRequest";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { releaseOnHoldPayouts } from "@/app/api/wallets-operations/walletHelpers";
 
@@ -254,12 +255,24 @@ export async function PUT(request: Request) {
 export async function PATCH(request: Request) {
   try {
     await connectDB();
+
     const { searchParams } = new URL(request.url);
+
     const walletIdFromQuery =
       searchParams.get("wallet_id") || searchParams.get("id");
 
     const body = await request.json();
-    const { id, wallet_id, aadhar_number, pan_number, ...updates } = body;
+
+    const {
+      id,
+      wallet_id,
+      aadhar_number,
+      pan_number,
+      last_modified_by,
+      requested_role,
+      ...updates
+    } = body;
+
     const updateId = id || wallet_id || walletIdFromQuery;
 
     if (!updateId)
@@ -269,6 +282,7 @@ export async function PATCH(request: Request) {
       );
 
     const wallet = await findWalletByIdOrWalletId(updateId);
+
     if (!wallet)
       return NextResponse.json(
         { success: false, message: "Wallet not found" },
@@ -277,8 +291,10 @@ export async function PATCH(request: Request) {
 
     const { user_id, account_number } = updates;
 
+    // Prevent duplicate wallet per user
     if (user_id && user_id !== wallet.user_id) {
       const userWallet = await Wallet.findOne({ user_id });
+
       if (userWallet)
         return NextResponse.json(
           { success: false, message: "This user already has a wallet" },
@@ -303,45 +319,157 @@ export async function PATCH(request: Request) {
 
       if (duplicate) {
         let field = "account_number";
-        if (duplicate.aadhar_number === aadhar_number) field = "aadhar_number";
-        if (duplicate.pan_number === pan_number) field = "pan_number";
+
+        if (duplicate.aadhar_number === aadhar_number)
+          field = "aadhar_number";
+
+        if (duplicate.pan_number === pan_number)
+          field = "pan_number";
+
         return NextResponse.json(
-          { success: false, message: `${formatField(field)} already exists.` },
+          {
+            success: false,
+            message: `${formatField(field)} already exists.`,
+          },
           { status: 400 }
         );
       }
     }
 
+    // --------------------------------------------------
+    // APPROVAL FLOW STARTS HERE
+    // --------------------------------------------------
+
+    const role = requested_role || "user";
+
+    // If USER → create change request
+    if (role === "user") {
+      // prevent multiple pending requests
+      const existingRequest = await WalletChangeRequest.findOne({
+        wallet_id: wallet.wallet_id,
+        status: "pending",
+      });
+
+      if (existingRequest) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "You already have a pending change request awaiting admin approval.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const request_id = await generateUniqueCustomId(
+        "WCR",
+        WalletChangeRequest,
+        8,
+        8
+      );
+
+      const changeRequest = await WalletChangeRequest.create({
+        request_id,
+        wallet_id: wallet.wallet_id,
+        user_id: wallet.user_id,
+
+        requested_by: last_modified_by || wallet.user_id,
+        requested_role: role,
+
+        old_values: wallet.toObject(),
+
+        new_values: {
+          ...updates,
+          aadhar_number:
+            aadhar_number || wallet.aadhar_number || "",
+
+          pan_number:
+            pan_number || wallet.pan_number || "",
+
+          gst_number:
+            updates.gst_number || wallet.gst_number || "",
+        },
+
+        status: "pending",
+      });
+
+      return NextResponse.json({
+        success: true,
+        message:
+          "Your changes have been submitted for admin approval.",
+        data: changeRequest,
+      });
+    }
+
+    // --------------------------------------------------
+    // ADMIN DIRECT UPDATE
+    // --------------------------------------------------
+
     Object.assign(wallet, updates);
+
     wallet.wallet_id = wallet_id || wallet.wallet_id || "";
-    wallet.aadhar_number = aadhar_number || wallet.aadhar_number || "";
-    wallet.pan_number = pan_number || wallet.pan_number || "";
-    wallet.gst_number = updates.gst_number || wallet.gst_number || "";
+
+    wallet.aadhar_number =
+      aadhar_number || wallet.aadhar_number || "";
+
+    wallet.pan_number =
+      pan_number || wallet.pan_number || "";
+
+    wallet.gst_number =
+      updates.gst_number || wallet.gst_number || "";
+
+    wallet.last_modified_by =
+      last_modified_by || wallet.last_modified_by || "";
+
+    wallet.last_modified_at = new Date();
 
     await wallet.save();
 
-    // ✅ Always sync Login
-    const login = await Login.findOne({ user_id: wallet.user_id });
+    // --------------------------------------------------
+    // LOGIN SYNC
+    // --------------------------------------------------
+
+    const login = await Login.findOne({
+      user_id: wallet.user_id,
+    });
+
     if (login) {
       login.wallet_id = wallet.wallet_id;
+
       login.aadhar = wallet.aadhar_number;
+
       login.pan = wallet.pan_number;
-      login.gst = wallet.gst_number || login.gst || "";
+
+      login.gst =
+        wallet.gst_number || login.gst || "";
 
       await login.save();
     }
 
-    // ✅ Release OnHold payouts if PAN is now verified
+    // --------------------------------------------------
+    // RELEASE PAYOUT IF PAN VERIFIED
+    // --------------------------------------------------
+
     if (wallet.pan_verified || pan_number) {
       await releaseOnHoldPayouts(wallet.user_id);
     }
 
-    return NextResponse.json({ success: true, data: wallet });
+    return NextResponse.json({
+      success: true,
+      message: "Wallet updated successfully",
+      data: wallet,
+    });
+
   } catch (error: any) {
+
     return NextResponse.json(
-      { success: false, message: error.message },
+      {
+        success: false,
+        message: error.message,
+      },
       { status: 500 }
     );
+
   }
 }
 
