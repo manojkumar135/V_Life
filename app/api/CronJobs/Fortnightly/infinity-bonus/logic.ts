@@ -47,6 +47,8 @@ async function getLast15DaysEligiblePayouts() {
     is_checked: false,
   });
 
+  console.log("Found payouts:", payouts)
+
   const filtered = payouts.filter((p) => {
     const payoutDate = parseDDMMYYYY(p.date);
     return payoutDate >= start && payoutDate <= now;

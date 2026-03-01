@@ -86,9 +86,9 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     const diffTime = cleanToday.getTime() - cleanActivation.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    // console.log("Activation:", cleanActivation);
-    // console.log("Today:", cleanToday);
-    // console.log("DiffDays:", diffDays);
+    console.log("Activation:", cleanActivation);
+    console.log("Today:", cleanToday);
+    console.log("DiffDays:", diffDays);
 
     // allow only 7 days including activation day
     if (diffDays < 0 || diffDays >= 7) return;
@@ -97,6 +97,8 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
        3️⃣ Get Direct PV Using Central Engine
     ------------------------------------------------------- */
     const { leftDirectPV, rightDirectPV } = await getDirectPV(userId);
+
+    console.log("Direct PV - Left:", leftDirectPV, "Right:", rightDirectPV);
 
     if (leftDirectPV < 100 || rightDirectPV < 100) return;
 

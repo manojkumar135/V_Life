@@ -243,7 +243,7 @@ export default function AddOrderPage() {
     landmark: "",
     city: "",
     state: "",
-    country: "",
+    country: "India",
     pincode: "",
     notes: "",
   });
@@ -316,7 +316,7 @@ export default function AddOrderPage() {
           landmark: data.landmark || "",
           city: data.locality || "",
           state: data.state || "",
-          country: data.country || "",
+          country: data.country || "India",
           pincode: data.pincode || "",
         }));
       }

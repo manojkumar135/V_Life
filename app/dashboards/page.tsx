@@ -95,6 +95,7 @@ const rankImages: Record<string, string> = {
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
 
+  console.log("user in dashboard:", user);
   const isNumericRank = !isNaN(Number(user?.rank));
   const hasRank = user?.rank && user.rank !== "none" && user.rank !== "0";
 
@@ -109,6 +110,8 @@ const DashboardPage: React.FC = () => {
 
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [cycles, setCycles] = useState<CycleStats | null>(null);
+  const [showQuickStarAlert, setShowQuickStarAlert] = useState(false);
+  const [quickStarDaysLeft, setQuickStarDaysLeft] = useState<number>(0);
   const [amountSummary, setAmountSummary] = useState({
     income: 0,
     purchases: 0,
@@ -126,34 +129,33 @@ const DashboardPage: React.FC = () => {
     }
   }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     if (!user?.user_id) return;
-  
+
     let isMounted = true;
-  
+
     (async () => {
       try {
         // 1️⃣ Check first order
         const firstOrderRes = await hasFirstOrder(user.user_id);
-  
+
         // 2️⃣ Check advance
         const advanceRes = await hasAdvancePaid(user.user_id, 15000);
-  
+
         if (!isMounted) return;
-  
+
         const hasPermission =
           firstOrderRes.hasFirstOrder ||
           advanceRes.hasPermission ||
           firstOrderRes.activatedByAdmin;
-  
+
         setShowAlert(!hasPermission);
-  
       } catch (err) {
         console.error("Permission check error:", err);
         if (isMounted) setShowAlert(true);
       }
     })();
-  
+
     return () => {
       isMounted = false;
     };
@@ -161,6 +163,41 @@ const DashboardPage: React.FC = () => {
 
   // console.log(showAlert)
   // console.log(user.rank);
+
+  useEffect(() => {
+  if (!user?.activated_date) return;
+
+  const hasRank =
+    user?.rank && user.rank !== "none" && user.rank !== "0";
+
+  if (hasRank) {
+    setShowQuickStarAlert(false);
+    return;
+  }
+
+  // 🔥 FIX: Manually parse DD-MM-YYYY
+  const [day, month, year] = user.activated_date.split("-");
+
+  const activationDate = new Date(
+    Number(year),
+    Number(month) - 1, // month index starts from 0
+    Number(day)
+  );
+
+  const today = new Date();
+
+  const diffTime = today.getTime() - activationDate.getTime();
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+  const remainingDays = 7 - diffDays;
+
+  if (remainingDays > 0) {
+    setQuickStarDaysLeft(remainingDays);
+    setShowQuickStarAlert(true);
+  } else {
+    setShowQuickStarAlert(false);
+  }
+}, [user?.activated_date, user?.rank]);
 
   useEffect(() => {
     const fetchDashboardSummary = async () => {
@@ -262,6 +299,21 @@ const DashboardPage: React.FC = () => {
           buttonLabel="ORDER NOW"
           buttonAction={() => router.push("/historys/payAdvance")}
           onClose={() => setShowAlert(false)}
+        />
+        <AlertBox
+          visible={showQuickStarAlert}
+          title="Quick Star Bonus Opportunity!"
+          message={
+            <>
+              Achieve <b>Star Rank</b> to get <b>Quick Star Bonus</b>.<br />⏳{" "}
+              {quickStarDaysLeft} day
+              {quickStarDaysLeft > 1 ? "s" : ""} left to complete 7 days from
+              activation.
+            </>
+          }
+          // buttonLabel="View Business"
+          // buttonAction={() => router.push("/genealogy")}
+          onClose={() => setShowQuickStarAlert(false)}
         />
 
         {/* Summary Cards */}

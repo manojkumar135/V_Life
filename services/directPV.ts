@@ -33,6 +33,7 @@ export const getDirectPV = async (userId: string) => {
     { user_id: 1, pv: 1 },
   ).lean();
 
+  // console.log("Direct Users:", directUsers);
   if (!directUsers.length) {
     return {
       leftDirectPV: 0,

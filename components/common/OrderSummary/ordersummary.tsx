@@ -1005,10 +1005,9 @@ export default function OrderFormCartSection({
               <InputField
                 label="Country"
                 name="country"
-                value={formData.country}
-                onChange={handleInputChange}
-                required
-                className="h-8"
+                value="India"
+                disabled
+                className="h-8 bg-gray-100"
                 labelClassName="text-[13px]"
               />
 
