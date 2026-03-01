@@ -110,6 +110,7 @@ export async function runDirectSalesBonus() {
     if (!orders?.length) return;
 
     let totalPayouts = 0;
+    let referralBonusCount = 0;
 
     for (const order of orders) {
       try {
@@ -144,6 +145,8 @@ export async function runDirectSalesBonus() {
                 buyerId: order.user_id,
                 orderId: order.order_id,
               });
+                referralBonusCount++;   
+
             }
           }
 
@@ -326,6 +329,16 @@ export async function runDirectSalesBonus() {
         created_at: new Date(),
       });
     }
+    if (referralBonusCount > 0) {
+  await Alert.create({
+    role: "admin",
+    title: "Referral Bonus Payouts Released",
+    description: `${referralBonusCount} referral bonus payout(s) processed successfully.`,
+    priority: "high",
+    date: formatDate(new Date()),
+    created_at: new Date(),
+  });
+}
   } catch (err) {
     console.error("[Direct Sales Bonus] Error:", err);
     throw err;

@@ -9,13 +9,12 @@ import { loadTreeMap, getUserTeamFromMap } from "@/services/getTeam";
 import { getDirectPV } from "@/services/directPV";
 import mongoose from "mongoose";
 
-
 /* -------------------------------------------------------------
    ⭐ STAR ENGINE (FINAL – CLEAN & BUSINESS SAFE)
 ------------------------------------------------------------- */
 export async function checkAndUpgradeRank(
   user: any,
-  session?: mongoose.ClientSession
+  session?: mongoose.ClientSession,
 ): Promise<number> {
   // console.log(user,"from rank engine")
   if (
@@ -23,39 +22,43 @@ export async function checkAndUpgradeRank(
     user.club === "Diamond" ||
     user.club === "Royality"
   ) {
-    return user.rank && !isNaN(Number(user.rank))
-      ? Number(user.rank)
-      : 0;
+    return user.rank && !isNaN(Number(user.rank)) ? Number(user.rank) : 0;
   }
 
   const currentStar =
-    user.rank && !isNaN(Number(user.rank))
-      ? Number(user.rank)
-      : 0;
+    user.rank && !isNaN(Number(user.rank)) ? Number(user.rank) : 0;
 
   /* ===========================================================
      🔥 EXECUTIVE FAST TRACK CHECK (500 PV EACH SIDE)
   =========================================================== */
-  const { leftDirectPV, rightDirectPV } =
-    await getDirectPV(user.user_id);
-    console.log(leftDirectPV, rightDirectPV,"from rank engine")
+  const { leftDirectPV, rightDirectPV } = await getDirectPV(user.user_id);
+  console.log(leftDirectPV, rightDirectPV, "from rank engine");
 
   if (leftDirectPV >= 500 && rightDirectPV >= 500) {
+    const execUpdate = { club: "Executive", rank: "Bronze" };
+
     await User.updateOne(
       { user_id: user.user_id },
-      { $set: { club: "Executive", rank: "Bronze" } }
+      { $set: execUpdate },
+      session ? { session } : {},
     );
+
     await Login.updateOne(
       { user_id: user.user_id },
-      { $set: { club: "Executive", rank: "Bronze" } }
+      { $set: execUpdate },
+      session ? { session } : {},
     );
+
     await TreeNode.updateOne(
       { user_id: user.user_id },
-      { $set: { club: "Executive", rank: "Bronze" } }
+      { $set: execUpdate },
+      session ? { session } : {},
     );
+
     await Wallet.updateOne(
       { user_id: user.user_id },
-      { $set: { club: "Executive", rank: "Bronze" } }
+      { $set: execUpdate },
+      session ? { session } : {},
     );
 
     return 5;
@@ -66,11 +69,12 @@ export async function checkAndUpgradeRank(
   /* -----------------------------------------------------------
      1️⃣ ENSURE RANK DOCUMENT EXISTS
   ----------------------------------------------------------- */
-  await Rank.findOneAndUpdate(
+  await Rank.updateOne(
     { user_id: user.user_id },
     {
       $setOnInsert: {
         user_id: user.user_id,
+        user_name: user.user_name,
         createdAt: new Date(),
         ranks: {
           "1_star": { qualified_users: [] },
@@ -82,7 +86,7 @@ export async function checkAndUpgradeRank(
         extra: { qualified_users: [] },
       },
     },
-    { upsert: true }
+    { upsert: true, session },
   );
 
   /* -----------------------------------------------------------
@@ -90,71 +94,64 @@ export async function checkAndUpgradeRank(
   ----------------------------------------------------------- */
   const nodeMap = await loadTreeMap();
 
-/* -----------------------------------------------------------
+  /* -----------------------------------------------------------
    3️⃣ FETCH PAID DIRECTS (FIXED — USE paid_directs)
 ----------------------------------------------------------- */
 
-// reload fresh user to ensure latest paid_directs
-const freshUser = (await User.findOne({
-  user_id: user.user_id,
-})
-.select("paid_directs")
-.lean()) as any;
+  // reload fresh user to ensure latest paid_directs
+  const freshUser = await User.findOne({
+    user_id: user.user_id,
+  })
+    .select("paid_directs")
+    .session(session || null);
 
-const paidDirectIds: string[] = freshUser?.paid_directs ?? [];
+  const paidDirectIds: string[] = freshUser?.paid_directs ?? [];
 
-const directs = await User.find(
-  { user_id: { $in: paidDirectIds } },
-  { user_id: 1, user_name: 1, pv: 1 }
-).lean();
+  const directs = await User.find(
+    { user_id: { $in: paidDirectIds } },
+    { user_id: 1, user_name: 1, pv: 1 },
+  ).session(session || null);
 
-const paidUsers: any[] = [];
+  const paidUsers: any[] = [];
 
-for (const d of directs) {
+  for (const d of directs) {
+    if (!d.pv || d.pv <= 0) continue;
 
-  if (!d.pv || d.pv <= 0) continue;
+    const team = getUserTeamFromMap(user.user_id, d.user_id, nodeMap);
 
-  const team = getUserTeamFromMap(
-    user.user_id,
-    d.user_id,
-    nodeMap
-  );
-
-  if (team === "left" || team === "right") {
-    paidUsers.push({
-      user_id: d.user_id,
-      user_name: d.user_name,
-      team,
-      pv: d.pv,
-    });
+    if (team === "left" || team === "right") {
+      paidUsers.push({
+        user_id: d.user_id,
+        user_name: d.user_name,
+        team,
+        pv: d.pv,
+      });
+    }
   }
-}
 
-console.log(paidUsers, "rank engine FIXED");
+  console.log(paidUsers, "rank engine FIXED");
 
   /* -----------------------------------------------------------
      4️⃣ REMOVE PREVIOUSLY USED USERS
   ----------------------------------------------------------- */
-  const rankDoc: any = await Rank.findOne({
-    user_id: user.user_id,
-  }).lean();
+  const rankDoc: any = await Rank.findOne({ user_id: user.user_id }).session(
+    session || null,
+  );
 
   const used = new Set<string>();
 
   if (rankDoc?.ranks) {
     Object.values(rankDoc.ranks).forEach((r: any) => {
-      r?.qualified_users?.forEach((u: any) =>
-        used.add(u.user_id)
-      );
+      r?.qualified_users?.forEach((u: any) => used.add(u.user_id));
     });
   }
 
   let leftPool = paidUsers.filter(
-    (u) => u.team === "left" && !used.has(u.user_id)
+    (u) => u.team === "left" && !used.has(u.user_id),
   );
 
   let rightPool = paidUsers.filter(
-    (u) => u.team === "right" && !used.has(u.user_id)
+    (u) => u.team === "right" && !used.has(u.user_id),
   );
 
   /* -----------------------------------------------------------
@@ -208,18 +205,15 @@ console.log(paidUsers, "rank engine FIXED");
           ],
           [`ranks.${star}_star.achieved_at`]: new Date(),
         },
-      }
+      },
+      session ? { session } : {},
     );
 
     const lIds = new Set(lUsed.map((u) => u.user_id));
     const rIds = new Set(rUsed.map((u) => u.user_id));
 
-    leftPool = leftPool.filter(
-      (u) => !lIds.has(u.user_id)
-    );
-    rightPool = rightPool.filter(
-      (u) => !rIds.has(u.user_id)
-    );
+    leftPool = leftPool.filter((u) => !lIds.has(u.user_id));
+    rightPool = rightPool.filter((u) => !rIds.has(u.user_id));
   }
 
   /* -----------------------------------------------------------
@@ -230,12 +224,10 @@ console.log(paidUsers, "rank engine FIXED");
       { user_id: user.user_id },
       {
         $set: {
-          "extra.qualified_users": [
-            ...leftPool,
-            ...rightPool,
-          ],
+          "extra.qualified_users": [...leftPool, ...rightPool],
         },
-      }
+      },
+      session ? { session } : {},
     );
   }
 
@@ -251,19 +243,26 @@ console.log(paidUsers, "rank engine FIXED");
 
     await User.updateOne(
       { user_id: user.user_id },
-      { $set: update }
+      { $set: update },
+      session ? { session } : {},
     );
+
     await Login.updateOne(
       { user_id: user.user_id },
-      { $set: update }
+      { $set: update },
+      session ? { session } : {},
     );
+
     await TreeNode.updateOne(
       { user_id: user.user_id },
-      { $set: update }
+      { $set: update },
+      session ? { session } : {},
     );
+
     await Wallet.updateOne(
       { user_id: user.user_id },
-      { $set: update }
+      { $set: update },
+      session ? { session } : {},
     );
   }
 
@@ -274,13 +273,10 @@ console.log(paidUsers, "rank engine FIXED");
       role: "user",
       priority: "high",
       title: "⭐ Welcome to Star Club!",
-      description:
-        "Congratulations! You have entered the Star Club.",
+      description: "Congratulations! You have entered the Star Club.",
       type: "achievement",
       link: "/dashboards",
-      date: new Date()
-        .toISOString()
-        .split("T")[0],
+      date: new Date().toISOString().split("T")[0],
     });
   }
 

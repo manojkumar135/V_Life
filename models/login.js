@@ -50,6 +50,8 @@ const LoginSchema = new mongoose.Schema(
     dob: { type: String, required: true },
     rank: { type: String, default: "none" },
     Club: { type: String, default: "none" },
+        club: { type: String, default: "none" },
+
     reward: { type: Number, default: 0 },
 
     gst: { type: String },

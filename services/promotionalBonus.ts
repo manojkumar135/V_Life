@@ -38,6 +38,7 @@ function formatDate(date: Date): string {
 ----------------------------------------------------------- */
 export async function checkAndReleasePromotionalBonus(userId: string) {
   try {
+    console.log("Checking Quick Star bonus for", userId);
     const user = await User.findOne({ user_id: userId });
     if (!user || !user.activated_date) return;
 
@@ -69,10 +70,28 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     if (!activationDate) return;
 
     const today = new Date();
-    const diffTime = today.getTime() - activationDate.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
-    if (diffDays < 0 || diffDays > 7) return;
+    // remove time portion from both dates
+    const cleanToday = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
+    const cleanActivation = new Date(
+      activationDate.getFullYear(),
+      activationDate.getMonth(),
+      activationDate.getDate(),
+    );
+
+    const diffTime = cleanToday.getTime() - cleanActivation.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    // console.log("Activation:", cleanActivation);
+    // console.log("Today:", cleanToday);
+    // console.log("DiffDays:", diffDays);
+
+    // allow only 7 days including activation day
+    if (diffDays < 0 || diffDays >= 7) return;
 
     /* -------------------------------------------------------
        3️⃣ Get Direct PV Using Central Engine
@@ -219,6 +238,17 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       priority: "high",
       read: false,
       link: "/wallet/payout/daily",
+      date: formattedDate,
+      created_at: now,
+    });
+    /* -------------------------------------------------------
+   8️⃣ Create Admin Alert
+------------------------------------------------------- */
+    await Alert.create({
+      role: "admin",
+      title: "Quick Star Bonus Released",
+      description: `Quick Star Bonus of ₹${PROMO_AMOUNT} released for user ${user.user_id} (${user.user_name}).`,
+      priority: "high",
       date: formattedDate,
       created_at: now,
     });

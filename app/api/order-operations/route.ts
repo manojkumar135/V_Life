@@ -84,7 +84,7 @@ interface OrderPayload {
     address?: string;
   };
 
- reward_usage: {
+  reward_usage: {
     cashback: {
       before: number;
       used: number;
@@ -95,7 +95,8 @@ interface OrderPayload {
       used: number;
       after: number;
     };
-    daily: {                 // ✅ ADD THIS BLOCK
+    daily: {
+      // ✅ ADD THIS BLOCK
       before: number;
       used: number;
       after: number;
@@ -115,8 +116,6 @@ export async function POST(request: Request) {
     /* ---------------- NORMALIZE OPTIONAL FIELDS ---------------- */
     const rewardUsed = Number(body.reward_used ?? 0);
     const rewardRemaining = Number(body.reward_remaining ?? 0);
-
-
 
     /* ============================================================
        🔑 IDENTIFY BENEFICIARY & PLACED BY (CRITICAL FIX)
@@ -272,16 +271,15 @@ export async function POST(request: Request) {
       });
     }
     if (rewardUsage?.daily?.used > 0) {
-  await useRewardScore({
-    user_id: rewardOwnerId,
-    points: rewardUsage.daily.used,
-    module: "order",
-    reference_id: newOrder.order_id,
-    remarks: `Daily reward used for order ${newOrder.order_id}`,
-    type: "daily",
-  });
-}
-
+      await useRewardScore({
+        user_id: rewardOwnerId,
+        points: rewardUsage.daily.used,
+        module: "order",
+        reference_id: newOrder.order_id,
+        remarks: `Daily reward used for order ${newOrder.order_id}`,
+        type: "daily",
+      });
+    }
 
     /* ---------------- 🎁 REWARD EARNING (BENEFICIARY) ---------------- */
     if (isFirstOrder && beneficiary.user_status !== "active") {
@@ -354,11 +352,26 @@ export async function POST(request: Request) {
         }
 
         if (shouldTriggerMLM && referrerId) {
+          console.log("🔁 updateInfinityTeam()");
           await updateInfinityTeam(referrerId);
-          await propagateInfinityUpdateToAncestors(referrerId);
+
+          console.log("🔁 propagateInfinityUpdateToAncestors()");
+          propagateInfinityUpdateToAncestors(referrerId)
+            .then(() =>
+              console.log("✅ propagateInfinityUpdateToAncestors finished"),
+            )
+            .catch((err) =>
+              console.error(
+                "❌ propagateInfinityUpdateToAncestors error:",
+                err,
+              ),
+            );
 
           const totalPayout = await getTotalPayout(referrerId);
+          console.log("🔁 updateClub");
           await updateClub(referrerId, totalPayout);
+
+          console.log("🔁 checkAndReleasePromotionalBonus");
           await checkAndReleasePromotionalBonus(referrerId);
         }
 

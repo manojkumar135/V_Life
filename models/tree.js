@@ -17,6 +17,8 @@ const TreeNodeSchema = new Schema(
 
     rank: { type: String, default: "none" },
     Club: { type: String, default: "none" },
+    club: { type: String, default: "none" },
+
 
     contact: { type: String, },
     mail: { type: String, },
