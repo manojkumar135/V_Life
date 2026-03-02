@@ -335,54 +335,49 @@ export async function POST(request: Request) {
     );
 
     /* ---------------- BACKGROUND MLM ---------------- */
-    void (async () => {
-      try {
-        if (!freshUser?.referBy) return;
+    /* ---------------- MLM + RANK + BONUS ---------------- */
+if (freshUser?.referBy) {
+  try {
+    const referrerId = freshUser.referBy;
 
-        const referrerId = freshUser.referBy;
+    if (justActivated) {
+      await User.updateOne(
+        { user_id: referrerId },
+        {
+          $addToSet: { paid_directs: freshUser.user_id },
+          $inc: { paid_directs_count: 1 },
+        },
+      );
+    }
 
-        if (justActivated) {
-          await User.updateOne(
-            { user_id: referrerId },
-            {
-              $addToSet: { paid_directs: freshUser.user_id },
-              $inc: { paid_directs_count: 1 },
-            },
-          );
-        }
+   if (shouldTriggerMLM && referrerId) {
+  await updateInfinityTeam(referrerId);
 
-        if (shouldTriggerMLM && referrerId) {
-          console.log("🔁 updateInfinityTeam()");
-          await updateInfinityTeam(referrerId);
+  const totalPayout = await getTotalPayout(referrerId);
 
-          console.log("🔁 propagateInfinityUpdateToAncestors()");
-          propagateInfinityUpdateToAncestors(referrerId)
-            .then(() =>
-              console.log("✅ propagateInfinityUpdateToAncestors finished"),
-            )
-            .catch((err) =>
-              console.error(
-                "❌ propagateInfinityUpdateToAncestors error:",
-                err,
-              ),
-            );
+  await updateClub(referrerId, totalPayout);
 
-          const totalPayout = await getTotalPayout(referrerId);
-          console.log("🔁 updateClub");
-          await updateClub(referrerId, totalPayout);
+  await checkAndReleasePromotionalBonus(referrerId);
 
-          console.log("🔁 checkAndReleasePromotionalBonus");
-          await checkAndReleasePromotionalBonus(referrerId);
-        }
+  // 🔥 Non-blocking heavy process
+  propagateInfinityUpdateToAncestors(referrerId)
+    .then(() => console.log("Infinity propagated"))
+    .catch(err => console.error("Infinity error", err));
+}
 
-        await User.updateOne(
-          { user_id: referrerId },
-          { $inc: { direct_bv: totalBV, direct_pv: totalPV } },
-        );
-      } catch (err) {
-        console.error("❌ [BG] Infinity / Rank error", err);
-      }
-    })();
+    await User.updateOne(
+      { user_id: referrerId },
+      { $inc: { direct_bv: totalBV, direct_pv: totalPV } },
+    );
+  } catch (err) {
+    console.error("❌ Infinity / Rank error", err);
+  }
+}
+
+return NextResponse.json(
+  { success: true, data: newOrder, addedBV: totalBV },
+  { status: 201 },
+);
 
     /* ---------------- ADMIN ALERT ---------------- */
     await Alert.create({

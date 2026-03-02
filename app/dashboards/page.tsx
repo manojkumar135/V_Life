@@ -130,36 +130,47 @@ const DashboardPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!user?.user_id) return;
+  if (!user) {
+    console.log("User not ready yet");
+    return;
+  }
 
-    let isMounted = true;
+  if (!user.user_id) {
+    console.log("User ID missing");
+    return;
+  }
 
-    (async () => {
-      try {
-        // 1️⃣ Check first order
-        const firstOrderRes = await hasFirstOrder(user.user_id);
+  console.log("Running permission check for:", user.user_id);
 
-        // 2️⃣ Check advance
-        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+  let isMounted = true;
 
-        if (!isMounted) return;
+  (async () => {
+    try {
+      const firstOrderRes = await hasFirstOrder(user.user_id);
+      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
-        const hasPermission =
-          firstOrderRes.hasFirstOrder ||
-          advanceRes.hasPermission ||
-          firstOrderRes.activatedByAdmin;
+      console.log("API Results:", firstOrderRes, advanceRes);
 
-        setShowAlert(!hasPermission);
-      } catch (err) {
-        console.error("Permission check error:", err);
-        if (isMounted) setShowAlert(true);
-      }
-    })();
+      if (!isMounted) return;
 
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.user_id]);
+      const hasPermission =
+        firstOrderRes?.hasFirstOrder ||
+        advanceRes?.hasPermission ||
+        firstOrderRes?.activatedByAdmin;
+
+      console.log("Permission Result:", hasPermission);
+
+      setShowAlert(!hasPermission);
+    } catch (err) {
+      console.error("Permission check error:", err);
+      if (isMounted) setShowAlert(true);
+    }
+  })();
+
+  return () => {
+    isMounted = false;
+  };
+}, [user]);
 
   // console.log(showAlert)
   // console.log(user.rank);

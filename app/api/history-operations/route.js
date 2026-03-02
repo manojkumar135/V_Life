@@ -371,89 +371,46 @@ export async function POST(request) {
       // ------------------------------------
       // BACKGROUND MLM / INFINITY / CLUB
       // ------------------------------------
-      void (async () => {
-        try {
-          if (!wasInactive) {
-            console.log("⛔ MLM skipped (user already active)");
-            return;
-          }
-
+      try {
+        if (wasInactive) {
           const freshUser = await User.findOne({
             user_id: body.user_id,
           }).lean();
 
-          if (!freshUser?.referBy) {
-            console.log("⚠️ No referBy found for", body.user_id);
-            return;
-          }
+          if (freshUser?.referBy) {
+            const referrerId = freshUser.referBy;
 
-          const referrerId = freshUser.referBy;
-          console.log("👤 Referrer:", referrerId);
-
-          // ------------------------------------
-          // PAID DIRECTS
-          // ------------------------------------
-          await User.updateOne(
-            { user_id: referrerId },
-            {
-              $addToSet: { paid_directs: freshUser.user_id },
-              $inc: { paid_directs_count: 1 },
-            }
-          );
-          console.log("✅ Paid direct added");
-
-          // ------------------------------------
-          // DIRECT PV
-          // ------------------------------------
-          if (earnedPV > 0) {
             await User.updateOne(
               { user_id: referrerId },
-              { $inc: { direct_pv: earnedPV } }
+              {
+                $addToSet: { paid_directs: freshUser.user_id },
+                $inc: { paid_directs_count: 1 },
+              }
             );
-            console.log("✅ Direct PV added:", earnedPV);
+
+            if (earnedPV > 0) {
+              await User.updateOne(
+                { user_id: referrerId },
+                { $inc: { direct_pv: earnedPV } }
+              );
+            }
+
+            await updateInfinityTeam(referrerId);
+
+            const totalPayout = await getTotalPayout(referrerId);
+
+            await updateClub(referrerId, totalPayout);
+
+            await checkAndReleasePromotionalBonus(referrerId);
+
+            // non-blocking
+            propagateInfinityUpdateToAncestors(referrerId)
+              .catch(err => console.error("Infinity error", err));
           }
-
-          // ------------------------------------
-          // INFINITY UPDATE
-          // ------------------------------------
-          console.log("🔁 updateInfinityTeam()");
-          await updateInfinityTeam(referrerId);
-
-          console.log("🔁 propagateInfinityUpdateToAncestors()");
-
-          // ✅ Non-blocking call
-          propagateInfinityUpdateToAncestors(referrerId)
-            .then(() => {
-              console.log("✅ propagateInfinityUpdateToAncestors finished");
-            })
-            .catch((err) => {
-              console.error("❌ propagateInfinityUpdateToAncestors error:", err);
-            });
-
-          // ------------------------------------
-          // CLUB UPDATE
-          // ------------------------------------
-          console.log("🧮 getTotalPayout()");
-          const totalPayout = await getTotalPayout(referrerId);
-
-          console.log(
-            "💰 TOTAL PAYOUT:",
-            totalPayout,
-            "FOR:",
-            referrerId
-          );
-
-          console.log("🏆 updateClub()");
-          await updateClub(referrerId, totalPayout);
-
-          console.log("✅ updateClub finished");
-          await checkAndReleasePromotionalBonus(referrerId);
-          console.log("✅ PromotionalBonus finished");
-
-        } catch (err) {
-          console.error("❌ [ADVANCE MLM ERROR]", err);
         }
-      })();
+      } catch (err) {
+        console.error("❌ ADVANCE MLM ERROR", err);
+      }
 
       // ------------------------------------
       // USER ACTIVATION ALERT (UNCHANGED)
