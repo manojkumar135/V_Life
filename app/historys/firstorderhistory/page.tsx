@@ -227,7 +227,7 @@ export default function FirstOrderPage() {
       // sortable: false,
       // filterable: false,
       renderCell: (params: GridRenderCellParams) => (
-        <div className="flex max-lg:gap-8 max-lg:min-w-[150px] gap-8 xl:items-center xl:justify-center mt-2">
+        <div className="flex max-lg:gap-8 max-lg:min-w-38 gap-8 xl:items-center xl:justify-center mt-2">
           {/* Preview Icon */}
           <button
             title="Preview Invoice"

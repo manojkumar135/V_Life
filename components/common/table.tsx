@@ -519,6 +519,42 @@ export default function Table<T extends Row>({
               fontSize: "16px",
               transform: "rotate(180deg)",
             },
+
+"& .MuiDataGrid-sortButton:hover": {
+  backgroundColor: "transparent !important",
+},
+"& .MuiDataGrid-sortButton .MuiTouchRipple-root": {
+  display: "none",
+},
+"& .MuiIconButton-root:hover": {
+  backgroundColor: "transparent !important",
+},
+
+"& .MuiDataGrid-columnHeader:hover .MuiDataGrid-iconButtonContainer": {
+  backgroundColor: "transparent !important",
+},
+"& .MuiDataGrid-columnHeader .MuiIconButton-root:hover": {
+  backgroundColor: "transparent !important",
+},
+"& .MuiDataGrid-columnHeader .MuiIconButton-root .MuiTouchRipple-root": {
+  display: "none !important",
+},
+
+"& .MuiDataGrid-sortButton.MuiButtonBase-root:hover": {
+  backgroundColor: "transparent !important",
+  boxShadow: "none !important",
+},
+"& .MuiDataGrid-sortButton.MuiButtonBase-root .MuiTouchRipple-root": {
+  display: "none !important",
+},
+"& .MuiDataGrid-iconButtonContainer .MuiButtonBase-root:hover": {
+  backgroundColor: "transparent !important",
+  boxShadow: "none !important",
+},
+"& .MuiDataGrid-iconButtonContainer .MuiTouchRipple-root": {
+  display: "none !important",
+},
+
             "& .MuiDataGrid-row--borderBottom .MuiSvgIcon-fontSizeMedium": {
               color: "white",
               border: 0,

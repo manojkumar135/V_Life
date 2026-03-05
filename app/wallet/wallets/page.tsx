@@ -129,7 +129,7 @@ export default function WalletsPage() {
   };
 
   const onBack = () => {
-    router.push("/wallet");
+    router.push("/walletpage");
   };
 
   return (

@@ -1,5 +1,6 @@
 "use client";
 
+// app/wallet/wallets/addwallet/page.tsx
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
@@ -20,27 +21,18 @@ interface WalletFormData {
   userId: string;
   userName: string;
   contact: string;
-
   accountHolderName: string;
   bankName: string;
   accountNumber: string;
   confirmAccountNumber: string;
   ifscCode: string;
   gstNumber?: string;
-
-  // cheque / bank book
   chequeFile: File | null;
   bankBookFile: File | null;
-
-  // Aadhaar
   aadharNumber: string;
   aadharFront: File | null;
   aadharBack: File | null;
-
-  // legacy single aadhar file (optional)
   aadharFile: File | null;
-
-  // PAN
   panNumber: string;
   panName: string;
   panDob: string;
@@ -55,32 +47,29 @@ export default function AddWalletForm() {
   const { user } = useVLife();
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  // NOTE: panVerified kept true for testing (PAN subscription over)
   const [panVerified, setPanVerified] = useState(true);
 
   const initialValues: WalletFormData = {
     userId: user.role === "user" ? user.user_id : "",
     userName: user.role === "user" ? user.user_name : "",
     contact: user.role === "user" ? user.contact || "" : "",
-
     accountHolderName: "",
     bankName: "",
     accountNumber: "",
     confirmAccountNumber: "",
     ifscCode: "",
     gstNumber: "",
-
     chequeFile: null,
     bankBookFile: null,
-
     aadharNumber: "",
     aadharFront: null,
     aadharBack: null,
     aadharFile: null,
-
     panNumber: "",
     panName: "",
     panDob: "",
-    panVerify: true,
+    panVerify: true, // kept true for testing
     panCategory: "",
     aadharSeeding: false,
     panFile: null,
@@ -103,18 +92,14 @@ export default function AddWalletForm() {
     ifscCode: Yup.string()
       .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format")
       .required("IFSC Code is required"),
-    // GSTIN basic pattern (optional)
     gstNumber: Yup.string()
       .matches(/^[0-9A-Z]{15}$/, "Invalid GSTIN")
       .notRequired()
       .nullable()
       .transform((v) => (v === "" ? null : v)),
-
     aadharNumber: Yup.string()
       .matches(/^\d{12}$/, "Aadhaar must be 12 digits")
       .required("* Aadhaar Number is required"),
-
-    // aadharFront / aadharBack required
     aadharFront: Yup.mixed<File>()
       .required("* Aadhaar front image/pdf is required")
       .test(
@@ -133,11 +118,7 @@ export default function AddWalletForm() {
           !value ||
           ["image/", "application/pdf"].some((t) => value.type.startsWith(t))
       ),
-
-    // legacy aadharFile optional
     aadharFile: Yup.mixed<File>().notRequired(),
-
-    // PAN
     panNumber: Yup.string()
       .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "* PAN must be 10 characters")
       .required("* PAN Number is required"),
@@ -152,8 +133,6 @@ export default function AddWalletForm() {
           !value ||
           ["image/", "application/pdf"].some((t) => value.type.startsWith(t))
       ),
-
-    // optional cheque & bank book
     chequeFile: Yup.mixed<File>()
       .notRequired()
       .test(
@@ -174,6 +153,7 @@ export default function AddWalletForm() {
       ),
   });
 
+  // ── File upload helper ──────────────────────────────────────────────────
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
       const fileForm = new FormData();
@@ -191,6 +171,7 @@ export default function AddWalletForm() {
     }
   };
 
+  // ── Fetch user details by ID (admin flow) ───────────────────────────────
   const fetchUserById = async (
     userId: string,
     setFieldValue: (field: string, value: any) => void
@@ -212,6 +193,9 @@ export default function AddWalletForm() {
     }
   };
 
+  // ── PAN verification ────────────────────────────────────────────────────
+  // NOTE: subscription is over — panVerified is defaulted true for testing.
+  // When subscription is restored this will call the real API as normal.
   const verifyPanDetails = async (
     panNumber: string,
     panName: string,
@@ -239,7 +223,6 @@ export default function AddWalletForm() {
         if (panData.status === "valid") {
           setPanVerified(true);
           ShowToast.success("PAN verified successfully!");
-
           setFieldValue("panVerify", true);
           setFieldValue("panCategory", panData.category || "");
           setFieldValue(
@@ -273,6 +256,7 @@ export default function AddWalletForm() {
     }
   };
 
+  // ── Form submit ─────────────────────────────────────────────────────────
   const handleSubmit = async (
     values: WalletFormData,
     actions: FormikHelpers<WalletFormData>
@@ -280,17 +264,19 @@ export default function AddWalletForm() {
     try {
       setLoading(true);
 
+      // PAN must be verified before submitting
+      // NOTE: panVerify is kept true in initialValues for testing (subscription over)
       if (!values.panVerify) {
         ShowToast.error("Please verify your PAN before submitting the form.");
         setLoading(false);
         return;
       }
 
+      // Admin: check if wallet already exists for this user
       if (user.role === "admin") {
         const walletCheck = await axios.get(
           `/api/wallets-operations?user_id=${values.userId}`
         );
-        // adjust based on your API response shape
         if (!walletCheck.data.success || walletCheck.data.exists) {
           ShowToast.error(
             "Wallet already exists for this user or user not found"
@@ -300,11 +286,11 @@ export default function AddWalletForm() {
         }
       }
 
-      // Upload files: front/back aadhar required; pan required; cheque/bankbook optional; legacy aadhar optional.
+      // Upload all files
       const uploadPairs: Array<[File | null, string]> = [
         [values.aadharFront, "aadhar_front_file"],
         [values.aadharBack, "aadhar_back_file"],
-        [values.aadharFile, "aadhar_file"], // legacy optional
+        [values.aadharFile, "aadhar_file"],
         [values.panFile, "pan_file"],
         [values.chequeFile, "cheque_file"],
         [values.bankBookFile, "bank_book_file"],
@@ -323,7 +309,6 @@ export default function AddWalletForm() {
         if (file instanceof File) {
           const url = await uploadFile(file);
           if (!url) {
-            // upload failed, abort submission
             setLoading(false);
             actions.setSubmitting(false);
             return;
@@ -342,30 +327,37 @@ export default function AddWalletForm() {
         account_number: values.accountNumber,
         ifsc_code: values.ifscCode,
         gst_number: values.gstNumber || null,
-
         aadhar_number: values.aadharNumber,
-        // files
         aadhar_front: uploadedUrls.aadhar_front_file,
         aadhar_back: uploadedUrls.aadhar_back_file,
-        aadhar_file: uploadedUrls.aadhar_file, // legacy if present
+        aadhar_file: uploadedUrls.aadhar_file,
         pan_file: uploadedUrls.pan_file,
         cheque: uploadedUrls.cheque_file,
         bank_book: uploadedUrls.bank_book_file,
-
         pan_number: values.panNumber,
         pan_name: values.panName,
         pan_dob: values.panDob,
         pan_verified: values.panVerify,
         pan_category: values.panCategory || null,
         aadhar_seeding: values.aadharSeeding || null,
-
         created_by: user.user_id,
         wallet_status: "active",
+        // Tells API: "admin" → create wallet directly, "user" → create change request
+        requested_role: user.role,
+        last_modified_by: user.user_id,
       };
 
       const res = await axios.post("/api/wallets-operations", payload);
+
       if (res.data.success) {
-        ShowToast.success("Wallet added successfully!");
+        if (user.role === "user") {
+          // User's request goes to admin for approval — no wallet created yet
+          ShowToast.success(
+            "Your wallet request has been submitted for admin approval!"
+          );
+        } else {
+          ShowToast.success("Wallet added successfully!");
+        }
         router.push("/wallet/wallets");
       } else {
         ShowToast.error(res.data.message || "Failed to add wallet.");
@@ -390,6 +382,7 @@ export default function AddWalletForm() {
         </div>
       )}
       <div className="p-4 max-md:p-2">
+
         {/* Header */}
         <div className="flex items-center mb-6 max-md:mb-2">
           <IoIosArrowBack
@@ -403,7 +396,6 @@ export default function AddWalletForm() {
           </p>
         </div>
 
-        {/* Formik Form */}
         <div className="rounded-xl px-6 max-md:p-4 bg-white">
           <Formik
             initialValues={initialValues}
@@ -413,6 +405,7 @@ export default function AddWalletForm() {
             {({ values, setFieldValue, errors, touched, handleBlur }) => {
               return (
                 <Form className="grid grid-cols-1 gap-6">
+
                   {/* User Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                     <InputField
@@ -426,7 +419,6 @@ export default function AddWalletForm() {
                         const value = e.target.value;
                         setFieldValue("userId", value);
                         if (user.role === "admin" && value.length >= 4) {
-                          // only fetch/check when admin and at least some length (you used 10 earlier)
                           try {
                             const res = await axios.get(
                               `/api/wallets-operations?user_id=${value}`
@@ -541,7 +533,6 @@ export default function AddWalletForm() {
                       onBlur={handleBlur}
                       error={touched.ifscCode ? (errors as any).ifscCode : ""}
                     />
-
                     <FileInput
                       label="Cancelled Cheque (optional)"
                       name="chequeFile"
@@ -583,7 +574,9 @@ export default function AddWalletForm() {
                         setFieldValue("gstNumber", e.target.value)
                       }
                       onBlur={handleBlur}
-                      error={touched.gstNumber ? (errors as any).gstNumber : ""}
+                      error={
+                        touched.gstNumber ? (errors as any).gstNumber : ""
+                      }
                     />
                   </div>
 
@@ -607,7 +600,9 @@ export default function AddWalletForm() {
                         setFieldValue("panNumber", e.target.value)
                       }
                       onBlur={handleBlur}
-                      error={touched.panNumber ? (errors as any).panNumber : ""}
+                      error={
+                        touched.panNumber ? (errors as any).panNumber : ""
+                      }
                     />
                     <InputField
                       label="Name as in PAN"
@@ -643,14 +638,14 @@ export default function AddWalletForm() {
                       onBlur={handleBlur}
                       error={touched.panFile ? (errors as any).panFile : ""}
                     />
-                    <div className="max-md:hidden "></div>
+                    <div className="max-md:hidden"></div>
 
                     {/* Verify PAN Button */}
                     <div className="flex items-center gap-2 mt-0 ml-auto">
                       <button
                         type="button"
                         disabled={verifying}
-                        className={`px-4 py-2 rounded-lg font-semibold text-sm  transition-colors cursor-pointer ${
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors cursor-pointer ${
                           verifying
                             ? "bg-gray-400 cursor-not-allowed"
                             : "bg-[#106187] text-white font-semibold"
@@ -692,7 +687,9 @@ export default function AddWalletForm() {
                       }
                       onBlur={handleBlur}
                       error={
-                        touched.aadharNumber ? (errors as any).aadharNumber : ""
+                        touched.aadharNumber
+                          ? (errors as any).aadharNumber
+                          : ""
                       }
                     />
                     <FileInput
@@ -735,6 +732,7 @@ export default function AddWalletForm() {
                       {loading ? "Submitting..." : "Submit"}
                     </SubmitButton>
                   </div>
+
                 </Form>
               );
             }}

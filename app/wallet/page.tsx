@@ -23,7 +23,7 @@ const page = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
           {/* Wallets Card */}
           <div
-            onClick={() => router.push("/wallet/wallets")}
+            onClick={() => router.push("/wallet/walletpage")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <Wallet size={32} />
@@ -79,10 +79,9 @@ const page = () => {
             <span className="mt-2 text-lg font-semibold">Activation</span>
           </div>)}
 
-
           {/* Royal Club */}
           <div
-            onClick={() => router.push("/wallet/change-requests")}
+            onClick={() => router.push("/reports")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaCrown  size={32} />

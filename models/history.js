@@ -40,6 +40,7 @@ title:{ type: String },
     base_amount: { type: Number, default: 0 },
     advance: { type: Boolean, default: false },
     ischecked: { type: Boolean, default: false },
+    isReferralChecked: { type: Boolean, default: false },
 
     from: { type: String, },
     to: { type: String, },
