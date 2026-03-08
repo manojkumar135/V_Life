@@ -5,10 +5,10 @@ import { History } from "@/models/history";
 import { Alert } from "@/models/alert";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { getDirectPV } from "@/services/directPV";
-import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout"; // ✅ NEW
+import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout"; 
 
 const PROMO_AMOUNT = 5000;
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // ✅ NEW
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; 
 
 /* -----------------------------------------------------------
    Helper: Parse DD-MM-YYYY safely

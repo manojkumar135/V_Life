@@ -5,6 +5,8 @@ import Layout from "@/layout/Layout";
 import { Users, UserCheck, TreePine } from "lucide-react"; // Lucide icons
 import { FaUsers } from "react-icons/fa";
 import { IoInfiniteSharp } from "react-icons/io5";
+import { FaUserCheck } from "react-icons/fa6";
+import { FaUserTimes } from "react-icons/fa";
 
 import { useRouter } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
@@ -53,7 +55,6 @@ const Page = () => {
             <span className="mt-2 text-lg font-semibold">Right Team</span>
           </div>
 
-          
           {/* Direct Team Card */}
           <div
             onClick={() => router.push("/administration/users/direct")}
@@ -71,6 +72,30 @@ const Page = () => {
             <IoInfiniteSharp size={32} />
             <span className="mt-2 text-lg font-semibold">Infinity Team</span>
           </div>
+
+          {/* Matches Report */}
+          {user?.role === "admin" && (
+            <>
+              <div
+                onClick={() => router.push("/admin-activated")}
+                className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              >
+                <FaUserCheck size={32} />
+                <span className="mt-2 text-lg font-semibold">
+                  Admin Activated
+                </span>
+              </div>
+              <div
+                onClick={() => router.push("/admin-deactivated")}
+                className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              >
+                <FaUserTimes size={32} />
+                <span className="mt-2 text-lg font-semibold">
+                  Admin Deactivated
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </Layout>

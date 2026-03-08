@@ -1,134 +1,82 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { RiMoneyRupeeCircleLine } from "react-icons/ri";
-import { FaWallet } from "react-icons/fa";
-import { FaPercent } from "react-icons/fa";
+import React from "react";
 import Layout from "@/layout/Layout";
+import { useRouter } from "next/navigation";
 import { useVLife } from "@/store/context";
 import { IoIosArrowBack } from "react-icons/io";
-import { useRouter } from "next/navigation";
+import { BsCalendarDay, BsCalendarRange } from "react-icons/bs";
+import { RiMoneyRupeeCircleLine } from "react-icons/ri";
+import { LuTicketsPlane } from "react-icons/lu";
+import { GiDoubled } from "react-icons/gi";
 
-/* ---------------------- TYPES ---------------------- */
-
-type RewardSummary = {
-  daily: number;
-  fortnight: number;
-  cashback: number;
-};
-
-/* ---------------------- PAGE ---------------------- */
-
-export default function ReportsPage() {
-  const { user } = useVLife();
-  const user_id = user?.user_id;
+const Page = () => {
   const router = useRouter();
-
-  const [rewardSummary, setRewardSummary] = useState<RewardSummary>({
-    daily: 0,
-    fortnight: 0,
-    cashback: 0,
-  });
-
-  /* ---------------- FETCH REWARD POINTS ---------------- */
-
-  useEffect(() => {
-    const fetchRewardPoints = async () => {
-      if (!user_id) return;
-
-      try {
-        const res = await axios.get(
-          `/api/dashboard-operations/reward-points?user_id=${user_id}`
-        );
-
-        if (res.data.success) {
-          setRewardSummary(res.data.data);
-        }
-      } catch (err) {
-        console.error("Error fetching reward points:", err);
-      }
-    };
-
-    fetchRewardPoints();
-  }, [user_id]);
-
-  /* ---------------------- UI ---------------------- */
+  const { user } = useVLife();
 
   return (
     <Layout>
-      <div className="w-full p-4">
-        {/* Header */}
-        <div className="flex items-center mb-6 max-md:mb-2">
+      <div className="px-6 py-3">
+        {user?.role === "superadmin" && (
           <IoIosArrowBack
             size={25}
-            className="mr-2 cursor-pointer"
-            onClick={() => router.push("/wallet")}
+            color="black"
+            className="ml-0 mr-3 mt-1 max-sm:!mt-0 max-sm:mr-1 cursor-pointer z-20 mb-3"
+            onClick={() => router.back()}
           />
-          <p className="text-xl max-md:text-[1rem] font-semibold">
-            Reports
-          </p>
-        </div>
+        )}
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 -mt-3 mb-5">
-          <Card
-            icon={
-              <RiMoneyRupeeCircleLine className="text-green-600" size={35} />
-            }
-            label="Daily Rewards"
-            amount={`₹ ${rewardSummary.daily.toFixed(2)}`}
-            className="bg-green-50 border-green-200"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {/* Daily Report */}
+          <div
+            onClick={() => router.push("/reports/daily")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <BsCalendarDay size={32} />
+            <span className="mt-2 text-lg font-semibold">Daily Report</span>
+          </div>
 
-          <Card
-            icon={<FaWallet className="text-pink-600" size={30} />}
-            label="Fortnight Rewards"
-            amount={`₹ ${rewardSummary.fortnight.toFixed(2)}`}
-            className="bg-pink-50 border-pink-200"
-          />
+          {/* Fortnight Report */}
+          <div
+            onClick={() => router.push("/reports/fortnight")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <BsCalendarRange size={32} />
+            <span className="mt-2 text-lg font-semibold">Fortnight Report</span>
+          </div>
 
-          <Card
-            icon={<FaPercent className="text-yellow-600" size={30} />}
-            label="Cashback Points"
-            amount={`₹ ${rewardSummary.cashback.toFixed(2)}`}
-            className="bg-yellow-50 border-yellow-200"
-          />
-        </div>
+          {/* Cashback Report */}
+          <div
+            onClick={() => router.push("/reports/cashback")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <RiMoneyRupeeCircleLine size={32} />
+            <span className="mt-2 text-lg font-semibold">Cashback Report</span>
+          </div>
 
-        {/* Table / More Details Later */}
-        <div className="mt-6">
-          {/* future expansion */}
+          {/* Reward Report */}
+          <div
+            onClick={() => router.push("/reports/reward")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <LuTicketsPlane size={32} />
+            <span className="mt-2 text-lg font-semibold">Reward Report</span>
+          </div>
+
+          {/* Matches Report */}
+          {user?.role !== "user" && (
+            <div
+              onClick={() => router.push("/matches")}
+              className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            >
+              <GiDoubled size={32} />
+              <span className="mt-2 text-lg font-semibold">Matches Report</span>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
   );
-}
+};
 
-/* ---------------------- CARD COMPONENT ---------------------- */
-
-const Card = ({
-  icon,
-  label,
-  amount,
-  className = "",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  amount: string;
-  className?: string;
-}) => (
-  <div
-    className={`flex items-center justify-between shadow rounded-lg p-4 border ${className}`}
-  >
-    <div className="flex items-center gap-4">
-      <div className="bg-transparent p-2 rounded-full">
-        {icon}
-      </div>
-      <div>
-        <p className="text-sm text-gray-500">{label}</p>
-        <p className="text-xl font-semibold">{amount}</p>
-      </div>
-    </div>
-  </div>
-);
+export default Page;

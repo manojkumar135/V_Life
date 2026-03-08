@@ -26,7 +26,6 @@ function generateTransactionId(prefix = "MB") {
   const hh = String(now.getHours()).padStart(2, "0");
   const min = String(now.getMinutes()).padStart(2, "0");
   const ss = String(now.getSeconds()).padStart(2, "0");
-
   return `${prefix}-${yyyy}${mm}${dd}${hh}${min}${ss}`;
 }
 const txId = generateTransactionId("IB");
@@ -47,18 +46,16 @@ async function getLast15DaysEligiblePayouts() {
     is_checked: false,
   });
 
-  console.log("Found payouts:", payouts)
+  console.log("Found payouts:", payouts);
 
   const filtered = payouts.filter((p) => {
     const payoutDate = parseDDMMYYYY(p.date);
     return payoutDate >= start && payoutDate <= now;
   });
-  // console.log(filtered )
 
   console.log(
     `[Infinity Bonus] Found ${filtered.length} payouts (Matching + Direct Sales) in last 15 days`,
   );
-  // console.log(filtered)
   return filtered;
 }
 
@@ -82,15 +79,28 @@ export async function runInfinityBonus() {
       return;
     }
 
+    // ✅ IN-MEMORY dedup Set — key: "fromUserId__sponsorId__infinityTitle"
+    // This is the PRIMARY guard. It prevents any duplicate infinity payout
+    // within this single cron run, regardless of how many DailyPayout records
+    // exist for the same user (different transaction_ids, different dates, etc.)
+    const processedThisRun = new Set<string>();
+
     let totalCreated = 0;
 
     for (const payout of payouts) {
       const user = await User.findOne({ user_id: payout.user_id });
-      if (!user) continue;
+      if (!user) {
+        // Mark checked so it won't be reprocessed
+        await DailyPayout.updateOne(
+          { _id: payout._id },
+          { $set: { is_checked: true } },
+        );
+        continue;
+      }
 
       let sponsor: any = null;
 
-      // 1️⃣ Try direct assigned infinity sponsor
+      // 1️⃣ Try direct assigned infinity sponsor (user.infinity field)
       if (user.infinity) {
         sponsor = await User.findOne({
           user_id: user.infinity,
@@ -98,7 +108,7 @@ export async function runInfinityBonus() {
         });
       }
 
-      // 2️⃣ If missing, find by infinity_users array
+      // 2️⃣ If still no sponsor, find via infinity_users array
       if (!sponsor) {
         sponsor = await findSponsorByInfinityUsers(user.user_id);
       }
@@ -111,34 +121,76 @@ export async function runInfinityBonus() {
       }
 
       console.log(sponsor);
-      // const rank = sponsor.rank;
-      // if (!rank || rank === "none") {
-      //   console.log(
-      //     `⚠️ Sponsor ${sponsor.user_id} has no rank, skipping Infinity Bonus.`
-      //   );
-      //   continue;
-      // }
 
-      // const rankPercentages: Record<string, number> = {
-      //   "1": 0.25,
-      //   "2": 0.35,
-      //   "3": 0.4,
-      //   "4": 0.45,
-      //   "5": 0.5,
-      // };
-      // const bonusPercentage = rankPercentages[rank] || 0;
       const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id);
-      // console.log(bonusPercentage,"bonusPercentage")
 
       if (bonusPercentage === 0) {
         console.log(
           `⚠️ Sponsor ${sponsor.user_id} not eligible for Infinity Bonus`,
         );
+        // Mark checked so it won't be reprocessed
+        await DailyPayout.updateOne(
+          { _id: payout._id },
+          { $set: { is_checked: true } },
+        );
         continue;
       }
+
       const wallet = await Wallet.findOne({ user_id: sponsor.user_id });
 
- 
+      // ✅ Declare infinityTitle before any guard uses it
+      const infinityTitleMap: Record<string, string> = {
+        "Direct Sales Bonus": "Infinity Sales Bonus",
+        "Matching Bonus": "Infinity Matching Bonus",
+      };
+      const infinityTitle = infinityTitleMap[payout.name] || "Infinity Bonus";
+
+      // ─────────────────────────────────────────────────────────────
+      // ✅ GUARD 1 — In-Memory Set
+      // Catches ALL duplicates within this single cron run.
+      // Covers cases where:
+      //   - DailyPayout has 2 records for same user+type (different transaction_ids)
+      //   - DailyPayout has 2 records for same user+type (different dates)
+      //   - Any other scenario producing multiple source payouts for same user
+      // ─────────────────────────────────────────────────────────────
+      const runKey = `${payout.user_id}__${sponsor.user_id}__${infinityTitle}`;
+      if (processedThisRun.has(runKey)) {
+        console.log(
+          `⚠️ [In-Memory Guard] Duplicate skipped this run: ${payout.user_id} → ${sponsor.user_id} (${infinityTitle})`,
+        );
+        // Still mark the source payout as checked so it won't appear again next run
+        await DailyPayout.updateOne(
+          { _id: payout._id },
+          { $set: { is_checked: true } },
+        );
+        continue;
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // ✅ GUARD 2 — DB Check
+      // Catches duplicates if the cron runs more than once today
+      // (e.g. manual trigger, retry, scheduler overlap)
+      // ─────────────────────────────────────────────────────────────
+      const todayFormatted = formatDate(new Date());
+      const alreadyExists = await WeeklyPayout.findOne({
+        from: payout.user_id,
+        to: sponsor.user_id,
+        name: infinityTitle,
+        date: todayFormatted,
+      });
+      if (alreadyExists) {
+        console.log(
+          `⚠️ [DB Guard] Already released today: ${payout.user_id} → ${sponsor.user_id} (${infinityTitle})`,
+        );
+        await DailyPayout.updateOne(
+          { _id: payout._id },
+          { $set: { is_checked: true } },
+        );
+        continue;
+      }
+
+      // ✅ Register in-memory BEFORE creating — so next iteration in this run is blocked
+      processedThisRun.add(runKey);
 
       const now = new Date();
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
@@ -153,12 +205,10 @@ export async function runInfinityBonus() {
       if (!wallet) {
         payoutStatus = "OnHold";
       }
-
       // 2️⃣ If wallet exists but bank details missing → Hold
       else if (!wallet.account_number) {
         payoutStatus = "OnHold";
       }
-
       // 3️⃣ Apply PV-based hold rules
       else if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
         payoutStatus = "OnHold";
@@ -183,27 +233,7 @@ export async function runInfinityBonus() {
         adminCharge = Number((bonusAmount * 0.1).toFixed(2));
       }
 
-      // ✅ Dynamic Infinity Bonus Title
-      const infinityTitleMap: Record<string, string> = {
-        "Direct Sales Bonus": "Infinity Sales Bonus",
-        "Matching Bonus": "Infinity Matching Bonus",
-      };
-      const infinityTitle = infinityTitleMap[payout.name] || "Infinity Bonus";
-
-           // ✅ Duplicate guard
-const alreadyExists = await WeeklyPayout.findOne({
-  "team_users.transaction_id": payout.transaction_id,
-  to: sponsor.user_id,
-  name: infinityTitle,
-});
-if (alreadyExists) {
-  console.log(`⚠️ Duplicate infinity bonus skipped for payout ${payout.transaction_id}`);
-  await DailyPayout.updateOne({ _id: payout._id }, { $set: { is_checked: true } });
-  continue;
-}
-
       const infinityPayout = await WeeklyPayout.create({
-        // transaction_id: `${txId}-${sponsor.user_id}`,
         transaction_id: payout_id,
         payout_id,
         user_id: sponsor.user_id,
@@ -253,49 +283,44 @@ if (alreadyExists) {
 
       const totalPayout = await getTotalPayout(sponsor.user_id);
 
-// 🔹 capture BEFORE state
-const beforeUser = (await User.findOne({ user_id: sponsor.user_id })
-  .select("rank club")
-  .lean()) as any;
+      // 🔹 Capture BEFORE state
+      const beforeUser = (await User.findOne({ user_id: sponsor.user_id })
+        .select("rank club")
+        .lean()) as any;
 
-const updatedClub = await updateClub(
-  sponsor.user_id,
-  totalPayout
-);
+      const updatedClub = await updateClub(sponsor.user_id, totalPayout);
 
-if (updatedClub && beforeUser) {
+      if (updatedClub && beforeUser) {
+        // 🎉 CLUB ENTRY ALERT
+        if (beforeUser.club !== updatedClub.newClub) {
+          await Alert.create({
+            user_id: sponsor.user_id,
+            title: `🎉 ${updatedClub.newClub} Club Achieved`,
+            description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
+            priority: "high",
+            read: false,
+            link: "/dashboards",
+            role: "user",
+            date: formatDate(now),
+            created_at: now,
+          });
+        }
 
-  // 🎉 CLUB ENTRY ALERT
-  if (beforeUser.club !== updatedClub.newClub) {
-    await Alert.create({
-      user_id: sponsor.user_id,
-      title: `🎉 ${updatedClub.newClub} Club Achieved`,
-      description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
-      priority: "high",
-      read: false,
-      link: "/dashboards",
-      role: "user",
-      date: formatDate(now),
-      created_at: now,
-    });
-  }
-
-  // 🎖️ RANK ACHIEVEMENT ALERT
-  if (beforeUser.rank !== updatedClub.newRank) {
-    await Alert.create({
-      user_id: sponsor.user_id,
-      title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
-      description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
-      priority: "high",
-      read: false,
-      link: "/dashboards",
-      role: "user",
-      date: formatDate(now),
-      created_at: now,
-    });
-  }
-}
-
+        // 🎖️ RANK ACHIEVEMENT ALERT
+        if (beforeUser.rank !== updatedClub.newRank) {
+          await Alert.create({
+            user_id: sponsor.user_id,
+            title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+            description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
+            priority: "high",
+            read: false,
+            link: "/dashboards",
+            role: "user",
+            date: formatDate(now),
+            created_at: now,
+          });
+        }
+      }
 
       await History.create({
         transaction_id: infinityPayout.transaction_id,
@@ -357,6 +382,7 @@ if (updatedClub && beforeUser) {
         type: "reward",
       });
 
+      // ✅ Mark this source payout as checked
       await DailyPayout.updateOne(
         { _id: payout._id },
         { $set: { is_checked: true } },
@@ -371,9 +397,7 @@ if (updatedClub && beforeUser) {
         related_id: infinityPayout.payout_id,
         link: "/wallet/payout/weekly",
         title: `${infinityTitle} Released 🎯`,
-        description: `You received ₹${bonusAmount.toLocaleString()} from ${infinityTitle} generated by ${
-          user.user_id
-        }.`,
+        description: `You received ₹${bonusAmount.toLocaleString()} from ${infinityTitle} generated by ${user.user_id}.`,
         role: "user",
         priority: "medium",
         read: false,
