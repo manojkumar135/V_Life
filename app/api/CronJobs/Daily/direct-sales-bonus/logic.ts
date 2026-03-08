@@ -249,10 +249,10 @@ export async function runDirectSalesBonus(): Promise<{
         /* ---------------------------------------------------------- */
 
         if (order.is_first_order === true) {
-          const alreadyPaid = await History.findOne({
-            order_id: order.order_id,
-            name:     "Referral Bonus",
-          }).lean();
+  const alreadyPaid = await History.findOne({
+    order_id: order.order_id,
+    name: { $regex: /referral bonus/i },
+  }).lean();
 
           if (!alreadyPaid) {
             await releaseReferralBonus({

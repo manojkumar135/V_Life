@@ -67,6 +67,7 @@ export async function GET(request: Request) {
     const historiesInWindow = await History.find({
       first_payment: true,
       ischecked: false,
+      transaction_type:"Debit",
       created_at: { $gte: start, $lte: end },
       $or: [
         { first_order: true }, // normal order

@@ -16,6 +16,7 @@ export interface TreeNode {
   status_notes?: string;
 
   rank?: string;
+  club?: string;
   contact?: string;
   mail?: string;
   referBy?: string;
@@ -34,6 +35,11 @@ export interface TreeNode {
   infinityLeft?: number;
   infinityRight?: number;
   infinity?: string;
+
+  totalLeftBV?: number;
+  totalRightBV?: number;
+  totalLeftPV?: number;
+  totalRightPV?: number;
 }
 
 interface Props {
@@ -45,6 +51,22 @@ interface Props {
   onUserClick?: (userId: string) => void;
   refreshTree?: (userId?: string) => void;
 }
+
+/** Convert rank to star label if it's a number or contains "star" */
+const formatRank = (rank?: string): string => {
+  if (!rank || rank === "none") return rank ?? "none";
+
+  const lower = rank.toLowerCase().trim();
+
+  // Already contains "star" → strip number, return "star" only
+  if (lower.includes("star")) return "star";
+
+  // Pure number → return "star"
+  if (/^\d+$/.test(lower)) return "star";
+
+  // Otherwise return as-is
+  return rank;
+};
 
 const BinaryTreeNode: React.FC<Props> = ({
   node,
@@ -58,6 +80,12 @@ const BinaryTreeNode: React.FC<Props> = ({
   const { user } = useVLife();
   const router = useRouter();
   const STATUS_URL = "/api/status-operations";
+
+  const [currentPV, setCurrentPV] = useState<{
+    leftPV: number;
+    rightPV: number;
+  } | null>(null);
+  const [pvLoading, setPvLoading] = useState(false);
 
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{
@@ -82,9 +110,7 @@ const BinaryTreeNode: React.FC<Props> = ({
 
   // ✅ Handle admin double-click or long press to change status
   const handleStatusClick = (id?: string, status?: string, row?: TreeNode) => {
-    // ❌ Block if clicked user is same as logged-in user
     if (id === user?.user_id) return;
-
     if (user?.role === "admin" && id && status && row) {
       setSelectedUser({ id, status, row });
       setIsStatusModalOpen(true);
@@ -104,7 +130,7 @@ const BinaryTreeNode: React.FC<Props> = ({
         ShowToast.success(
           `User ${user_id} status changed to ${
             new_status.charAt(0).toUpperCase() + new_status.slice(1)
-          }`
+          }`,
         );
         setIsStatusModalOpen(false);
         refreshTree?.(user_id);
@@ -121,25 +147,42 @@ const BinaryTreeNode: React.FC<Props> = ({
   // ✅ Empty slot click → Go to registration
   const handleEmptyClick = (side: "left" | "right") => {
     router.push(
-      `/administration/users/tree/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`
+      `/administration/users/tree/register?referBy=${user.user_id}&parent=${node.user_id}&position=${side}`,
     );
   };
 
- // Hover Delay Timer
-const hoverDelayRef = useRef<NodeJS.Timeout | null>(null);
+  // Hover Delay Timer
+  const hoverDelayRef = useRef<NodeJS.Timeout | null>(null);
 
-const handleMouseEnter = () => {
-  if (hoverDelayRef.current) clearTimeout(hoverDelayRef.current);
-  hoverDelayRef.current = setTimeout(() => {
-    setHovered(true);
-  }, 500); // 500ms delay
-};
+  const handleMouseEnter = () => {
+    if (hoverDelayRef.current) clearTimeout(hoverDelayRef.current);
+    hoverDelayRef.current = setTimeout(async () => {
+      setHovered(true);
 
-const handleMouseLeave = () => {
-  if (hoverDelayRef.current) clearTimeout(hoverDelayRef.current);
-  setHovered(false);
-};
+      // Fetch current window PV for this node
+      if (!currentPV) {
+        try {
+          setPvLoading(true);
+          const res = await axios.get("/api/dashboard-operations/team-slot", {
+            params: { user_id: node.user_id },
+          });
+          setCurrentPV({
+            leftPV: res.data.leftTeam || 0,
+            rightPV: res.data.rightTeam || 0,
+          });
+        } catch (err) {
+          console.error("Failed to fetch current PV:", err);
+        } finally {
+          setPvLoading(false);
+        }
+      }
+    }, 500);
+  };
 
+  const handleMouseLeave = () => {
+    if (hoverDelayRef.current) clearTimeout(hoverDelayRef.current);
+    setHovered(false);
+  };
 
   // ---------------- Improved tooltip positioning ----------------
   useEffect(() => {
@@ -149,73 +192,58 @@ const handleMouseLeave = () => {
       if (!nodeRef.current || !tooltipRef.current) return;
 
       const nodeRect = nodeRef.current.getBoundingClientRect();
-      // measure tooltip using its current size
       const tooltipRect = tooltipRef.current.getBoundingClientRect();
 
-      const MARGIN = 8; // margin from viewport edge
+      const MARGIN = 8;
       const scrollY = window.scrollY || window.pageYOffset || 0;
       const scrollX = window.scrollX || window.pageXOffset || 0;
 
-      // Horizontal center relative to node
       let left =
         nodeRect.left + nodeRect.width / 2 + scrollX - tooltipRect.width / 2;
-      // Clamp horizontally to viewport with margin
       left = Math.min(
         Math.max(left, MARGIN + scrollX),
-        window.innerWidth - tooltipRect.width - MARGIN + scrollX
+        window.innerWidth - tooltipRect.width - MARGIN + scrollX,
       );
 
-      // Calculate available vertical space (in viewport coordinates)
       const spaceBelow = window.innerHeight - nodeRect.bottom - MARGIN;
       const spaceAbove = nodeRect.top - MARGIN;
 
       let top: number;
       let preferAbove = false;
 
-      // Prefer placing below if it fits
       if (spaceBelow >= tooltipRect.height) {
         top = nodeRect.bottom + MARGIN + scrollY;
       } else if (spaceAbove >= tooltipRect.height) {
-        // else place above if it fits there
         top = nodeRect.top - tooltipRect.height - MARGIN + scrollY;
         preferAbove = true;
       } else {
-        // If neither side fully fits, clamp inside viewport:
-        // prefer below but clamp between top and bottom margins
         const desiredBelow = nodeRect.bottom + MARGIN + scrollY;
         const minTop = scrollY + MARGIN;
         const maxTop =
           scrollY + window.innerHeight - tooltipRect.height - MARGIN;
         top = Math.min(Math.max(desiredBelow, minTop), maxTop);
-        // if clamped to top region, it effectively becomes "above-like"
         preferAbove = top < nodeRect.bottom + scrollY;
       }
 
-      // apply position
       setTooltipPos({ top, left });
 
-      // optional: store whether placed above to allow arrow styling
       if (tooltipRef.current) {
         tooltipRef.current.setAttribute(
           "data-above",
-          preferAbove ? "true" : "false"
+          preferAbove ? "true" : "false",
         );
       }
     };
 
-    // initial set
     updatePos();
 
-    // update on window resize / scroll (use capture for scroll to catch ancestors)
     window.addEventListener("resize", updatePos);
     window.addEventListener("scroll", updatePos, true);
 
-    // cleanup
     return () => {
       window.removeEventListener("resize", updatePos);
       window.removeEventListener("scroll", updatePos, true);
     };
-    // include node.user_id so position recalculates when hovering a different node
   }, [hovered, node.user_id]);
 
   // ✅ Long press detection for mobile (Admin only)
@@ -291,7 +319,7 @@ const handleMouseLeave = () => {
             <span
               className={`${getColor(
                 node.user_status,
-                node.status_notes
+                node.status_notes,
               )} capitalize`}
             >
               {node.user_status}
@@ -304,7 +332,16 @@ const handleMouseLeave = () => {
                 <div className="flex">
                   <strong className="w-20">Rank:</strong>
                   <span className="truncate font-semibold capitalize">
-                    {node.rank}
+                    {formatRank(node.rank)}
+                  </span>
+                </div>
+              )}
+              {/* ✅ Club field */}
+              {node.club && node.club !== "none" && (
+                <div className="flex">
+                  <strong className="w-20">Club:</strong>
+                  <span className="truncate font-semibold capitalize">
+                    {node.club}
                   </span>
                 </div>
               )}
@@ -369,11 +406,11 @@ const handleMouseLeave = () => {
           )}
           <div className="flex">
             <strong className="w-20">Total BV:</strong>
-            <span>{node.bv ?? 0}</span>
+            <span>{(node.totalLeftBV ?? 0) + (node.totalRightBV ?? 0)}</span>
           </div>
           <div className="flex">
             <strong className="w-20">Total PV:</strong>
-            <span>{node.sv ?? 0}</span>
+            <span>{(node.totalLeftPV ?? 0) + (node.totalRightPV ?? 0)}</span>
           </div>
           <div className="flex">
             <strong className="w-20">Left BV:</strong>
@@ -383,15 +420,14 @@ const handleMouseLeave = () => {
             <strong className="w-20">Right BV:</strong>
             <span>{node.rightBV ?? 0}</span>
           </div>
-            <div className="flex">
+          <div className="flex">
             <strong className="w-20">Left PV:</strong>
-            <span>{node.leftPV ?? 0}</span>
+            <span>{pvLoading ? "..." : (currentPV?.leftPV ?? 0)}</span>
           </div>
           <div className="flex">
             <strong className="w-20">Right PV:</strong>
-            <span>{node.rightPV ?? 0}</span>
+            <span>{pvLoading ? "..." : (currentPV?.rightPV ?? 0)}</span>
           </div>
-          
         </div>
       )}
 

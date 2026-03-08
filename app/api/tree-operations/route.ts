@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
+import { Club } from "lucide-react";
 
 /** Collect DOWNLINE ONLY (binary children recursively) */
 function collectDescendants(
@@ -41,6 +42,36 @@ function calculateInfinityValues(userMap: Map<string, any>) {
   }
 }
 
+/** Calculate total team BV/PV by traversing actual binary tree sides */
+function calculateTeamTotals(
+  userMap: Map<string, any>,
+  nodeMap: Map<string, any>
+) {
+  for (const [userId, user] of userMap) {
+    const node = nodeMap.get(userId);
+    if (!node || !user) continue;
+
+    const collectSide = (id: string | null, bucket: string[]) => {
+      if (!id) return;
+      bucket.push(id);
+      const n = nodeMap.get(id);
+      if (!n) return;
+      collectSide(n.left, bucket);
+      collectSide(n.right, bucket);
+    };
+
+    const leftIds: string[] = [];
+    const rightIds: string[] = [];
+    collectSide(node.left, leftIds);
+    collectSide(node.right, rightIds);
+
+    user.totalLeftBV = leftIds.reduce((sum, id) => sum + (userMap.get(id)?.bv || 0), 0);
+    user.totalRightBV = rightIds.reduce((sum, id) => sum + (userMap.get(id)?.bv || 0), 0);
+    user.totalLeftPV = leftIds.reduce((sum, id) => sum + (userMap.get(id)?.pv || 0), 0);
+    user.totalRightPV = rightIds.reduce((sum, id) => sum + (userMap.get(id)?.pv || 0), 0);
+  }
+}
+
 /** Build binary subtree */
 function buildTree(
   id: string | null,
@@ -71,16 +102,23 @@ function buildTree(
     infinityRight: user?.infinty_right_count || 0,
 
     rank: user?.rank || "none",
+    club: user?.club || "none",   // ✅ club field
     bv: user?.bv || 0,
     pv: user?.pv || 0,
     referrals: user?.referred_users?.length || 0,
     status_notes: user?.status_notes || "",
 
-    /** 💥 Infinity values added here */
+    /** Infinity values */
     leftBV: user?.leftBV ?? 0,
     rightBV: user?.rightBV ?? 0,
     leftPV: user?.leftPV ?? 0,
     rightPV: user?.rightPV ?? 0,
+
+    /** Total team values from binary tree traversal */
+    totalLeftBV: user?.totalLeftBV ?? 0,
+    totalRightBV: user?.totalRightBV ?? 0,
+    totalLeftPV: user?.totalLeftPV ?? 0,
+    totalRightPV: user?.totalRightPV ?? 0,
 
     left,
     right,
@@ -137,6 +175,7 @@ export async function GET(req: Request) {
       const userMap = new Map(users.map((u) => [u.user_id, u]));
 
       calculateInfinityValues(userMap);
+      calculateTeamTotals(userMap, nodeMap);
       const tree = buildTree(search, nodeMap, userMap);
 
       return NextResponse.json({
@@ -155,6 +194,7 @@ export async function GET(req: Request) {
     const userMap = new Map(users.map((u) => [u.user_id, u]));
 
     calculateInfinityValues(userMap);
+    calculateTeamTotals(userMap, nodeMap);
     const tree = buildTree(user_id, nodeMap, userMap);
 
     return NextResponse.json({

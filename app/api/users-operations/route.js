@@ -52,47 +52,13 @@ export async function POST(request) {
 
         created_by: newUser.user_id,
       });
-
-      // ── Create a change request to track wallet creation ──────────────
-      try {
-        const request_id = await generateUniqueCustomId("WCR");
-
-        await WalletChangeRequest.create({
-          request_id,
-          wallet_id: newWallet.wallet_id,
-          user_id: newUser.user_id,
-          requested_by: newUser.user_id,
-          requested_role: "user",
-          request_type: "new_wallet",
-          status: "pending",
-          old_values: {},               // no previous values — this is a fresh wallet
-          new_values: {
-            pan_number: body.pan,
-            pan_verified: "Yes",
-          },
-        });
-      } catch (reqErr) {
-        // Log but don't fail the whole request — wallet was already created
-        console.error("⚠️ Failed to create wallet change request:", reqErr);
-      }
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "User created successfully",
-        userId: newUser.user_id,
-        user: newUser,
-        login: newLogin,
-      },
-      { status: 201 }
-    );
+
+    return NextResponse.json({ success: true, message: "User created successfully", userId: newUser.user_id, user: newUser, login: newLogin }, { status: 201 });
   } catch (error) {
     console.error("❌ Error creating user:", error);
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 

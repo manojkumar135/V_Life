@@ -138,6 +138,8 @@ export async function runInfinityBonus() {
       }
       const wallet = await Wallet.findOne({ user_id: sponsor.user_id });
 
+ 
+
       const now = new Date();
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
       const bonusAmount = payout.amount * bonusPercentage;
@@ -187,6 +189,18 @@ export async function runInfinityBonus() {
         "Matching Bonus": "Infinity Matching Bonus",
       };
       const infinityTitle = infinityTitleMap[payout.name] || "Infinity Bonus";
+
+           // ✅ Duplicate guard
+const alreadyExists = await WeeklyPayout.findOne({
+  "team_users.transaction_id": payout.transaction_id,
+  to: sponsor.user_id,
+  name: infinityTitle,
+});
+if (alreadyExists) {
+  console.log(`⚠️ Duplicate infinity bonus skipped for payout ${payout.transaction_id}`);
+  await DailyPayout.updateOne({ _id: payout._id }, { $set: { is_checked: true } });
+  continue;
+}
 
       const infinityPayout = await WeeklyPayout.create({
         // transaction_id: `${txId}-${sponsor.user_id}`,
