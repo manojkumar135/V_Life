@@ -95,7 +95,7 @@ const rankImages: Record<string, string> = {
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
 
-  console.log("user in dashboard:", user);
+  // console.log("user in dashboard:", user);
   const isNumericRank = !isNaN(Number(user?.rank));
   const hasRank = user?.rank && user.rank !== "none" && user.rank !== "0";
 
@@ -130,85 +130,85 @@ const DashboardPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-  if (!user) {
-    console.log("User not ready yet");
-    return;
-  }
-
-  if (!user.user_id) {
-    console.log("User ID missing");
-    return;
-  }
-
-  console.log("Running permission check for:", user.user_id);
-
-  let isMounted = true;
-
-  (async () => {
-    try {
-      const firstOrderRes = await hasFirstOrder(user.user_id);
-      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
-
-      console.log("API Results:", firstOrderRes, advanceRes);
-
-      if (!isMounted) return;
-
-      const hasPermission =
-        firstOrderRes?.hasFirstOrder ||
-        advanceRes?.hasPermission ||
-        firstOrderRes?.activatedByAdmin;
-
-      console.log("Permission Result:", hasPermission);
-
-      setShowAlert(!hasPermission);
-    } catch (err) {
-      console.error("Permission check error:", err);
-      if (isMounted) setShowAlert(true);
+    if (!user) {
+      console.log("User not ready yet");
+      return;
     }
-  })();
 
-  return () => {
-    isMounted = false;
-  };
-}, [user]);
+    if (!user.user_id) {
+      console.log("User ID missing");
+      return;
+    }
+
+    // console.log("Running permission check for:", user.user_id);
+
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const firstOrderRes = await hasFirstOrder(user.user_id);
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+
+        // console.log("API Results:", firstOrderRes, advanceRes);
+
+        if (!isMounted) return;
+
+        const hasPermission =
+          firstOrderRes?.hasFirstOrder ||
+          advanceRes?.hasPermission ||
+          firstOrderRes?.activatedByAdmin ||
+          firstOrderRes?.isActive;
+
+        // console.log("Permission Result:", hasPermission);
+
+        setShowAlert(!hasPermission);
+      } catch (err) {
+        console.error("Permission check error:", err);
+        if (isMounted) setShowAlert(true);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
 
   // console.log(showAlert)
   // console.log(user.rank);
 
   useEffect(() => {
-  if (!user?.activated_date) return;
+    if (!user?.activated_date) return;
 
-  const hasRank =
-    user?.rank && user.rank !== "none" && user.rank !== "0";
+    const hasRank = user?.rank && user.rank !== "none" && user.rank !== "0";
 
-  if (hasRank) {
-    setShowQuickStarAlert(false);
-    return;
-  }
+    if (hasRank) {
+      setShowQuickStarAlert(false);
+      return;
+    }
 
-  // 🔥 FIX: Manually parse DD-MM-YYYY
-  const [day, month, year] = user.activated_date.split("-");
+    // 🔥 FIX: Manually parse DD-MM-YYYY
+    const [day, month, year] = user.activated_date.split("-");
 
-  const activationDate = new Date(
-    Number(year),
-    Number(month) - 1, // month index starts from 0
-    Number(day)
-  );
+    const activationDate = new Date(
+      Number(year),
+      Number(month) - 1, // month index starts from 0
+      Number(day),
+    );
 
-  const today = new Date();
+    const today = new Date();
 
-  const diffTime = today.getTime() - activationDate.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffTime = today.getTime() - activationDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-  const remainingDays = 7 - diffDays;
+    const remainingDays = 7 - diffDays;
 
-  if (remainingDays > 0) {
-    setQuickStarDaysLeft(remainingDays);
-    setShowQuickStarAlert(true);
-  } else {
-    setShowQuickStarAlert(false);
-  }
-}, [user?.activated_date, user?.rank]);
+    if (remainingDays > 0) {
+      setQuickStarDaysLeft(remainingDays);
+      setShowQuickStarAlert(true);
+    } else {
+      setShowQuickStarAlert(false);
+    }
+  }, [user?.activated_date, user?.rank]);
 
   useEffect(() => {
     const fetchDashboardSummary = async () => {

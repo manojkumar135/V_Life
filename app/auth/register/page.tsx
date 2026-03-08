@@ -127,10 +127,10 @@ function RegisterContent() {
           ShowToast.success("Registration successful!");
           router.push(
             `/auth/success?username=${encodeURIComponent(
-              values.user_name
+              values.user_name,
             )}&userId=${encodeURIComponent(
-              res.data.userId
-            )}&email=${encodeURIComponent(values.mail)}`
+              res.data.userId,
+            )}&email=${encodeURIComponent(values.mail)}`,
           );
         } else {
           ShowToast.error(res.data.message || "Registration failed");
@@ -160,7 +160,7 @@ function RegisterContent() {
       try {
         const decrypted = CryptoJS.AES.decrypt(
           decodeURIComponent(ref),
-          SECRET_KEY
+          SECRET_KEY,
         ).toString(CryptoJS.enc.Utf8);
 
         const data = JSON.parse(decrypted);
@@ -273,9 +273,9 @@ function RegisterContent() {
             height={100}
             className="
     mb-5 border-0 
-    w-[180px]        
-    max-md:w-[120px] 
-    max-sm:w-[120px] 
+    w-45        
+    max-md:w-30 
+    max-sm:w-30
   "
           />
 
@@ -319,7 +319,7 @@ function RegisterContent() {
                       if (!date) return formik.setFieldValue("dob", "");
 
                       const localDate = new Date(
-                        date.getTime() - date.getTimezoneOffset() * 60000
+                        date.getTime() - date.getTimezoneOffset() * 60000,
                       )
                         .toISOString()
                         .split("T")[0];
@@ -356,7 +356,7 @@ function RegisterContent() {
                       const currentYear = new Date().getFullYear();
                       const years = Array.from(
                         { length: 101 },
-                        (_, i) => currentYear - i
+                        (_, i) => currentYear - i,
                       );
                       const monthOptions = Array.from({ length: 12 }).map(
                         (_, m) => ({
@@ -364,7 +364,7 @@ function RegisterContent() {
                           label: new Date(0, m).toLocaleString("default", {
                             month: "long",
                           }),
-                        })
+                        }),
                       );
                       const yearOptions = years.map((y) => ({
                         value: y,
@@ -383,11 +383,11 @@ function RegisterContent() {
                           </button>
 
                           <div className="flex items-center gap-2">
-                            <div className="min-w-[100px]">
+                            <div className="min-w-25">
                               <Select
                                 options={monthOptions}
                                 value={monthOptions.find(
-                                  (m) => m.value === date.getMonth()
+                                  (m) => m.value === date.getMonth(),
                                 )}
                                 onChange={(selected) =>
                                   selected && changeMonth(selected.value)
@@ -399,17 +399,21 @@ function RegisterContent() {
                                     fontSize: "0.85rem",
                                   }),
                                   menu: (base) => ({ ...base, zIndex: 9999 }),
+                                  option: (base) => ({
+                                    ...base,
+                                    fontSize: "0.85rem",
+                                  }),
                                 }}
                                 menuPortalTarget={document.body}
                                 menuPosition="fixed"
                               />
                             </div>
 
-                            <div className="min-w-[80px]">
+                            <div className="min-w-20">
                               <Select
                                 options={yearOptions}
                                 value={yearOptions.find(
-                                  (y) => y.value === date.getFullYear()
+                                  (y) => y.value === date.getFullYear(),
                                 )}
                                 onChange={(selected) =>
                                   selected && changeYear(selected.value)
@@ -421,6 +425,10 @@ function RegisterContent() {
                                     fontSize: "0.85rem",
                                   }),
                                   menu: (base) => ({ ...base, zIndex: 9999 }),
+                                  option: (base) => ({
+                                    ...base,
+                                    fontSize: "0.85rem",
+                                  }),
                                 }}
                                 menuPortalTarget={document.body}
                                 menuPosition="fixed"
@@ -457,11 +465,12 @@ function RegisterContent() {
                       options={gender}
                       name="gender"
                       value={gender.find(
-                        (t) => t.value === formik.values.gender
+                        (t) => t.value === formik.values.gender,
                       )}
-                      onChange={(opt) =>
-                        formik.setFieldValue("gender", opt?.value || "")
-                      }
+                      onChange={(opt) => {
+                        formik.setFieldValue("gender", opt?.value || "");
+                        formik.setFieldTouched("gender", true);
+                      }}
                       onBlur={() => formik.setFieldTouched("gender", true)}
                       styles={{
                         ...customSelectStyles,
@@ -560,9 +569,11 @@ function RegisterContent() {
                       options={teams}
                       name="team"
                       value={teams.find((t) => t.value === formik.values.team)}
-                      onChange={(opt) =>
-                        formik.setFieldValue("team", opt?.value || "")
-                      }
+                      // Team Select
+                      onChange={(opt) => {
+                        formik.setFieldValue("team", opt?.value || "");
+                        formik.setFieldTouched("team", true);
+                      }}
                       onBlur={() => formik.setFieldTouched("team", true)}
                       styles={{
                         ...customSelectStyles,
@@ -615,7 +626,7 @@ function RegisterContent() {
                       if (value.length > 10) {
                         formik.setFieldError(
                           "pan",
-                          "PAN must be exactly 10 characters"
+                          "PAN must be exactly 10 characters",
                         );
                         return;
                       }
@@ -624,7 +635,7 @@ function RegisterContent() {
                       if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value)) {
                         formik.setFieldError(
                           "pan",
-                          "Invalid PAN format (ABCDE1234F)"
+                          "Invalid PAN format (ABCDE1234F)",
                         );
                         return;
                       }

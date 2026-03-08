@@ -343,8 +343,10 @@ export default function AddOrderPage() {
     }
   }, [user, address, isOtherOrder]);
 
-  // Check if first order
-  useEffect(() => {
+useEffect(() => {
+    // ✅ Wait until orderContext is fully resolved before checking
+    if (orderContext === null) return;
+
     const checkFirstOrder = async () => {
       try {
         const targetUserId =
@@ -355,18 +357,15 @@ export default function AddOrderPage() {
         if (!targetUserId) return;
 
         const result = await hasFirstOrder(targetUserId);
-        // console.log(result,!result.hasFirstOrder)
-
-        // First order = no previous orders
         setIsFirstOrder(!result.hasFirstOrder);
       } catch (error) {
         console.error("Failed to check first order:", error);
-        setIsFirstOrder(false); // safe fallback
+        setIsFirstOrder(false);
       }
     };
 
     checkFirstOrder();
-  }, [isOtherOrder, orderContext?.beneficiary_id, user?.user_id]);
+  }, [orderContext, isOtherOrder, user?.user_id]); // 👈 changed orderContext?.beneficiary_id → orderContext
 
   useEffect(() => {
     // OTHER ORDER → always fresh

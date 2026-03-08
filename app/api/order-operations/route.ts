@@ -121,7 +121,6 @@ export async function POST(request: Request) {
        🔑 IDENTIFY BENEFICIARY & PLACED BY (CRITICAL FIX)
     ============================================================ */
     const beneficiaryId = body.beneficiary?.user_id || body.user_id;
-
     const placedById = body.placed_by?.user_id || body.user_id;
 
     /* ---------------- FETCH USERS ---------------- */
@@ -189,7 +188,8 @@ export async function POST(request: Request) {
     const newOrder = await Order.create({
       ...body,
       order_id,
-      user_id: beneficiary.user_id, // ✅ beneficiary owns order
+      user_id: beneficiary.user_id,
+      is_first_order: isFirstOrder,
       amount,
     });
 
@@ -239,6 +239,9 @@ export async function POST(request: Request) {
       created_by: placedBy.user_id,
     });
 
+    /* ✅ ORDER + HISTORY BOTH CREATED — return response immediately */
+    /* Remaining tasks run in background without blocking the response */
+
     /* ---------------- 3️⃣ UPDATE BV / PV (BENEFICIARY) ---------------- */
     beneficiary.bv = (beneficiary.bv || 0) + totalBV;
     beneficiary.pv = (beneficiary.pv || 0) + totalPV;
@@ -249,69 +252,7 @@ export async function POST(request: Request) {
     const rewardUsage = body.reward_usage;
     const rewardOwnerId = placedBy.user_id;
 
-    if (rewardUsage?.cashback?.used > 0) {
-      await useRewardScore({
-        user_id: rewardOwnerId,
-        points: rewardUsage.cashback.used,
-        module: "order",
-        reference_id: newOrder.order_id,
-        remarks: `Cashback used for order ${newOrder.order_id}`,
-        type: "cashback",
-      });
-    }
-
-    if (rewardUsage?.fortnight?.used > 0) {
-      await useRewardScore({
-        user_id: rewardOwnerId,
-        points: rewardUsage.fortnight.used,
-        module: "order",
-        reference_id: newOrder.order_id,
-        remarks: `Fortnight reward used for order ${newOrder.order_id}`,
-        type: "fortnight",
-      });
-    }
-    if (rewardUsage?.daily?.used > 0) {
-      await useRewardScore({
-        user_id: rewardOwnerId,
-        points: rewardUsage.daily.used,
-        module: "order",
-        reference_id: newOrder.order_id,
-        remarks: `Daily reward used for order ${newOrder.order_id}`,
-        type: "daily",
-      });
-    }
-
-    /* ---------------- 🎁 REWARD EARNING (BENEFICIARY) ---------------- */
-    if (isFirstOrder && beneficiary.user_status !== "active") {
-      const cashbackPoints = newOrder.amount;
-
-      if (cashbackPoints > 0) {
-        await addRewardScore({
-          user_id: beneficiary.user_id,
-          points: cashbackPoints,
-          source: "order",
-          reference_id: newOrder.order_id,
-          remarks: `Cashback for first order ${newOrder.order_id}`,
-          type: "cashback",
-        });
-      }
-    }
-    // else {
-    //   const dailyPoints = 10 * totalPV;
-
-    //   if (dailyPoints > 0) {
-    //     await addRewardScore({
-    //       user_id: beneficiary.user_id,
-    //       points: dailyPoints,
-    //       source: "order",
-    //       reference_id: newOrder.order_id,
-    //       remarks: `Cashback reward for order ${newOrder.order_id}`,
-    //       type: "cashback",
-    //     });
-    //   }
-    // }
-
-    /* ---------------- ACTIVATE BENEFICIARY (AS REQUESTED) ---------------- */
+    /* ---------------- ACTIVATE BENEFICIARY ---------------- */
     let justActivated = false;
 
     if (isFirstOrder && beneficiary.user_status !== "active") {
@@ -334,69 +275,120 @@ export async function POST(request: Request) {
       { status: 201 },
     );
 
-    /* ---------------- BACKGROUND MLM ---------------- */
-    /* ---------------- MLM + RANK + BONUS ---------------- */
-if (freshUser?.referBy) {
-  try {
-    const referrerId = freshUser.referBy;
+    /* ---------------- ALL BACKGROUND TASKS (fire and forget) ---------------- */
+    (async () => {
+      try {
 
-    if (justActivated) {
-      await User.updateOne(
-        { user_id: referrerId },
-        {
-          $addToSet: { paid_directs: freshUser.user_id },
-          $inc: { paid_directs_count: 1 },
-        },
-      );
-    }
+        /* REWARD DEDUCTION (PLACED BY) */
+        if (rewardUsage?.cashback?.used > 0) {
+          await useRewardScore({
+            user_id: rewardOwnerId,
+            points: rewardUsage.cashback.used,
+            module: "order",
+            reference_id: newOrder.order_id,
+            remarks: `Cashback used for order ${newOrder.order_id}`,
+            type: "cashback",
+          });
+        }
 
-   if (shouldTriggerMLM && referrerId) {
-  await updateInfinityTeam(referrerId);
+        if (rewardUsage?.fortnight?.used > 0) {
+          await useRewardScore({
+            user_id: rewardOwnerId,
+            points: rewardUsage.fortnight.used,
+            module: "order",
+            reference_id: newOrder.order_id,
+            remarks: `Fortnight reward used for order ${newOrder.order_id}`,
+            type: "fortnight",
+          });
+        }
 
-  const totalPayout = await getTotalPayout(referrerId);
+        if (rewardUsage?.daily?.used > 0) {
+          await useRewardScore({
+            user_id: rewardOwnerId,
+            points: rewardUsage.daily.used,
+            module: "order",
+            reference_id: newOrder.order_id,
+            remarks: `Daily reward used for order ${newOrder.order_id}`,
+            type: "daily",
+          });
+        }
 
-  await updateClub(referrerId, totalPayout);
+        /* 🎁 REWARD EARNING (BENEFICIARY) */
+        if (isFirstOrder && beneficiary.user_status !== "active") {
+          const cashbackPoints = newOrder.amount;
 
-  await checkAndReleasePromotionalBonus(referrerId);
+          if (cashbackPoints > 0) {
+            await addRewardScore({
+              user_id: beneficiary.user_id,
+              points: cashbackPoints,
+              source: "order",
+              reference_id: newOrder.order_id,
+              remarks: `Cashback for first order ${newOrder.order_id}`,
+              type: "cashback",
+            });
+          }
+        }
 
-  // 🔥 Non-blocking heavy process
-  propagateInfinityUpdateToAncestors(referrerId)
-    .then(() => console.log("Infinity propagated"))
-    .catch(err => console.error("Infinity error", err));
-}
+        /* MLM + RANK + BONUS */
+        if (freshUser?.referBy) {
+          const referrerId = freshUser.referBy;
 
-    await User.updateOne(
-      { user_id: referrerId },
-      { $inc: { direct_bv: totalBV, direct_pv: totalPV } },
-    );
-  } catch (err) {
-    console.error("❌ Infinity / Rank error", err);
-  }
-}
+          if (justActivated) {
+            await User.updateOne(
+              { user_id: referrerId },
+              {
+                $addToSet: { paid_directs: freshUser.user_id },
+                $inc: { paid_directs_count: 1 },
+              },
+            );
+          }
 
-return NextResponse.json(
-  { success: true, data: newOrder, addedBV: totalBV },
-  { status: 201 },
-);
+          if (shouldTriggerMLM && referrerId) {
+            await updateInfinityTeam(referrerId);
 
-    /* ---------------- ADMIN ALERT ---------------- */
-    await Alert.create({
-      user_id: placedBy.user_id,
-      user_contact: placedBy.contact || "",
-      user_email: placedBy.mail || "",
-      user_status: placedBy.user_status || "active",
-      title: "New Order Placed",
-      description: `Order ${newOrder.order_id} placed for ${beneficiary.user_id}`,
-      role: "admin",
-      link: "/orders",
-      related_id: newOrder.order_id,
-      alert_type: "success",
-      date: new Date().toLocaleDateString("en-GB").split("/").join("-"),
-      priority: "high",
-      delivered_via: "system",
-    });
+            const totalPayout = await getTotalPayout(referrerId);
 
+            await updateClub(referrerId, totalPayout);
+
+            await checkAndReleasePromotionalBonus(referrerId);
+
+            // 🔥 Non-blocking heavy process
+            propagateInfinityUpdateToAncestors(referrerId)
+              .then(() => console.log("Infinity propagated"))
+              .catch((err) => console.error("Infinity error", err));
+          }
+
+          await User.updateOne(
+            { user_id: referrerId },
+            { $inc: { direct_bv: totalBV, direct_pv: totalPV } },
+          );
+        }
+
+        /* ADMIN ALERT */
+        await Alert.create({
+          user_id: placedBy.user_id,
+          user_contact: placedBy.contact || "",
+          user_email: placedBy.mail || "",
+          user_status: placedBy.user_status || "active",
+          title: "New Order Placed",
+          description: `Order ${newOrder.order_id} placed for ${beneficiary.user_id}`,
+          role: "admin",
+          link: "/orders",
+          related_id: newOrder.order_id,
+          alert_type: "success",
+          date: new Date().toLocaleDateString("en-GB").split("/").join("-"),
+          priority: "high",
+          delivered_via: "system",
+        });
+
+      } catch (err) {
+        console.error("❌ Background task error:", err);
+      }
+    })(); // 🔥 fire and forget — does NOT block response
+
+    /* ✅ Returns immediately after Order + History are safely created */
     return response;
+
   } catch (error: any) {
     console.error("🔥 [ORDER] Fatal error", error);
     return NextResponse.json(

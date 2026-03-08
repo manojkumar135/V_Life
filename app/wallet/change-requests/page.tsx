@@ -83,28 +83,16 @@ export default function ChangeRequestsPage() {
     fetchRequests(debouncedQuery);
   }, [debouncedQuery, user, fetchRequests]);
 
-  /* ── Navigate to view/action the change request ─────────────────
-   *
-   * ALWAYS open in request-mode so EditWalletPage shows:
-   *   - status badge
-   *   - old vs new comparison table
-   *   - read-only form for approved/rejected
-   *
-   * URL patterns:
-   *   update_wallet → /wallet/wallets/editwallet/[wallet_id]?mode=request&request_id=WCR...
-   *   new_wallet    → /wallet/wallets/editwallet/new?mode=request&request_id=WCR...
-   * ---------------------------------------------------------------- */
+  /* ── Row click → open detail page ───────────────────────────────────
+   * Always navigates to /wallet/change-requests/[request_id]
+   * This page shows:
+   *   - status badge + banner
+   *   - old vs new comparison table (toggle button)
+   *   - all wallet fields read-only (3 per row)
+   *   - admin reject / review & update buttons
+   * ------------------------------------------------------------------ */
   const handleRowClick = (row: any) => {
-    const requestId  = row.request_id;
-    const walletId   = row.wallet_id;
-    const isNewWallet = row.request_type === "new_wallet" || !walletId;
-
-    const basePath = isNewWallet
-      ? "/wallet/wallets/editwallet/new"
-      : `/wallet/wallets/editwallet/${walletId}`;
-
-    const url = `${basePath}?mode=request&request_id=${requestId}`;
-    router.push(url);
+    router.push(`/wallet/change-requests/${row.request_id}`);
   };
 
   /* ── Status cell renderer ───────────────────────────────────────── */
@@ -245,12 +233,6 @@ export default function ChangeRequestsPage() {
           rowIdField="request_id"
           pageSize={12}
           checkboxSelection
-          /*
-           * onIdClick  → fires when the ID cell is clicked (passes id + full row)
-           * onRowClick → fires when anywhere else on the row is clicked
-           * Both must use handleRowClick so they always build the correct
-           * ?mode=request&request_id URL — never navigate by wallet_id alone.
-           */
           onIdClick={(_id, row) => handleRowClick(row)}
           onRowClick={(row) => handleRowClick(row)}
         />

@@ -508,7 +508,7 @@ export async function createUserAndLogin(
   }
 
   // -------------------- now placement is valid, we can safely create user --------------------
-  const user_id = await generateUniqueCustomId("US", User, 8, 8);
+const user_id = await generateUniqueCustomId("IND", User, 7, 7);
   const login_id = await generateUniqueCustomId("LG", Login, 8, 8);
 
   const newUserDoc = await User.create({

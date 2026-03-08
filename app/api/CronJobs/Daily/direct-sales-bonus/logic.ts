@@ -105,6 +105,7 @@ export async function getOrdersInWindow() {
     direct_bonus_checked: { $ne: true },
   }).lean();
 
+
   return orders.filter((o: any) => {
     try {
       const orderUTC = orderToUTCDate(o);
@@ -136,6 +137,7 @@ export async function getAdvanceHistoryInWindow() {
     created_at:        { $gte: startUTC, $lte: endUTC },
   }).lean();
 
+  // console.log(histories,"histories in window fjtkjku");
   return histories;
 }
 
@@ -214,6 +216,7 @@ export async function runDirectSalesBonus(): Promise<{
 }> {
   try {
     const orders = await getOrdersInWindow();
+    // console.log(orders, "orders in window");
     let totalPayouts       = 0;
     let referralBonusCount = 0;
 

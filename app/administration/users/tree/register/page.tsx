@@ -339,7 +339,7 @@ function RegisterContent() {
                           </button>
 
                           <div className="flex items-center gap-2">
-                            <div className="min-w-[100px]">
+                            <div className="min-w-25">
                               <Select
                                 options={monthOptions}
                                 value={monthOptions.find(
@@ -355,13 +355,17 @@ function RegisterContent() {
                                     fontSize: "0.85rem",
                                   }),
                                   menu: (base) => ({ ...base, zIndex: 9999 }),
+                                  option: (base) => ({
+                                    ...base,
+                                    fontSize: "0.85rem",
+                                  }),
                                 }}
                                 menuPortalTarget={document.body}
                                 menuPosition="fixed"
                               />
                             </div>
 
-                            <div className="min-w-[80px]">
+                            <div className="min-w-20">
                               <Select
                                 options={yearOptions}
                                 value={yearOptions.find(
@@ -377,6 +381,10 @@ function RegisterContent() {
                                     fontSize: "0.85rem",
                                   }),
                                   menu: (base) => ({ ...base, zIndex: 9999 }),
+                                  option: (base) => ({
+                                    ...base,
+                                    fontSize: "0.85rem",
+                                  }),
                                 }}
                                 menuPortalTarget={document.body}
                                 menuPosition="fixed"
@@ -415,9 +423,10 @@ function RegisterContent() {
                       value={gender.find(
                         (t) => t.value === formik.values.gender
                       )}
-                      onChange={(opt) =>
-                        formik.setFieldValue("gender", opt?.value || "")
-                      }
+                       onChange={(opt) => {
+                        formik.setFieldValue("gender", opt?.value || "");
+                        formik.setFieldTouched("gender", true);
+                      }}
                       onBlur={() => formik.setFieldTouched("gender", true)}
                       styles={{
                         ...customSelectStyles,
@@ -513,9 +522,11 @@ function RegisterContent() {
                       options={teams}
                       name="team"
                       value={teams.find((t) => t.value === formik.values.team)}
-                      onChange={(opt) =>
-                        formik.setFieldValue("team", opt?.value || "")
-                      }
+                     // Team Select
+onChange={(opt) => {
+  formik.setFieldValue("team", opt?.value || "");
+  formik.setFieldTouched("team", true); 
+}}
                       onBlur={() => formik.setFieldTouched("team", true)}
                       styles={customSelectStyles}
                       placeholder="Select Team"

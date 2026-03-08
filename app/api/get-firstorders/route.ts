@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { History } from "@/models/history";
+import { Order } from "@/models/order";
 import mongoose from "mongoose";
 
 export async function GET(request: Request) {
@@ -20,18 +20,18 @@ export async function GET(request: Request) {
     const to = searchParams.get("to");
 
     /* =======================
-       1️⃣ FETCH BY ID / TRANSACTION ID
+       1️⃣ FETCH BY ID / ORDER ID
     ======================= */
     if (id) {
-      let history;
+      let order;
 
       if (mongoose.Types.ObjectId.isValid(id)) {
-        history = await History.findById(id);
+        order = await Order.findById(id);
       } else {
-        history = await History.findOne({ transaction_id: id });
+        order = await Order.findOne({ order_id: id });
       }
 
-      if (!history) {
+      if (!order) {
         return NextResponse.json(
           { success: false, message: "Record not found", data: [] },
           { status: 404 }
@@ -39,21 +39,18 @@ export async function GET(request: Request) {
       }
 
       return NextResponse.json(
-        { success: true, data: [history] },
+        { success: true, data: [order] },
         { status: 200 }
       );
     }
 
     /* =======================
-       2️⃣ BASE QUERY — FIRST ORDER HISTORY ONLY
+       2️⃣ BASE QUERY — FIRST ORDER ONLY
     ======================= */
-    const completed="Completed"
     const baseQuery: any = {
-      first_order: true,
-      first_payment: true,
-      advance: false,
-      details: "Order Payment",
-      status: completed || "pending",
+      is_first_order: true,
+      advance_used: false,
+      payment: "completed",
     };
 
     /* =======================
@@ -94,13 +91,12 @@ export async function GET(request: Request) {
           const regex = new RegExp("^" + term, "i");
 
           orConditions.push(
-            { transaction_id: regex },
             { order_id: regex },
             { user_id: regex },
             { user_name: regex },
-            { status: regex },
-            { details: regex },
-            { date: regex }
+            { order_status: regex },
+            { payment_date: regex },
+            { order_mode: regex }
           );
 
           if (!isNaN(Number(term))) {
@@ -149,7 +145,7 @@ export async function GET(request: Request) {
         const mm = String(parsed.getMonth() + 1).padStart(2, "0");
         const yyyy = parsed.getFullYear();
 
-        conditions.push({ date: `${dd}-${mm}-${yyyy}` });
+        conditions.push({ payment_date: `${dd}-${mm}-${yyyy}` });
       }
     }
 
@@ -170,7 +166,7 @@ export async function GET(request: Request) {
         ).padStart(2, "0")}-${endDate.getFullYear()}`;
 
         conditions.push({
-          date: { $gte: fromDate, $lte: toDate },
+          payment_date: { $gte: fromDate, $lte: toDate },
         });
       }
     }
@@ -184,14 +180,14 @@ export async function GET(request: Request) {
         : baseQuery;
 
     /* =======================
-       9️⃣ FETCH FIRST ORDER HISTORY
+       9️⃣ FETCH FIRST ORDERS
     ======================= */
-    const histories = await History.find(finalQuery).sort({
+    const orders = await Order.find(finalQuery).sort({
       created_at: -1,
     });
 
     return NextResponse.json(
-      { success: true, data: histories },
+      { success: true, data: orders },
       { status: 200 }
     );
   } catch (err: any) {

@@ -108,7 +108,7 @@ export async function releaseReferralBonus({
     transaction_type: "Credit",
     status,
     details: isAdvance
-      ? `Referral Bonus for activation ${orderId}`
+      ? `Referral Bonus for activation ${buyerId}`
       : `Referral Bonus for first order ${orderId}`,
 
     created_by: "system",

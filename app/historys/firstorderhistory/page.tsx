@@ -14,10 +14,10 @@ import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 import AlertBox from "@/components/Alerts/advanceAlert";
- import { hasAdvancePaid } from "@/services/hasAdvancePaid";
+import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 
-import { FaPlusCircle, FaMinusCircle, FaEye, FaDownload } from "react-icons/fa";
+import { FaEye, FaDownload } from "react-icons/fa";
 import { handleDownload } from "@/utils/handleDownload";
 import dynamic from "next/dynamic";
 import { handleDownloadPDF } from "@/lib/invoiceDownload";
@@ -78,41 +78,40 @@ export default function FirstOrderPage() {
   };
 
   // 🔹 Check initial advance payment status
- useEffect(() => {
-  if (!user?.user_id) return;
+  useEffect(() => {
+    if (!user?.user_id) return;
 
-  let isMounted = true;
+    let isMounted = true;
 
-  (async () => {
-    try {
-      // 1️⃣ Check first order
-      const firstOrderRes = await hasFirstOrder(user.user_id);
+    (async () => {
+      try {
+        // 1️⃣ Check first order
+        const firstOrderRes = await hasFirstOrder(user.user_id);
 
-      // 2️⃣ Check advance
-      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+        // 2️⃣ Check advance
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
-      if (!isMounted) return;
+        if (!isMounted) return;
 
-      const hasPermission =
-        firstOrderRes.hasFirstOrder ||
-        advanceRes.hasPermission ||
-        firstOrderRes.activatedByAdmin;
+        const hasPermission =
+          firstOrderRes.hasFirstOrder ||
+          advanceRes.hasPermission ||
+          firstOrderRes.activatedByAdmin;
 
-      setHasPermission(hasPermission);
-      setShowAlert(!hasPermission);
+        setHasPermission(hasPermission);
+        setShowAlert(!hasPermission);
+      } catch (err) {
+        console.error("Permission check error:", err);
+        if (isMounted) setShowAlert(true);
+      }
+    })();
 
-    } catch (err) {
-      console.error("Permission check error:", err);
-      if (isMounted) setShowAlert(true);
-    }
-  })();
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.user_id]);
 
-  return () => {
-    isMounted = false;
-  };
-}, [user?.user_id]);
-
-  // 🔹 Fetch Advance payments
+  // 🔹 Fetch First Orders
   const fetchHistory = useCallback(async () => {
     if (!user?.user_id) return;
     try {
@@ -131,12 +130,11 @@ export default function FirstOrderPage() {
         },
       });
 
-      //   console.log(data)
       const list = data.data || [];
       setData(list);
       setTotalItems(list.length);
     } catch (err) {
-      ShowToast.error("Unable to load advance history.");
+      ShowToast.error("Unable to load first order history.");
     } finally {
       setLoading(false);
     }
@@ -148,7 +146,6 @@ export default function FirstOrderPage() {
   }, [fetchHistory]);
 
   const formatTime = (value: string) => {
-    // console.log("Formatting time:", value);
     if (!value) return "";
 
     // CASE 1: Already in 12-hour format (contains AM/PM)
@@ -162,7 +159,6 @@ export default function FirstOrderPage() {
     const minute = minuteStr?.padStart(2, "0") || "00";
 
     const ampm = hour >= 12 ? "PM" : "AM";
-
     hour = hour % 12 || 12;
 
     return `${hour.toString().padStart(2, "0")}:${minute} ${ampm}`;
@@ -171,8 +167,8 @@ export default function FirstOrderPage() {
   /** ======================== TABLE COLUMNS ========================= */
 
   const columns: GridColDef[] = [
-    { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
-    { field: "order_id", headerName: "Order ID", flex: 0.8 },
+    { field: "order_id", headerName: "Order ID", flex: 1 },
+    { field: "payment_id", headerName: "Payment ID", flex: 0.8 },
 
     user?.role === "admin" && {
       field: "user_id",
@@ -184,22 +180,20 @@ export default function FirstOrderPage() {
       headerName: "Name",
       flex: 1,
     },
-    // { field: "contact", headerName: "Contact", flex: 0.7 },
 
-    { field: "date", headerName: "Date", flex: 0.7 },
+    { field: "payment_date", headerName: "Date", flex: 0.7 },
     {
-      field: "time",
+      field: "payment_time",
       headerName: "Time",
       flex: 0.6,
       renderCell: (params: any) => {
-        const time = params?.row?.time;
-        // console.log("Original time value:", time);
+        const time = params?.row?.payment_time;
         return formatTime(time);
       },
     },
 
     {
-      field: "amount",
+      field: "payable_amount",
       headerName: "Amount (₹)",
       align: "right",
       flex: 0.7,
@@ -208,24 +202,10 @@ export default function FirstOrderPage() {
       ),
     },
 
-    // {
-    //   field: "transaction_type",
-    //   headerName: "Type",
-    //   flex: 0.6,
-    //   renderCell: (params: any) => {
-    //     const type = String(params.value).toLowerCase();
-
-    //     // 👇 flip values
-    //     return type === "credit" ? "Debit" : "Credit";
-    //   },
-    // },
-
     {
       field: "download",
       headerName: "Invoice",
       flex: 0.8,
-      // sortable: false,
-      // filterable: false,
       renderCell: (params: GridRenderCellParams) => (
         <div className="flex max-lg:gap-8 max-lg:min-w-38 gap-8 xl:items-center xl:justify-center mt-2">
           {/* Preview Icon */}
@@ -339,7 +319,7 @@ export default function FirstOrderPage() {
           pageSize={12}
           checkboxSelection
           setSelectedRows={setSelectedRows}
-          onRowClick={(row) => console.log("Advance Clicked:", row)}
+          onRowClick={(row) => console.log("First Order Clicked:", row)}
         />
 
         {/* Date filter modal */}

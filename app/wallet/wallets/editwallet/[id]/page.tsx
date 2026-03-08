@@ -16,6 +16,13 @@ import Loader from "@/components/common/loader";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
 import { GrStatusGood } from "react-icons/gr";
 import { MdCancel, MdOutlinePending } from "react-icons/md";
+import {
+  MdOutlineCreditCard,
+  MdAccountBalance,
+  MdOutlineCompareArrows,
+} from "react-icons/md";
+import { FaIdCard } from "react-icons/fa";
+import { IoChevronDownOutline, IoChevronUpOutline } from "react-icons/io5";
 import { useVLife } from "@/store/context";
 
 /* ------------------------------------------------------------------ */
@@ -186,6 +193,32 @@ const StatusBadge = ({ status }: { status: string }) => {
   );
 };
 
+/* ------------------------------------------------------------------ */
+/* Section Card wrapper                                                */
+/* ------------------------------------------------------------------ */
+
+const SectionCard = ({
+  icon, title, subtitle, children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) => (
+  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50">
+      <div className="w-9 h-9 rounded-lg bg-[#106187]/10 flex items-center justify-center text-[#106187] flex-shrink-0">
+        {icon}
+      </div>
+      <div>
+        <p className="font-semibold text-gray-800 text-sm">{title}</p>
+        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+    <div className="px-6 py-5">{children}</div>
+  </div>
+);
+
 /* ================================================================== */
 /* Inner Page (uses useSearchParams — must be inside Suspense)        */
 /* ================================================================== */
@@ -198,27 +231,11 @@ function EditWalletInner() {
   const { user }     = useVLife();
   const isAdmin      = user?.role === "admin";
 
-  /*
-   * ── MODE DETECTION ────────────────────────────────────────────────
-   *
-   *  EDIT WALLET (default):
-   *    URL: /editwallet/[walletId]
-   *    Back → /wallet/wallets
-   *    Title: "Edit Wallet"
-   *    No status badge. No comparison table in header.
-   *
-   *  VIEW CHANGE REQUEST:
-   *    URL: /editwallet/[walletId]?mode=request&request_id=WCR...
-   *     OR: /editwallet/new?mode=request&request_id=WCR...
-   *    Back → /wallet/wallet-change-requests
-   *    Title: "Change Request — WCR..."
-   *    Shows status badge + comparison table.
-   */
-  const modeParam    = searchParams?.get("mode")        ?? null;
-  const reqIdParam   = searchParams?.get("request_id")  ?? null;
+  const modeParam     = searchParams?.get("mode")        ?? null;
+  const reqIdParam    = searchParams?.get("request_id")  ?? null;
   const isRequestMode = modeParam === "request" && !!reqIdParam;
 
-  /* ── Back navigation ───────────────────────────────────────────── */
+  /* ── Back navigation ─────────────────────────────────────────────── */
   const handleBack = () => {
     if (isRequestMode) {
       router.push("/wallet/change-requests");
@@ -232,6 +249,7 @@ function EditWalletInner() {
   const [panVerified,       setPanVerified]       = useState(true);
   const [pendingRequest,    setPendingRequest]    = useState<any>(null);
   const [savedWalletValues, setSavedWalletValues] = useState<any>(null);
+  const [compareOpen,       setCompareOpen]       = useState(false);
 
   const [initialValues, setInitialValues] = useState<WalletFormData>({
     walletId: "", userId: "", userName: "", contact: "",
@@ -243,7 +261,7 @@ function EditWalletInner() {
     aadharFile: null, panFile: null,
   });
 
-  /* ── Populate form on mount ────────────────────────────────────── */
+  /* ── Populate form on mount ────────────────────────────────────────── */
   useEffect(() => {
     if (!user) return;
     if (isRequestMode && reqIdParam) {
@@ -254,7 +272,7 @@ function EditWalletInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletId, isRequestMode, reqIdParam, user]);
 
-  /* ── Map source → form values ──────────────────────────────────── */
+  /* ── Map source → form values ──────────────────────────────────────── */
   const applySource = (walletMeta: any | null, source: any) => {
     setInitialValues({
       walletId:          walletMeta?.wallet_id        || source?.wallet_id        || "",
@@ -282,7 +300,7 @@ function EditWalletInner() {
     });
   };
 
-  /* ── MODE 1: load wallet for direct edit ──────────────────────── */
+  /* ── MODE 1: load wallet for direct edit ──────────────────────────── */
   const loadFromWallet = async (wid: string) => {
     try {
       setLoading(true);
@@ -291,8 +309,7 @@ function EditWalletInner() {
 
       const wallet  = data.data;
       const pending = await fetchPendingRequest(wallet.user_id);
-
-      const source = isAdmin ? wallet : pending?.new_values || wallet;
+      const source  = isAdmin ? wallet : pending?.new_values || wallet;
       applySource(wallet, source);
       setPanVerified(source.pan_verified || false);
     } catch (err) {
@@ -303,23 +320,18 @@ function EditWalletInner() {
     }
   };
 
-  /* ── MODE 2: load a specific change request ───────────────────── */
+  /* ── MODE 2: load a specific change request ───────────────────────── */
   const loadFromRequest = async (requestId: string) => {
     try {
       setLoading(true);
 
-      /* Fetch by request_id via search param */
       const { data: reqData } = await axios.get(
         `/api/wallet-change-requests?search=${requestId}`
       );
-
       const requests: any[] = reqData?.data || [];
       const req = requests.find((r: any) => r.request_id === requestId);
 
-      if (!req) {
-        ShowToast.error("Change request not found");
-        return;
-      }
+      if (!req) { ShowToast.error("Change request not found"); return; }
 
       setPendingRequest(req);
       const newVals = req.new_values || {};
@@ -331,7 +343,6 @@ function EditWalletInner() {
         return;
       }
 
-      /* update_wallet — also load current live wallet for accurate comparison */
       let currentWallet: any = null;
       if (req.wallet_id) {
         try {
@@ -353,7 +364,7 @@ function EditWalletInner() {
     }
   };
 
-  /* ── Fetch pending request by userId (edit-wallet mode only) ─── */
+  /* ── Fetch pending request by userId ─────────────────────────────── */
   const fetchPendingRequest = async (userId: string) => {
     try {
       const res = await axios.get(
@@ -368,7 +379,7 @@ function EditWalletInner() {
     } catch { return null; }
   };
 
-  /* ── File upload helper ─────────────────────────────────────── */
+  /* ── File upload helper ─────────────────────────────────────────────── */
   const uploadFile = async (file: File): Promise<string | null> => {
     try {
       const formData = new FormData();
@@ -386,7 +397,7 @@ function EditWalletInner() {
     }
   };
 
-  /* ── PAN verification ───────────────────────────────────────── */
+  /* ── PAN verification ─────────────────────────────────────────────── */
   const verifyPanDetails = async (
     panNumber: string, panName: string, panDob: string,
     setFieldValue: (field: string, value: any) => void
@@ -430,7 +441,7 @@ function EditWalletInner() {
     setFieldValue("panVerify", false); setFieldValue("panCategory", ""); setFieldValue("aadharSeeding", false);
   };
 
-  /* ── Reject handler ─────────────────────────────────────────── */
+  /* ── Reject handler ─────────────────────────────────────────────── */
   const handleReject = async () => {
     if (!pendingRequest) return;
     try {
@@ -450,7 +461,7 @@ function EditWalletInner() {
     } finally { setLoading(false); }
   };
 
-  /* ── Form submit ─────────────────────────────────────────────── */
+  /* ── Form submit ─────────────────────────────────────────────────── */
   const handleSubmit = async (values: WalletFormData, actions: FormikHelpers<WalletFormData>) => {
     try {
       setLoading(true);
@@ -524,7 +535,7 @@ function EditWalletInner() {
   };
 
   /* ================================================================ */
-  /* Comparison Table                                                  */
+  /* Collapsible Comparison Table                                      */
   /* ================================================================ */
   const renderComparisonTable = () => {
     if (!pendingRequest) return null;
@@ -537,44 +548,60 @@ function EditWalletInner() {
       const newVals  = pendingRequest.new_values || {};
       const textRows = TEXT_COMPARE_FIELDS.filter(([, key]) => newVals[key]);
       const fileRows = FILE_COMPARE_FIELDS.filter(([, key]) => newVals[key]);
-
       if (textRows.length === 0 && fileRows.length === 0) return null;
 
       return (
-        <div className="bg-blue-50 border border-blue-300 rounded-xl p-4 mb-4">
-          <div className="flex flex-wrap items-center gap-3 mb-3">
-            <p className="font-semibold text-blue-800">📋 New Wallet Creation Request</p>
-            <StatusBadge status={requestStatus} />
-            <span className="text-xs text-blue-600 font-mono">{pendingRequest.request_id}</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-blue-100">
-                  <th className="text-left px-3 py-2 border border-blue-200 font-semibold w-[30%]">Field</th>
-                  <th className="text-left px-3 py-2 border border-blue-200 font-semibold text-green-700 w-[70%]">New Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {textRows.map(([label, key]) => (
-                  <tr key={key} className="even:bg-blue-50">
-                    <td className="px-3 py-2 border border-blue-200 font-medium">{label}</td>
-                    <td className="px-3 py-2 border border-blue-200 text-green-700 font-semibold">{newVals[key]}</td>
-                  </tr>
-                ))}
-                {fileRows.map(([label, key]) => (
-                  <tr key={key} className="even:bg-blue-50">
-                    <td className="px-3 py-2 border border-blue-200 font-medium">{label}</td>
-                    <td className="px-3 py-2 border border-blue-200"><FileCell url={newVals[key]} label={label} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {isAdmin && requestStatus === "pending" && (
-            <p className="text-xs text-blue-700 mt-2">
-              Click &apos;Approve Request&apos; to create this wallet, or &apos;Reject Request&apos; to decline.
-            </p>
+        <div className="border border-blue-300 rounded-xl overflow-hidden mb-4">
+          <button
+            type="button"
+            onClick={() => setCompareOpen((p) => !p)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <MdOutlineCompareArrows size={20} className="text-blue-700" />
+              <span className="font-semibold text-blue-800 text-sm">
+                📋 New Wallet Creation Request
+              </span>
+              <StatusBadge status={requestStatus} />
+              <span className="text-xs text-blue-500 font-mono">{pendingRequest.request_id}</span>
+            </div>
+            {compareOpen
+              ? <IoChevronUpOutline size={18} className="text-blue-700 flex-shrink-0" />
+              : <IoChevronDownOutline size={18} className="text-blue-700 flex-shrink-0" />}
+          </button>
+
+          {compareOpen && (
+            <div className="bg-white px-4 py-3">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-blue-50">
+                      <th className="text-left px-3 py-2 border border-blue-200 font-semibold w-[30%]">Field</th>
+                      <th className="text-left px-3 py-2 border border-blue-200 font-semibold text-green-700 w-[70%]">Submitted Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {textRows.map(([label, key]) => (
+                      <tr key={key} className="even:bg-blue-50/40">
+                        <td className="px-3 py-2 border border-blue-100 font-medium text-gray-700">{label}</td>
+                        <td className="px-3 py-2 border border-blue-100 text-green-700 font-semibold">{newVals[key]}</td>
+                      </tr>
+                    ))}
+                    {fileRows.map(([label, key]) => (
+                      <tr key={key} className="even:bg-blue-50/40">
+                        <td className="px-3 py-2 border border-blue-100 font-medium text-gray-700">{label}</td>
+                        <td className="px-3 py-2 border border-blue-100"><FileCell url={newVals[key]} label={label} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {isAdmin && requestStatus === "pending" && (
+                <p className="text-xs text-blue-600 mt-2">
+                  Click &apos;Approve Request&apos; to create this wallet, or &apos;Reject Request&apos; to decline.
+                </p>
+              )}
+            </div>
           )}
         </div>
       );
@@ -586,66 +613,78 @@ function EditWalletInner() {
       const newVals = pendingRequest.new_values || {};
 
       const changedTextRows = TEXT_COMPARE_FIELDS.filter(([, key]) => {
-        const oldVal = String(oldVals[key] ?? "");
-        const newVal = String(newVals[key] ?? "");
-        return newVal && oldVal !== newVal;
+        return String(newVals[key] ?? "") && String(oldVals[key] ?? "") !== String(newVals[key] ?? "");
       });
       const changedFileRows = FILE_COMPARE_FIELDS.filter(([, key]) => {
-        const oldVal = String(oldVals[key] ?? "");
-        const newVal = String(newVals[key] ?? "");
-        return newVal && oldVal !== newVal;
+        return String(newVals[key] ?? "") && String(oldVals[key] ?? "") !== String(newVals[key] ?? "");
       });
 
-      /* Nothing changed → don't render table */
-      if (changedTextRows.length === 0 && changedFileRows.length === 0) return null;
+      const totalChanges = changedTextRows.length + changedFileRows.length;
+      if (totalChanges === 0) return null;
 
       return (
-        <div className="bg-yellow-50 border border-yellow-400 rounded-xl p-4 mb-4">
-          <div className="flex flex-wrap items-center gap-3 mb-3">
-            <p className="font-semibold text-yellow-800">
-              {isAdmin
-                ? "⏳ Pending Change Request from User — Fields changed:"
-                : "⏳ Your Pending Change Request — Awaiting admin approval:"}
-            </p>
-            {isRequestMode && (
-              <>
-                <StatusBadge status={requestStatus} />
-                <span className="text-xs text-yellow-600 font-mono">{pendingRequest.request_id}</span>
-              </>
-            )}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-yellow-100">
-                  <th className="text-left px-3 py-2 border border-yellow-300 font-semibold w-[22%]">Field</th>
-                  <th className="text-left px-3 py-2 border border-yellow-300 font-semibold text-red-600 w-[39%]">Old Value</th>
-                  <th className="text-left px-3 py-2 border border-yellow-300 font-semibold text-green-700 w-[39%]">New Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {changedTextRows.map(([label, key]) => (
-                  <tr key={key} className="even:bg-yellow-50">
-                    <td className="px-3 py-2 border border-yellow-200 font-medium">{label}</td>
-                    <td className="px-3 py-2 border border-yellow-200 text-red-600 line-through">{oldVals[key] || "—"}</td>
-                    <td className="px-3 py-2 border border-yellow-200 text-green-700 font-semibold">{newVals[key] || "—"}</td>
-                  </tr>
-                ))}
-                {changedFileRows.map(([label, key]) => (
-                  <tr key={key} className="even:bg-yellow-50">
-                    <td className="px-3 py-2 border border-yellow-200 font-medium">{label}</td>
-                    <td className="px-3 py-2 border border-yellow-200"><FileCell url={oldVals[key]} label={label} /></td>
-                    <td className="px-3 py-2 border border-yellow-200"><FileCell url={newVals[key]} label={label} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-yellow-700 mt-2">
-            {isAdmin
-              ? "Click 'Approve Request' to apply these changes, or 'Reject Request' to decline."
-              : "You can update your request below — admin will see your latest submitted values."}
-          </p>
+        <div className="border border-yellow-400 rounded-xl overflow-hidden mb-4">
+          <button
+            type="button"
+            onClick={() => setCompareOpen((p) => !p)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-yellow-50 hover:bg-yellow-100 transition-colors"
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <MdOutlineCompareArrows size={20} className="text-yellow-700" />
+              <span className="font-semibold text-yellow-800 text-sm">
+                {isAdmin ? "Pending Change Request — View changes" : "Your Pending Request — View changes"}
+              </span>
+              <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-200 text-yellow-800 font-semibold">
+                {totalChanges} field{totalChanges > 1 ? "s" : ""} changed
+              </span>
+              {isRequestMode && (
+                <>
+                  <StatusBadge status={requestStatus} />
+                  <span className="text-xs text-yellow-600 font-mono">{pendingRequest.request_id}</span>
+                </>
+              )}
+            </div>
+            {compareOpen
+              ? <IoChevronUpOutline size={18} className="text-yellow-700 flex-shrink-0" />
+              : <IoChevronDownOutline size={18} className="text-yellow-700 flex-shrink-0" />}
+          </button>
+
+          {compareOpen && (
+            <div className="bg-white px-4 py-3">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-yellow-50">
+                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold w-[22%]">Field</th>
+                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold text-red-600 w-[39%]">Old Value</th>
+                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold text-green-700 w-[39%]">New Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {changedTextRows.map(([label, key]) => (
+                      <tr key={key} className="even:bg-yellow-50/40">
+                        <td className="px-3 py-2 border border-yellow-200 font-medium text-gray-700">{label}</td>
+                        <td className="px-3 py-2 border border-yellow-200 text-red-600 line-through">{oldVals[key] || "—"}</td>
+                        <td className="px-3 py-2 border border-yellow-200 text-green-700 font-semibold">{newVals[key] || "—"}</td>
+                      </tr>
+                    ))}
+                    {changedFileRows.map(([label, key]) => (
+                      <tr key={key} className="even:bg-yellow-50/40">
+                        <td className="px-3 py-2 border border-yellow-200 font-medium text-gray-700">{label}</td>
+                        <td className="px-3 py-2 border border-yellow-200"><FileCell url={oldVals[key]} label={label} /></td>
+                        <td className="px-3 py-2 border border-yellow-200"><FileCell url={newVals[key]} label={label} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-yellow-700 mt-2">
+                {isAdmin
+                  ? "Click 'Approve Request' to apply these changes, or 'Reject Request' to decline."
+                  : "You can update your request below — admin will see your latest submitted values."}
+              </p>
+            </div>
+          )}
         </div>
       );
     }
@@ -653,10 +692,7 @@ function EditWalletInner() {
     return null;
   };
 
-  /* ================================================================ */
-  /* Derived flags                                                     */
-  /* ================================================================ */
-
+  /* ── Derived flags ─────────────────────────────────────────────── */
   const requestStatus = pendingRequest?.status || "pending";
   const isResolved    = requestStatus === "approved" || requestStatus === "rejected";
   const formReadOnly  = isRequestMode && isResolved;
@@ -674,7 +710,6 @@ function EditWalletInner() {
   /* ================================================================ */
   /* Render                                                            */
   /* ================================================================ */
-
   return (
     <Layout>
       {loading && (
@@ -684,17 +719,27 @@ function EditWalletInner() {
       )}
       <div className="p-4 max-md:p-2">
 
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-4 flex-wrap">
+        {/* ── Page header ─────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3 mb-5 flex-wrap">
           <IoIosArrowBack size={25} className="cursor-pointer flex-shrink-0" onClick={handleBack} />
           <h2 className="text-xl max-sm:text-[1rem] font-semibold">{pageTitle}</h2>
           {isRequestMode && pendingRequest && <StatusBadge status={requestStatus} />}
         </div>
 
-        {/* Comparison table — only in request mode or when user has pending request */}
+        {/* ── Collapsible comparison table ─────────────────────────────── */}
         {renderComparisonTable()}
 
-        {/* Resolved notice */}
+        {/* ── Non-edit mode: user pending note ────────────────────────── */}
+        {!isAdmin && pendingRequest && !isResolved && !isRequestMode && (
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg mb-4 text-sm">
+            <span className="font-semibold">NOTE: </span>
+            {pendingRequest.request_type === "new_wallet"
+              ? "Your wallet creation request is under admin review."
+              : "Your changes are under admin review. You can still update your request — admin will see your latest values."}
+          </div>
+        )}
+
+        {/* ── Resolved notice ────────────────────────────────────────────── */}
         {isRequestMode && isResolved && (
           <div className={`border rounded-lg px-4 py-3 mb-4 text-sm font-medium ${
             requestStatus === "approved"
@@ -702,29 +747,50 @@ function EditWalletInner() {
               : "bg-red-50 border-red-300 text-red-700"
           }`}>
             {requestStatus === "approved"
-              ? "✅ This request has been approved and the wallet has been updated. No further changes can be made."
+              ? "✅ This request has been approved and the wallet has been updated."
               : "❌ This request has been rejected. No changes were applied to the wallet."}
           </div>
         )}
 
-        {/* Form */}
-        <div className="rounded-xl p-6 bg-white">
-          <Formik
-            enableReinitialize
-            initialValues={initialValues}
-            validationSchema={formReadOnly ? undefined : WalletSchema}
-            onSubmit={handleSubmit}
-          >
-            {({ values, setFieldValue, errors, touched, handleBlur }) => (
-              <Form className="grid grid-cols-1 gap-4">
+        {/* ── Form ─────────────────────────────────────────────────────── */}
+        <Formik
+          enableReinitialize
+          initialValues={initialValues}
+          validationSchema={formReadOnly ? undefined : WalletSchema}
+          onSubmit={handleSubmit}
+        >
+          {({ values, setFieldValue, errors, touched, handleBlur }) => (
+            <Form className="flex flex-col gap-4">
 
-                {/* Readonly identity fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 -mt-3">
+              {/* ══════════════════════════════════════════════════════════
+                  SECTION 1 — Account Overview
+                  FIXED: grid-cols-3 max (was xl:grid-cols-4)
+                  4 fields → row 1: Wallet ID, User ID, User Name
+                             row 2: Contact
+                 ══════════════════════════════════════════════════════════ */}
+              <SectionCard
+                icon={<MdOutlineCreditCard size={20} />}
+                title="Account Overview"
+                subtitle="Wallet and user identity details"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <InputField label="Wallet ID"  name="walletId"  value={values.walletId}  disabled />
                   <InputField label="User ID"    name="userId"    value={values.userId}    disabled />
                   <InputField label="User Name"  name="userName"  value={values.userName}  disabled />
                   <InputField label="Contact"    name="contact"   value={values.contact}   disabled />
+                </div>
+              </SectionCard>
 
+              {/* ══════════════════════════════════════════════════════════
+                  SECTION 2 — Banking Details
+                  grid-cols-3 max (unchanged — was already correct)
+                 ══════════════════════════════════════════════════════════ */}
+              <SectionCard
+                icon={<MdAccountBalance size={20} />}
+                title="Banking Details"
+                subtitle="Bank account information"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <InputField label="Account Holder Name" name="accountHolderName"
                     value={values.accountHolderName} disabled={formReadOnly}
                     onChange={(e) => setFieldValue("accountHolderName", e.target.value)} onBlur={handleBlur}
@@ -760,53 +826,25 @@ function EditWalletInner() {
                     onChange={(e) => setFieldValue("gstNumber", e.target.value)} onBlur={handleBlur}
                     error={touched.gstNumber ? (errors as any).gstNumber : ""} />
                 </div>
+              </SectionCard>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4" />
-
-                {/* PAN Section */}
-                <div className="mt-2">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xl max-md:text-[1rem] font-semibold">PAN Details</p>
-                    {panVerified && <RiVerifiedBadgeFill className="text-green-600 text-2xl" />}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mt-2">
-                    <InputField label="PAN Number" name="panNumber"
-                      value={values.panNumber} disabled={formReadOnly}
-                      onChange={(e) => { setFieldValue("panNumber", e.target.value.toUpperCase()); resetPanVerification(setFieldValue); }}
-                      onBlur={handleBlur} error={touched.panNumber ? errors.panNumber : ""} />
-
-                    <InputField label="Name as in PAN" name="panName"
-                      value={values.panName} disabled={formReadOnly}
-                      onChange={(e) => { setFieldValue("panName", e.target.value); resetPanVerification(setFieldValue); }}
-                      onBlur={handleBlur} error={touched.panName ? errors.panName : ""} />
-
-                    <InputField label="Date of Birth as in PAN" type="date" name="panDob"
-                      value={values.panDob} className="uppercase" disabled={formReadOnly}
-                      onChange={(e) => { setFieldValue("panDob", e.target.value); resetPanVerification(setFieldValue); }}
-                      onBlur={handleBlur} error={touched.panDob ? errors.panDob : ""} />
-
-                    <FileInput label="Upload PAN" name="panFile"
-                      value={values.panFile || null} disabled={formReadOnly}
-                      onChange={(e) => setFieldValue("panFile", e.currentTarget.files?.[0] || values.panFile)}
-                      onBlur={handleBlur} error={touched.panFile ? (errors as any).panFile : ""} />
-
-                    <div className="max-md:hidden" />
-
-                    {/* Verify PAN — admin only, not when resolved */}
-                    {isAdmin && !formReadOnly && (
-                      <div className="flex items-center gap-2 mt-2 ml-auto">
-                        <button type="button" disabled={verifying}
-                          className={`px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer ${verifying ? "bg-gray-400 cursor-not-allowed" : "bg-[#106187] text-white"}`}
-                          onClick={() => verifyPanDetails(values.panNumber, values.panName, values.panDob, setFieldValue)}>
-                          {verifying ? "Verifying..." : "Verify PAN"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Aadhaar */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-2">
+              {/* ══════════════════════════════════════════════════════════
+                  SECTION 3 — Identity Documents
+                  Aadhaar: 3 per row (correct)
+                  PAN: FIXED grid-cols-3 max (was xl:grid-cols-4)
+                  4 PAN fields → row 1: PAN No, Name, DOB
+                                 row 2: Upload PAN
+                 ══════════════════════════════════════════════════════════ */}
+              <SectionCard
+                icon={<FaIdCard size={18} />}
+                title="Identity Documents"
+                subtitle="Upload your Aadhaar and PAN documents"
+              >
+                {/* Aadhaar — 3 per row */}
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  Aadhaar Details
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   <InputField label="Aadhar Number" name="aadharNumber" required
                     value={values.aadharNumber} disabled={formReadOnly}
                     onChange={(e) => setFieldValue("aadharNumber", e.target.value)}
@@ -823,33 +861,75 @@ function EditWalletInner() {
                     onBlur={handleBlur} error={touched.aadharBack ? (errors as any).aadharBack : ""} />
                 </div>
 
-                {/* User review note */}
-                {!isAdmin && pendingRequest && !isResolved && (
-                  <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded-lg mt-2">
-                    <span className="font-semibold">NOTE: </span>
-                    {pendingRequest.request_type === "new_wallet"
-                      ? "Your wallet creation request is under admin review."
-                      : "Your changes are under admin review. You can still update your request — admin will see your latest values."}
+                <div className="border-t border-gray-100 mb-5" />
+
+                {/* PAN — FIXED: 3 per row max */}
+                <div className="flex items-center gap-2 mb-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    PAN Details
+                  </p>
+                  {panVerified && <RiVerifiedBadgeFill className="text-green-600 text-base" />}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <InputField label="PAN Number" name="panNumber"
+                    value={values.panNumber} disabled={formReadOnly}
+                    onChange={(e) => { setFieldValue("panNumber", e.target.value.toUpperCase()); resetPanVerification(setFieldValue); }}
+                    onBlur={handleBlur} error={touched.panNumber ? errors.panNumber : ""} />
+
+                  <InputField label="Name as in PAN" name="panName"
+                    value={values.panName} disabled={formReadOnly}
+                    onChange={(e) => { setFieldValue("panName", e.target.value); resetPanVerification(setFieldValue); }}
+                    onBlur={handleBlur} error={touched.panName ? errors.panName : ""} />
+
+                  <InputField label="Date of Birth as in PAN" type="date" name="panDob"
+                    value={values.panDob} className="uppercase" disabled={formReadOnly}
+                    onChange={(e) => { setFieldValue("panDob", e.target.value); resetPanVerification(setFieldValue); }}
+                    onBlur={handleBlur} error={touched.panDob ? errors.panDob : ""} />
+
+                  <FileInput label="Upload PAN" name="panFile"
+                    value={values.panFile || null} disabled={formReadOnly}
+                    onChange={(e) => setFieldValue("panFile", e.currentTarget.files?.[0] || values.panFile)}
+                    onBlur={handleBlur} error={touched.panFile ? (errors as any).panFile : ""} />
+                </div>
+
+                {/* Verify PAN — admin only, not when resolved */}
+                {isAdmin && !formReadOnly && (
+                  <div className="flex justify-end mt-4">
+                    <button
+                      type="button"
+                      disabled={verifying}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer transition-colors ${
+                        verifying ? "bg-gray-400 cursor-not-allowed text-white" : "bg-[#106187] hover:bg-[#0d4f6b] text-white"
+                      }`}
+                      onClick={() => verifyPanDetails(values.panNumber, values.panName, values.panDob, setFieldValue)}
+                    >
+                      {verifying ? "Verifying..." : "Verify PAN"}
+                    </button>
                   </div>
                 )}
+              </SectionCard>
 
-                {/* Action buttons — hidden when resolved */}
-                {!formReadOnly && (
-                  <div className="flex justify-end gap-3 mt-6">
-                    {isAdmin && pendingRequest && requestStatus === "pending" && (
-                      <button type="button" disabled={loading} onClick={handleReject}
-                        className="px-5 py-2 rounded-lg font-semibold text-sm bg-red-500 hover:bg-red-600 text-white cursor-pointer disabled:opacity-50 transition-colors">
-                        {loading ? "..." : "Reject Request"}
-                      </button>
-                    )}
-                    <SubmitButton type="submit">{submitLabel}</SubmitButton>
-                  </div>
-                )}
+              {/* ── Action buttons — hidden when resolved ────────────────── */}
+              {!formReadOnly && (
+                <div className="flex justify-end gap-3 mt-2">
+                  {isAdmin && pendingRequest && requestStatus === "pending" && (
+                    <button
+                      type="button"
+                      disabled={loading}
+                      onClick={handleReject}
+                      className="px-5 py-2 rounded-lg font-semibold text-sm bg-red-500 hover:bg-red-600 text-white cursor-pointer disabled:opacity-50 transition-colors"
+                    >
+                      {loading ? "..." : "Reject Request"}
+                    </button>
+                  )}
+                  <SubmitButton type="submit">{submitLabel}</SubmitButton>
+                </div>
+              )}
 
-              </Form>
-            )}
-          </Formik>
-        </div>
+            </Form>
+          )}
+        </Formik>
       </div>
     </Layout>
   );
@@ -857,7 +937,6 @@ function EditWalletInner() {
 
 /* ================================================================== */
 /* Default export — wraps inner component in Suspense                 */
-/* useSearchParams() requires Suspense in Next.js App Router          */
 /* ================================================================== */
 
 export default function EditWalletPage() {

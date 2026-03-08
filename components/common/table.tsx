@@ -74,7 +74,7 @@ export default function Table<T extends Row>({
 
   // Use typed GridSortModel for state (handles readonly)
   const [sortModelLocal, setSortModelLocal] = useState<GridSortModel>(
-    sortModel ?? []
+    sortModel ?? [],
   );
   useEffect(() => {
     if (sortModel) setSortModelLocal(sortModel);
@@ -194,7 +194,7 @@ export default function Table<T extends Row>({
               raw === "yes";
 
             const statusNotes = String(
-              params.row?.status_notes ?? ""
+              params.row?.status_notes ?? "",
             ).toLowerCase();
             const Icon = isActive ? GrStatusGood : MdCancel;
 
@@ -283,7 +283,7 @@ export default function Table<T extends Row>({
   const paginatedRows = useMemo(
     () =>
       sortedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [sortedRows, currentPage, pageSize]
+    [sortedRows, currentPage, pageSize],
   );
 
   useEffect(() => {
@@ -320,7 +320,7 @@ export default function Table<T extends Row>({
     }
 
     const selectedData = rows.filter((row) =>
-      selectedIds.includes(String(row[rowIdField]))
+      selectedIds.includes(String(row[rowIdField])),
     );
 
     // console.log("Selected rows data:", selectedData);
@@ -359,7 +359,6 @@ export default function Table<T extends Row>({
             border: 0,
             zIndex: 1,
             position: "relative",
-            
 
             "& .MuiDataGrid-iconButtonContainer .MuiSvgIcon-root": {
               color: "#ffffff", // white dots
@@ -520,40 +519,16 @@ export default function Table<T extends Row>({
               transform: "rotate(180deg)",
             },
 
-"& .MuiDataGrid-sortButton:hover": {
-  backgroundColor: "transparent !important",
-},
-"& .MuiDataGrid-sortButton .MuiTouchRipple-root": {
-  display: "none",
-},
-"& .MuiIconButton-root:hover": {
-  backgroundColor: "transparent !important",
-},
-
-"& .MuiDataGrid-columnHeader:hover .MuiDataGrid-iconButtonContainer": {
-  backgroundColor: "transparent !important",
-},
-"& .MuiDataGrid-columnHeader .MuiIconButton-root:hover": {
-  backgroundColor: "transparent !important",
-},
-"& .MuiDataGrid-columnHeader .MuiIconButton-root .MuiTouchRipple-root": {
-  display: "none !important",
-},
-
-"& .MuiDataGrid-sortButton.MuiButtonBase-root:hover": {
-  backgroundColor: "transparent !important",
-  boxShadow: "none !important",
-},
-"& .MuiDataGrid-sortButton.MuiButtonBase-root .MuiTouchRipple-root": {
-  display: "none !important",
-},
-"& .MuiDataGrid-iconButtonContainer .MuiButtonBase-root:hover": {
-  backgroundColor: "transparent !important",
-  boxShadow: "none !important",
-},
-"& .MuiDataGrid-iconButtonContainer .MuiTouchRipple-root": {
-  display: "none !important",
-},
+            "& .MuiDataGrid-iconButtonContainer button": {
+              backgroundColor: "transparent !important",
+              boxShadow: "none !important",
+              "&:hover": {
+                backgroundColor: "transparent !important",
+              },
+            },
+            "& .MuiDataGrid-iconButtonContainer .MuiTouchRipple-root": {
+              display: "none !important",
+            },
 
             "& .MuiDataGrid-row--borderBottom .MuiSvgIcon-fontSizeMedium": {
               color: "white",
