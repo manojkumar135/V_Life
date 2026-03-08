@@ -29,14 +29,6 @@ function formatDate(date: Date): string {
 
 /* ------------------------------------------------------------------ */
 /* 🔹 IST Window Logic                                                 */
-/*                                                                     */
-/*  FIX: The original used toLocaleString() to get IST digits, then   */
-/*  passed them to `new Date(y, m, d, h...)` which creates a LOCAL-   */
-/*  TIME object. On a UTC server (Vercel / AWS) that is UTC-based,    */
-/*  making the window wrong by 5h30m.                                 */
-/*                                                                     */
-/*  Fix: shift by IST_OFFSET_MS, read via getUTC*, build boundaries   */
-/*  with Date.UTC(), then subtract the offset → real UTC instants.    */
 /* ------------------------------------------------------------------ */
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // 330 min in ms
@@ -68,11 +60,6 @@ export function getCurrentWindowIST(): { startUTC: Date; endUTC: Date } {
 
 /* ------------------------------------------------------------------ */
 /* 🔹 Convert Order payment_date / payment_time → real UTC Date       */
-/*                                                                     */
-/*  FIX: payment_date/payment_time are IST wall-clock strings.        */
-/*  Original built a local-time Date from those digits — wrong on     */
-/*  UTC servers. Fix: Date.UTC() treats digits as IST, subtract       */
-/*  offset → true UTC instant.                                        */
 /* ------------------------------------------------------------------ */
 
 export function orderToUTCDate(order: any): Date {
@@ -105,7 +92,6 @@ export async function getOrdersInWindow() {
     direct_bonus_checked: { $ne: true },
   }).lean();
 
-
   return orders.filter((o: any) => {
     try {
       const orderUTC = orderToUTCDate(o);
@@ -118,11 +104,6 @@ export async function getOrdersInWindow() {
 
 /* ------------------------------------------------------------------ */
 /* 🔹 Get Advance History In Window                                    */
-/*                                                                     */
-/*  FIX: h.created_at from MongoDB is real UTC. Original compared it  */
-/*  against local-time IST objects — different reference frames,      */
-/*  silent mismatch on UTC servers. Push filter into MongoDB using    */
-/*  correct UTC bounds; no in-memory filtering needed.                */
 /* ------------------------------------------------------------------ */
 
 export async function getAdvanceHistoryInWindow() {
@@ -137,21 +118,38 @@ export async function getAdvanceHistoryInWindow() {
     created_at:        { $gte: startUTC, $lte: endUTC },
   }).lean();
 
-  // console.log(histories,"histories in window fjtkjku");
   return histories;
 }
 
 /* ------------------------------------------------------------------ */
+/* 🔹 Helper — Robust referral already-paid check                     */
+/*                                                                     */
+/*  Checks BOTH History and DailyPayout because releaseReferralBonus  */
+/*  may write to either collection depending on its implementation.   */
+/*  This prevents duplicate referral bonuses regardless of where      */
+/*  the record is stored.                                              */
+/* ------------------------------------------------------------------ */
+
+async function isReferralAlreadyPaid(orderId: string): Promise<boolean> {
+  // Check History collection
+  const inHistory = await History.findOne({
+    order_id: orderId,
+    name: { $regex: /referral bonus/i },
+  }).lean();
+  if (inHistory) return true;
+
+  // Check DailyPayout collection
+  const inPayout = await DailyPayout.findOne({
+    order_id: orderId,
+    name: { $regex: /referral bonus/i },
+  }).lean();
+  if (inPayout) return true;
+
+  return false;
+}
+
+/* ------------------------------------------------------------------ */
 /* 🔹 Process Advance Referral                                         */
-/*                                                                     */
-/*  FIX: Original used `advance.placed_by` as the sponsor — this      */
-/*  field does not exist on advance History records (it was always     */
-/*  undefined → every record silently skipped via `if (!sponsorId)`). */
-/*                                                                     */
-/*  Correct logic (confirmed):                                         */
-/*    - Advance is always paid by the buyer themselves (user_id).     */
-/*    - Sponsor = User.referBy looked up by buyer's user_id.          */
-/*    - Same pattern used for orders.                                  */
 /* ------------------------------------------------------------------ */
 
 async function processAdvanceReferral(): Promise<number> {
@@ -163,12 +161,10 @@ async function processAdvanceReferral(): Promise<number> {
       const buyerId = advance.user_id;
       if (!buyerId) continue;
 
-      // FIX: look up sponsor from the buyer's User record via referBy
       const buyer = (await User.findOne({ user_id: buyerId }).lean()) as any;
       const sponsorId = buyer?.referBy;
 
       if (!sponsorId) {
-        // No referrer — mark as checked so it is not retried
         await History.updateOne(
           { transaction_id: advance.transaction_id },
           { $set: { isReferralChecked: true } }
@@ -178,7 +174,17 @@ async function processAdvanceReferral(): Promise<number> {
 
       const node = await TreeNode.findOne({ user_id: sponsorId });
       if (!node || node.status !== "active") {
-        // Sponsor inactive — mark as checked so it is not retried
+        await History.updateOne(
+          { transaction_id: advance.transaction_id },
+          { $set: { isReferralChecked: true } }
+        );
+        continue;
+      }
+
+      // ✅ Use robust check before releasing
+      const alreadyPaid = await isReferralAlreadyPaid(advance.transaction_id);
+      if (alreadyPaid) {
+        console.log(`⚠️ Referral bonus already paid for advance ${advance.transaction_id}, skipping.`);
         await History.updateOne(
           { transaction_id: advance.transaction_id },
           { $set: { isReferralChecked: true } }
@@ -216,9 +222,12 @@ export async function runDirectSalesBonus(): Promise<{
 }> {
   try {
     const orders = await getOrdersInWindow();
-    // console.log(orders, "orders in window");
     let totalPayouts       = 0;
     let referralBonusCount = 0;
+
+    // ✅ In-memory set to prevent duplicate referral bonuses within this run
+    // Key: orderId — ensures one referral bonus per order per cron run
+    const referralProcessedThisRun = new Set<string>();
 
     for (const order of orders) {
       try {
@@ -249,12 +258,24 @@ export async function runDirectSalesBonus(): Promise<{
         /* ---------------------------------------------------------- */
 
         if (order.is_first_order === true) {
-  const alreadyPaid = await History.findOne({
-    order_id: order.order_id,
-    name: { $regex: /referral bonus/i },
-  }).lean();
+
+          // ✅ GUARD 1 — In-memory: already processed this order in this run
+          if (referralProcessedThisRun.has(order.order_id)) {
+            console.log(`⚠️ [In-Memory] Referral bonus already processed this run for order ${order.order_id}`);
+            await Order.updateOne(
+              { order_id: order.order_id },
+              { $set: { direct_bonus_checked: true } }
+            );
+            continue;
+          }
+
+          // ✅ GUARD 2 — DB: already paid in History or DailyPayout
+          const alreadyPaid = await isReferralAlreadyPaid(order.order_id);
 
           if (!alreadyPaid) {
+            // Register in-memory BEFORE releasing to block any re-entry
+            referralProcessedThisRun.add(order.order_id);
+
             await releaseReferralBonus({
               sponsorId: referBy,
               buyerId:   order.user_id,
@@ -262,6 +283,8 @@ export async function runDirectSalesBonus(): Promise<{
             });
 
             referralBonusCount++;
+          } else {
+            console.log(`⚠️ [DB] Referral bonus already paid for order ${order.order_id}, skipping.`);
           }
 
           await Order.updateOne(
@@ -295,7 +318,7 @@ export async function runDirectSalesBonus(): Promise<{
         const payout_id     = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
         const formattedDate = formatDate(now);
 
-        const wallet = (await Wallet.findOne({ user_id: referBy }).lean()) as any;
+        const wallet  = (await Wallet.findOne({ user_id: referBy }).lean()) as any;
         const sponsor = (await User.findOne({ user_id: referBy }).lean()) as any;
 
         /* Determine payout hold status */
@@ -340,7 +363,7 @@ export async function runDirectSalesBonus(): Promise<{
         if (payout) {
           totalPayouts++;
 
-          /* ── Mirror into History with all matching fields ───────── */
+          /* ── Mirror into History ────────────────────────────────── */
           await History.create({
             transaction_id:   payout.transaction_id,
             payout_id:        payout.payout_id,
@@ -363,8 +386,6 @@ export async function runDirectSalesBonus(): Promise<{
             last_modified_at: now,
           });
 
-          /* FIX: was passing withdrawAmount (~80%) instead of         */
-          /* rewardAmount (8%), inflating reward scores ~10x           */
           await addRewardScore({
             user_id:      referBy,
             points:       rewardAmount,
@@ -373,11 +394,8 @@ export async function runDirectSalesBonus(): Promise<{
             type:         "daily",
           });
 
-          /* updateClub: pass userId + earned amount                   */
-          /* ⚠️  Replace totalAmount with correct 2nd arg if different */
           await updateClub(referBy, totalAmount);
 
-          /* Notify sponsor when their payout is held */
           if (payoutStatus === "OnHold") {
             await Alert.create({
               role:        "user",
