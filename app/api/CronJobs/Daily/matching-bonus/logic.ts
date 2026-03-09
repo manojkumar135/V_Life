@@ -6,7 +6,6 @@ import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { Order } from "@/models/order";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
-// import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { Alert } from "@/models/alert";
 import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
 import { updateClub } from "@/services/clubrank";
@@ -114,17 +113,14 @@ export function historyToUTCDate(history: any): Date {
     throw new Error("Invalid date format in history");
   }
 
-  // Support both "DD-MM-YYYY" and "YYYY-MM-DD"
   let day: number;
   let month: number;
   let year: number;
   if (dateParts[0].length === 4) {
-    // YYYY-MM-DD
     year = Number(dateParts[0]);
     month = Number(dateParts[1]);
     day = Number(dateParts[2]);
   } else {
-    // DD-MM-YYYY
     day = Number(dateParts[0]);
     month = Number(dateParts[1]);
     year = Number(dateParts[2]);
@@ -199,11 +195,10 @@ export async function getUserTeamsAndHistories() {
     $or: [{ first_order: true }, { advance: true }],
   }).lean()) as any[];
 
-  // DEBUG: helpful diagnostics for missing records
   console.log(
     `[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`,
   );
-  console.log(`[Matching Bonus] historiesInWindow count: ${historiesInWindow}`);
+  console.log(`[Matching Bonus] historiesInWindow count: ${historiesInWindow.length}`);
 
   const treeNodes = (await TreeNode.find({}).lean()) as any[];
   const allNodesMap = new Map<string, any>(
@@ -223,16 +218,8 @@ export async function getUserTeamsAndHistories() {
   }> = [];
 
   for (const node of treeNodes) {
-    const leftTeamIds = getTeamUserIdsFromMap(
-      allNodesMap,
-      node.user_id,
-      "left",
-    );
-    const rightTeamIds = getTeamUserIdsFromMap(
-      allNodesMap,
-      node.user_id,
-      "right",
-    );
+    const leftTeamIds = getTeamUserIdsFromMap(allNodesMap, node.user_id, "left");
+    const rightTeamIds = getTeamUserIdsFromMap(allNodesMap, node.user_id, "right");
 
     const leftHistories = historiesInWindow.filter((h) =>
       leftTeamIds.includes(h.user_id),
@@ -253,7 +240,7 @@ export async function getUserTeamsAndHistories() {
       right_histories: rightHistories,
     });
   }
-  // console.log(result, "Matching Bonus Result");
+
   return result;
 }
 
@@ -264,6 +251,12 @@ export async function runMatchingBonus() {
     const teamsAndHistories = await getUserTeamsAndHistories();
 
     let totalPayouts = 0;
+
+    // ✅ IN-MEMORY dedup set — key: user_id
+    // Prevents releasing 2 matching bonuses to the same user
+    // within a single cron run even if something causes the loop
+    // to visit the same user twice.
+    const processedThisRun = new Set<string>();
 
     const allOrderIds = teamsAndHistories
       .flatMap((u) => [...u.left_histories, ...u.right_histories])
@@ -283,22 +276,21 @@ export async function runMatchingBonus() {
       let leftPV = 0;
       let rightPV = 0;
 
-    for (const h of u.left_histories) {
-  if (h.advance === true) {
-    leftPV += 100; // ✅ fixed PV for advance
-  } else {
-    leftPV += orderPvMap.get(h.order_id) || 0;
-  }
-}
+      for (const h of u.left_histories) {
+        if (h.advance === true) {
+          leftPV += 100; // ✅ fixed PV for advance
+        } else {
+          leftPV += orderPvMap.get(h.order_id) || 0;
+        }
+      }
 
-for (const h of u.right_histories) {
-  if (h.advance === true) {
-    rightPV += 100; // ✅ fixed PV for advance
-  } else {
-    rightPV += orderPvMap.get(h.order_id) || 0;
-  }
-}
-
+      for (const h of u.right_histories) {
+        if (h.advance === true) {
+          rightPV += 100; // ✅ fixed PV for advance
+        } else {
+          rightPV += orderPvMap.get(h.order_id) || 0;
+        }
+      }
 
       // 🔒 cap at 100 PV per side
       const effectiveLeftPV = Math.min(leftPV, 100);
@@ -306,24 +298,56 @@ for (const h of u.right_histories) {
 
       // ✅ compulsory condition
       const match = effectiveLeftPV >= 100 && effectiveRightPV >= 100;
-
       if (!match) continue;
 
-      const node = (await TreeNode.findOne({
-        user_id: u.user_id,
-      }).lean()) as any;
+      const node = (await TreeNode.findOne({ user_id: u.user_id }).lean()) as any;
       if (!node || node.status !== "active") continue;
 
       const firstOrder = await checkFirstOrder(u.user_id);
-      // if (!advancePaid.hasPermission) continue;
+
+      // ─────────────────────────────────────────────────────────────
+      // ✅ GUARD 1 — In-Memory: prevents double payout within this run
+      // ─────────────────────────────────────────────────────────────
+      if (processedThisRun.has(u.user_id)) {
+        console.log(`⚠️ [In-Memory Guard] Matching Bonus already processed this run for ${u.user_id}, skipping.`);
+        continue;
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // ✅ GUARD 2 — DB: prevents double payout if cron runs twice today
+      // Checks DailyPayout for an existing Matching Bonus for this
+      // user today (same date string, same window half-day).
+      // ─────────────────────────────────────────────────────────────
+      const todayFormatted = formatDate(new Date());
+      const alreadyPaid = await DailyPayout.findOne({
+        user_id: u.user_id,
+        name: "Matching Bonus",
+        date: todayFormatted,
+      }).lean();
+
+      if (alreadyPaid) {
+        console.log(`⚠️ [DB Guard] Matching Bonus already exists today for ${u.user_id}, skipping.`);
+        // Mark histories as checked so they won't reappear
+        const historyIds = [...u.left_histories, ...u.right_histories]
+          .map((h: any) => h._id)
+          .filter(Boolean);
+        if (historyIds.length > 0) {
+          await History.updateMany(
+            { _id: { $in: historyIds } },
+            { $set: { ischecked: true } },
+          );
+        }
+        continue;
+      }
+
+      // ✅ Register in-memory BEFORE creating payout
+      processedThisRun.add(u.user_id);
 
       const now = new Date();
       const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
       const formattedDate = formatDate(now);
 
-      const wallet = (await Wallet.findOne({
-        user_id: u.user_id,
-      }).lean()) as any;
+      const wallet = (await Wallet.findOne({ user_id: u.user_id }).lean()) as any;
       const user = (await User.findOne({ user_id: u.user_id }).lean()) as any;
 
       const walletId = wallet ? wallet.wallet_id : null;
@@ -338,12 +362,10 @@ for (const h of u.right_histories) {
       if (!wallet) {
         payoutStatus = "OnHold";
       }
-
       // 2️⃣ If wallet exists but bank details missing → Hold
       else if (!wallet.account_number) {
         payoutStatus = "OnHold";
       }
-
       // 3️⃣ Apply PV-based hold rules
       else if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
         payoutStatus = "OnHold";
@@ -418,7 +440,7 @@ for (const h of u.right_histories) {
 
       const totalPayout = await getTotalPayout(u.user_id);
 
-      // 🔹 capture BEFORE state
+      // 🔹 Capture BEFORE state
       const beforeUser = (await User.findOne({ user_id: u.user_id })
         .select("rank club")
         .lean()) as any;
@@ -459,6 +481,7 @@ for (const h of u.right_histories) {
 
       if (payout) {
         totalPayouts++;
+
         await History.create({
           transaction_id: payout.transaction_id,
           wallet_id: payout.wallet_id,
@@ -469,7 +492,6 @@ for (const h of u.right_histories) {
           mail: payout.mail,
           contact: payout.contact,
           user_status: payout.user_status,
-
           account_holder_name: payout.account_holder_name,
           bank_name: payout.bank_name,
           account_number: payout.account_number,
@@ -514,7 +536,6 @@ for (const h of u.right_histories) {
           type: "reward",
         });
 
-        // ✅ Create alert for user
         await Alert.create({
           user_id: u.user_id,
           user_name: u.name,
@@ -523,7 +544,6 @@ for (const h of u.right_histories) {
           user_status: u.status || "active",
           related_id: payout.payout_id,
           link: "/wallet/payout/daily",
-
           title: "Matching Bonus Released 🎉",
           description: `Your matching bonus of ₹${totalAmount.toLocaleString()} has been released.`,
           role: "user",
@@ -534,6 +554,8 @@ for (const h of u.right_histories) {
         });
       }
 
+      // ✅ Mark histories as checked IMMEDIATELY after payout is created
+      // so a second run of the same cron won't re-process them
       const historyIds = [...u.left_histories, ...u.right_histories]
         .map((h: any) => h._id)
         .filter(Boolean);
@@ -548,6 +570,7 @@ for (const h of u.right_histories) {
         `[Matching Bonus] Payout created for ${u.user_id} status=${payout?.status} histories marked: ${historyIds.length}`,
       );
     }
+
     if (totalPayouts > 0) {
       await Alert.create({
         role: "admin",
@@ -556,13 +579,10 @@ for (const h of u.right_histories) {
         priority: "high",
         read: false,
         link: "/wallet/payout/daily",
-
         date: formatDate(new Date()),
         created_at: new Date(),
       });
-      console.log(
-        `[Matching Bonus] Admin alert created for ${totalPayouts} payouts`,
-      );
+      console.log(`[Matching Bonus] Admin alert created for ${totalPayouts} payouts`);
     }
   } catch (err) {
     console.error("[Matching Bonus] Error:", err);

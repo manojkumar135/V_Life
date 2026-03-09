@@ -28,6 +28,26 @@ export async function releaseReferralBonus({
   buyerId: string;
   orderId: string;
 }) {
+  // ─────────────────────────────────────────────────────────────
+  // ✅ INTERNAL DUPLICATE GUARD
+  // This is the last line of defense. Even if the caller
+  // (direct-sales-bonus) somehow calls this twice for the same
+  // orderId + sponsorId, this check will block the second call.
+  // Checks DailyPayout (where this function saves its record).
+  // ─────────────────────────────────────────────────────────────
+  const alreadyExists = await DailyPayout.findOne({
+    order_id: orderId,
+    user_id: sponsorId,
+    name: "Referral Bonus",
+  }).lean();
+
+  if (alreadyExists) {
+    console.log(
+      `⚠️ [releaseReferralBonus] Already paid for order ${orderId} → sponsor ${sponsorId}, skipping.`,
+    );
+    return;
+  }
+
   const node = await TreeNode.findOne({ user_id: sponsorId });
   if (!node || node.status !== "active") return;
 
@@ -53,14 +73,14 @@ export async function releaseReferralBonus({
 
   if (wallet?.pan_verified) {
     withdraw = Math.round(REFERRAL_AMOUNT * 0.8);  // 80%
-    reward = Math.round(REFERRAL_AMOUNT * 0.08);   // 8%
-    tds = Math.round(REFERRAL_AMOUNT * 0.02);      // 2%
-    admin = Math.round(REFERRAL_AMOUNT * 0.1);     // 10%
+    reward   = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
+    tds      = Math.round(REFERRAL_AMOUNT * 0.02); // 2%
+    admin    = Math.round(REFERRAL_AMOUNT * 0.1);  // 10%
   } else {
     withdraw = Math.round(REFERRAL_AMOUNT * 0.62); // 62%
-    reward = Math.round(REFERRAL_AMOUNT * 0.08);   // 8%
-    tds = Math.round(REFERRAL_AMOUNT * 0.2);       // 20%
-    admin = Math.round(REFERRAL_AMOUNT * 0.1);     // 10%
+    reward   = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
+    tds      = Math.round(REFERRAL_AMOUNT * 0.2);  // 20%
+    admin    = Math.round(REFERRAL_AMOUNT * 0.1);  // 10%
   }
 
   const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
@@ -81,37 +101,37 @@ export async function releaseReferralBonus({
   const payout = await DailyPayout.create({
     transaction_id: payout_id,
     payout_id,
-    user_id: sponsorId,
-    user_name: node.name,
-    contact: node.contact,
-    mail: node.mail,
-    user_status: node.status,
-    wallet_id: wallet?.wallet_id,
-    rank: wallet?.rank,
+    user_id:      sponsorId,
+    user_name:    node.name,
+    contact:      node.contact,
+    mail:         node.mail,
+    user_status:  node.status,
+    wallet_id:    wallet?.wallet_id,
+    rank:         wallet?.rank,
     pan_verified: wallet?.pan_verified ?? false,
 
-    name: "Referral Bonus",
+    name:  "Referral Bonus",
     title: "Referral Bonus",
-    date: formattedDate,
-    time: now.toTimeString().slice(0, 5),
+    date:  formattedDate,
+    time:  now.toTimeString().slice(0, 5),
 
-    amount: REFERRAL_AMOUNT,
-    totalamount: REFERRAL_AMOUNT,
+    amount:         REFERRAL_AMOUNT,
+    totalamount:    REFERRAL_AMOUNT,
     withdraw_amount: withdraw,
-    reward_amount: reward,
-    tds_amount: tds,
-    admin_charge: admin,
+    reward_amount:   reward,
+    tds_amount:      tds,
+    admin_charge:    admin,
 
-    to: sponsorId,
-    from: buyerId,
-    order_id: orderId,
+    to:               sponsorId,
+    from:             buyerId,
+    order_id:         orderId,
     transaction_type: "Credit",
     status,
     details: isAdvance
       ? `Referral Bonus for activation ${buyerId}`
       : `Referral Bonus for first order ${orderId}`,
 
-    created_by: "system",
+    created_by:       "system",
     last_modified_by: "system",
     last_modified_at: now,
   });
@@ -119,38 +139,42 @@ export async function releaseReferralBonus({
   /* ------------------- Create History Entry ------------------- */
 
   await History.create({
-    transaction_id: payout.transaction_id,
-    wallet_id: payout.wallet_id,
-    user_id: payout.user_id,
-    user_name: node.name,
+    transaction_id:  payout.transaction_id,
+    wallet_id:       payout.wallet_id,
+    user_id:         payout.user_id,
+    user_name:       node.name,
+
+    // ✅ name field added so isReferralAlreadyPaid() can find it
+    name:  "Referral Bonus",
+    title: "Referral Bonus",
 
     order_id: orderId,
 
     date: formattedDate,
     time: now.toTimeString().slice(0, 5),
 
-    amount: payout.amount,
-    total_amount: payout.amount,
+    amount:          payout.amount,
+    total_amount:    payout.amount,
     withdraw_amount: payout.withdraw_amount,
-    reward_amount: payout.reward_amount,
-    tds_amount: payout.tds_amount,
-    admin_charge: payout.admin_charge,
+    reward_amount:   payout.reward_amount,
+    tds_amount:      payout.tds_amount,
+    admin_charge:    payout.admin_charge,
 
-    to: payout.to,
-    from: payout.from,
+    to:               payout.to,
+    from:             payout.from,
     transaction_type: "Credit",
 
-    status: payout.status,
+    status:  payout.status,
     details: payout.details,
 
-    first_payment: isAdvance ? true : false,
-    first_order: isAdvance ? false : true,
-    advance: isAdvance ? true : false,
+    first_payment: isAdvance ? true  : false,
+    first_order:   isAdvance ? false : true,
+    advance:       isAdvance ? true  : false,
 
-    ischecked: false,
-    isReferralChecked: true,  // 🔥 VERY IMPORTANT
+    ischecked:         false,
+    isReferralChecked: true, // 🔥 VERY IMPORTANT — prevents advance referral reprocessing
 
-    created_by: "system",
+    created_by:       "system",
     last_modified_by: "system",
     last_modified_at: now,
   });
@@ -158,34 +182,34 @@ export async function releaseReferralBonus({
   /* ------------------- Reward Points ------------------- */
 
   await addRewardScore({
-    user_id: sponsorId,
-    points: withdraw,
-    source: "referral_bonus",
+    user_id:      sponsorId,
+    points:       withdraw,
+    source:       "referral_bonus",
     reference_id: orderId,
-    remarks: payout.details,
-    type: "referral",
+    remarks:      payout.details,
+    type:         "referral",
   });
 
   await addRewardScore({
-    user_id: sponsorId,
-    points: reward,
-    source: "referral_bonus",
+    user_id:      sponsorId,
+    points:       reward,
+    source:       "referral_bonus",
     reference_id: orderId,
-    remarks: `${payout.details} (reward portion)`,
-    type: "reward",
+    remarks:      `${payout.details} (reward portion)`,
+    type:         "reward",
   });
 
   /* ------------------- User Alert ------------------- */
 
   await Alert.create({
-    user_id: sponsorId,
-    title: "Referral Bonus Earned 🎉",
+    user_id:  sponsorId,
+    title:    "Referral Bonus Earned 🎉",
     description: `You earned ₹${REFERRAL_AMOUNT} referral bonus.`,
-    role: "user",
+    role:     "user",
     priority: "medium",
-    read: false,
-    link: "/wallet/payout/daily",
-    date: formattedDate,
+    read:     false,
+    link:     "/wallet/payout/daily",
+    date:     formattedDate,
     created_at: now,
   });
 
@@ -193,38 +217,37 @@ export async function releaseReferralBonus({
 
   const totalPayout = await getTotalPayout(sponsorId);
 
-  const beforeUser =( await User.findOne({ user_id: sponsorId })
+  const beforeUser = (await User.findOne({ user_id: sponsorId })
     .select("rank club")
-    .lean() ) as any;
+    .lean()) as any;
 
   const updatedClub = await updateClub(sponsorId, totalPayout);
 
   if (updatedClub && beforeUser) {
-
     if (beforeUser.club !== updatedClub.newClub) {
       await Alert.create({
-        user_id: sponsorId,
-        title: `🎉 ${updatedClub.newClub} Club Achieved`,
+        user_id:  sponsorId,
+        title:    `🎉 ${updatedClub.newClub} Club Achieved`,
         description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
-        role: "user",
+        role:     "user",
         priority: "high",
-        read: false,
-        link: "/dashboards",
-        date: formattedDate,
+        read:     false,
+        link:     "/dashboards",
+        date:     formattedDate,
         created_at: now,
       });
     }
 
     if (beforeUser.rank !== updatedClub.newRank) {
       await Alert.create({
-        user_id: sponsorId,
-        title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
+        user_id:  sponsorId,
+        title:    `🎖️ ${updatedClub.newRank} Rank Achieved`,
         description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
-        role: "user",
+        role:     "user",
         priority: "high",
-        read: false,
-        link: "/dashboards",
-        date: formattedDate,
+        read:     false,
+        link:     "/dashboards",
+        date:     formattedDate,
         created_at: now,
       });
     }
