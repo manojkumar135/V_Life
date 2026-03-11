@@ -13,10 +13,6 @@ import {
   putPayoutsOnHold,
 } from "@/app/api/wallets-operations/walletHelpers";
 
-/* ------------------------------------------------------------------ */
-/* 🔹 Helper - format date DD-MM-YYYY                                  */
-/* ------------------------------------------------------------------ */
-
 function formatDate(date: Date): string {
   const dd   = String(date.getDate()).padStart(2, "0");
   const mm   = String(date.getMonth() + 1).padStart(2, "0");
@@ -24,29 +20,20 @@ function formatDate(date: Date): string {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-/* ------------------------------------------------------------------ */
-/* 🔹 Helper - raise alerts when a change request is submitted         */
-/*                                                                     */
-/*  Two alerts are created:                                            */
-/*    1. To the USER who raised the request — confirmation             */
-/*    2. To ADMIN — notification of a new pending request             */
-/* ------------------------------------------------------------------ */
-
 async function createChangeRequestAlerts({
   request_id,
   user_id,
   user_name,
   requestLabel,
 }: {
-  request_id: string;
-  user_id:    string;
-  user_name:  string;
-  requestLabel: string; // "Wallet Creation" | "Wallet Update"
+  request_id:   string;
+  user_id:      string;
+  user_name:    string;
+  requestLabel: string;
 }) {
   const now           = new Date();
   const formattedDate = formatDate(now);
 
-  // Alert → user who raised the request
   await Alert.create({
     role:        "user",
     user_id,
@@ -57,7 +44,6 @@ async function createChangeRequestAlerts({
     created_at:  now,
   });
 
-  // Alert → admin
   await Alert.create({
     role:        "admin",
     title:       `New ${requestLabel} Request`,
@@ -111,16 +97,16 @@ export async function GET(request: Request) {
     let query: any = {};
     if (search) {
       query.$or = [
-        { wallet_id:            { $regex: search, $options: "i" } },
-        { user_id:              { $regex: search, $options: "i" } },
-        { user_name:            { $regex: search, $options: "i" } },
-        { account_number:       { $regex: search, $options: "i" } },
-        { account_holder_name:  { $regex: search, $options: "i" } },
-        { bank_name:            { $regex: search, $options: "i" } },
-        { ifsc_code:            { $regex: search, $options: "i" } },
-        { aadhar_number:        { $regex: search, $options: "i" } },
-        { pan_number:           { $regex: search, $options: "i" } },
-        { wallet_status:        { $regex: search, $options: "i" } },
+        { wallet_id:           { $regex: search, $options: "i" } },
+        { user_id:             { $regex: search, $options: "i" } },
+        { user_name:           { $regex: search, $options: "i" } },
+        { account_number:      { $regex: search, $options: "i" } },
+        { account_holder_name: { $regex: search, $options: "i" } },
+        { bank_name:           { $regex: search, $options: "i" } },
+        { ifsc_code:           { $regex: search, $options: "i" } },
+        { aadhar_number:       { $regex: search, $options: "i" } },
+        { pan_number:          { $regex: search, $options: "i" } },
+        { wallet_status:       { $regex: search, $options: "i" } },
       ];
     }
     if (user_id) query.user_id = user_id;
@@ -153,11 +139,11 @@ export async function POST(request: Request) {
     } = body;
 
     if (
-      !user_id          ||
-      !body.user_name   ||
+      !user_id               ||
+      !body.user_name        ||
       !body.account_holder_name ||
-      !body.bank_name   ||
-      !account_number   ||
+      !body.bank_name        ||
+      !account_number        ||
       !body.ifsc_code
     ) {
       return NextResponse.json(
@@ -205,8 +191,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             success: false,
-            message:
-              "You already have a pending wallet creation request awaiting admin approval.",
+            message: "You already have a pending wallet creation request awaiting admin approval.",
           },
           { status: 400 }
         );
@@ -231,9 +216,9 @@ export async function POST(request: Request) {
         status:         "pending",
       });
 
-      await putPayoutsOnHold(user_id);
+      // Put Pending payouts OnHold — wallet is under review
+      await putPayoutsOnHold(user_id, "WALLET_UNDER_REVIEW");
 
-      /* ── Alerts: user confirmation + admin notification ─────────────── */
       await createChangeRequestAlerts({
         request_id,
         user_id,
@@ -244,17 +229,16 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: true,
-          message:
-            "Your wallet creation request has been submitted for admin approval.",
-          data: changeRequest,
+          message: "Your wallet creation request has been submitted for admin approval.",
+          data:    changeRequest,
         },
         { status: 201 }
       );
     }
 
     // ── ADMIN: create wallet directly ────────────────────────────────────
-    const wallet_id  = await generateUniqueCustomId("WA", Wallet, 8, 8);
-    const newWallet  = await Wallet.create({ ...body, wallet_id });
+    const wallet_id = await generateUniqueCustomId("WA", Wallet, 8, 8);
+    const newWallet = await Wallet.create({ ...body, wallet_id });
 
     const login = await Login.findOne({ user_id });
     if (login) {
@@ -265,9 +249,8 @@ export async function POST(request: Request) {
       await login.save();
     }
 
-    if (newWallet.pan_verified || pan_number) {
-      await releaseOnHoldPayouts(user_id);
-    }
+    // Admin created wallet directly → trigger wallet_created release
+    await releaseOnHoldPayouts(user_id, "wallet_created");
 
     return NextResponse.json(
       { success: true, data: newWallet },
@@ -337,9 +320,9 @@ export async function PUT(request: Request) {
     }
 
     Object.assign(wallet, updates);
-    wallet.wallet_id     = wallet_id      || wallet.wallet_id     || "";
-    wallet.aadhar_number = aadhar_number  || wallet.aadhar_number || "";
-    wallet.pan_number    = pan_number     || wallet.pan_number    || "";
+    wallet.wallet_id     = wallet_id     || wallet.wallet_id     || "";
+    wallet.aadhar_number = aadhar_number || wallet.aadhar_number || "";
+    wallet.pan_number    = pan_number    || wallet.pan_number    || "";
     wallet.gst_number    = updates.gst_number || wallet.gst_number || "";
     await wallet.save();
 
@@ -352,9 +335,8 @@ export async function PUT(request: Request) {
       await login.save();
     }
 
-    if (wallet.pan_verified || pan_number) {
-      await releaseOnHoldPayouts(wallet.user_id);
-    }
+    // PUT is admin-only direct update → trigger wallet_activated
+    await releaseOnHoldPayouts(wallet.user_id, "wallet_activated");
 
     return NextResponse.json({ success: true, data: wallet });
   } catch (error: any) {
@@ -440,9 +422,9 @@ export async function PATCH(request: Request) {
     if (role === "user") {
       const newValues = {
         ...updates,
-        aadhar_number: aadhar_number       || wallet.aadhar_number || "",
-        pan_number:    pan_number          || wallet.pan_number    || "",
-        gst_number:    updates.gst_number  || wallet.gst_number   || "",
+        aadhar_number: aadhar_number      || wallet.aadhar_number || "",
+        pan_number:    pan_number         || wallet.pan_number    || "",
+        gst_number:    updates.gst_number || wallet.gst_number   || "",
       };
 
       const existingRequest = await WalletChangeRequest.findOne({
@@ -451,9 +433,9 @@ export async function PATCH(request: Request) {
       });
 
       if (existingRequest) {
-        existingRequest.new_values    = newValues;
-        existingRequest.requested_by  = last_modified_by || wallet.user_id;
-        existingRequest.updated_at    = new Date();
+        existingRequest.new_values   = newValues;
+        existingRequest.requested_by = last_modified_by || wallet.user_id;
+        existingRequest.updated_at   = new Date();
         await existingRequest.save();
 
         return NextResponse.json({
@@ -482,9 +464,9 @@ export async function PATCH(request: Request) {
         status:         "pending",
       });
 
-      await putPayoutsOnHold(wallet.user_id);
+      // Put Pending payouts OnHold — wallet change is under review
+      await putPayoutsOnHold(wallet.user_id, "WALLET_UNDER_REVIEW");
 
-      /* ── Alerts: user confirmation + admin notification ─────────────── */
       await createChangeRequestAlerts({
         request_id,
         user_id:      wallet.user_id,
@@ -501,11 +483,11 @@ export async function PATCH(request: Request) {
 
     // ── ADMIN: direct update ─────────────────────────────────────────────
     Object.assign(wallet, updates);
-    wallet.wallet_id        = wallet_id       || wallet.wallet_id        || "";
-    wallet.aadhar_number    = aadhar_number   || wallet.aadhar_number    || "";
-    wallet.pan_number       = pan_number      || wallet.pan_number       || "";
-    wallet.gst_number       = updates.gst_number || wallet.gst_number   || "";
-    wallet.last_modified_by = last_modified_by   || wallet.last_modified_by || "";
+    wallet.wallet_id        = wallet_id           || wallet.wallet_id        || "";
+    wallet.aadhar_number    = aadhar_number        || wallet.aadhar_number    || "";
+    wallet.pan_number       = pan_number           || wallet.pan_number       || "";
+    wallet.gst_number       = updates.gst_number   || wallet.gst_number      || "";
+    wallet.last_modified_by = last_modified_by     || wallet.last_modified_by || "";
     wallet.last_modified_at = new Date();
     await wallet.save();
 
@@ -530,9 +512,8 @@ export async function PATCH(request: Request) {
       await login.save();
     }
 
-    if (wallet.pan_verified || pan_number) {
-      await releaseOnHoldPayouts(wallet.user_id);
-    }
+    // Admin direct update → trigger wallet_activated release
+    await releaseOnHoldPayouts(wallet.user_id, "wallet_activated");
 
     return NextResponse.json({
       success:  true,

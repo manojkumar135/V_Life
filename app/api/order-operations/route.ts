@@ -22,6 +22,8 @@ import {
   propagateInfinityUpdateToAncestors,
 } from "@/services/infinity";
 
+import { processPvOrder } from "@/services/processPvOrder"; 
+
 // ----------------- Types -----------------
 interface OrderItem {
   product_id: string;
@@ -328,6 +330,23 @@ export async function POST(request: Request) {
     const freshUser = await User.findOne({
       user_id: beneficiary.user_id,
     });
+
+        // ✅ ADD THIS BLOCK — PV tracking, fire-and-forget, does not block response
+    if (totalPV > 0) {
+      processPvOrder({
+        user_id:      beneficiary.user_id,
+        order_id:     newOrder.order_id,
+        pv:           totalPV,
+        order_amount: newOrder.final_amount ?? amount,
+        userInfo: {
+          user_name: beneficiary.user_name || "",
+          contact:   beneficiary.contact   || "",
+          mail:      beneficiary.mail      || "",
+        },
+      }).catch((err) =>
+        console.error("❌ [order-operations] processPvOrder error", err)
+      );
+    }
 
     /* ---------------- FAST RESPONSE ---------------- */
     const response = NextResponse.json(

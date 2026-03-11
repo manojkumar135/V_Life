@@ -11,10 +11,6 @@ import {
 } from "@/app/api/wallets-operations/walletHelpers";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
-/* ------------------------------------------------------------------ */
-/* 🔹 Helper - format date DD-MM-YYYY                                  */
-/* ------------------------------------------------------------------ */
-
 function formatDate(date: Date): string {
   const dd   = String(date.getDate()).padStart(2, "0");
   const mm   = String(date.getMonth() + 1).padStart(2, "0");
@@ -91,9 +87,10 @@ export async function PATCH(
           await login.save();
         }
 
-        if (changeRequest.new_values?.pan_verified) {
-          await releaseOnHoldPayouts(userId);
-        }
+        // ✅ CHANGED: was `if (pan_verified) releaseOnHoldPayouts(userId)`
+        // Now always release — payoutHoldService re-checks all 4 conditions
+        // fresh so only truly unblocked payouts are released.
+        await releaseOnHoldPayouts(userId, "wallet_review_approved");
       }
 
       // ── UPDATE WALLET ───────────────────────────────────────────────────────
@@ -125,12 +122,11 @@ export async function PATCH(
           await login.save();
         }
 
-        if (wallet.pan_verified) {
-          await releaseOnHoldPayouts(wallet.user_id);
-        }
+        // ✅ CHANGED: was `if (pan_verified) releaseOnHoldPayouts(userId)`
+        // Now always release — payoutHoldService handles the logic.
+        await releaseOnHoldPayouts(wallet.user_id, "wallet_review_approved");
       }
 
-      /* ── Alert: notify user their request was approved ─────────────────── */
       await Alert.create({
         role:        "user",
         user_id:     userId,
@@ -144,10 +140,12 @@ export async function PATCH(
 
     // ─── REJECT ───────────────────────────────────────────────────────────────
     if (action === "rejected") {
-      // Release payouts — wallet unchanged, no reason to keep them on hold
-      await releaseOnHoldPayouts(userId);
+      // ✅ CHANGED: added trigger "wallet_review_approved"
+      // Review is over — payoutHoldService re-checks all conditions fresh.
+      // If wallet is still missing/inactive, payouts stay OnHold for the
+      // correct reason. Nothing is released incorrectly.
+      await releaseOnHoldPayouts(userId, "wallet_review_approved");
 
-      /* ── Alert: notify user their request was rejected ─────────────────── */
       await Alert.create({
         role:        "user",
         user_id:     userId,

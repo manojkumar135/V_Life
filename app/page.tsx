@@ -125,7 +125,7 @@ const MaverickHome = () => {
             >Login</button>
             <button
               onClick={() => router.push("/auth/register")}
-              className="px-4 py-1.5 max-lg:py-1.5 font-semibold text-sm md:text-base bg-gradient-to-r from-[#16B8E4] to-[#0C3978] text-white rounded-lg transition-all cursor-pointer"
+              className="px-4 py-1.5 max-lg:py-1.5 font-semibold text-sm md:text-base bg-linear-to-r from-[#16B8E4] to-[#0C3978] text-white rounded-lg transition-all cursor-pointer"
             >Sign Up</button>
           </div>
         </div>

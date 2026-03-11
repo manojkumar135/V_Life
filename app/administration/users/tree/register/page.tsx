@@ -121,7 +121,7 @@ function RegisterContent() {
         if (res.data.success) {
           ShowToast.success("Registration successful!");
           router.push(
-            `/administration/users/tree?parent=${values.parent}&newuser=${res.data.userId}`
+            `/administration/users/tree?parent=${values.parent}&newuser=${res.data.userId}`,
           );
         } else {
           ShowToast.error(res.data.message || "Registration failed");
@@ -275,7 +275,7 @@ function RegisterContent() {
                       if (!date) return formik.setFieldValue("dob", "");
 
                       const localDate = new Date(
-                        date.getTime() - date.getTimezoneOffset() * 60000
+                        date.getTime() - date.getTimezoneOffset() * 60000,
                       )
                         .toISOString()
                         .split("T")[0];
@@ -312,7 +312,7 @@ function RegisterContent() {
                       const currentYear = new Date().getFullYear();
                       const years = Array.from(
                         { length: 101 },
-                        (_, i) => currentYear - i
+                        (_, i) => currentYear - i,
                       );
                       const monthOptions = Array.from({ length: 12 }).map(
                         (_, m) => ({
@@ -320,7 +320,7 @@ function RegisterContent() {
                           label: new Date(0, m).toLocaleString("default", {
                             month: "long",
                           }),
-                        })
+                        }),
                       );
                       const yearOptions = years.map((y) => ({
                         value: y,
@@ -343,7 +343,7 @@ function RegisterContent() {
                               <Select
                                 options={monthOptions}
                                 value={monthOptions.find(
-                                  (m) => m.value === date.getMonth()
+                                  (m) => m.value === date.getMonth(),
                                 )}
                                 onChange={(selected) =>
                                   selected && changeMonth(selected.value)
@@ -369,7 +369,7 @@ function RegisterContent() {
                               <Select
                                 options={yearOptions}
                                 value={yearOptions.find(
-                                  (y) => y.value === date.getFullYear()
+                                  (y) => y.value === date.getFullYear(),
                                 )}
                                 onChange={(selected) =>
                                   selected && changeYear(selected.value)
@@ -421,11 +421,11 @@ function RegisterContent() {
                       options={gender}
                       name="gender"
                       value={gender.find(
-                        (t) => t.value === formik.values.gender
+                        (t) => t.value === formik.values.gender,
                       )}
-                       onChange={(opt) => {
-                        formik.setFieldValue("gender", opt?.value || "");
-                        formik.setFieldTouched("gender", true);
+                      onChange={(opt) => {
+                        formik.setFieldValue("gender", opt?.value || "", true);
+                        formik.setFieldTouched("gender", false);
                       }}
                       onBlur={() => formik.setFieldTouched("gender", true)}
                       styles={{
@@ -522,11 +522,11 @@ function RegisterContent() {
                       options={teams}
                       name="team"
                       value={teams.find((t) => t.value === formik.values.team)}
-                     // Team Select
-onChange={(opt) => {
-  formik.setFieldValue("team", opt?.value || "");
-  formik.setFieldTouched("team", true); 
-}}
+                      // Team Select
+                      onChange={(opt) => {
+                        formik.setFieldValue("team", opt?.value || "");
+                        formik.setFieldTouched("team",false);
+                      }}
                       onBlur={() => formik.setFieldTouched("team", true)}
                       styles={customSelectStyles}
                       placeholder="Select Team"
@@ -570,7 +570,7 @@ onChange={(opt) => {
                       if (value.length > 10) {
                         formik.setFieldError(
                           "pan",
-                          "PAN must be exactly 10 characters"
+                          "PAN must be exactly 10 characters",
                         );
                         return;
                       }
@@ -579,7 +579,7 @@ onChange={(opt) => {
                       if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value)) {
                         formik.setFieldError(
                           "pan",
-                          "Invalid PAN format (ABCDE1234F)"
+                          "Invalid PAN format (ABCDE1234F)",
                         );
                         return;
                       }

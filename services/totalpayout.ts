@@ -1,3 +1,5 @@
+
+//services/totalpayout.ts
 import { DailyPayout, WeeklyPayout } from "@/models/payout";
 import { connectDB } from "@/lib/mongodb";
 
@@ -21,7 +23,6 @@ export async function getTotalPayout(user_id: string) {
 
 export function checkHoldStatus(totalPayout: number, pv: number): boolean {
   if (totalPayout >= 300000 && pv < 100) return true;
-  if (totalPayout >= 200000 && pv < 50) return true;
-  if (totalPayout >= 100000 && pv < 25) return true;
+  if (totalPayout >= 100000 && pv < 50) return true;
   return false;
 }

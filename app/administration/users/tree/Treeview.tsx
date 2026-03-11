@@ -11,6 +11,7 @@ import SubmitButton from "@/components/common/submitbutton";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { LuRefreshCw } from "react-icons/lu";
+import { FaLongArrowAltUp } from "react-icons/fa";
 
 interface TreeNode {
   user_id: string;
@@ -236,6 +237,28 @@ export default function TreeView({ id, newuser }: TreeViewProps) {
     }
   };
 
+  // Navigate up to the parent of the current root
+  const handleGoToParent = async () => {
+    if (!currentRoot?.parent) return;
+
+    try {
+      setLoading(true);
+      const { data } = await axios.get(API_URL, {
+        params: { user_id: currentRoot.parent },
+      });
+      if (data?.data) {
+        setCurrentRoot(data.data);
+        setHighlightedId(currentRoot.parent);
+      } else {
+        ShowToast.error("Parent not found!");
+      }
+    } catch (error) {
+      ShowToast.error("Failed to load parent tree");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // On node click, load subtree
   const handleUserClick = async (userId: string) => {
     try {
@@ -253,6 +276,10 @@ export default function TreeView({ id, newuser }: TreeViewProps) {
       setLoading(false);
     }
   };
+
+  // Show up arrow only when current root is NOT the logged-in user
+  const showUpArrow =
+    currentRoot?.user_id !== user?.user_id && !!currentRoot?.parent;
 
   return (
     <Layout>
@@ -322,6 +349,20 @@ export default function TreeView({ id, newuser }: TreeViewProps) {
           </div>
         </div>
       </div>
+
+      {/* Up Arrow — navigate to parent of current root */}
+      {showUpArrow && (
+        <button
+          onClick={handleGoToParent}
+          title="Go to parent"
+          // className="fixed bottom-6 left-6 sm:left-25 z-20 bg-linear-to-r from-[#16B8E4] to-[#0C3978]
+          //  text-white rounded-full p-3 shadow-lg transition-all duration-200 cursor-pointer"
+            className="fixed bottom-6 left-6 sm:left-25 z-20 bg-linear-to-r from-[#106187] to-[#106187]
+           text-white rounded-full p-3 shadow-lg transition-all duration-200 cursor-pointer"
+        >
+          <FaLongArrowAltUp size={22} />
+        </button>
+      )}
     </Layout>
   );
 }
