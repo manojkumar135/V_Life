@@ -1,39 +1,113 @@
-// wallet-change-requests/[request_id]/route.ts
+// wallet-change-requests/route.ts
 
-import { NextResponse }          from "next/server";
-import { connectDB }             from "@/lib/mongodb";
-import { Wallet }                from "@/models/wallet";
-import { Login }                 from "@/models/login";
-import { Alert }                 from "@/models/alert";
-import { WalletChangeRequest }   from "@/models/walletChangeRequest";
-import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
-import { releaseOnHoldPayouts }  from "@/app/api/wallets-operations/walletHelpers";
+import { NextRequest, NextResponse } from "next/server";
+import { connectDB } from "@/lib/mongodb";
+import { WalletChangeRequest } from "@/models/walletChangeRequest";
 
-function formatDate(date: Date): string {
-  const dd   = String(date.getDate()).padStart(2, "0");
-  const mm   = String(date.getMonth() + 1).padStart(2, "0");
-  const yyyy = date.getFullYear();
-  return `${dd}-${mm}-${yyyy}`;
+function parseDate(input: string | null): Date | null {
+  if (!input) return null;
+  input = input.trim();
+
+  let match = input.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
+  if (match) {
+    const [, d, m, y] = match;
+    return new Date(Number(y), Number(m) - 1, Number(d));
+  }
+
+  match = input.match(/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/);
+  if (match) {
+    const [, y, m, d] = match;
+    return new Date(Number(y), Number(m) - 1, Number(d));
+  }
+
+  const d = new Date(input);
+  return isNaN(d.getTime()) ? null : d;
 }
 
-// ─── GET single request ────────────────────────────────────────────────────
-export async function GET(
-  request: Request,
-  { params }: { params: { request_id: string } }
-) {
+function toStartOfDay(d: Date): Date {
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0));
+}
+
+function toEndOfDay(d: Date): Date {
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999));
+}
+
+export async function GET(request: NextRequest) {
   try {
     await connectDB();
-    const { request_id } = params;
 
-    const changeRequest = await WalletChangeRequest.findOne({ request_id });
-    if (!changeRequest)
-      return NextResponse.json(
-        { success: false, message: "Request not found" },
-        { status: 404 }
-      );
+    const { searchParams } = new URL(request.url);
 
-    return NextResponse.json({ success: true, data: changeRequest });
+    const status  = searchParams.get("status");
+    const user_id = searchParams.get("user_id");
+    const search  = searchParams.get("search");
+    const date    = searchParams.get("date");
+    const from    = searchParams.get("from");
+    const to      = searchParams.get("to");
+
+    const baseQuery: any = {};
+    if (status)  baseQuery.status  = status;
+    if (user_id) baseQuery.user_id = user_id;
+
+    const conditions: any[] = [];
+
+    if (search) {
+      const terms = search
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean);
+
+      if (terms.length) {
+        const orConditions: any[] = [];
+        terms.forEach((term) => {
+          const regex = new RegExp("^" + term, "i");
+          orConditions.push(
+            { request_id:     regex },
+            { wallet_id:      regex },
+            { user_id:        regex },
+            { status:         regex },
+            { requested_role: regex }
+          );
+        });
+        conditions.push({ $or: orConditions });
+      }
+    }
+
+    if (date && !from && !to) {
+      const parsed = parseDate(date);
+      if (parsed) {
+        conditions.push({
+          created_at: {
+            $gte: toStartOfDay(parsed),
+            $lte: toEndOfDay(parsed),
+          },
+        });
+      }
+    }
+
+    if (from || to) {
+      const startDate = parseDate(from);
+      const endDate   = parseDate(to);
+      const rangeFilter: any = {};
+      if (startDate) rangeFilter.$gte = toStartOfDay(startDate);
+      if (endDate)   rangeFilter.$lte = toEndOfDay(endDate);
+      if (Object.keys(rangeFilter).length) {
+        conditions.push({ created_at: rangeFilter });
+      }
+    }
+
+    const finalQuery =
+      conditions.length > 0
+        ? { $and: [baseQuery, ...conditions] }
+        : baseQuery;
+
+    const requests = await WalletChangeRequest.find(finalQuery).sort({
+      created_at: -1,
+    });
+
+    return NextResponse.json({ success: true, data: requests });
   } catch (error: any) {
+    console.error("🔥 GET WALLET-CHANGE-REQUESTS ERROR:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }
@@ -41,144 +115,50 @@ export async function GET(
   }
 }
 
-// ─── PATCH — approve or reject ────────────────────────────────────────────
-export async function PATCH(
-  request: Request,
-  { params }: { params: { request_id: string } }
-) {
+export async function PUT(request: NextRequest) {
   try {
     await connectDB();
 
-    const { request_id } = params;
-    const body           = await request.json();
-    const { action, reviewed_by } = body; // action: "approved" | "rejected"
+    const body = await request.json();
+    const { request_id, new_values } = body;
 
-    if (!action || !["approved", "rejected"].includes(action)) {
+    if (!request_id || !new_values) {
       return NextResponse.json(
-        { success: false, message: "action must be 'approved' or 'rejected'" },
+        { success: false, message: "request_id and new_values are required" },
         { status: 400 }
       );
     }
 
     const changeRequest = await WalletChangeRequest.findOne({ request_id });
-    if (!changeRequest)
+
+    if (!changeRequest) {
       return NextResponse.json(
         { success: false, message: "Request not found" },
         { status: 404 }
       );
+    }
 
     if (changeRequest.status !== "pending") {
       return NextResponse.json(
-        { success: false, message: "Request is already processed" },
+        {
+          success: false,
+          message: "Cannot update a request that is already processed",
+        },
         { status: 400 }
       );
     }
 
-    const now           = new Date();
-    const formattedDate = formatDate(now);
-    const { user_id }   = changeRequest;
-
-    // ── APPROVED ──────────────────────────────────────────────────────────
-    if (action === "approved") {
-      const newValues = changeRequest.new_values as any;
-
-      if (changeRequest.request_type === "new_wallet") {
-        // Create the wallet for the first time
-        const wallet_id = await generateUniqueCustomId("WA", Wallet, 8, 8);
-        await Wallet.create({ ...newValues, wallet_id });
-
-        const login = await Login.findOne({ user_id });
-        if (login) {
-          login.wallet_id = wallet_id                || login.wallet_id || "";
-          login.aadhar    = newValues.aadhar_number  || login.aadhar    || "";
-          login.pan       = newValues.pan_number     || login.pan       || "";
-          login.gst       = newValues.gst_number     || login.gst       || "";
-          await login.save();
-        }
-
-        // Wallet now exists → release payouts held for NO_WALLET / WALLET_UNDER_REVIEW
-        await releaseOnHoldPayouts(user_id, "wallet_review_approved");
-
-        await Alert.create({
-          role:        "user",
-          user_id,
-          title:       "✅ Wallet Creation Approved",
-          description: `Your wallet creation request (${request_id}) has been approved. Your wallet is now active.`,
-          priority:    "high",
-          read:        false,
-          date:        formattedDate,
-          created_at:  now,
-        });
-
-      } else {
-        // Update existing wallet with new_values
-        const wallet = await Wallet.findOne({ wallet_id: changeRequest.wallet_id });
-        if (!wallet)
-          return NextResponse.json(
-            { success: false, message: "Wallet not found" },
-            { status: 404 }
-          );
-
-        Object.assign(wallet, newValues);
-        wallet.last_modified_by = reviewed_by || "admin";
-        wallet.last_modified_at = now;
-        await wallet.save();
-
-        const login = await Login.findOne({ user_id });
-        if (login) {
-          login.wallet_id = wallet.wallet_id;
-          login.aadhar    = wallet.aadhar_number;
-          login.pan       = wallet.pan_number;
-          login.gst       = wallet.gst_number || login.gst || "";
-          await login.save();
-        }
-
-        // Wallet update approved → release payouts held for WALLET_UNDER_REVIEW
-        await releaseOnHoldPayouts(user_id, "wallet_review_approved");
-
-        await Alert.create({
-          role:        "user",
-          user_id,
-          title:       "✅ Wallet Update Approved",
-          description: `Your wallet update request (${request_id}) has been approved.`,
-          priority:    "high",
-          read:        false,
-          date:        formattedDate,
-          created_at:  now,
-        });
-      }
-
-    // ── REJECTED ──────────────────────────────────────────────────────────
-    } else {
-      // Rejected — release WALLET_UNDER_REVIEW hold since the review is over.
-      // payoutHoldService re-checks all conditions so if wallet is still
-      // missing/inactive the payouts will remain OnHold for the correct reason.
-      await releaseOnHoldPayouts(user_id, "wallet_review_approved");
-
-      await Alert.create({
-        role:        "user",
-        user_id,
-        title:       "❌ Wallet Request Rejected",
-        description: `Your wallet request (${request_id}) was rejected. Please contact support or resubmit.`,
-        priority:    "high",
-        read:        false,
-        date:        formattedDate,
-        created_at:  now,
-      });
-    }
-
-    // Mark request as approved / rejected
-    changeRequest.status      = action;
-    changeRequest.reviewed_by = reviewed_by || "admin";
-    changeRequest.reviewed_at = now;
+    changeRequest.new_values = new_values;
+    changeRequest.updated_at = new Date();
     await changeRequest.save();
 
     return NextResponse.json({
       success: true,
-      message: `Request ${action} successfully`,
+      message: "Request updated successfully",
       data:    changeRequest,
     });
   } catch (error: any) {
+    console.error("🔥 PUT WALLET-CHANGE-REQUESTS ERROR:", error);
     return NextResponse.json(
       { success: false, message: error.message },
       { status: 500 }

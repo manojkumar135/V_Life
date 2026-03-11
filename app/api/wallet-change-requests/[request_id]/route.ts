@@ -18,6 +18,32 @@ function formatDate(date: Date): string {
   return `${dd}-${mm}-${yyyy}`;
 }
 
+// ─── GET single request ────────────────────────────────────────────────────
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ request_id: string }> }
+) {
+  try {
+    await connectDB();
+    const { request_id } = await params;
+
+    const changeRequest = await WalletChangeRequest.findOne({ request_id });
+    if (!changeRequest)
+      return NextResponse.json(
+        { success: false, message: "Request not found" },
+        { status: 404 }
+      );
+
+    return NextResponse.json({ success: true, data: changeRequest });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// ─── PATCH — approve or reject ────────────────────────────────────────────
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ request_id: string }> }
@@ -26,7 +52,7 @@ export async function PATCH(
     await connectDB();
 
     const { request_id } = await params;
-    const body = await request.json();
+    const body           = await request.json();
     const { action, admin_id } = body;
 
     const changeRequest = await WalletChangeRequest.findOne({ request_id });
@@ -77,7 +103,6 @@ export async function PATCH(
           created_by: changeRequest.requested_by,
         });
 
-        // Sync Login
         const login = await Login.findOne({ user_id: userId });
         if (login) {
           login.wallet_id = wallet_id;
@@ -87,9 +112,6 @@ export async function PATCH(
           await login.save();
         }
 
-        // ✅ CHANGED: was `if (pan_verified) releaseOnHoldPayouts(userId)`
-        // Now always release — payoutHoldService re-checks all 4 conditions
-        // fresh so only truly unblocked payouts are released.
         await releaseOnHoldPayouts(userId, "wallet_review_approved");
       }
 
@@ -112,7 +134,6 @@ export async function PATCH(
         wallet.last_modified_at = now;
         await wallet.save();
 
-        // Sync Login
         const login = await Login.findOne({ user_id: wallet.user_id });
         if (login) {
           login.wallet_id = wallet.wallet_id;
@@ -122,8 +143,6 @@ export async function PATCH(
           await login.save();
         }
 
-        // ✅ CHANGED: was `if (pan_verified) releaseOnHoldPayouts(userId)`
-        // Now always release — payoutHoldService handles the logic.
         await releaseOnHoldPayouts(wallet.user_id, "wallet_review_approved");
       }
 
@@ -140,10 +159,6 @@ export async function PATCH(
 
     // ─── REJECT ───────────────────────────────────────────────────────────────
     if (action === "rejected") {
-      // ✅ CHANGED: added trigger "wallet_review_approved"
-      // Review is over — payoutHoldService re-checks all conditions fresh.
-      // If wallet is still missing/inactive, payouts stay OnHold for the
-      // correct reason. Nothing is released incorrectly.
       await releaseOnHoldPayouts(userId, "wallet_review_approved");
 
       await Alert.create({
