@@ -74,7 +74,7 @@ const Page = () => {
           </div>
 
           {/* Matches Report */}
-          {user?.role === "admin" && (
+          {user?.role === "superadmin" && (
             <>
               <div
                 onClick={() => router.push("/admin-activated")}

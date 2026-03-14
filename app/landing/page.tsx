@@ -188,7 +188,7 @@ const MaverickHome = () => {
 
   /* ── shared section scroll offset class — keeps content below floating navbar ── */
   /* scroll-mt-24 = 96px offset, so anchor scroll doesn't hide under navbar */
-  const sectionClass = "scroll-mt-10 sm:scroll-mt-10 md:scroll-mt-10";
+  const sectionClass = "scroll-mt-24";
 
   return (
     <div id="home" className="min-h-screen flex flex-col bg-white font-sans">
@@ -209,8 +209,8 @@ const MaverickHome = () => {
             rounded-xl sm:rounded-2xl
             transition-all duration-300
             ${scrolled
-              ? "bg-white/90 backdrop-blur-2xl shadow-[0_8px_32px_rgba(12,57,120,0.18)] border border-gray-200/80"
-              : "bg-white/99 backdrop-blur-2xl shadow-[0_4px_24px_rgba(12,57,120,0.14)] border border-white/70"
+              ? "bg-white/95 backdrop-blur-2xl shadow-[0_8px_32px_rgba(12,57,120,0.18)] border border-gray-200/80"
+              : "bg-white/80 backdrop-blur-2xl shadow-[0_4px_24px_rgba(12,57,120,0.14)] border border-white/70"
             }
           `}
         >
@@ -344,13 +344,10 @@ const MaverickHome = () => {
 
                 <motion.div variants={fadeUp} className="flex flex-wrap gap-3 sm:gap-4">
                   <button onClick={() => router.push("/auth/register")}
-                    className="flex items-center gap-2.5 px-6 sm:px-8 py-2 sm:py-2 bg-linear-to-r from-[#0C3978] to-[#16B8E4]
-                     text-white font-bold text-sm sm:text-base rounded-xl shadow-xl 
-                     shadow-[#16B8E4]/30 hover:shadow-[#16B8E4]/50 hover:-translate-y-1
-                      transition-all duration-200 border-[0.2px] border-white/70"
+                    className="flex items-center gap-2.5 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#0C3978] to-[#16B8E4] text-white font-bold text-sm sm:text-base rounded-xl shadow-xl shadow-[#16B8E4]/30 hover:shadow-[#16B8E4]/50 hover:-translate-y-1 transition-all duration-200"
                   >Get Started <FaArrowRight className="text-xs sm:text-sm" /></button>
                   <button onClick={() => router.push("/auth/login")}
-                    className="flex items-center gap-2.5 px-6 sm:px-8 py-2 sm:py-2 border-2 border-white/85 text-white font-semibold text-sm sm:text-base rounded-xl hover:bg-white/12 hover:border-white/75 transition-all duration-200"
+                    className="flex items-center gap-2.5 px-6 sm:px-8 py-3 sm:py-4 border-2 border-white/45 text-white font-semibold text-sm sm:text-base rounded-xl hover:bg-white/12 hover:border-white/75 transition-all duration-200"
                   >Login</button>
                 </motion.div>
 
