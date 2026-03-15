@@ -91,35 +91,27 @@ export default function LoginPage() {
 
   return (
     <>
-      <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-gradient-to-l from-[#0C3978] via-[#106187] to-[#16B8E4]">
-        {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <Loader />
-          </div>
-        )}
+      {/* Loader overlay — outside main div so it always covers full screen */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <Loader />
+        </div>
+      )}
 
-        {/* ─── Left Panel: Full white bg with floating image cards ─── */}
+      {/* ── Outer wrapper ── */}
+      <div className="flex h-screen w-full overflow-hidden bg-linear-to-l from-[#0C3978] via-[#106187] to-[#16B8E4]">
+
+        {/* ─── Left Panel: hidden on mobile AND tablet, visible only on xl+ ─── */}
         <div
-          className="w-1/2 max-md:hidden shrink-0"
+          className="hidden xl:flex w-1/2 shrink-0"
           style={{
             background: "#ffffff",
             height: "100vh",
-            display: "flex",
             alignItems: "center",
             justifyContent: "center",
             padding: "32px 24px",
           }}
         >
-          {/*
-    ┌─────────────┬────────────┐
-    │   Image 1   │            │
-    │ (top-left)  │  Image 2   │
-    ├─────────────┤  (tall R)  │
-    │             ├────────────┤
-    │   Image 3   │  Image 4   │
-    │  (tall L)   │ (small BR) │
-    └─────────────┴────────────┘
-  */}
           <div
             style={{
               display: "grid",
@@ -224,9 +216,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* ─── Right Login Form (unchanged) ─── */}
-        <div className="w-1/2 max-lg:w-full max-md:w-full flex flex-col justify-center items-center overflow-y-auto max-lg:py-6 max-md:h-full">
-          <div className="w-[70%] max-md:w-[90%] flex flex-col items-center pt-10 pb-10 px-8 bg-[#fffff0] rounded-3xl shadow max-lg:pb-8 max-lg:pt-5">
+        {/* ─── Right Login Form ─── */}
+        {/* FIX: w-full on mobile/tablet, w-1/2 only on xl+ */}
+        <div className="w-full xl:w-1/2 flex flex-col justify-center items-center overflow-y-auto py-6 px-4">
+          {/* FIX: max-w-sm on mobile, max-w-md on sm+, keeps 70% feel on desktop */}
+          <div className="w-full max-w-90 sm:max-w-110 lg:w-[70%] lg:max-w-none flex flex-col items-center pt-10 pb-10 px-8 bg-[#fffff0] rounded-3xl shadow max-lg:pb-8 max-lg:pt-5">
             {/* Logo */}
             <Image
               src={Images.MaverickLogo}
