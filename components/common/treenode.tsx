@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { FaUserCircle } from "react-icons/fa";
 import { useVLife } from "@/store/context";
 import { useRouter } from "next/navigation";
 import StatusModal from "@/components/common/userStatusModal";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
-import infinity from "@/services/infinity";
 
 export interface TreeNode {
   user_id: string;
@@ -55,18 +53,54 @@ interface Props {
 /** Convert rank to star label if it's a number or contains "star" */
 const formatRank = (rank?: string): string => {
   if (!rank || rank === "none") return rank ?? "none";
-
   const lower = rank.toLowerCase().trim();
-
-  // Already contains "star" → strip number, return "star" only
   if (lower.includes("star")) return "star";
-
-  // Pure number → return "star"
   if (/^\d+$/.test(lower)) return "star";
-
-  // Otherwise return as-is
   return rank;
 };
+
+/**
+ * Resolve badge key from node fields.
+ * Priority:
+ * 1. inactive + status_notes contains "Deactivated by Admin" → blocked
+ * 2. inactive (any other reason)                             → registered
+ * 3. active, no rank                                         → associate
+ * 4. club === "Star" OR numeric rank                         → star
+ * 5. named rank (Bronze … Royal Crown Diamond)               → matching file
+ */
+function resolveBadge(node: TreeNode): string {
+  const status = (node.user_status || "").toLowerCase();
+  const notes = (node.status_notes || "").toLowerCase();
+  const rank = node.rank || "";
+  const club = node.club || "";
+
+  if (status === "inactive" || status === "deactivated") {
+    if (notes.includes("deactivated by admin")) return "blocked";
+    return "registered";
+  }
+
+  if (!rank || rank === "none" || rank === "0") return "associate";
+
+  if (club === "Star" || !isNaN(Number(rank))) return "star";
+
+  const namedRanks: Record<string, string> = {
+    Bronze: "bronze",
+    Sliver: "sliver",
+    Silver: "sliver",
+    Gold: "gold",
+    Emerald: "emerald",
+    Platinum: "platinum",
+    Diamond: "diamond",
+    "Blue Diamond": "bluediamond",
+    "Black Diamond": "blackdiamond",
+    "Crown Diamond": "crowndiamond",
+    "Royal Crown Diamond": "royalcrowndiamond",
+    Royality: "royalcrowndiamond",
+  };
+  if (namedRanks[rank]) return namedRanks[rank];
+
+  return "associate";
+}
 
 const BinaryTreeNode: React.FC<Props> = ({
   node,
@@ -99,6 +133,7 @@ const BinaryTreeNode: React.FC<Props> = ({
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverDelayRef = useRef<NodeJS.Timeout | null>(null);
 
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number }>({
     top: 0,
@@ -107,6 +142,7 @@ const BinaryTreeNode: React.FC<Props> = ({
   const [hovered, setHovered] = useState(false);
 
   const isHighlighted = highlightedId === node.user_id;
+  const badgeKey = resolveBadge(node);
 
   // ✅ Handle admin double-click or long press to change status
   const handleStatusClick = (id?: string, status?: string, row?: TreeNode) => {
@@ -151,15 +187,11 @@ const BinaryTreeNode: React.FC<Props> = ({
     );
   };
 
-  // Hover Delay Timer
-  const hoverDelayRef = useRef<NodeJS.Timeout | null>(null);
-
   const handleMouseEnter = () => {
     if (hoverDelayRef.current) clearTimeout(hoverDelayRef.current);
     hoverDelayRef.current = setTimeout(async () => {
       setHovered(true);
 
-      // Fetch current window PV for this node
       if (!currentPV) {
         try {
           setPvLoading(true);
@@ -266,11 +298,11 @@ const BinaryTreeNode: React.FC<Props> = ({
         ref={nodeRef}
         className="flex flex-col items-center relative cursor-pointer"
       >
-        <FaUserCircle
-          className={`${getColor(node.user_status, node.status_notes)} ${
+        {/* ── Badge image — no ring, no bg, just the badge ── */}
+        <div
+          className={`cursor-pointer transition-transform active:scale-90 ${
             isHighlighted ? "ring-4 ring-blue-700 rounded-full" : "mt-1"
-          } cursor-pointer transition-transform active:scale-90`}
-          size={35}
+          }`}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onDoubleClick={() => {
@@ -280,7 +312,17 @@ const BinaryTreeNode: React.FC<Props> = ({
           }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-        />
+        >
+          <img
+            src={`/badges/${badgeKey}.png`}
+            alt={badgeKey}
+            className="w-14 h-14 object-contain drop-shadow-md"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = "none";
+            }}
+          />
+        </div>
 
         <span className="text-xs text-center mt-1 capitalize">{node.name}</span>
 
@@ -306,6 +348,21 @@ const BinaryTreeNode: React.FC<Props> = ({
             hoverTimeoutRef.current = setTimeout(() => setHovered(false), 100);
           }}
         >
+          {/* Badge preview in tooltip */}
+          <div className="flex items-center gap-2 pb-1 border-b border-gray-100 mb-1">
+            <img
+              src={`/badges/${badgeKey}.png`}
+              alt={badgeKey}
+              className="w-8 h-8 object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+            <span className="font-semibold capitalize text-gray-700">
+              {badgeKey.replace(/([a-z])([A-Z])/g, "$1 $2")}
+            </span>
+          </div>
+
           <div className="flex">
             <strong className="w-20">ID:</strong>
             <span className="truncate">{node.user_id}</span>
@@ -336,7 +393,6 @@ const BinaryTreeNode: React.FC<Props> = ({
                   </span>
                 </div>
               )}
-              {/* ✅ Club field */}
               {node.club && node.club !== "none" && (
                 <div className="flex">
                   <strong className="w-20">Club:</strong>

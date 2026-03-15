@@ -50,8 +50,21 @@ const MaverickHome = () => {
   const [scrolled,      setScrolled]      = useState(false);
   const [activeSection, setActiveSection] = useState("home");
 
+  const navRef = useRef<HTMLDivElement>(null);
+
+
   const openModal  = (type: ModalType) => setModalType(type);
   const closeModal = () => setModalType(null);
+
+  useEffect(() => {
+  const handleClickOutside = (e: MouseEvent) => {
+    if (navRef.current && !navRef.current.contains(e.target as Node)) {
+      setMobileOpen(false);
+    }
+  };
+  if (mobileOpen) document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, [mobileOpen]);
 
   /* scroll shadow */
   useEffect(() => {
@@ -171,7 +184,7 @@ const MaverickHome = () => {
           • Mobile/md (< lg): logo | hamburger only
             → hamburger opens dropdown with nav links + Login + SignUp
       ════════════════════════════════════════════════════════ */}
-      <div className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-5 md:px-8 pt-3 sm:pt-4">
+      <div ref={navRef} className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-5 md:px-8 pt-3 sm:pt-4">
         <motion.nav
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -302,13 +315,13 @@ const MaverickHome = () => {
           </motion.div>
         </AnimatePresence>
 
-        <div className="relative z-10 h-full flex items-center">
-          <div className="w-full max-w-8xl mx-auto px-5 sm:px-8 md:px-12 lg:px-16">
+<div className="relative z-10 h-full flex items-start lg:items-center pt-20 sm:pt-24">
+            <div className="w-full max-w-8xl mx-auto px-5 sm:px-8 md:px-12 lg:px-16">
             <AnimatePresence mode="wait">
               <motion.div
                 key={heroSlide}
                 initial="hidden" animate="show" exit={{ opacity: 0, y: -10 }} variants={stagger}
-                className="max-w-3xl pt-6 sm:pt-10 md:pt-15 md:ml-8"
+className="max-w-3xl pt-20 sm:pt-20 md:pt-15 lg:pt-4 md:ml-8"
               >
                 <motion.div variants={fadeUp} className="mb-5 sm:mb-7">
                   <span className="inline-flex items-center gap-2 bg-white/12 border border-white/25 text-white text-[11px] sm:text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
@@ -368,11 +381,9 @@ const MaverickHome = () => {
           ))}
         </div>
         <button onClick={() => setHeroSlide(p => (p - 1 + heroSlides.length) % heroSlides.length)}
-          className="absolute left-3 sm:left-5 md:left-7 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/12 border border-white/25 flex items-center justify-center text-white hover:bg-white/25 transition-all backdrop-blur-sm"
-        ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+className="absolute left-3 sm:left-5 md:left-7 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/12 border border-white/25 hidden sm:flex items-center justify-center text-white hover:bg-white/25 transition-all backdrop-blur-sm"        ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
         <button onClick={() => setHeroSlide(p => (p + 1) % heroSlides.length)}
-          className="absolute right-3 sm:right-5 md:right-7 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/12 border border-white/25 flex items-center justify-center text-white hover:bg-white/25 transition-all backdrop-blur-sm"
-        ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+className="absolute right-3 sm:right-5 md:right-7 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/12 border border-white/25 hidden sm:flex items-center justify-center text-white hover:bg-white/25 transition-all backdrop-blur-sm"        ><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
       </section>
 
       {/* ════════════════════════════════════════════════════════

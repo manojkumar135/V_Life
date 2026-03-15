@@ -475,7 +475,7 @@ const DashboardPage: React.FC = () => {
 
             {/* ── Total Earnings card — mobile only ── */}
             <div
-              className="md:hidden rounded-2xl p-4 text-white relative overflow-hidden"
+              className="md:hidden rounded-2xl p-4 py-5 text-white relative overflow-hidden"
               style={{
                 background:
                   "linear-gradient(135deg, #0C3978 0%, #106187 50%, #16B8E4 100%)",
@@ -487,16 +487,16 @@ const DashboardPage: React.FC = () => {
               />
               <div className="flex items-center gap-3">
                 <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                  className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
                   style={{ background: "rgba(255,255,255,0.2)" }}
                 >
                   <FaRupeeSign className="text-white text-xl" />
                 </div>
-                <div>
+                <div className="">
                   <p className="text-white/80 text-xs font-medium">
                     Total Earnings
                   </p>
-                  <p className="text-white text-2xl font-bold">
+                  <p className="text-white text-2xl font-bold py-2">
                     ₹ {summary?.totalPayout?.toFixed(2) || "0.00"}
                   </p>
                 </div>
