@@ -44,47 +44,46 @@ const NAV_LINKS = [
 
 const MaverickHome = () => {
   const router = useRouter();
-  const [modalType,      setModalType]      = useState<ModalType>(null);
-  const [heroSlide,      setHeroSlide]      = useState(0);
-  const [mobileOpen,     setMobileOpen]     = useState(false);
-  const [scrolled,       setScrolled]       = useState(false);
-  /* ── NEW: track which section is currently in view ── */
-  const [activeSection,  setActiveSection]  = useState("home");
+  const [modalType,     setModalType]     = useState<ModalType>(null);
+  const [heroSlide,     setHeroSlide]     = useState(0);
+  const [mobileOpen,    setMobileOpen]    = useState(false);
+  const [scrolled,      setScrolled]      = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
 
   const openModal  = (type: ModalType) => setModalType(type);
   const closeModal = () => setModalType(null);
 
-  /* scroll shadow + active section tracker */
+  /* scroll shadow */
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  /* ── IntersectionObserver: highlight nav link for visible section ── */
+  /* ── Active section tracker — scroll-based, reliable ── */
   useEffect(() => {
     const sectionIds = NAV_LINKS.map(l => l.id);
-    const observers: IntersectionObserver[] = [];
 
-    sectionIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const obs = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) setActiveSection(id);
-        },
-        {
-          /* fire when section occupies ≥25% of viewport */
-          threshold: 0.25,
-          /* offset top by navbar height (~80px) */
-          rootMargin: "-80px 0px 0px 0px",
+    const getActive = () => {
+      /* pick the section whose top is closest to (but ≤) 120px from viewport top */
+      let best = sectionIds[0];
+      let bestTop = -Infinity;
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const top = el.getBoundingClientRect().top;
+        /* section is at or above the 120px line */
+        if (top <= 120 && top > bestTop) {
+          bestTop = top;
+          best = id;
         }
-      );
-      obs.observe(el);
-      observers.push(obs);
-    });
+      }
+      setActiveSection(best);
+    };
 
-    return () => observers.forEach(o => o.disconnect());
+    getActive(); /* run once on mount */
+    window.addEventListener("scroll", getActive, { passive: true });
+    return () => window.removeEventListener("scroll", getActive);
   }, []);
 
   /* hero auto-slide */
@@ -120,36 +119,11 @@ const MaverickHome = () => {
 
   /* ─── PRODUCTS ─── */
   const products = [
-    {
-      name: "Mobile",      tag: "Latest Tech",  category: "Technology",
-      desc: "Next-gen mobile devices packed with performance and style.",
-      downloadLabel: "Download Brochure",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760763474/ionizers_khpjpn.jpg",
-    },
-    {
-      name: "Electronics", tag: "Smart Living", category: "Electronics",
-      desc: "Smart home and lifestyle electronics for modern living.",
-      downloadLabel: "Download Catalogue",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760075754/DAB-E-electric-bike-1-1_ikf7xa.jpg",
-    },
-    {
-      name: "EV Bike",     tag: "Eco Mobility", category: "Transport",
-      desc: "Zero-emission electric bikes for sustainable commuting.",
-      downloadLabel: "Download Spec Sheet",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760075763/S500926465_1_qzukvk.webp",
-    },
-    {
-      name: "Ionizer",     tag: "Pure Air",     category: "Wellness",
-      desc: "Advanced air ionizers for a cleaner, healthier environment.",
-      downloadLabel: "Download Guide",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
-    },
-    {
-      name: "Health Kit",  tag: "Wellness",     category: "Health",
-      desc: "Comprehensive health kits for daily wellness routines.",
-      downloadLabel: "Download Health Guide",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1729073816/cld-sample-4.jpg",
-    },
+    { name: "Mobile",      tag: "Latest Tech",  category: "Technology", desc: "Next-gen mobile devices packed with performance and style.",         downloadLabel: "Download Brochure",     img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760763474/ionizers_khpjpn.jpg" },
+    { name: "Electronics", tag: "Smart Living", category: "Electronics", desc: "Smart home and lifestyle electronics for modern living.",             downloadLabel: "Download Catalogue",    img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760075754/DAB-E-electric-bike-1-1_ikf7xa.jpg" },
+    { name: "EV Bike",     tag: "Eco Mobility", category: "Transport",   desc: "Zero-emission electric bikes for sustainable commuting.",             downloadLabel: "Download Spec Sheet",   img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760075763/S500926465_1_qzukvk.webp" },
+    { name: "Ionizer",     tag: "Pure Air",     category: "Wellness",    desc: "Advanced air ionizers for a cleaner, healthier environment.",         downloadLabel: "Download Guide",        img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif" },
+    { name: "Health Kit",  tag: "Wellness",     category: "Health",      desc: "Comprehensive health kits for daily wellness routines.",              downloadLabel: "Download Health Guide", img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1729073816/cld-sample-4.jpg" },
   ];
 
   const features = [
@@ -178,23 +152,24 @@ const MaverickHome = () => {
   const fadeUp  = { hidden: { opacity: 0, y: 28 }, show: { opacity: 1, y: 0, transition: { duration: 0.55 } } };
   const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.12 } } };
 
-  /* ── helper: active link classes ── */
+  /* active link class */
   const navLinkClass = (id: string) =>
-    `px-3 lg:px-5 py-2 text-[13px] lg:text-[15px] font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+    `px-3 lg:px-5 py-2 text-[13px] lg:text-[17px] font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
       activeSection === id
-        ? "text-[#0C3978] bg-[#0C3978]/8 font-semibold"   /* active */
-        : "text-gray-600 hover:text-[#0C3978] hover:bg-[#0C3978]/5" /* idle */
+        ? "text-[#0C3978] bg-[#0C3978]/8 font-semibold"
+        : "text-gray-600 hover:text-[#0C3978] hover:bg-[#0C3978]/5"
     }`;
 
-  /* ── shared section scroll offset class — keeps content below floating navbar ── */
-  /* scroll-mt-24 = 96px offset, so anchor scroll doesn't hide under navbar */
-  const sectionClass = "scroll-mt-24";
+  const sectionClass = "scroll-mt-10 sm:scroll-mt-10 md:scroll-mt-10";
 
   return (
     <div id="home" className="min-h-screen flex flex-col bg-white font-sans">
 
       {/* ════════════════════════════════════════════════════════
-          NAVBAR — floating pill, active link highlights
+          NAVBAR
+          • Desktop (lg+): logo | center nav links | Login + SignUp buttons
+          • Mobile/md (< lg): logo | hamburger only
+            → hamburger opens dropdown with nav links + Login + SignUp
       ════════════════════════════════════════════════════════ */}
       <div className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-5 md:px-8 pt-3 sm:pt-4">
         <motion.nav
@@ -205,26 +180,25 @@ const MaverickHome = () => {
             w-full max-w-7xl mx-auto
             flex items-center justify-between
             px-4 sm:px-5 md:px-7
-            h-[52px] sm:h-[56px] md:h-[60px]
+            h-13 sm:h-14 md:h-15
             rounded-xl sm:rounded-2xl
             transition-all duration-300
             ${scrolled
-              ? "bg-white/95 backdrop-blur-2xl shadow-[0_8px_32px_rgba(12,57,120,0.18)] border border-gray-200/80"
-              : "bg-white/80 backdrop-blur-2xl shadow-[0_4px_24px_rgba(12,57,120,0.14)] border border-white/70"
+              ? "bg-white/90 backdrop-blur-2xl shadow-[0_8px_32px_rgba(12,57,120,0.18)] border border-gray-200/80"
+              : "bg-white/95 backdrop-blur-2xl shadow-[0_4px_24px_rgba(12,57,120,0.14)] border border-white/70"
             }
           `}
         >
-          {/* Logo */}
-          <a href="#home" className="flex-shrink-0 flex items-center" onClick={() => setMobileOpen(false)}>
-            <Image src={Images.MaverickLogo} alt="Maverick" className="h-9 sm:h-10 md:h-12 w-auto" priority />
+          {/* ── Logo ── */}
+          <a href="#home" className="shrink-0 flex items-center" onClick={() => setMobileOpen(false)}>
+            <Image src={Images.MaverickLogo} alt="Maverick" className="h-10 sm:h-12 md:h-13 w-auto" priority />
           </a>
 
-          {/* Desktop nav links — centered, with active highlight */}
-          <div className="hidden md:flex items-center gap-0.5 absolute left-1/2 -translate-x-1/2">
+          {/* ── Desktop nav links (lg+) — centered ── */}
+          <div className="hidden lg:flex items-center gap-0.5 absolute left-1/2 -translate-x-1/2">
             {NAV_LINKS.map(link => (
               <a key={link.id} href={link.href} className={navLinkClass(link.id)}>
                 {link.label}
-                {/* active underline dot */}
                 {activeSection === link.id && (
                   <motion.span
                     layoutId="nav-active-dot"
@@ -235,48 +209,61 @@ const MaverickHome = () => {
             ))}
           </div>
 
-          {/* Desktop auth buttons */}
-          <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+          {/* ── Desktop auth buttons (lg+) ── */}
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
             <button
               onClick={() => router.push("/auth/login")}
-              className="px-4 lg:px-5 py-2 text-[13px] lg:text-sm font-semibold text-[#0C3978] border border-[#0C3978]/25 rounded-lg hover:bg-[#0C3978] hover:text-white hover:border-[#0C3978] transition-all duration-200"
-            >Login</button>
+              className="px-4 lg:px-5 py-2 text-[13px] lg:text-sm font-semibold text-[#0C3978] border border-[#0C3978]/75 rounded-lg hover:bg-gray-800 hover:text-white hover:border-[#0C3978] transition-all duration-200"
+            >LOGIN</button>
             <button
               onClick={() => router.push("/auth/register")}
-              className="px-4 lg:px-5 py-2 text-[13px] lg:text-sm font-bold text-white rounded-lg bg-gradient-to-r from-[#0C3978] to-[#16B8E4] shadow-md shadow-[#16B8E4]/25 hover:shadow-lg hover:shadow-[#16B8E4]/40 hover:-translate-y-0.5 transition-all duration-200"
-            >Sign Up</button>
+              className="px-4 lg:px-5 py-2 text-[13px] lg:text-sm font-semibold text-white rounded-lg bg-linear-to-r from-[#0C3978] to-[#16B8E4] shadow-md shadow-[#16B8E4]/25 hover:shadow-lg hover:shadow-[#16B8E4]/40 hover:-translate-y-0.5 transition-all duration-200"
+            >SIGN UP</button>
           </div>
 
-          {/* Mobile: auth buttons + burger */}
-          <div className="flex md:hidden items-center gap-2">
-            <button onClick={() => router.push("/auth/login")}
-              className="px-3 py-1.5 text-[11px] font-semibold text-[#0C3978] border border-[#0C3978]/30 rounded-lg hover:bg-[#0C3978]/8 transition-all"
-            >Login</button>
-            <button onClick={() => router.push("/auth/register")}
-              className="px-3 py-1.5 text-[11px] font-bold text-white rounded-lg bg-gradient-to-r from-[#0C3978] to-[#16B8E4] shadow-sm transition-all"
-            >Sign Up</button>
-            <button onClick={() => setMobileOpen(v => !v)}
-              className="ml-1 p-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition" aria-label="Menu"
-            >
-              {mobileOpen ? <FaTimes size={16}/> : <FaBars size={16}/>}
-            </button>
-          </div>
+          {/* ── Hamburger only (< lg) — no buttons here ── */}
+          <button
+            onClick={() => setMobileOpen(v => !v)}
+            className="lg:hidden p-2 rounded-xl text-[#0C3978] hover:bg-[#0C3978]/8 transition-all"
+            aria-label="Menu"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {mobileOpen
+                ? <motion.span key="x"    initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}><FaTimes  size={18}/></motion.span>
+                : <motion.span key="bars" initial={{ rotate:  90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}><FaBars  size={18}/></motion.span>
+              }
+            </AnimatePresence>
+          </button>
         </motion.nav>
 
-        {/* Mobile dropdown */}
+        {/* ── Mobile / md dropdown — nav links + Login + SignUp ── */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+              initial={{ opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0,   scale: 1    }}
+              exit={{   opacity: 0, y: -10, scale: 0.98 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-7xl mx-auto mt-2 rounded-xl bg-white/95 backdrop-blur-2xl border border-gray-200/80 shadow-[0_8px_32px_rgba(12,57,120,0.14)] overflow-hidden"
+              className="lg:hidden w-full max-w-7xl mx-auto mt-2 rounded-xl bg-white/98 backdrop-blur-2xl border border-gray-200/80 shadow-[0_8px_32px_rgba(12,57,120,0.14)] overflow-hidden"
             >
-              <div className="px-4 py-3 flex flex-col gap-0.5">
+               {/* divider + auth buttons inside dropdown */}
+              <div className="px-4 py-3 mt-1 border-t border-gray-100 flex gap-2.5">
+                <button
+                  onClick={() => { router.push("/auth/login"); setMobileOpen(false); }}
+                  className="flex-1 py-2.5 text-sm font-semibold text-[#0C3978] border border-[#0C3978]/30 rounded-lg hover:bg-[#0C3978] hover:text-white hover:border-[#0C3978] transition-all"
+                >LOGIN</button>
+                <button
+                  onClick={() => { router.push("/auth/register"); setMobileOpen(false); }}
+                  className="flex-1 py-2.5 text-sm font-bold text-white rounded-lg bg-linear-to-r from-[#0C3978] to-[#16B8E4] shadow-md hover:shadow-lg hover:shadow-[#16B8E4]/30 transition-all"
+                >SIGN UP</button>
+              </div>
+              <div className="px-4 pt-3 pb-1 flex flex-col gap-0.5">
                 {NAV_LINKS.map(link => (
-                  <a key={link.id} href={link.href} onClick={() => setMobileOpen(false)}
-                    className={`px-4 py-2.5 text-sm rounded-lg transition flex items-center justify-between ${
+                  <a
+                    key={link.id}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-4 py-2.5 text-sm rounded-lg transition-all flex items-center justify-between ${
                       activeSection === link.id
                         ? "text-[#0C3978] bg-[#0C3978]/8 font-semibold"
                         : "text-gray-700 hover:text-[#0C3978] hover:bg-[#0C3978]/5 font-medium"
@@ -284,20 +271,22 @@ const MaverickHome = () => {
                   >
                     {link.label}
                     {activeSection === link.id && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#16B8E4] flex-shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#16B8E4] shrink-0" />
                     )}
                   </a>
                 ))}
               </div>
+
+             
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       {/* ════════════════════════════════════════════════════════
-          HERO — full-width image slider (UNCHANGED)
+          HERO — UNCHANGED
       ════════════════════════════════════════════════════════ */}
-      <section className="relative w-full h-screen min-h-[560px] overflow-hidden">
+      <section className="relative w-full h-screen min-h-140 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={heroSlide}
@@ -308,22 +297,22 @@ const MaverickHome = () => {
             className="absolute inset-0"
           >
             <img src={heroSlides[heroSlide].img} alt="" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#051e45]/90 via-[#0C3978]/65 to-[#0C3978]/20" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
+            <div className="absolute inset-0 bg-linear-to-r from-[#051e45]/90 via-[#0C3978]/65 to-[#0C3978]/20" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-black/10" />
           </motion.div>
         </AnimatePresence>
 
         <div className="relative z-10 h-full flex items-center">
-          <div className="w-full max-w-7xl mx-auto px-5 sm:px-8 md:px-12 lg:px-16">
+          <div className="w-full max-w-8xl mx-auto px-5 sm:px-8 md:px-12 lg:px-16">
             <AnimatePresence mode="wait">
               <motion.div
                 key={heroSlide}
                 initial="hidden" animate="show" exit={{ opacity: 0, y: -10 }} variants={stagger}
-                className="max-w-2xl pt-20 sm:pt-24"
+                className="max-w-3xl pt-6 sm:pt-10 md:pt-15 md:ml-8"
               >
                 <motion.div variants={fadeUp} className="mb-5 sm:mb-7">
                   <span className="inline-flex items-center gap-2 bg-white/12 border border-white/25 text-white text-[11px] sm:text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#16B8E4] animate-pulse flex-shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#16B8E4] animate-pulse shrink-0" />
                     {heroSlides[heroSlide].tag}
                   </span>
                 </motion.div>
@@ -333,7 +322,7 @@ const MaverickHome = () => {
                   style={{ fontSize: "clamp(2.6rem, 6vw, 5rem)" }}
                 >
                   {heroSlides[heroSlide].title}<br />
-                  <span className="bg-gradient-to-r from-[#16B8E4] via-[#38d0f5] to-white bg-clip-text text-transparent">
+                  <span className="bg-linear-to-r from-[#16B8E4] via-[#38d0f5] to-white bg-clip-text text-transparent">
                     {heroSlides[heroSlide].brand}
                   </span>
                 </motion.h1>
@@ -344,10 +333,10 @@ const MaverickHome = () => {
 
                 <motion.div variants={fadeUp} className="flex flex-wrap gap-3 sm:gap-4">
                   <button onClick={() => router.push("/auth/register")}
-                    className="flex items-center gap-2.5 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#0C3978] to-[#16B8E4] text-white font-bold text-sm sm:text-base rounded-xl shadow-xl shadow-[#16B8E4]/30 hover:shadow-[#16B8E4]/50 hover:-translate-y-1 transition-all duration-200"
+                    className="flex items-center gap-2.5 px-6 sm:px-8 py-2 sm:py-2 bg-linear-to-r from-[#0C3978] to-[#16B8E4] text-white font-bold text-sm sm:text-base rounded-xl shadow-xl shadow-[#16B8E4]/30 hover:shadow-[#16B8E4]/50 hover:-translate-y-1 transition-all duration-200 border-[0.2px] border-white/70"
                   >Get Started <FaArrowRight className="text-xs sm:text-sm" /></button>
                   <button onClick={() => router.push("/auth/login")}
-                    className="flex items-center gap-2.5 px-6 sm:px-8 py-3 sm:py-4 border-2 border-white/45 text-white font-semibold text-sm sm:text-base rounded-xl hover:bg-white/12 hover:border-white/75 transition-all duration-200"
+                    className="flex items-center gap-2.5 px-6 sm:px-8 py-2 sm:py-2 border-2 border-white/85 text-white font-semibold text-sm sm:text-base rounded-xl hover:bg-white/12 hover:border-white/75 transition-all duration-200"
                   >Login</button>
                 </motion.div>
 
@@ -361,7 +350,7 @@ const MaverickHome = () => {
                   <div className="hidden sm:block h-8 w-px bg-white/20" />
                   <div className="hidden sm:flex -space-x-2">
                     {["RK","PS","AM","SK"].map((init, i) => (
-                      <div key={i} className="w-7 h-7 rounded-full border-2 border-white/60 bg-gradient-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white text-[9px] font-bold">{init}</div>
+                      <div key={i} className="w-7 h-7 rounded-full border-2 border-white/60 bg-linear-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white text-[9px] font-bold">{init}</div>
                     ))}
                     <div className="w-7 h-7 rounded-full border-2 border-white/60 bg-white/20 flex items-center justify-center text-white text-[8px] font-bold">+9k</div>
                   </div>
@@ -387,9 +376,7 @@ const MaverickHome = () => {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          ALL SECTIONS — scroll-mt-24 added to each section that
-          has an id, so anchor links don't hide content under navbar.
-          Everything else inside is COMPLETELY UNCHANGED.
+          ALL SECTIONS BELOW — COMPLETELY UNCHANGED
       ════════════════════════════════════════════════════════ */}
 
       {/* PRODUCTS */}
@@ -398,7 +385,7 @@ const MaverickHome = () => {
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-10 sm:mb-14">
             <motion.p variants={fadeUp} className="text-[#16B8E4] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-2 sm:mb-3">Our Products</motion.p>
             <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-3 sm:mb-4">
-              Explore Our{" "}<span className="bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Innovative Range</span>
+              Explore Our{" "}<span className="bg-linear-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Innovative Range</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-gray-500 max-w-lg mx-auto text-xs sm:text-sm leading-relaxed">Science-backed, quality-driven products. Download any product guide below.</motion.p>
           </motion.div>
@@ -420,7 +407,7 @@ const MaverickHome = () => {
                   <a href="#" onClick={e => e.preventDefault()}
                     className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-[#0C3978] border border-[#0C3978]/20 rounded-lg px-3 py-2 hover:bg-[#0C3978] hover:text-white hover:border-[#0C3978] transition-all group/dl"
                   >
-                    <FaDownload className="text-[#16B8E4] group-hover/dl:text-white transition-colors flex-shrink-0 text-[10px]" />
+                    <FaDownload className="text-[#16B8E4] group-hover/dl:text-white transition-colors shrink-0 text-[10px]" />
                     <span className="truncate">{p.downloadLabel}</span>
                   </a>
                 </div>
@@ -436,14 +423,14 @@ const MaverickHome = () => {
       </section>
 
       {/* WHY CHOOSE */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-gradient-to-br from-[#0C3978] to-[#0a2d60] relative overflow-hidden">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-linear-to-br from-[#0C3978] to-[#0a2d60] relative overflow-hidden">
         <div className="absolute -top-20 -right-20 w-72 sm:w-96 h-72 sm:h-96 rounded-full bg-[#16B8E4]/10 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 -left-20 w-64 sm:w-80 h-64 sm:h-80 rounded-full bg-white/5 blur-3xl pointer-events-none" />
         <div className="max-w-6xl mx-auto relative z-10">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-10 sm:mb-14">
             <motion.p variants={fadeUp} className="text-[#16B8E4] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-2 sm:mb-3">Why Maverick</motion.p>
             <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-white leading-tight">
-              Built for{" "}<span className="bg-gradient-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">Real Impact</span>
+              Built for{" "}<span className="bg-linear-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">Real Impact</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-white/55 mt-3 max-w-xl mx-auto text-xs sm:text-sm">Everything you need to grow personally, financially, and professionally — all in one ecosystem.</motion.p>
           </motion.div>
@@ -452,7 +439,7 @@ const MaverickHome = () => {
               <motion.div key={idx} variants={fadeUp} whileHover={{ y: -5 }}
                 className="group bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-7 hover:bg-white/10 hover:border-[#16B8E4]/40 transition-all duration-300"
               >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-[#16B8E4] to-[#0C3978] flex items-center justify-center text-white text-lg sm:text-xl mb-4 sm:mb-5 shadow-lg group-hover:scale-110 transition-transform">{f.icon}</div>
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-linear-to-br from-[#16B8E4] to-[#0C3978] flex items-center justify-center text-white text-lg sm:text-xl mb-4 sm:mb-5 shadow-lg group-hover:scale-110 transition-transform">{f.icon}</div>
                 <h3 className="text-white font-bold text-base sm:text-lg mb-1.5 sm:mb-2">{f.title}</h3>
                 <p className="text-white/50 text-xs sm:text-sm leading-relaxed">{f.desc}</p>
               </motion.div>
@@ -462,9 +449,9 @@ const MaverickHome = () => {
       </section>
 
       {/* STORY OF WELLNESS */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-gradient-to-br from-gray-50 via-white to-blue-50/40 overflow-hidden">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-linear-to-br from-gray-50 via-white to-blue-50/40 overflow-hidden">
         <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-10 lg:gap-14 items-center">
-          <motion.div initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="w-full lg:w-2/5 flex-shrink-0">
+          <motion.div initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }} className="w-full lg:w-2/5 shrink-0">
             <div className="relative w-full max-w-xs sm:max-w-sm mx-auto">
               <div className="rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
                 <img src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1729073810/samples/two-ladies.jpg" alt="Wellness" className="w-full h-64 sm:h-72 lg:h-80 xl:h-96 object-cover" />
@@ -472,10 +459,10 @@ const MaverickHome = () => {
               <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
                 className="absolute -bottom-4 -right-4 sm:-bottom-5 sm:-right-5 bg-white rounded-xl sm:rounded-2xl shadow-xl px-4 py-3 flex items-center gap-2.5 border border-gray-100"
               >
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white"><FaLeaf className="text-sm" /></div>
+                <div className="w-9 h-9 rounded-lg bg-linear-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white"><FaLeaf className="text-sm" /></div>
                 <div>
                   <p className="text-[10px] text-gray-400 font-medium leading-none">Members thriving</p>
-                  <p className="text-base font-extrabold bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent leading-tight">10,000+</p>
+                  <p className="text-base font-extrabold bg-linear-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent leading-tight">10,000+</p>
                 </div>
               </motion.div>
               <div className="absolute -top-3 -left-3 w-20 h-20 rounded-full border-4 border-[#16B8E4]/20 pointer-events-none" />
@@ -484,7 +471,7 @@ const MaverickHome = () => {
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="flex-1">
             <motion.p variants={fadeUp} className="text-[#16B8E4] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-2 sm:mb-3">Our Philosophy</motion.p>
             <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#0c3978] mb-4 sm:mb-6 leading-tight">
-              STORY OF{" "}<span className="bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">WELLNESS</span>
+              STORY OF{" "}<span className="bg-linear-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">WELLNESS</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-[#778598] mb-3 sm:mb-4 leading-relaxed text-sm">The <strong className="text-[#0c3978]">"Story of Wellness"</strong> reflects the journey toward complete well-being — physical, mental, emotional, and spiritual — emphasizing balance and harmony in all aspects of life.</motion.p>
             <motion.p variants={fadeUp} className="text-[#778598] mb-5 sm:mb-6 leading-relaxed text-sm">Wellness begins with an awakening — realizing the need to care for mind, body, and soul through purposeful living.</motion.p>
@@ -508,21 +495,21 @@ const MaverickHome = () => {
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-10 sm:mb-14">
             <motion.p variants={fadeUp} className="text-[#16B8E4] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-2 sm:mb-3">About Us</motion.p>
             <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900">
-              About{" "}<span className="bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Maverick</span>
+              About{" "}<span className="bg-linear-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Maverick</span>
             </motion.h2>
           </motion.div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-7">
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
-              className="relative bg-gradient-to-br from-[#f0f7ff] to-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 border border-[#e0eeff] hover:shadow-2xl hover:border-[#16B8E4]/40 transition-all duration-300 overflow-hidden"
+              className="relative bg-linear-to-br from-[#f0f7ff] to-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 border border-[#e0eeff] hover:shadow-2xl hover:border-[#16B8E4]/40 transition-all duration-300 overflow-hidden"
             >
-              <div className="absolute top-0 right-0 w-32 sm:w-40 h-32 sm:h-40 bg-gradient-to-bl from-[#16B8E4]/10 to-transparent rounded-bl-full pointer-events-none" />
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white text-lg sm:text-xl mb-5 shadow-lg"><FaUsers /></div>
+              <div className="absolute top-0 right-0 w-32 sm:w-40 h-32 sm:h-40 bg-linear-to-bl from-[#16B8E4]/10 to-transparent rounded-bl-full pointer-events-none" />
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-linear-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white text-lg sm:text-xl mb-5 shadow-lg"><FaUsers /></div>
               <h3 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-3 sm:mb-4">Who We Are</h3>
               <p className="text-gray-600 leading-relaxed text-sm mb-3">We are an emerging Direct Selling company on a mission to manifest{" "}<span className="font-bold text-[#0C3978]">THE WAY TO HAPPINESS</span> — helping people achieve balance, freedom, financial abundance, and fulfillment.</p>
               <p className="text-gray-600 leading-relaxed text-sm">At <span className="font-bold text-[#16B8E4]">Maverick</span>, we empower individuals with a uniquely blended hybrid opportunity that enables them to grow on their own terms.</p>
             </motion.div>
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.1 }}
-              className="relative bg-gradient-to-br from-[#0C3978] to-[#0a2d60] rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 overflow-hidden hover:shadow-2xl transition-all duration-300"
+              className="relative bg-linear-to-br from-[#0C3978] to-[#0a2d60] rounded-2xl sm:rounded-3xl p-6 sm:p-8 md:p-10 overflow-hidden hover:shadow-2xl transition-all duration-300"
             >
               <div className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full bg-[#16B8E4]/10 blur-2xl pointer-events-none" />
               <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-[#16B8E4]/20 border border-[#16B8E4]/30 flex items-center justify-center text-[#16B8E4] text-lg sm:text-xl mb-5"><FaRocket /></div>
@@ -539,12 +526,12 @@ const MaverickHome = () => {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-blue-50/30">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-linear-to-br from-gray-50 to-blue-50/30">
         <div className="max-w-6xl mx-auto">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-12 sm:mb-16">
             <motion.p variants={fadeUp} className="text-[#16B8E4] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-2 sm:mb-3">Our Process</motion.p>
             <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900">
-              Simple Steps to{" "}<span className="bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Success</span>
+              Simple Steps to{" "}<span className="bg-linear-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Success</span>
             </motion.h2>
           </motion.div>
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-7 relative">
@@ -554,7 +541,7 @@ const MaverickHome = () => {
                 className="relative z-10 flex flex-col items-center text-center bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-sm hover:shadow-xl border border-gray-100 hover:border-[#16B8E4]/40 transition-all duration-300"
               >
                 <div className="relative mb-5 sm:mb-6">
-                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg shadow-[#16B8E4]/20">{step.icon}</div>
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-linear-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg shadow-[#16B8E4]/20">{step.icon}</div>
                   <span className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white border-2 border-[#16B8E4] text-[#0C3978] text-[10px] sm:text-xs font-extrabold flex items-center justify-center shadow-sm">{idx+1}</span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-extrabold text-gray-900 mb-2 sm:mb-3">{step.title}</h3>
@@ -588,25 +575,26 @@ const MaverickHome = () => {
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="text-center mb-10 sm:mb-14">
             <motion.p variants={fadeUp} className="text-[#16B8E4] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-2 sm:mb-3">Community</motion.p>
             <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900">
-              Hear from Our{" "}<span className="bg-gradient-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Members</span>
+              Hear from Our{" "}<span className="bg-linear-to-r from-[#0C3978] to-[#16B8E4] bg-clip-text text-transparent">Members</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-gray-500 mt-3 max-w-lg mx-auto text-xs sm:text-sm">Real stories from real members who chose to grow with Maverick.</motion.p>
           </motion.div>
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {testimonials.map((t, idx) => (
               <motion.div key={idx} variants={fadeUp} whileHover={{ y: -7 }}
-                className="relative bg-gradient-to-br from-gray-50 to-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:border-[#16B8E4]/25 transition-all duration-300 flex flex-col"
+                className="relative bg-linear-to-br from-gray-50 to-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm hover:shadow-xl hover:border-[#16B8E4]/25 transition-all duration-300 flex flex-col"
               >
-                <div className="absolute top-4 right-5 text-5xl font-serif text-[#0C3978]/6 leading-none select-none pointer-events-none">"</div>
-                <div className="flex gap-1 text-yellow-400 text-[10px] sm:text-xs mb-3 sm:mb-4">{[...Array(5)].map((_,i)=><FaStar key={i}/>)}</div>
-                <p className="text-gray-600 text-xs sm:text-sm leading-relaxed italic flex-1 mb-5 sm:mb-6">{t.text}</p>
-                <div className="flex items-center gap-3 pt-4 sm:pt-5 border-t border-gray-100">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white font-extrabold text-xs sm:text-sm flex-shrink-0">{t.initials}</div>
+                <div className="flex items-center gap-3 pt-2 sm:pt-3 mb-4 border-b border-gray-100">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-linear-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white font-extrabold text-xs sm:text-sm shrink-0">{t.initials}</div>
                   <div>
                     <p className="text-xs sm:text-sm font-bold text-gray-900">{t.name}</p>
                     <p className="text-[10px] sm:text-xs text-[#16B8E4] font-medium">{t.role}</p>
                   </div>
                 </div>
+                <div className="absolute top-4 right-5 text-5xl font-serif text-[#0C3978]/6 leading-none select-none pointer-events-none">"</div>
+                <div className="flex gap-1 text-yellow-400 text-[10px] sm:text-xs mb-3 sm:mb-4">{[...Array(5)].map((_,i)=><FaStar key={i}/>)}</div>
+                <p className="text-gray-600 text-xs sm:text-sm leading-relaxed italic flex-1 mb-5 sm:mb-6">{t.text}</p>
+                
               </motion.div>
             ))}
           </motion.div>
@@ -614,25 +602,25 @@ const MaverickHome = () => {
       </section>
 
       {/* QUAD-CORE PLAN */}
-      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-gradient-to-br from-gray-50 to-blue-50/30">
+      <section className="px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-linear-to-br from-gray-50 to-blue-50/30">
         <div className="max-w-6xl mx-auto">
-          <div className="relative bg-gradient-to-br from-[#0C3978] to-[#061e4d] rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
+          <div className="relative bg-linear-to-br from-[#0C3978] to-[#061e4d] rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
             <div className="absolute -top-16 -right-16 w-56 sm:w-64 h-56 sm:h-64 rounded-full bg-[#16B8E4]/15 blur-3xl pointer-events-none" />
             <div className="absolute -bottom-16 -left-16 w-56 sm:w-64 h-56 sm:h-64 rounded-full bg-[#16B8E4]/10 blur-3xl pointer-events-none" />
             <div className="relative z-10 flex flex-col lg:flex-row gap-8 lg:gap-12 p-6 sm:p-10 lg:p-14 xl:p-16 items-start lg:items-center">
               <motion.div initial={{ opacity: 0, x: -35 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.65 }} className="flex-1">
                 <p className="text-[#16B8E4] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-3 sm:mb-4">Maverick's Promise</p>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-4 sm:mb-5 leading-snug">
-                  Entrepreneurial Growth &<br /><span className="bg-gradient-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">Vertical Mobility</span>
+                  Entrepreneurial Growth &<br /><span className="bg-linear-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">Vertical Mobility</span>
                 </h2>
                 <p className="text-white/60 text-xs sm:text-sm leading-relaxed mb-6">Maverick nurtures people with an entrepreneurial mindset through exclusive 4-phase training via Maverick Academy. Financial abundance is not a dream — it's a structured roadmap.</p>
                 <div className="flex flex-col gap-2 mb-6 sm:mb-8">
                   {["Success without growth is hollow","Built for Life Fulfillment"].map((line,i)=>(
-                    <div key={i} className="flex items-center gap-2 text-white/75 text-xs sm:text-sm"><FaCheckCircle className="text-[#16B8E4] flex-shrink-0 text-xs" />{line}</div>
+                    <div key={i} className="flex items-center gap-2 text-white/75 text-xs sm:text-sm"><FaCheckCircle className="text-[#16B8E4] shrink-0 text-xs" />{line}</div>
                   ))}
                 </div>
                 <button onClick={() => router.push("/auth/register")}
-                  className="flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-3.5 bg-gradient-to-r from-[#16B8E4] to-[#0C3978] text-white font-bold text-sm rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all w-fit"
+                  className="flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-3.5 bg-linear-to-r from-[#16B8E4] to-[#0C3978] text-white font-bold text-sm rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all w-fit"
                 >Start Your Journey <FaArrowRight /></button>
               </motion.div>
               <motion.div initial={{ opacity: 0, x: 35 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.65, delay: 0.15 }}
@@ -641,7 +629,7 @@ const MaverickHome = () => {
                 {planTags.map((tag, idx) => (
                   <motion.div key={idx} initial={{ opacity: 0, scale: 0.88 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ delay: idx * 0.06, duration: 0.4 }} whileHover={{ scale: 1.04 }}
                     className="flex items-center gap-2 bg-white/8 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 text-white text-[11px] sm:text-sm font-semibold hover:bg-white/14 hover:border-[#16B8E4]/35 transition-all"
-                  ><FaCheckCircle className="text-[#16B8E4] flex-shrink-0 text-[10px] sm:text-xs" />{tag}</motion.div>
+                  ><FaCheckCircle className="text-[#16B8E4] shrink-0 text-[10px] sm:text-xs" />{tag}</motion.div>
                 ))}
               </motion.div>
             </div>
@@ -650,26 +638,26 @@ const MaverickHome = () => {
       </section>
 
       {/* CONTACT CTA */}
-      <section id="contact" className={`${sectionClass} px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-gradient-to-r from-gray-900 to-[#061e4d] text-white relative overflow-hidden`}>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(22,184,228,0.10)_0%,transparent_70%)] pointer-events-none" />
+      <section id="contact" className={`${sectionClass} px-4 sm:px-6 md:px-10 lg:px-16 py-16 sm:py-20 bg-linear-to-r from-gray-900 to-[#061e4d] text-white relative overflow-hidden`}>
+        <div className="absolute inset-0 bg-[radial-linear(ellipse_at_center,rgba(22,184,228,0.10)_0%,transparent_70%)] pointer-events-none" />
         <div className="max-w-6xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true }} variants={stagger}>
             <motion.p variants={fadeUp} className="text-[#16B8E4] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-3 sm:mb-4">Get In Touch</motion.p>
             <motion.h2 variants={fadeUp} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold mb-4 sm:mb-5 leading-tight">
-              Take the Leap with{" "}<span className="bg-gradient-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">Maverick</span>
+              Take the Leap with{" "}<span className="bg-linear-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">Maverick</span>
             </motion.h2>
             <motion.p variants={fadeUp} className="text-white/55 text-sm sm:text-base mb-6 sm:mb-8 leading-relaxed">Join a movement built on innovation, integrity, and inspiration. Let's redefine success — together.</motion.p>
             <motion.div variants={fadeUp} className="flex flex-wrap gap-3 mb-6 sm:mb-8">
-              <button onClick={() => router.push("/auth/register")} className="flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-gradient-to-r from-[#0C3978] to-[#16B8E4] text-white font-bold text-sm rounded-lg shadow-lg hover:shadow-[#16B8E4]/30 hover:-translate-y-0.5 transition-all">Join Now <FaArrowRight /></button>
+              <button onClick={() => router.push("/auth/register")} className="flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 bg-linear-to-r from-[#0C3978] to-[#16B8E4] text-white font-bold text-sm rounded-lg shadow-lg hover:shadow-[#16B8E4]/30 hover:-translate-y-0.5 transition-all">Join Now <FaArrowRight /></button>
               <button onClick={() => router.push("/auth/login")} className="flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border-2 border-white/25 text-white font-semibold text-sm rounded-lg hover:bg-white/8 hover:border-white/50 transition-all">Login to Account</button>
             </motion.div>
             <motion.div variants={fadeUp} className="flex flex-col gap-2.5">
               <a href="mailto:info@maverick.com" className="flex items-center gap-3 text-white/55 hover:text-white transition text-sm">
-                <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center flex-shrink-0"><FaEnvelope className="text-[#16B8E4] text-xs" /></div>
+                <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center shrink-0"><FaEnvelope className="text-[#16B8E4] text-xs" /></div>
                 info@maverick.com
               </a>
               <a href="tel:+10095447818" className="flex items-center gap-3 text-white/55 hover:text-white transition text-sm">
-                <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center flex-shrink-0"><FaPhoneAlt className="text-[#16B8E4] text-xs" /></div>
+                <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center shrink-0"><FaPhoneAlt className="text-[#16B8E4] text-xs" /></div>
                 +1 (009) 544-7818
               </a>
             </motion.div>
@@ -686,7 +674,7 @@ const MaverickHome = () => {
                 { icon: <FaLeaf />,   title: "Start Earning",      desc: "Activate your plan and begin your journey" },
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white text-xs sm:text-sm flex-shrink-0 mt-0.5">{item.icon}</div>
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-linear-to-br from-[#0C3978] to-[#16B8E4] flex items-center justify-center text-white text-xs sm:text-sm shrink-0 mt-0.5">{item.icon}</div>
                   <div>
                     <p className="text-xs sm:text-sm font-bold text-white leading-tight">{item.title}</p>
                     <p className="text-[11px] sm:text-xs text-white/45 mt-0.5">{item.desc}</p>
@@ -695,7 +683,7 @@ const MaverickHome = () => {
               ))}
             </div>
             <button onClick={() => router.push("/auth/register")}
-              className="w-full mt-6 sm:mt-8 py-3 sm:py-3.5 bg-gradient-to-r from-[#0C3978] to-[#16B8E4] text-white font-bold text-sm rounded-lg hover:shadow-lg hover:shadow-[#16B8E4]/25 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
+              className="w-full mt-6 sm:mt-8 py-3 sm:py-3.5 bg-linear-to-r from-[#0C3978] to-[#16B8E4] text-white font-bold text-sm rounded-lg hover:shadow-lg hover:shadow-[#16B8E4]/25 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
             >Create Free Account <FaArrowRight /></button>
           </motion.div>
         </div>
@@ -706,11 +694,13 @@ const MaverickHome = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 pb-8 sm:pb-10 border-b border-white/6">
             <div className="sm:col-span-2">
-              <div className="mb-3 sm:mb-4"><Image src={Images.MaverickLogo} alt="Maverick" className="h-8 sm:h-9 w-auto brightness-0 invert opacity-85" /></div>
+              <div className="mb-3 sm:mb-4"><Image src={Images.MaverickLogo} alt="Maverick"
+               className="h-8 sm:h-9 w-auto brightness-0 invert opacity-85" />
+               </div>
               <p className="text-xs sm:text-sm leading-relaxed text-gray-500 max-w-sm mb-4 sm:mb-6">Pioneering a new era of opportunity, community, and growth. Empowering every individual to live their best life through wellness and smart earning.</p>
               <div className="flex gap-2">
                 {[{icon:<FaFacebookF/>,href:"#"},{icon:<FaInstagram/>,href:"#"},{icon:<FaTwitter/>,href:"#"},{icon:<FaLinkedinIn/>,href:"#"}].map((s,i)=>(
-                  <a key={i} href={s.href} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/5 border border-white/8 flex items-center justify-center text-gray-500 hover:text-white hover:bg-gradient-to-br hover:from-[#0C3978] hover:to-[#16B8E4] hover:border-transparent transition-all text-xs sm:text-sm">{s.icon}</a>
+                  <a key={i} href={s.href} className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-white/5 border border-white/8 flex items-center justify-center text-gray-500 hover:text-white hover:bg-linear-to-br hover:from-[#0C3978] hover:to-[#16B8E4] hover:border-transparent transition-all text-xs sm:text-sm">{s.icon}</a>
                 ))}
               </div>
             </div>
@@ -731,7 +721,7 @@ const MaverickHome = () => {
                 {products.map((p,i)=>(
                   <li key={i}>
                     <a href="#products" className="flex items-center gap-1.5 hover:text-[#16B8E4] transition group/fp">
-                      <FaDownload className="text-[8px] text-[#16B8E4] opacity-0 group-hover/fp:opacity-100 transition flex-shrink-0" />{p.name}
+                      <FaDownload className="text-[8px] text-[#16B8E4] opacity-0 group-hover/fp:opacity-100 transition shrink-0" />{p.name}
                     </a>
                   </li>
                 ))}
