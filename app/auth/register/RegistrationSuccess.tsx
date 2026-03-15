@@ -23,7 +23,7 @@ export default function RegistrationSuccess() {
       <div className="bg-white w-full max-w-sm rounded-2xl shadow-lg p-4 text-center mx-3">
         {/* Tick Icon */}
         <div className="flex justify-center mb-2 relative">
-          <div className="w-18 h-18 rounded-full bg-gradient-to-tl from-[#0C3978] via-[#106187] to-[#16B8E4] flex items-center justify-center shadow-lg">
+          <div className="w-18 h-18 rounded-full bg-linear-to-tl from-[#0C3978] via-[#106187] to-[#16B8E4] flex items-center justify-center shadow-lg">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"

@@ -63,6 +63,40 @@ interface LinkButtonProps {
   onClick: () => void;
 }
 
+function resolveBadge(user: any): string {
+  const status = (user?.user_status || user?.status || "").toLowerCase();
+  const notes = (user?.status_notes || "").toLowerCase();
+  const rank = user?.rank || "";
+  const club = user?.club || "";
+
+  if (status === "inactive" || status === "deactivated") {
+    if (notes.includes("deactivated by admin")) return "blocked";
+    return "registered";
+  }
+
+  if (!rank || rank === "none" || rank === "0") return "associate";
+
+  if (club === "Star" || !isNaN(Number(rank))) return "star";
+
+  const namedRanks: Record<string, string> = {
+    Bronze: "bronze",
+    Sliver: "sliver",
+    Silver: "sliver",
+    Gold: "gold",
+    Emerald: "emerald",
+    Platinum: "platinum",
+    Diamond: "diamond",
+    "Blue Diamond": "bluediamond",
+    "Black Diamond": "blackdiamond",
+    "Crown Diamond": "crowndiamond",
+    "Royal Crown Diamond": "royalcrowndiamond",
+    Royality: "royalcrowndiamond",
+  };
+  if (namedRanks[rank]) return namedRanks[rank];
+
+  return "associate";
+}
+
 const rankImages: Record<string, string> = {
   no: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761374765/Untitled_design_2_buhazb.png",
   star: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1769360047/Gemini_Generated_Image_qg6njaqg6njaqg6n_a8dpp6.png",
@@ -95,11 +129,9 @@ const rankImages: Record<string, string> = {
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
 
-  // console.log("user in dashboard:", user);
   const isNumericRank = !isNaN(Number(user?.rank));
   const hasRank = user?.rank && user.rank !== "none" && user.rank !== "0";
 
-  // console.log(user);
   const user_id = user?.user_id || "";
   const router = useRouter();
 
@@ -118,14 +150,13 @@ const DashboardPage: React.FC = () => {
     tax: 0,
   });
 
-  // console.log(cycles);
+  const badgeKey = resolveBadge(user);
 
   useEffect(() => {
     const shouldShow = sessionStorage.getItem("showLoginPopup");
-
     if (shouldShow === "true") {
       setShowPopup(true);
-      sessionStorage.removeItem("showLoginPopup"); // ✅ show once only
+      sessionStorage.removeItem("showLoginPopup");
     }
   }, []);
 
@@ -134,13 +165,10 @@ const DashboardPage: React.FC = () => {
       console.log("User not ready yet");
       return;
     }
-
     if (!user.user_id) {
       console.log("User ID missing");
       return;
     }
-
-    // console.log("Running permission check for:", user.user_id);
 
     let isMounted = true;
 
@@ -149,8 +177,6 @@ const DashboardPage: React.FC = () => {
         const firstOrderRes = await hasFirstOrder(user.user_id);
         const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
-        // console.log("API Results:", firstOrderRes, advanceRes);
-
         if (!isMounted) return;
 
         const hasPermission =
@@ -158,8 +184,6 @@ const DashboardPage: React.FC = () => {
           advanceRes?.hasPermission ||
           firstOrderRes?.activatedByAdmin ||
           firstOrderRes?.isActive;
-
-        // console.log("Permission Result:", hasPermission);
 
         setShowAlert(!hasPermission);
       } catch (err) {
@@ -173,9 +197,6 @@ const DashboardPage: React.FC = () => {
     };
   }, [user]);
 
-  // console.log(showAlert)
-  // console.log(user.rank);
-
   useEffect(() => {
     if (!user?.activated_date) return;
 
@@ -186,20 +207,17 @@ const DashboardPage: React.FC = () => {
       return;
     }
 
-    // 🔥 FIX: Manually parse DD-MM-YYYY
     const [day, month, year] = user.activated_date.split("-");
 
     const activationDate = new Date(
       Number(year),
-      Number(month) - 1, // month index starts from 0
+      Number(month) - 1,
       Number(day),
     );
 
     const today = new Date();
-
     const diffTime = today.getTime() - activationDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
     const remainingDays = 7 - diffDays;
 
     if (remainingDays > 0) {
@@ -217,8 +235,6 @@ const DashboardPage: React.FC = () => {
         const res = await axios.get(
           `/api/dashboard-operations/purchase-count?user_id=${user_id}`,
         );
-
-        // console.log("Dashboard Summary Response:", res.data);
         if (res.data.success) {
           setSummary(res.data.data);
         } else {
@@ -229,7 +245,6 @@ const DashboardPage: React.FC = () => {
         setSummary(null);
       }
     };
-
     fetchDashboardSummary();
   }, [user_id]);
 
@@ -237,7 +252,6 @@ const DashboardPage: React.FC = () => {
     const fetchAmountSummary = async () => {
       if (!user_id) return;
       try {
-        const role = user?.role || "user";
         const res = await axios.get(
           `/api/dashboard-operations/amount-count?user_id=${user_id}&role=${user.role}`,
         );
@@ -264,30 +278,23 @@ const DashboardPage: React.FC = () => {
     })();
   }, [user_id]);
 
-  // console.log("Cycles Data:", cycles);
-
-  /* ------------ Maverick Link Actions ------------ */
   const handleCopyLink = async (position: "left" | "right") => {
     if (!user_id) {
       showToast.error("User ID missing");
       return;
     }
 
-    // Payload to encrypt
     const payload = { referBy: user_id, position };
 
-    // Encrypt using AES
     const encrypted = CryptoJS.AES.encrypt(
       JSON.stringify(payload),
       SECRET_KEY,
     ).toString();
 
-    // URL encoded encrypted string
     const link = `https://v-life-gules.vercel.app/auth/register?ref=${encodeURIComponent(
       encrypted,
     )}`;
 
-    // Copy URL to clipboard
     await navigator.clipboard.writeText(link);
 
     const orgName = position === "left" ? "Left Team" : "Right Team";
@@ -322,177 +329,203 @@ const DashboardPage: React.FC = () => {
               activation.
             </>
           }
-          // buttonLabel="View Business"
-          // buttonAction={() => router.push("/genealogy")}
           onClose={() => setShowQuickStarAlert(false)}
         />
 
-        {/* Summary Cards */}
-        {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-4 -mt-5 mb-5"> */}
-        {/* <Card
-            icon={
-              <RiMoneyRupeeCircleLine className="text-green-600" size={35} />
-            }
-            label="Income"
-            amount={`₹ ${amountSummary.income.toFixed(2)}`}
-            className="bg-green-50 border-green-200"
-          />
-          <Card
-            icon={<FaWallet className="text-pink-600" size={30} />}
-            label="Expense"
-            amount={`₹ ${amountSummary.purchases.toFixed(2)}`}
-            className="bg-pink-50 border-pink-200"
-          /> */}
-        {/* <Card
-            icon={<FaPercent className="text-yellow-600" size={30} />}
-            label="Tax Deducted"
-            amount={`₹ ${amountSummary.tax.toFixed(2)}`}
-            className="bg-yellow-50 border-yellow-200"
-          /> */}
-        {/* </div> */}
+        {/* ── NewsTicker — mobile only, at the very top ── */}
+        <div className="block md:hidden mb-8 -mt-2">
+          <NewsTicker />
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6  -mt-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 -mt-5">
           {/* --- LEFT COLUMN --- */}
           <div className="space-y-6 max-md:space-y-3">
-            {/* Profile Card */}
-            <div
-              className="bg-white
- rounded-2xl shadow-md p-6 max-md:p-3 border-[1.5px] border-gray-300 relative"
-            >
+            {/* ── PROFILE CARD ── */}
+            <div className="bg-white rounded-2xl shadow-md border-[1.5px] border-gray-300 relative overflow-hidden">
+              {/* ── Logo — top-left corner, ALL devices ── */}
+              <div className="px-4 pt-4 pb-2">
+                <img
+                  src="/maverick-logo.png"
+                  alt="Maverick Logo"
+                  className="h-10 lg:h-12 object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+
+              {/* ── Edit button — top-right ── */}
               <div
                 onClick={() => router.push("/settings")}
-                className="absolute bottom-2 right-5 flex items-center gap-1 cursor-pointer
-             text-black hover:text-blue-700 text-xs md:text-sm"
+                className="absolute bottom-4 right-4 flex items-center gap-1 cursor-pointer text-black hover:text-blue-700 text-xs md:text-sm z-10"
               >
                 <CiEdit className="w-4 h-4 md:w-5 md:h-5" />
                 <span>Edit</span>
               </div>
-              <div className="flex flex-col md:flex-row justify-center  lg:flex-col items-center text-center">
-                <div className="w-24 h-24 mb-4 md:w-28 md:h-28 border-0 border-gray-600 rounded-full flex items-center justify-center bg-white shadow-lg md:mr-12 lg:mr-0">
+
+              {/* ── Profile body — centered, ALL devices ── */}
+              <div className="flex flex-col items-center text-center px-6 pb-6 pt-2">
+                {/* Avatar + badge */}
+                <div className="relative w-28 h-28 mb-3 shrink-0">
                   <img
                     src={
                       user.profile ||
                       "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760695970/gray-user-profile-icon-png-fP8Q1P_ggaoim.png"
                     }
                     alt="Profile"
-                    className={`w-full h-full object-cover rounded-full border-3 shadow-md p-[2px] ${
+                    className={`w-full h-full object-cover rounded-full border-2 shadow-md p-0.5 ${
                       user?.status?.toLowerCase() === "active"
-                        ? "border-green-600"
-                        : "border-red-600"
+                        ? "border-green-500"
+                        : "border-red-500"
                     }`}
                   />
+                  <img
+                    src={`/badges/${badgeKey}.png`}
+                    alt={badgeKey}
+                    className="absolute w-12 h-12 object-contain drop-shadow-md"
+                    style={{ bottom: "-4px", right: "-8px" }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
                 </div>
-                <div className="space-y-1 text-sm xl:-ml-3">
-                  <div className="flex items-center ">
-                    <span className="font-semibold w-25 text-left">
-                      USER ID
-                    </span>
-                    <span className="w-3 mx-1 text-center">:</span>
-                    <span>{user?.user_id || "N/A"}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-semibold w-25 text-left ">Name</span>
-                    <span className="w-3 mx-1 text-center">:</span>
-                    <span>
-                      {user?.user_name
+
+                {/* Name */}
+                <p className="font-bold text-lg capitalize leading-tight">
+                  {user?.user_name
+                    ? user.user_name.charAt(0).toUpperCase() +
+                      user.user_name.slice(1)
+                    : "N/A"}
+                </p>
+
+                {/* Status pill */}
+                {/* <span
+                  className={`text-xs font-semibold px-3 py-0.5 rounded-full mt-1 mb-4 ${
+                    user?.status?.toLowerCase() === "active"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {(user?.status || "N/A").toUpperCase()}
+                </span> */}
+
+                {/* Info rows — centered label:value layout */}
+                <div
+                  className="space-y-1.5 text-sm mt-4 mb-3"
+                  style={{ width: "fit-content", margin: "10px auto 0" }}
+                >
+                  {" "}
+                  {[
+                    { label: "USER ID", value: user?.user_id || "N/A" },
+                    {
+                      label: "Name",
+                      value: user?.user_name
                         ? user.user_name.charAt(0).toUpperCase() +
                           user.user_name.slice(1)
-                        : "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex items-center ">
-                    <span className="font-semibold w-25 text-left">Status</span>
-                    <span className="w-3 mx-1 text-center">:</span>
-                    <span
-                      className={`font-semibold capitalize ${
-                        user?.status?.toLowerCase() === "active"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      {user?.status || "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-semibold w-25 text-left ">
-                      Date of Birth
-                    </span>
-                    <span className="w-3 mx-1 text-center">:</span>
-                    <span>
-                      {user?.dob
+                        : "N/A",
+                    },
+                    {
+                      label: "Status",
+                      value: user?.status || "N/A",
+                      isStatus: true,
+                    },
+                    {
+                      label: "Date of Birth",
+                      value: user?.dob
                         ? user.dob.split("-").reverse().join("-")
-                        : "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-semibold w-25 text-left ">
-                      Signup Date
-                    </span>
-                    <span className="w-3 mx-1 text-center">:</span>
-                    <span>
-                      {user?.created_at
+                        : "N/A",
+                    },
+                    {
+                      label: "Signup Date",
+                      value: user?.created_at
                         ? new Date(user.created_at)
                             .toLocaleDateString("en-GB")
                             .replace(/\//g, "-")
-                        : "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-semibold w-25 text-left ">
-                      Activated Date
-                    </span>
-                    <span className="w-3 mx-1 text-center">:</span>
-                    <span>{user?.activated_date || "N/A"}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="font-semibold w-25 text-left ">
-                      Blood Group
-                    </span>
-                    <span className="w-3 mx-1 text-center">:</span>
-                    <span>{user?.blood || "N/A"}</span>
-                  </div>
-                  {/* <div className="flex items-center">
-                    <span className="font-semibold w-27 text-left ">
-                      Last Order Date
-                    </span>
-                    <span className="w-3 mx-1 text-center">:</span>
-                    <span>--</span>
-                  </div> */}
+                        : "N/A",
+                    },
+                    {
+                      label: "Activated Date",
+                      value: user?.activated_date || "N/A",
+                    },
+                    { label: "Blood Group", value: user?.blood || "N/A" },
+                  ].map(({ label, value, isStatus }) => (
+                    <div key={label} className="flex items-center">
+                      <span className="font-semibold w-32 text-left shrink-0">
+                        {label}
+                      </span>
+                      <span className="mx-2 text-center">:</span>
+                      {isStatus ? (
+                        <span
+                          className={`font-semibold capitalize ${
+                            value?.toLowerCase() === "active"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {value}
+                        </span>
+                      ) : (
+                        <span>{value}</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            <TimeRemainingCard />
-
-            <div className="block lg:hidden">
-              <NewsTicker />
+            {/* ── Total Earnings card — mobile only ── */}
+            <div
+              className="md:hidden rounded-2xl p-4 text-white relative overflow-hidden"
+              style={{
+                background:
+                  "linear-gradient(135deg, #0C3978 0%, #106187 50%, #16B8E4 100%)",
+              }}
+            >
+              <div
+                className="absolute -top-5 -right-5 w-24 h-24 rounded-full pointer-events-none"
+                style={{ background: "rgba(255,255,255,0.1)" }}
+              />
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(255,255,255,0.2)" }}
+                >
+                  <FaRupeeSign className="text-white text-xl" />
+                </div>
+                <div>
+                  <p className="text-white/80 text-xs font-medium">
+                    Total Earnings
+                  </p>
+                  <p className="text-white text-2xl font-bold">
+                    ₹ {summary?.totalPayout?.toFixed(2) || "0.00"}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Product Card */}
-            {/* <div className="bg-white rounded-2xl shadow-md border border-gray-400 overflow-hidden max-md:h-30 max-lg:h-55 h-44 2xl:h-120"> */}
-            {/* For screens up to lg */}
-            {/* <img
-                src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760765861/ionizer_with_kitchen_t3da7q.jpg"
-                alt="Product small"
-                className="w-full object-contain block lg:hidden"
-              /> */}
+            {/* ── TimeRemainingCard — mobile: right after Total Earnings; desktop: in left col ── */}
+            {/* Mobile version */}
+            <div className="md:hidden">
+              <TimeRemainingCard />
+            </div>
 
-            {/* For screens lg and above */}
-            {/* <img
-                src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1760763474/ionizers_khpjpn.jpg"
-                alt="Product large"
-                className="w-full object-cover hidden lg:block"
-              /> */}
-            {/* </div> */}
+            {/* Desktop/Tablet version */}
+            <div className="hidden md:block">
+              <TimeRemainingCard />
+            </div>
+
+            {/* ── NewsTicker — tablet only ── */}
+            <div className="hidden md:block lg:hidden">
+              <NewsTicker />
+            </div>
           </div>
 
           {/* --- RIGHT COLUMN (MAIN DASHBOARD) --- */}
           <div className="lg:col-span-2 space-y-6 max-md:space-y-3">
             {/* Top Info Cards Row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-md:-mt-2">
-              <InfoCard title="Achieved Rank ">
+              <InfoCard title="Achieved Rank">
                 <div className="mx-auto">
-                  {/* --- Dynamic Rank Image --- */}
                   <img
                     src={
                       !hasRank
@@ -504,7 +537,6 @@ const DashboardPage: React.FC = () => {
                     alt="Rank Badge"
                     className="h-26 -mt-2 mx-auto"
                   />
-
                   <p className="text-black text-center text-sm font-semibold">
                     {hasRank ? (
                       isNumericRank ? (
@@ -551,83 +583,67 @@ const DashboardPage: React.FC = () => {
                 <LinkButton text="SHOPPING LINK" onClick={handleShopping} />
               </InfoCard>
             </div>
+
+            {/* ── NewsTicker — desktop only ── */}
             <div className="hidden lg:block">
               <NewsTicker />
             </div>
+
             {/* My Business Summary */}
-            <div className="bg-gray-50 rounded-2xl shadow-md border border-gray-100  my-0 py-0">
-              <div
-                className="bg-gray-700  text-white
-               max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans"
-              >
+            <div className="bg-gray-50 rounded-2xl shadow-md border border-gray-100 my-0 py-0">
+              <div className="bg-gray-700 text-white max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans">
                 MY BUSINESS SUMMARY
               </div>
 
-              {/* Dashboard Boxes */}
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-2 gap-4 p-4">
                 <DashBox
                   icon={<FaRupeeSign />}
                   title="Total Payout"
                   value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
+                  index={0}
                 />
                 <DashBox
                   icon={<FaGift />}
                   title="Reward Value"
                   value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
+                  index={1}
                 />
                 <DashBox
                   icon={<BsFillPeopleFill />}
-                  title={`Matching pairs (${
-                    cycles?.matches?.toString() || "0"
-                  }) `}
-                  value={`${
-                    cycles?.remainingDays?.toString() || "0"
-                  } days left`}
+                  title={`Matching pairs (${cycles?.matches?.toString() || "0"})`}
+                  value={`${cycles?.remainingDays?.toString() || "0"} days left`}
+                  index={2}
                 />
-
-                {/* <DashBox
-                  icon={<MdOutlineCheckCircle />}
-                  title="Purchase Countdown"
-                  value={summary?.purchaseCount?.toString() || "0"}
-                /> */}
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Cashback Points"
                   value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
+                  index={3}
                 />
-
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Matching Bonus"
                   value={`₹ ${summary?.matchingBonus?.toFixed(2) || "0.00"}`}
+                  index={4}
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Infinity Matching Bonus"
                   value={`₹ ${summary?.infinityBonus?.toFixed(2) || "0.00"}`}
+                  index={5}
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Direct Team Sales"
-                  value={`₹  ${summary?.directTeamSales?.toFixed(2) || "0.00"}`}
+                  value={`₹ ${summary?.directTeamSales?.toFixed(2) || "0.00"}`}
+                  index={6}
                 />
                 <DashBox
                   icon={<FaShoppingBag />}
                   title="Infinity Team Sales"
-                  value={`₹ ${
-                    summary?.infinityTeamSales?.toFixed(2) || "0.00"
-                  }`}
+                  value={`₹ ${summary?.infinityTeamSales?.toFixed(2) || "0.00"}`}
+                  index={7}
                 />
-                {/* <DashBox
-                  icon={<FaShoppingBag />}
-                  title="Direct Customer PV"
-                  value="0.00"
-                />
-                <DashBox
-                  icon={<FaWallet />}
-                  title="Shopping Wallet"
-                  value="0.00"
-                /> */}
               </div>
             </div>
           </div>
@@ -641,7 +657,6 @@ export default DashboardPage;
 
 /* ------------ Sub Components ------------- */
 
-// ---------------- InfoCard ----------------
 const InfoCard = ({
   title,
   children,
@@ -650,10 +665,7 @@ const InfoCard = ({
   children: React.ReactNode;
 }) => (
   <div className="bg-white rounded-2xl shadow-md border border-gray-200 overflow-hidden h-46">
-    <div
-      className="bg-gray-700
-                 text-white text-md text-center font-semibold py-2 font-sans"
-    >
+    <div className="bg-gray-700 text-white text-md text-center font-semibold py-2 font-sans">
       {title}
     </div>
     <div className="py-2 px-4 text-gray-700">{children}</div>
@@ -662,7 +674,6 @@ const InfoCard = ({
 
 const StatusItem = ({ label, value }: { label: string; value?: string }) => {
   const hasValue = Boolean(value);
-
   return (
     <div className="flex justify-between border-b border-gray-100 pb-1">
       <span>{label}</span>
@@ -677,7 +688,6 @@ const StatusItem = ({ label, value }: { label: string; value?: string }) => {
   );
 };
 
-// ---------------- LinkButton ----------------
 const LinkButton = ({
   text,
   onClick,
@@ -693,28 +703,40 @@ const LinkButton = ({
   </button>
 );
 
+const DASH_GRADIENTS = [
+  "linear-gradient(135deg, #0C3978 0%, #106187 50%, #16B8E4 100%)",
+];
+
 const DashBox = ({
   icon,
   title,
   value,
+  index = 0,
 }: {
   icon: React.ReactNode;
   title: string;
   value: string;
+  index?: number;
 }) => (
-  <div className=" text-black bg-white rounded-xl p-3 text-center flex flex-col items-center justify-center shadow-[0_4px_10px_rgba(255, 218, 68, 0.2)] border-[1.5px] border-gray-500 hover:scale-[1.01] transition-transform duration-150">
-    <div className="text-2xl mb-2 text-[#106187]">{icon}</div>
-    <p className="text-xs font-medium">{title}</p>
-    <p className="text-md font-semibold mt-1">{value}</p>
+  <div
+    className="rounded-xl p-3 text-center flex flex-col items-center justify-center relative overflow-hidden hover:scale-[1.01] transition-transform duration-150"
+    style={{ background: DASH_GRADIENTS[index % DASH_GRADIENTS.length] }}
+  >
+    <div
+      className="absolute -top-4 -right-4 w-16 h-16 rounded-full pointer-events-none"
+      style={{ background: "rgba(255,255,255,0.15)" }}
+    />
+    <div className="text-2xl mb-2 text-white">{icon}</div>
+    <p className="text-xs font-medium text-white/90">{title}</p>
+    <p className="text-md font-semibold mt-1 text-white">{value}</p>
   </div>
 );
 
-// Summary card component
 const Card = ({
   icon,
   label,
   amount,
-  className = "", // allows passing bg, border, etc.
+  className = "",
 }: {
   icon: React.ReactNode;
   label: string;

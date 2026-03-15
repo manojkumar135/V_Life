@@ -5,11 +5,7 @@ import * as Yup from "yup";
 import { TfiLock } from "react-icons/tfi";
 import { FaEye } from "react-icons/fa";
 import { FaEyeSlash } from "react-icons/fa6";
-
-// import { useContext } from "react";
-
 import { Toaster } from "sonner";
-
 import { FaRegUser } from "react-icons/fa6";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -27,27 +23,24 @@ export default function LoginPage() {
 
   const { user, setUser, clearUser } = useVLife();
 
-  // Formik + Yup schema
   const formik = useFormik({
     initialValues: {
-      loginId: "", // user_id or contact
+      loginId: "",
       password: "",
     },
     validationSchema: Yup.object({
       loginId: Yup.string().required("* User ID / Contact is required"),
       password: Yup.string().required("* Password is required"),
     }),
-    // ...existing code...
 
     onSubmit: async (values) => {
       setLoading(true);
       try {
         const res = await axios.post(
           "/api/login-operations/signIn-operations",
-          values
-        ); // <-- use POST
+          values,
+        );
 
-        // console.log("Login response:", res.data.data.score);
         if (res.data.success) {
           const userData = res.data.data;
 
@@ -65,13 +58,8 @@ export default function LoginPage() {
             score: res.data.data.score,
             reward: res.data.data.reward,
           });
-          // ✅ Pass theme string directly
-          // if (res.data.data.theme) {
-          //   setTheme(res.data.data.theme as ThemeType);
-          // }
 
-          // ShowToast.success("Login successful!");
-            sessionStorage.setItem("showLoginPopup", "true");
+          sessionStorage.setItem("showLoginPopup", "true");
 
           if (userData.role === "admin") {
             router.push("/AdminDashboard");
@@ -83,18 +71,14 @@ export default function LoginPage() {
         }
       } catch (err: any) {
         console.log("error:", err.response?.data?.message);
-
         const errorMessage =
           err.response?.data?.message || err.message || "Something went wrong";
-
         console.log("toast message:", errorMessage);
-
-        ShowToast?.error?.(errorMessage); // safe call if function exists
+        ShowToast?.error?.(errorMessage);
       } finally {
         setLoading(false);
       }
     },
-    // ...existing code...
   });
 
   const handleForgotPassword = () => {
@@ -107,29 +91,143 @@ export default function LoginPage() {
 
   return (
     <>
-      {/* <Toaster position="top-right" richColors closeButton /> */}
-
-      <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-[#106187]/85 -pt-20">
+      <div className="flex flex-row max-md:flex-col h-screen overflow-hidden bg-gradient-to-l from-[#0C3978] via-[#106187] to-[#16B8E4]">
         {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40  backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
           </div>
         )}
-        {/* Left Illustration Section */}
-        <div className="w-1/2 max-md:w-full flex items-center justify-center p-10 max-lg:p-5 max-md:hidden">
-          <Image
-            src={Images.LoginImage}
-            alt="Login Illustration"
-            width={500}
-            height={500}
-            className="w-4/5 max-md:w-full max-lg:w-full max-md:ml-1 max-lg:ml-16"
-          />
+
+        {/* ─── Left Panel: Full white bg with floating image cards ─── */}
+        <div
+          className="w-1/2 max-md:hidden shrink-0"
+          style={{
+            background: "#ffffff",
+            height: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "32px 24px",
+          }}
+        >
+          {/*
+    ┌─────────────┬────────────┐
+    │   Image 1   │            │
+    │ (top-left)  │  Image 2   │
+    ├─────────────┤  (tall R)  │
+    │             ├────────────┤
+    │   Image 3   │  Image 4   │
+    │  (tall L)   │ (small BR) │
+    └─────────────┴────────────┘
+  */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.1fr 0.9fr",
+              gridTemplateRows: "1fr 0.6fr 0.5fr 0.8fr",
+              gap: "12px",
+              width: "100%",
+              height: "100%",
+            }}
+          >
+            {/* Image 1 — Top Left (shorter) */}
+            <div
+              style={{
+                gridColumn: "1/2",
+                gridRow: "1/2",
+                borderRadius: "14px",
+                overflow: "hidden",
+                position: "relative",
+                border: "4px solid #ffffff",
+                boxShadow:
+                  "0 6px 24px rgba(0,0,0,0.16), 0 2px 8px rgba(0,0,0,0.10)",
+                background: "#f0f4f8",
+              }}
+            >
+              <Image
+                src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1770376659/08bf31d26f0ffa62493f44ef6a677ec5af86a0ef_p0utrl.jpg"
+                alt="Product image 1"
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="25vw"
+              />
+            </div>
+
+            {/* Image 2 — Right Tall (spans row 1+2) */}
+            <div
+              style={{
+                gridColumn: "2/3",
+                gridRow: "1/3",
+                borderRadius: "14px",
+                overflow: "hidden",
+                position: "relative",
+                border: "4px solid #ffffff",
+                boxShadow:
+                  "0 8px 28px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10)",
+                background: "#f0f4f8",
+              }}
+            >
+              <Image
+                src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1773573156/long_image_nmg7jp.jpg"
+                alt="Product image 2"
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="25vw"
+              />
+            </div>
+
+            {/* Image 3 — Left Tall (spans row 2+3+4) */}
+            <div
+              style={{
+                gridColumn: "1/2",
+                gridRow: "2/5",
+                borderRadius: "14px",
+                overflow: "hidden",
+                position: "relative",
+                border: "4px solid #ffffff",
+                boxShadow:
+                  "0 10px 32px rgba(0,0,0,0.18), 0 3px 10px rgba(0,0,0,0.10)",
+                background: "#f0f4f8",
+              }}
+            >
+              <Image
+                src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1773572909/WhatsApp_Image_2026-03-15_at_4.35.45_PM_ylenhs.jpg"
+                alt="Product image 3"
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="25vw"
+              />
+            </div>
+
+            {/* Image 4 — Bottom Right (small) */}
+            <div
+              style={{
+                gridColumn: "2/3",
+                gridRow: "3/5",
+                borderRadius: "14px",
+                overflow: "hidden",
+                position: "relative",
+                border: "4px solid #ffffff",
+                boxShadow:
+                  "0 6px 20px rgba(0,0,0,0.14), 0 2px 6px rgba(0,0,0,0.08)",
+                background: "#f0f4f8",
+              }}
+            >
+              <Image
+                src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1770376659/08bf31d26f0ffa62493f44ef6a677ec5af86a0ef_p0utrl.jpg"
+                alt="Product image 4"
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="25vw"
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Right Login Form */}
-        <div className="w-1/2 max-lg:w-full flex flex-col justify-center items-center overflow-y-auto max-lg:py-6 max-md:h-full">
+        {/* ─── Right Login Form (unchanged) ─── */}
+        <div className="w-1/2 max-lg:w-full max-md:w-full flex flex-col justify-center items-center overflow-y-auto max-lg:py-6 max-md:h-full">
           <div className="w-[70%] max-md:w-[90%] flex flex-col items-center pt-10 pb-10 px-8 bg-[#fffff0] rounded-3xl shadow max-lg:pb-8 max-lg:pt-5">
-            {/* Logo - Top Left */}
+            {/* Logo */}
             <Image
               src={Images.MaverickLogo}
               alt="Logo"
@@ -138,12 +236,7 @@ export default function LoginPage() {
               className="mb-6 border-0 border-black"
             />
 
-            {/* Center content below logo */}
             <div className="w-full flex flex-col justify-center items-center">
-              {/* <p className="text-[1.6rem] max-md:text-[1.2rem] max-lg:text-[1.2rem] font-bold text-black mb-4 max-lg:mb-3">
-                Login
-              </p> */}
-
               <form onSubmit={formik.handleSubmit} className="w-full space-y-6">
                 {/* User ID / Contact */}
                 <div className="flex flex-col">
@@ -170,7 +263,7 @@ export default function LoginPage() {
                   </span>
                 </div>
 
-                {/* Password with Show/Hide */}
+                {/* Password */}
                 <div className="flex flex-col">
                   <div className="relative">
                     <TfiLock className="absolute left-3 top-3 text-gray-500" />
@@ -202,7 +295,7 @@ export default function LoginPage() {
                   </span>
                 </div>
 
-                {/* Forgot password */}
+                {/* Forgot Password */}
                 <div className="text-right text-sm mb-3">
                   <span
                     onClick={handleForgotPassword}
@@ -220,19 +313,19 @@ export default function LoginPage() {
                     !formik.values.loginId.trim() ||
                     !formik.values.password.trim()
                   }
-                  className={`w-full py-2 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem] 
-            ${
-              loading ||
-              !formik.values.loginId.trim() ||
-              !formik.values.password.trim()
-                ? "bg-gray-400 text-white cursor-none"
-                : "bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
-            }`}
+                  className={`w-full py-2 font-semibold rounded-md transition-colors text-[1.2rem] max-lg:text-[1rem]
+                    ${
+                      loading ||
+                      !formik.values.loginId.trim() ||
+                      !formik.values.password.trim()
+                        ? "bg-gray-400 text-white cursor-not-allowed"
+                        : "bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
+                    }`}
                 >
                   Login
                 </button>
 
-                {/* Signup prompt */}
+                {/* Sign Up prompt */}
                 <div className="text-center text-sm text-gray-800 -mt-3">
                   Don&apos;t have an account ?{" "}
                   <span

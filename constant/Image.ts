@@ -5,6 +5,7 @@ import ForgotPhoto from "@/public/forgot-image.png";
 import SignupPhoto from "@/public/signup-image.png";
 import Maverick from "@/public/Maverick.png";
 import MaverickLogo from "@/public/maverick-logo.png";
+import signin from "@/public/signin.png";
 
 export default {
   LoginImage,
@@ -14,4 +15,5 @@ export default {
   SignupPhoto,
   Maverick,
   MaverickLogo,
+  signin
 };

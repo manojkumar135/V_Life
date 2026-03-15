@@ -357,7 +357,7 @@ export default function TreeView({ id, newuser }: TreeViewProps) {
           title="Go to parent"
           // className="fixed bottom-6 left-6 sm:left-25 z-20 bg-linear-to-r from-[#16B8E4] to-[#0C3978]
           //  text-white rounded-full p-3 shadow-lg transition-all duration-200 cursor-pointer"
-            className="fixed bottom-6 left-6 sm:left-25 z-20 bg-linear-to-r from-[#106187] to-[#106187]
+            className="fixed bottom-6 left-6 sm:left-35 z-20 bg-linear-to-t from-[#0C3978] via-[#106187] to-[#16B8E4]
            text-white rounded-full p-3 shadow-lg transition-all duration-200 cursor-pointer"
         >
           <FaLongArrowAltUp size={22} />
