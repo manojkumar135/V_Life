@@ -28,7 +28,7 @@ const page = () => {
           >
             <Wallet size={32} />
             <span className="mt-2 text-lg font-semibold">
-              {user.role === "admin" ? "Wallets" : "Wallet"}
+              {user.role === "admin" ? "KYC" : "KYC"}
             </span>
           </div>
 
@@ -62,31 +62,31 @@ const page = () => {
           </div>
 
           {/* Reports Card */}
-          <div
+          {/* <div
             onClick={() => router.push("/reports")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <VscGraph size={32} />
             <span className="mt-2 text-lg font-semibold">Reports</span>
-          </div>
+          </div> */}
 
           {/* ID activation */}
-          {user.status!=="inactive" &&(<div
+          {/* {user.status!=="inactive" &&(<div
             onClick={() => router.push("/activation/activationform")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <MdOutlineVerifiedUser  size={32} />
             <span className="mt-2 text-lg font-semibold">Activation</span>
-          </div>)}
+          </div>)} */}
 
           {/* Royal Club */}
-          <div
+          {/* <div
             onClick={() => router.push("/reports")}
             className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaCrown  size={32} />
             <span className="mt-2 text-lg font-semibold">Royality Club</span>
-          </div>
+          </div> */}
 
           
           {/* Profile Management */}

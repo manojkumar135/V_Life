@@ -31,6 +31,15 @@ const PdfPreview = dynamic(() => import("@/components/PDF/PdfPreview"), {
   ssr: false,
 });
 
+/* ------------------------------------------------------------------ */
+/* Order type filter options                                            */
+/* ------------------------------------------------------------------ */
+const ORDER_TYPE_OPTIONS = [
+  { label: "All", value: "" },
+  { label: "Normal", value: "normal" },
+  { label: "Advance Used", value: "advance" },
+];
+
 export default function OrdersPage() {
   const { user } = useVLife();
   const router = useRouter();
@@ -53,68 +62,109 @@ export default function OrdersPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [pdfScale, setPdfScale] = useState<number>(1);
 
+  /* ── NEW: order type filter ──────────────────────────────────────── */
+  const [orderTypeFilter, setOrderTypeFilter] = useState<string>("");
+
   useEffect(() => {
     const isMobile = window.innerWidth < 700;
     setPdfScale(isMobile ? 0.56 : 1);
   }, []);
 
-  const API_URL = "/api/order-operations"; // Replace with your actual API endpoint
+  const API_URL = "/api/order-operations";
 
   const handleDownloadClick = () => {
+    const expandedRows: any[] = [];
+
+    const orderIds = selectedRows.map((o: any) => o.order_id).join(",");
+
+    let downloadAllAdded = false;
+
+    selectedRows.forEach((order: any) => {
+      let invoiceAdded = false;
+
+      if (Array.isArray(order.items) && order.items.length > 0) {
+        order.items.forEach((item: any) => {
+          expandedRows.push({
+            order_id: order.order_id,
+            payment_id: order.payment_id,
+            user_id: order.user_id,
+            user_name: order.user_name,
+            contact: order.contact,
+            payment_date: order.payment_date,
+
+            product_name: item.name,
+            category: item.category,
+            quantity: item.quantity,
+
+            unit_price: item.unit_price,
+            taxable_value: item.unit_price * item.quantity,
+
+            gst_percent: item.gst,
+            gst_amount: item.gst_amount,
+
+            cgst: item.cgst,
+            sgst: item.sgst,
+            igst: item.igst,
+
+            total_price: item.price_with_gst,
+
+            invoice_download: invoiceAdded
+              ? ""
+              : `${window.location.origin}/api/invoice/${order.order_id}`,
+
+            download_all_invoices:
+              !downloadAllAdded && !invoiceAdded
+                ? `${window.location.origin}/api/invoices/download?orders=${orderIds}`
+                : "",
+          });
+
+          invoiceAdded = true;
+          downloadAllAdded = true;
+        });
+      }
+    });
+
     handleDownload<any>({
-      rows: selectedRows, // or selected rows if you want selection-based export
+      rows: expandedRows,
       fileName: "orders",
       format: "xlsx",
-      excludeHeaders: [
-        "_id",
-        "__v",
-        "referBy",
-        "infinity",
-        "created_at",
-        "bonus_checked",
-        "last_modified_at",
-        "items", // items array may not be needed in export
-      ],
+      excludeHeaders: [],
       onStart: () => setDownloading(true),
       onFinish: () => setDownloading(false),
     });
   };
 
- useEffect(() => {
-  if (!user?.user_id) return;
+  useEffect(() => {
+    if (!user?.user_id) return;
 
-  let isMounted = true;
+    let isMounted = true;
 
-  (async () => {
-    try {
-      // 1️⃣ Check first order
-      const firstOrderRes = await hasFirstOrder(user.user_id);
+    (async () => {
+      try {
+        const firstOrderRes = await hasFirstOrder(user.user_id);
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
-      // 2️⃣ Check advance
-      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+        if (!isMounted) return;
 
-      if (!isMounted) return;
+        const hasPermission =
+          firstOrderRes.hasFirstOrder ||
+          advanceRes.hasPermission ||
+          firstOrderRes.activatedByAdmin;
 
-      const hasPermission =
-        firstOrderRes.hasFirstOrder ||
-        advanceRes.hasPermission ||
-        firstOrderRes.activatedByAdmin;
+        setHasPermission(hasPermission);
+        setShowAlert(!hasPermission);
+      } catch (err) {
+        console.error("Permission check error:", err);
+        if (isMounted) setShowAlert(true);
+      }
+    })();
 
-      setHasPermission(hasPermission);
-      setShowAlert(!hasPermission);
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.user_id]);
 
-    } catch (err) {
-      console.error("Permission check error:", err);
-      if (isMounted) setShowAlert(true);
-    }
-  })();
-
-  return () => {
-    isMounted = false;
-  };
-}, [user?.user_id]);
-
-  // Fetch orders from API
+  /* ── Fetch orders ────────────────────────────────────────────────── */
   const fetchOrders = useCallback(
     async (search: string, orderId?: string, id?: string) => {
       try {
@@ -123,15 +173,17 @@ export default function OrdersPage() {
         const params: any = {
           search: search || "",
           role: user?.role,
-          ...(user?.user_id && { user_id: user.user_id }), // ✅ include user_id if available
-          ...(dateFilter?.type === "on" && { date: dateFilter.date }), // ✅ single date filter
+          ...(user?.user_id && { user_id: user.user_id }),
+          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
             from: dateFilter.from,
             to: dateFilter.to,
-          }), // ✅ date range filter
+          }),
+          /* ── pass advance filter to API ── */
+          ...(orderTypeFilter === "advance" && { advance_used: true }),
+          ...(orderTypeFilter === "normal" && { advance_used: false }),
         };
 
-        // ✅ optionally include order_id / id
         if (orderId) params.order_id = orderId;
         if (id) params.id = id;
 
@@ -147,21 +199,19 @@ export default function OrdersPage() {
         setLoading(false);
       }
     },
-    [user?.role, user?.user_id, dateFilter]
+    [user?.role, user?.user_id, dateFilter, orderTypeFilter],
   );
 
   useEffect(() => {
     if (!user?.user_id) return;
     fetchOrders(debouncedQuery);
-
     goToPage(1);
-  }, [debouncedQuery, user?.user_id, dateFilter]);
+  }, [debouncedQuery, user?.user_id, dateFilter, orderTypeFilter]);
 
-  // Delete order
+  /* ── Delete ─────────────────────────────────────────────────────── */
   const handleDelete = async (id: string) => {
     try {
       await axios.delete(`${API_URL}?order_id=${id}`);
-      // Remove from UI immediately
       setOrdersData((prev) => prev.filter((order: any) => order._id !== id));
       setTotalItems((prev) => prev - 1);
     } catch (error) {
@@ -169,7 +219,7 @@ export default function OrdersPage() {
     }
   };
 
-  // Edit order (navigate)
+  /* ── Edit ────────────────────────────────────────────────────────── */
   const handleEdit = (id: string) => {
     router.push(`/orders/orderDetailView/${id}`);
   };
@@ -178,7 +228,6 @@ export default function OrdersPage() {
     { field: "order_id", headerName: "Order ID", flex: 1 },
     { field: "payment_id", headerName: "Transaction ID", flex: 1.5 },
 
-    // conditional columns (filter later)
     user?.role === "admin" && {
       field: "user_id",
       headerName: "User ID",
@@ -207,11 +256,8 @@ export default function OrdersPage() {
       field: "download",
       headerName: "Invoice",
       flex: 0.8,
-      // sortable: false,
-      // filterable: false,
       renderCell: (params: GridRenderCellParams) => (
-        <div className="flex max-lg:gap-8 max-lg:min-w-[150px] gap-8 xl:items-center xl:justify-center mt-2">
-          {/* Preview Icon */}
+        <div className="flex max-lg:gap-8 max-lg:min-w-38 gap-8 xl:items-center xl:justify-center mt-2">
           <button
             title="Preview Invoice"
             className="text-[#106187] cursor-pointer"
@@ -223,7 +269,6 @@ export default function OrdersPage() {
           >
             <FaEye size={16} />
           </button>
-          {/* Download */}
           <button
             title="Download Invoice"
             className="text-[#106187] cursor-pointer"
@@ -237,57 +282,11 @@ export default function OrdersPage() {
         </div>
       ),
     },
-
-    // ...(user?.role === "admin"
-    //   ? [
-    //       {
-    //         field: "download",
-    //         headerName: "Invoice",
-    //         flex: 1,
-    //         sortable: false,
-    //         filterable: false,
-    //         renderCell: (params: GridRenderCellParams) => (
-    //           <div className="flex gap-8 items-center justify-center mt-2">
-    //             {/* Download */}
-    //             <button
-    //               title="Download Invoice"
-    //               className="text-[#106187] cursor-pointer"
-    //               onClick={(e) => {
-    //                 e.stopPropagation();
-    //                 handleDownloadPDF(params.row.order_id, setLoading);
-    //               }}
-    //             >
-    //               <FaDownload size={15} />
-    //             </button>
-
-    //             {/* Preview Icon */}
-    //             <button
-    //               title="Preview Invoice"
-    //               className="text-[#106187] cursor-pointer"
-    //               onClick={(e) => {
-    //                 e.stopPropagation();
-    //                 handlePreviewPDF(
-    //                   params.row.order_id,
-    //                   setLoading,
-    //                   setPreviewUrl
-    //                 );
-    //                 setShowPreview(true);
-    //               }}
-    //             >
-    //               <FaEye size={16} />
-    //             </button>
-    //           </div>
-    //         ),
-    //       },
-    //     ]
-    //   : []),
-  ].filter(Boolean) as GridColDef[]; // 👈 removes false and fixes typing
+  ].filter(Boolean) as GridColDef[];
 
   const handlePageChange = useCallback(
-    (page: number, offset: number, limit: number) => {
-      // Optional: implement server-side pagination
-    },
-    [query]
+    (page: number, offset: number, limit: number) => {},
+    [query],
   );
 
   const {
@@ -297,7 +296,6 @@ export default function OrdersPage() {
     prevPage,
     startItem,
     endItem,
-
     goToPage,
   } = usePagination({
     totalItems,
@@ -307,31 +305,27 @@ export default function OrdersPage() {
 
   const handleRowClick = (row: any) => {
     console.log("Order clicked:", row);
-    // handle navigation or modal etc.
   };
 
   const handleAddOrder = async () => {
-  if (!user?.user_id) {
-    router.push("/orders/addorder");
-    return;
-  }
-
-  try {
-    const advanceRes = await hasAdvancePaid(user.user_id, 15000);
-
-    // If advance paid AND not used → go to selection page
-    if (advanceRes.hasAdvance && !advanceRes.advanceUsed) {
-      router.push("/orders/order-mode");
+    if (!user?.user_id) {
+      router.push("/orders/addorder");
       return;
     }
 
-    // Otherwise normal
-    router.push("/orders/addorder");
-  } catch (err) {
-    router.push("/orders/addorder");
-  }
-};
+    try {
+      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
+      if (advanceRes.hasAdvance && !advanceRes.advanceUsed) {
+        router.push("/orders/order-mode");
+        return;
+      }
+
+      router.push("/orders/addorder");
+    } catch (err) {
+      router.push("/orders/addorder");
+    }
+  };
 
   return (
     <Layout>
@@ -344,7 +338,8 @@ export default function OrdersPage() {
         buttonAction={() => router.push("/historys/payAdvance")}
         onClose={() => setShowAlert(false)}
       />
-      <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
+
+      <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
         {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
@@ -352,11 +347,11 @@ export default function OrdersPage() {
         )}
 
         {/* Floating Filter Icon */}
-        <div title="Filter" className="fixed  bottom-5 right-6 z-10">
+        <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
-            className="relative w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
+            className="relative w-12 h-12 rounded-full bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
              shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-gray-400 
-             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] 
+             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-0.5 
              active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
             onClick={() => setShowModal(true)}
           >
@@ -369,20 +364,11 @@ export default function OrdersPage() {
           search={query}
           setSearch={setQuery}
           addLabel="+ ADD ORDER"
-          // showAddButton={user?.role === "admin" || hasPermission}
-
           showAddButton
-          // ={
-          //   user?.role === "admin"
-          //     ? true
-          //     : user?.role === "user" && user?.status.toLowerCase() === "active"
-          //     ? hasPaidAdvance
-          //     : false
-          // }
           onAdd={handleAddOrder}
           onMore={handleDownloadClick}
           showPagination
-          showMoreOptions
+          showMoreOptions={selectedRows.length > 0}
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={totalItems}
@@ -392,6 +378,28 @@ export default function OrdersPage() {
           onPrev={prevPage}
         />
 
+        {/* ── Order type filter pills — admin only ───────────────────────── */}
+        {user?.role === "admin" && (
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <span className="text-sm font-medium text-gray-600">
+              Filter by type:
+            </span>
+            {ORDER_TYPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setOrderTypeFilter(opt.value)}
+                className={`px-3 py-1 rounded-full text-sm font-medium border transition-colors cursor-pointer ${
+                  orderTypeFilter === opt.value
+                    ? "bg-[#0C3978] text-white border-[#0C3978]"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978] hover:text-[#0C3978]"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <Table
           columns={columns}
           rows={ordersData}
@@ -399,12 +407,11 @@ export default function OrdersPage() {
           setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
-          statusField="order_status" // ← show icon & click
+          statusField="order_status"
           onIdClick={(id) => handleEdit(id)}
           checkboxSelection
-          // loading={loading}
           onRowClick={handleRowClick}
-          setSelectedRows={setSelectedRows} // ✅ add this
+          setSelectedRows={setSelectedRows}
         />
 
         {/* Date Filter Modal */}
@@ -420,7 +427,7 @@ export default function OrdersPage() {
 
       {/* ==================== PDF PREVIEW MODAL ===================== */}
       {showPreview && previewUrl && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/60 z-100 flex items-center justify-center backdrop-blur-sm">
           <button
             className="absolute top-5 max-lg:top-5 right-15 max-lg:right-3 text-white bg-black rounded-full 
             w-7 h-7 cursor-pointer border-white border-2 font-bold"

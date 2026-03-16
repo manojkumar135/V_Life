@@ -7,6 +7,9 @@ import { RiLogoutCircleRLine } from "react-icons/ri";
 import { LuLayoutDashboard } from "react-icons/lu";
 import { IoPeople, IoSettings } from "react-icons/io5";
 import { FaWallet, FaHistory } from "react-icons/fa";
+import { MdOutlineVerifiedUser } from "react-icons/md";
+import { VscGraph } from "react-icons/vsc";
+
 import { FaBoxesPacking } from "react-icons/fa6";
 import { IoMdClose } from "react-icons/io";
 import Images from "@/constant/Image";
@@ -31,13 +34,10 @@ export default function SideNav({
 
   const menuItems = [
     {
-      href:
-        user?.role === "admin"
-          ? "/AdminDashboard"
-          : "/dashboards",
+      href: user?.role === "admin" ? "/AdminDashboard" : "/dashboards",
       icon: <LuLayoutDashboard />,
       label: "My Profile",
-      match: ["dashboard","AdminDashboard"],
+      match: ["dashboard", "AdminDashboard"],
     },
     {
       href:
@@ -46,25 +46,42 @@ export default function SideNav({
           : "/administration/users",
       icon: <IoPeople />,
       label: "My Team",
-      match: ["administration","/admin"],
+      match: ["administration", "/admin"],
     },
     {
       href: "/wallet",
       icon: <FaWallet />,
       label: "My Wallet",
-      match: ["wallet", "reports", "/tds", "/activation"],
+      match: ["/wallet", "/tds"],
     },
     {
       href: "/orders",
       icon: <FaBoxesPacking />,
       label: "My Orders",
-      match: ["orders", "products"], // 👈 include both
+      match: ["orders", "products"],
     },
+    ...(user.status !== "inactive"
+      ? [
+          {
+            href: "/activation/activationform",
+            icon: <MdOutlineVerifiedUser />,
+            label: "My Activations",
+            match: ["activation"],
+          },
+        ]
+      : []),
+
     {
       href: user?.role === "user" ? "/historys" : "/historys/adminhistory",
       icon: <FaHistory />,
       label: "My Payments",
       match: ["history"],
+    },
+    {
+      href: "/reports",
+      icon: <VscGraph />,
+      label: "My Reports",
+      match: ["/report"],
     },
     {
       href: "/settings",
@@ -107,7 +124,7 @@ export default function SideNav({
       {/* Desktop SideNav */}
       <div
         className="hidden md:flex flex-col items-center
-       w-20 bg-gradient-to-b from-[#0C3978] to-[#16B8E4]  pt-20 pb-6 
+       w-20 bg-linear-to-b from-[#0C3978] to-[#16B8E4]  pt-20 pb-6 
        rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative"
       >
         {/* Logo */}
@@ -123,7 +140,7 @@ export default function SideNav({
         </div>
 
         {/* Menu Items */}
-        <div className="flex flex-col items-center gap-2 flex-grow w-full mt-4 max-lg:mt-8">
+        <div className="flex flex-col items-center gap-2 grow w-full mt-4 max-lg:mt-8">
           {menuItems.map((item, index) => {
             const isActive = item.match.some((m) => pathname.includes(m));
             return (
@@ -141,7 +158,7 @@ export default function SideNav({
                 {/* Tooltip */}
                 <span
                   className="absolute left-full top-1/2 -translate-y-1/2 ml-0 px-2 py-1 text-xs 
-                  font-medium text-white bg-gray-700 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[400ms]
+                  font-medium text-white bg-gray-700 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-400
                   translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50"
                 >
                   {item.label}
@@ -167,7 +184,7 @@ export default function SideNav({
             {/* Tooltip */}
             <span
               className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs font-medium 
-              text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-[300ms]
+              text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-300
               translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50"
             >
               Logout
@@ -186,7 +203,7 @@ export default function SideNav({
 
       {/* Mobile SideNav */}
       <div
-        className={`md:hidden fixed top-0 left-0 z-50 h-full w-[200px] rounded-r-xl bg-gradient-to-b from-[#0C3978] to-[#16B8E4] p-6 transform transition-transform duration-300 ${
+        className={`md:hidden fixed top-0 left-0 z-50 h-full w-50 rounded-r-xl bg-linear-to-b from-[#0C3978] to-[#16B8E4] p-6 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -209,28 +226,41 @@ export default function SideNav({
           />
         </div>
 
-        {/* Menu Items */}
-        <div className="flex flex-col space-y-3 w-[110%]">
-          {menuItems.map((item, index) => {
-            const isActive = item.match.some((m) => pathname.includes(m));
-            return (
-              <button
-                key={index}
-                onClick={() => handleNavigation(item.href)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
-                  isActive
-                    ? "bg-white text-black"
-                    : "text-white hover:bg-white/90"
-                }`}
-              >
-                <span className="text-[22px] max-md:text-[18px]">
-                  {item.icon}
-                </span>
-                <span className="text-sm font-medium">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
+       {/* Menu Items */}
+<div className="flex flex-col space-y-3 w-[110%]">
+  {menuItems.map((item, index) => {
+    const isActive = item.match.some((m) => pathname.includes(m));
+    const isOrders = item.match.includes("orders");
+    return (
+      <React.Fragment key={index}>
+        <button
+          onClick={() => handleNavigation(item.href)}
+          className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
+            isActive ? "bg-white text-black" : "text-white hover:bg-white/90"
+          }`}
+        >
+          <span className="text-[22px] max-md:text-[18px]">{item.icon}</span>
+          <span className="text-sm font-medium">{item.label}</span>
+        </button>
+
+        {/* New Order sub-item — always visible under My Orders */}
+        {isOrders && (
+          <button
+            onClick={() => handleNavigation("/orders/addorder")}
+            className={`flex items-center gap-3 pl-8 pr-3 py-2 rounded-md transition-all duration-200 -mt-1 ${
+              pathname.includes("addorder")
+                ? "bg-white text-black"
+                : "text-white/80 hover:bg-white/90 hover:text-black"
+            }`}
+          >
+            <span className="text-[16px]">＋</span>
+            <span className="text-sm font-medium">New Order</span>
+          </button>
+        )}
+      </React.Fragment>
+    );
+  })}
+</div>
 
         {/* Logout (Mobile) */}
         <button

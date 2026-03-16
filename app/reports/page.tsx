@@ -9,6 +9,8 @@ import { BsCalendarDay, BsCalendarRange } from "react-icons/bs";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { LuTicketsPlane } from "react-icons/lu";
 import { GiDoubled } from "react-icons/gi";
+import { FaCrown } from "react-icons/fa";
+
 
 const Page = () => {
   const router = useRouter();
@@ -62,6 +64,15 @@ const Page = () => {
             <LuTicketsPlane size={32} />
             <span className="mt-2 text-lg font-semibold">Reward Report</span>
           </div>
+
+          {/* Royal Club */}
+                    <div
+                      onClick={() => router.push("/reports")}
+                      className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+                    >
+                      <FaCrown  size={32} />
+                      <span className="mt-2 text-lg font-semibold">Royality Club</span>
+                    </div>
 
           {/* Matches Report */}
           {user?.role !== "user" && (

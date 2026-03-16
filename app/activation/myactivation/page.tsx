@@ -261,7 +261,7 @@ export default function MyActivationsPage() {
         {/* Floating Filter */}
         <div className="fixed bottom-5 right-6 z-10">
           <button
-            className="relative w-12 h-12 rounded-full bg-gradient-to-r 
+            className="relative w-12 h-12 rounded-full bg-linear-to-r 
             from-[#0C3978] via-[#106187] to-[#16B8E4] 
             text-white flex items-center justify-center shadow-lg"
             onClick={() => setShowModal(true)}
@@ -271,7 +271,7 @@ export default function MyActivationsPage() {
         </div>
 
         <HeaderWithActions
-          title="My Activations"
+          title={user?.role === "admin" ? "Activations" : "My Activations"}
           search={query}
           setSearch={setQuery}
           showBack

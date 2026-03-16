@@ -40,7 +40,7 @@ export default function ActivationForm() {
   const fetchUser = async (
     userId: string,
     setFieldValue: any,
-    setFieldError: any
+    setFieldError: any,
   ) => {
     try {
       setLoading(true);
@@ -95,7 +95,7 @@ export default function ActivationForm() {
 
     const encrypted = CryptoJS.AES.encrypt(
       JSON.stringify(payload),
-      process.env.NEXT_PUBLIC_REF_KEY!
+      process.env.NEXT_PUBLIC_REF_KEY!,
     ).toString();
 
     router.push(`/orders/addorder?data=${encodeURIComponent(encrypted)}`);
@@ -113,11 +113,14 @@ export default function ActivationForm() {
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center w-full max-md:mb-2">
           <div className="flex items-center gap-2">
-            <IoIosArrowBack
-              size={25}
-              className="cursor-pointer"
-              onClick={() => router.push("/wallet")}
-            />
+            {user.role === "superadmin" && (
+              <IoIosArrowBack
+                size={25}
+                className="cursor-pointer"
+                onClick={() => router.push("/wallet")}
+              />
+            )}
+
             <p className="text-xl max-sm:text-lg font-bold text-black">
               Activation Form
             </p>
@@ -125,7 +128,7 @@ export default function ActivationForm() {
 
           <div className="flex w-full sm:w-auto justify-end">
             <Link href="/activation/myactivation">
-              <SubmitButton className="px-4 !py-1 bg-blue-500">
+              <SubmitButton className="px-4 py-1! bg-blue-500">
                 {user?.role === "admin" ? "Activations" : "My Activations"}
               </SubmitButton>
             </Link>

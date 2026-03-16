@@ -431,13 +431,14 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
 
-    const id = searchParams.get("id") || searchParams.get("order_id");
-    const user_id = searchParams.get("user_id");
-    const search = searchParams.get("search");
-    const role = searchParams.get("role");
-    const date = searchParams.get("date");
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
+    const id           = searchParams.get("id") || searchParams.get("order_id");
+    const user_id      = searchParams.get("user_id");
+    const search       = searchParams.get("search");
+    const role         = searchParams.get("role");
+    const date         = searchParams.get("date");
+    const from         = searchParams.get("from");
+    const to           = searchParams.get("to");
+    const advance_used = searchParams.get("advance_used"); // ✅
 
     // -------------------
     // Lookup by ID or order_id
@@ -554,14 +555,14 @@ export async function GET(request: Request) {
       }
     }
 
-    // Single date filter (assume payment_date stored as "dd-mm-yyyy" string like history)
+    // Single date filter
     if (date && !from && !to) {
       const parsedDate = parseDate(date);
       if (parsedDate) {
-        const day = ("0" + parsedDate.getDate()).slice(-2);
+        const day   = ("0" + parsedDate.getDate()).slice(-2);
         const month = ("0" + (parsedDate.getMonth() + 1)).slice(-2);
-        const year = parsedDate.getFullYear();
-        const formatted = `${day}-${month}-${year}`; // dd-mm-yyyy
+        const year  = parsedDate.getFullYear();
+        const formatted = `${day}-${month}-${year}`;
         conditions.push({ payment_date: formatted });
       }
     }
@@ -569,22 +570,38 @@ export async function GET(request: Request) {
     // Date range filter
     if (from || to) {
       const startDate = parseDate(from);
-      const endDate = parseDate(to);
+      const endDate   = parseDate(to);
 
       if (startDate && endDate) {
-        const startDay = ("0" + startDate.getDate()).slice(-2);
+        const startDay   = ("0" + startDate.getDate()).slice(-2);
         const startMonth = ("0" + (startDate.getMonth() + 1)).slice(-2);
-        const startYear = startDate.getFullYear();
+        const startYear  = startDate.getFullYear();
 
-        const endDay = ("0" + endDate.getDate()).slice(-2);
+        const endDay   = ("0" + endDate.getDate()).slice(-2);
         const endMonth = ("0" + (endDate.getMonth() + 1)).slice(-2);
-        const endYear = endDate.getFullYear();
+        const endYear  = endDate.getFullYear();
 
         const startFormatted = `${startDay}-${startMonth}-${startYear}`;
-        const endFormatted = `${endDay}-${endMonth}-${endYear}`;
+        const endFormatted   = `${endDay}-${endMonth}-${endYear}`;
 
         conditions.push({
           payment_date: { $gte: startFormatted, $lte: endFormatted },
+        });
+      }
+    }
+
+    // ✅ Advance used filter
+    if (advance_used !== null && advance_used !== "") {
+      if (advance_used === "true") {
+        // Advance orders — field must explicitly be true
+        conditions.push({ advance_used: true });
+      } else {
+        // Normal orders — field is false OR field doesn't exist at all
+        conditions.push({
+          $or: [
+            { advance_used: false },
+            { advance_used: { $exists: false } },
+          ],
         });
       }
     }
@@ -595,11 +612,7 @@ export async function GET(request: Request) {
     const finalQuery =
       conditions.length > 0 ? { $and: [baseQuery, ...conditions] } : baseQuery;
 
-    const orders = await Order.find(finalQuery).sort({
-      // last_modified_at: -1,
-      created_at: -1,
-    });
-    // console.log(orders);
+    const orders = await Order.find(finalQuery).sort({ created_at: -1 });
 
     return NextResponse.json({ success: true, data: orders }, { status: 200 });
   } catch (error: any) {

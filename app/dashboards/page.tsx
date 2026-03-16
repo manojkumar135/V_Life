@@ -340,7 +340,7 @@ const DashboardPage: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 -mt-5">
           {/* --- LEFT COLUMN --- */}
-          <div className="space-y-6 max-md:space-y-3">
+          <div className="space-y-3 max-md:space-y-3">
             {/* ── PROFILE CARD ── */}
             <div
               className="bg-white rounded-2xl shadow-md border-[1.5px] border-gray-300 relative overflow-hidden"
@@ -352,11 +352,11 @@ const DashboardPage: React.FC = () => {
               }}
             >
               {/* ── Logo — top-left corner, ALL devices ── */}
-              <div className="px-4 pb-2 pt-3 lg:pt-1">
+              <div className="px-4 pb-2 pt-2 lg:pt-1">
                 <img
                   src="/maverick-logo.png"
                   alt="Maverick Logo"
-                  className="h-12 lg:h-12 object-contain"
+                  className="h-11 lg:h-11 object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
                   }}
@@ -373,7 +373,7 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* ── Profile body — centered, ALL devices ── */}
-              <div className="flex flex-col items-center text-center px-6 pb-6 pt-2">
+              <div className="flex flex-col items-center text-center px-6 pb-6 -mt-5">
                 {/* Avatar + badge */}
                 <div className="relative w-36 h-36 mb-3 shrink-0">
                   <img
@@ -426,14 +426,21 @@ const DashboardPage: React.FC = () => {
                 >
                   {" "}
                   {[
-                    { label: "USER ID", value: user?.user_id || "N/A" },
                     {
-                      label: "Name",
-                      value: user?.user_name
-                        ? user.user_name.charAt(0).toUpperCase() +
-                          user.user_name.slice(1)
-                        : "N/A",
+                      label: "USER ID",
+                      value: (
+                        <span className="font-semibold">
+                          {user?.user_id || "N/A"}
+                        </span>
+                      ),
                     },
+                    // {
+                    //   label: "Name",
+                    //   value: user?.user_name
+                    //     ? user.user_name.charAt(0).toUpperCase() +
+                    //       user.user_name.slice(1)
+                    //     : "N/A",
+                    // },
                     {
                       label: "Status",
                       value: user?.status || "N/A",

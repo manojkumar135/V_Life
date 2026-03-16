@@ -76,7 +76,28 @@ export async function handleDownload<T extends object>({
 
       // Add data rows
       rows.forEach((row) => {
-        worksheet.addRow(headers.map((field) => (row as any)[field] ?? ""));
+        const rowValues = headers.map((field) => (row as any)[field] ?? "");
+        const newRow = worksheet.addRow(rowValues);
+
+        headers.forEach((field, index) => {
+          const cell = newRow.getCell(index + 1);
+
+          if (field === "invoice_download" && (row as any)[field]) {
+            cell.value = {
+              text: "Download Invoice",
+              hyperlink: (row as any)[field],
+            };
+            cell.font = { color: { argb: "0000FF" }, underline: true };
+          }
+
+          if (field === "download_all_invoices" && (row as any)[field]) {
+            cell.value = {
+              text: "Download All",
+              hyperlink: (row as any)[field],
+            };
+            cell.font = { color: { argb: "0000FF" }, underline: true };
+          }
+        });
       });
 
       // Auto column widths
@@ -110,7 +131,7 @@ export async function handleDownload<T extends object>({
       ...rows.map((row) =>
         headers
           .map((field) => JSON.stringify((row as any)[field] ?? ""))
-          .join(",")
+          .join(","),
       ),
     ];
     const content = csvRows.join("\n");
