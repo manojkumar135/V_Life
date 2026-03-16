@@ -128,7 +128,6 @@ const rankImages: Record<string, string> = {
 
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
-  // console.log("Dashboard user:", user);
 
   const isNumericRank = !isNaN(Number(user?.rank));
   const hasRank = user?.rank && user.rank !== "none" && user.rank !== "0";
@@ -351,7 +350,6 @@ const DashboardPage: React.FC = () => {
                 backgroundRepeat: "no-repeat",
               }}
             >
-              {/* ── Logo — top-left corner, ALL devices ── */}
               <div className="px-4 pb-2 pt-2 lg:pt-1">
                 <img
                   src="/maverick-logo.png"
@@ -363,7 +361,6 @@ const DashboardPage: React.FC = () => {
                 />
               </div>
 
-              {/* ── Edit button — top-right ── */}
               <div
                 onClick={() => router.push("/settings")}
                 className="absolute bottom-4 right-4 flex items-center gap-1 cursor-pointer text-black hover:text-blue-700 text-xs md:text-sm z-10"
@@ -372,9 +369,7 @@ const DashboardPage: React.FC = () => {
                 <span>Edit</span>
               </div>
 
-              {/* ── Profile body — centered, ALL devices ── */}
               <div className="flex flex-col items-center text-center px-6 pb-6 -mt-5">
-                {/* Avatar + badge */}
                 <div className="relative w-36 h-36 mb-3 shrink-0">
                   <img
                     src={
@@ -400,7 +395,6 @@ const DashboardPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Name */}
                 <p className="font-bold text-lg capitalize leading-tight">
                   {user?.user_name
                     ? user.user_name.charAt(0).toUpperCase() +
@@ -408,23 +402,10 @@ const DashboardPage: React.FC = () => {
                     : "N/A"}
                 </p>
 
-                {/* Status pill */}
-                {/* <span
-                  className={`text-xs font-semibold px-3 py-0.5 rounded-full mt-1 mb-4 ${
-                    user?.status?.toLowerCase() === "active"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-700"
-                  }`}
-                >
-                  {(user?.status || "N/A").toUpperCase()}
-                </span> */}
-
-                {/* Info rows — centered label:value layout */}
                 <div
                   className="space-y-1.5 text-sm mt-4 mb-3"
                   style={{ width: "fit-content", margin: "10px auto 0" }}
                 >
-                  {" "}
                   {[
                     {
                       label: "USER ID",
@@ -434,13 +415,6 @@ const DashboardPage: React.FC = () => {
                         </span>
                       ),
                     },
-                    // {
-                    //   label: "Name",
-                    //   value: user?.user_name
-                    //     ? user.user_name.charAt(0).toUpperCase() +
-                    //       user.user_name.slice(1)
-                    //     : "N/A",
-                    // },
                     {
                       label: "Status",
                       value: user?.status || "N/A",
@@ -452,14 +426,6 @@ const DashboardPage: React.FC = () => {
                         ? user.dob.split("-").reverse().join("-")
                         : "N/A",
                     },
-                    // {
-                    //   label: "Signup Date",
-                    //   value: user?.created_at
-                    //     ? new Date(user.created_at)
-                    //         .toLocaleDateString("en-GB")
-                    //         .replace(/\//g, "-")
-                    //     : "N/A",
-                    // },
                     {
                       label: "Activated Date",
                       value: user?.activated_date || "N/A",
@@ -509,7 +475,7 @@ const DashboardPage: React.FC = () => {
                 >
                   <FaRupeeSign className="text-white text-xl" />
                 </div>
-                <div className="">
+                <div>
                   <p className="text-white/80 text-xs font-medium">
                     Total Earnings
                   </p>
@@ -520,13 +486,58 @@ const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* ── TimeRemainingCard — mobile: right after Total Earnings; desktop: in left col ── */}
-            {/* Mobile version */}
+            {/* ── NEW: Maverick Cycle + MNF — mobile only, under Total Earnings ── */}
+            <div className="md:hidden grid grid-cols-2 gap-3">
+              <DashBox
+                icon={<BsFillPeopleFill />}
+                title={`Maverick Cycle (${cycles?.matches?.toString() || "0"})`}
+                value={`${cycles?.remainingDays?.toString() || "0"} days left`}
+                index={2}
+              />
+              <DashBox
+                icon={<FaGift />}
+                title="Maverick Nexus Fund (MNF)"
+                value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
+                index={1}
+              />
+            </div>
+
+            {/* ── NEW: Direct Sales Bonus + Infinity Sales Bonus — mobile only ── */}
+            <div className="md:hidden grid grid-cols-2 gap-3">
+              <DashBox
+                icon={<FaShoppingBag />}
+                title="Direct Sales Bonus"
+                value={`₹ ${summary?.directTeamSales?.toFixed(2) || "0.00"}`}
+                index={6}
+              />
+              <DashBox
+                icon={<FaShoppingBag />}
+                title="Infinity Sales Bonus"
+                value={`₹ ${summary?.infinityTeamSales?.toFixed(2) || "0.00"}`}
+                index={7}
+              />
+            </div>
+
+            {/* ── NEW: Matching Bonus + Infinity Matching Bonus — mobile only ── */}
+            <div className="md:hidden grid grid-cols-2 gap-3">
+              <DashBox
+                icon={<FaShoppingBag />}
+                title="Matching Bonus"
+                value={`₹ ${summary?.matchingBonus?.toFixed(2) || "0.00"}`}
+                index={4}
+              />
+              <DashBox
+                icon={<FaShoppingBag />}
+                title="Infinity Matching Bonus"
+                value={`₹ ${summary?.infinityBonus?.toFixed(2) || "0.00"}`}
+                index={5}
+              />
+            </div>
+
+            {/* ── TimeRemainingCard ── */}
             <div className="md:hidden">
               <TimeRemainingCard />
             </div>
-
-            {/* Desktop/Tablet version */}
             <div className="hidden md:block">
               <TimeRemainingCard />
             </div>
@@ -541,42 +552,44 @@ const DashboardPage: React.FC = () => {
           <div className="lg:col-span-2 space-y-6 max-md:space-y-3">
             {/* Top Info Cards Row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-md:-mt-2">
-              <InfoCard title="Achieved Rank">
-                <div className="mx-auto">
-                  <img
-                    src={
-                      !hasRank
-                        ? rankImages["no"]
-                        : isNumericRank
-                          ? rankImages["star"]
-                          : rankImages[user!.rank]
-                    }
-                    alt="Rank Badge"
-                    className="h-26 -mt-2 mx-auto"
-                  />
-                  <p className="text-black text-center text-sm font-semibold">
-                    {hasRank ? (
-                      isNumericRank ? (
-                        <span className="text-black text-lg font-extrabold">
-                          STAR
-                        </span>
+              {/* Achieved Rank — hidden on mobile, visible sm+ */}
+              <div className="hidden sm:block">
+                <InfoCard title="Achieved Rank">
+                  <div className="mx-auto flex flex-col items-center justify-center py-2">
+                    <img
+                      src={`/badges/${badgeKey}.png`}
+                      alt={badgeKey}
+                      className="h-30 w-30 object-contain drop-shadow-md mx-auto"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    {/* <p className="text-black text-center text-sm font-semibold mt-2">
+                      {hasRank ? (
+                        isNumericRank ? (
+                          <span className="text-black text-lg font-extrabold">
+                            STAR
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-black text-lg font-extrabold">
+                              {user!.rank}
+                            </span>{" "}
+                            STAR
+                          </>
+                        )
                       ) : (
                         <>
-                          <span className="text-black text-lg font-extrabold">
-                            {user!.rank}
+                          <span className="text-black text-lg font-bold">
+                            NO
                           </span>{" "}
                           STAR
                         </>
-                      )
-                    ) : (
-                      <>
-                        <span className="text-black text-lg font-bold">NO</span>{" "}
-                        STAR
-                      </>
-                    )}
-                  </p>
-                </div>
-              </InfoCard>
+                      )}
+                    </p> */}
+                  </div>
+                </InfoCard>
+              </div>
 
               <InfoCard title="KYC Status">
                 <div className="text-sm space-y-1">
@@ -587,7 +600,6 @@ const DashboardPage: React.FC = () => {
                 </div>
               </InfoCard>
 
-              {/* --- Maverick Links --- */}
               <InfoCard title="Maverick Links">
                 <LinkButton
                   text="JOIN LEFT TEAM"
@@ -606,7 +618,7 @@ const DashboardPage: React.FC = () => {
               <NewsTicker />
             </div>
 
-            {/* My Business Summary */}
+            {/* My Business Summary — unchanged, shown on all screen sizes */}
             <div className="bg-gray-50 rounded-2xl shadow-md border border-gray-100 my-0 py-0">
               <div className="bg-gray-700 text-white max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans">
                 MY BUSINESS SUMMARY
