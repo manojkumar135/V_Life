@@ -61,8 +61,8 @@ export async function POST(req: Request) {
     // ⭐ Fetch only important attributes (score, rank, club)
     const userData = await User.findOne(
       { user_id: loginUser.user_id },
-      { score: 1, reward: 1, rank: 1, club: 1, _id: 0 }
-    ).lean<{ score: number; rank: string; club: string; reward: number }>();
+      { score: 1, reward: 1, rank: 1, club: 1,profile: 1, _id: 0 }
+    ).lean<{ score: number; rank: string; club: string; reward: number ,profile: string; }>();
 
     // Convert login doc to plain object
     const loginObj = loginUser.toObject();
@@ -73,6 +73,8 @@ export async function POST(req: Request) {
 
     loginObj.rank = userData?.rank ?? loginObj.rank ?? "none";
     loginObj.club = userData?.club ?? loginObj.club ?? "none";
+
+    loginObj.profile = userData?.profile ?? null;
 
     const scoreData = await Score.findOne(
       { user_id: loginUser.user_id },

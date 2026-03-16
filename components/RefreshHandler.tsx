@@ -44,7 +44,7 @@ export default function RefreshHandler() {
         clearUser();
         router.push("/auth/login");
       } finally {
-        setLoading(false); // ✅ hide loader after API finishes
+        setLoading(false); 
       }
     };
 

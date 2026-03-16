@@ -128,6 +128,7 @@ const rankImages: Record<string, string> = {
 
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
+  // console.log("Dashboard user:", user);
 
   const isNumericRank = !isNaN(Number(user?.rank));
   const hasRank = user?.rank && user.rank !== "none" && user.rank !== "0";
@@ -333,7 +334,7 @@ const DashboardPage: React.FC = () => {
         />
 
         {/* ── NewsTicker — mobile only, at the very top ── */}
-        <div className="block md:hidden mb-8 -mt-2">
+        <div className="block md:hidden mb-8 -mt-5">
           <NewsTicker />
         </div>
 
@@ -341,13 +342,21 @@ const DashboardPage: React.FC = () => {
           {/* --- LEFT COLUMN --- */}
           <div className="space-y-6 max-md:space-y-3">
             {/* ── PROFILE CARD ── */}
-            <div className="bg-white rounded-2xl shadow-md border-[1.5px] border-gray-300 relative overflow-hidden">
+            <div
+              className="bg-white rounded-2xl shadow-md border-[1.5px] border-gray-300 relative overflow-hidden"
+              style={{
+                backgroundImage: "url('/profilebg.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }}
+            >
               {/* ── Logo — top-left corner, ALL devices ── */}
-              <div className="px-4 pt-4 pb-2">
+              <div className="px-4 pb-2 pt-3 lg:pt-1">
                 <img
                   src="/maverick-logo.png"
                   alt="Maverick Logo"
-                  className="h-10 lg:h-12 object-contain"
+                  className="h-12 lg:h-12 object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = "none";
                   }}
@@ -366,11 +375,12 @@ const DashboardPage: React.FC = () => {
               {/* ── Profile body — centered, ALL devices ── */}
               <div className="flex flex-col items-center text-center px-6 pb-6 pt-2">
                 {/* Avatar + badge */}
-                <div className="relative w-28 h-28 mb-3 shrink-0">
+                <div className="relative w-36 h-36 mb-3 shrink-0">
                   <img
                     src={
-                      user.profile ||
-                      "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760695970/gray-user-profile-icon-png-fP8Q1P_ggaoim.png"
+                      user?.profile
+                        ? user.profile
+                        : "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760695970/gray-user-profile-icon-png-fP8Q1P_ggaoim.png"
                     }
                     alt="Profile"
                     className={`w-full h-full object-cover rounded-full border-2 shadow-md p-0.5 ${
@@ -382,8 +392,8 @@ const DashboardPage: React.FC = () => {
                   <img
                     src={`/badges/${badgeKey}.png`}
                     alt={badgeKey}
-                    className="absolute w-12 h-12 object-contain drop-shadow-md"
-                    style={{ bottom: "-4px", right: "-8px" }}
+                    className="absolute w-14 h-14 object-contain drop-shadow-md"
+                    style={{ bottom: "-15px", right: "-20px" }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
@@ -435,14 +445,14 @@ const DashboardPage: React.FC = () => {
                         ? user.dob.split("-").reverse().join("-")
                         : "N/A",
                     },
-                    {
-                      label: "Signup Date",
-                      value: user?.created_at
-                        ? new Date(user.created_at)
-                            .toLocaleDateString("en-GB")
-                            .replace(/\//g, "-")
-                        : "N/A",
-                    },
+                    // {
+                    //   label: "Signup Date",
+                    //   value: user?.created_at
+                    //     ? new Date(user.created_at)
+                    //         .toLocaleDateString("en-GB")
+                    //         .replace(/\//g, "-")
+                    //     : "N/A",
+                    // },
                     {
                       label: "Activated Date",
                       value: user?.activated_date || "N/A",

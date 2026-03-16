@@ -57,6 +57,7 @@ export default function LoginPage() {
             wallet_id: res.data.data.wallet_id,
             score: res.data.data.score,
             reward: res.data.data.reward,
+            profile: res.data.data.profile,
           });
 
           sessionStorage.setItem("showLoginPopup", "true");

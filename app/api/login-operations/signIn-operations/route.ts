@@ -53,14 +53,15 @@ export async function POST(request: Request) {
     // ⭐ Fetch only score, rank and club from User
     const userData = await User.findOne(
       { user_id: loginRecord.user_id },
-      { score: 1, reward: 1, rank: 1, club: 1, _id: 0 }
-    ).lean<{ score: number; rank: string; club: string; reward: number }>();
+      { score: 1, reward: 1, rank: 1, club: 1,profile: 1, _id: 0 }
+    ).lean<{ score: number; rank: string; club: string; reward: number,  profile: string; }>();
 
     // ⭐ Overwrite or attach values from User
     userObj.score = userData?.score ?? 0;
     userObj.reward = userData?.reward ?? 0;
     userObj.rank = userData?.rank ?? userObj.rank ?? "none";
     userObj.club = userData?.club ?? userObj.club ?? "none";
+    userObj.profile = userData?.profile ?? null;
 
     const scoreData = await Score.findOne(
       { user_id: loginRecord.user_id },
