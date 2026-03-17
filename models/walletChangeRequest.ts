@@ -16,7 +16,7 @@ const walletChangeRequestSchema = new mongoose.Schema(
       default: "pending",
     },
 
-    old_values: { type: Object, required: true },
+    old_values: { type: Object,  },
     new_values: { type: Object, required: true },
 
     reviewed_by: { type: String, default: null },

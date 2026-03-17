@@ -28,11 +28,11 @@ interface AdminDashboardData {
     reorder: number;
   };
   orders: {
-    totalOrders:      number;
-    pendingOrders:    number;  // ✅ pending + packed
-    dispatchedOrders: number;  // ✅ dispatched + out_for_delivery + delivered
-    deliveredOrders:  number;  // ✅ delivered
-    returnedOrders:   number;  // ✅ returned + cancelled
+    totalOrders: number;
+    pendingOrders: number; // ✅ pending + packed
+    dispatchedOrders: number; // ✅ dispatched + out_for_delivery + delivered
+    deliveredOrders: number; // ✅ delivered
+    returnedOrders: number; // ✅ returned + cancelled
   };
   team: {
     totalRegistered: number;
@@ -53,6 +53,7 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   const [showAlert, setShowAlert] = useState(false);
+  const [showWalletAlert, setShowWalletAlert] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -145,6 +146,33 @@ export default function AdminDashboard() {
     fetchAdminDashboard();
   }, [fetchAdminDashboard]);
 
+  const checkWalletChangeRequests = useCallback(async () => {
+    if (!user?.user_id) return;
+
+    try {
+      const res = await axios.get("/api/wallet-change-requests", {
+        params: {
+          status: "pending",
+        },
+      });
+
+      if (res.data.success && res.data.data.length > 0) {
+        setShowWalletAlert(true);
+      } else {
+        setShowWalletAlert(false);
+      }
+    } catch (err) {
+      console.error("Wallet request check error:", err);
+      setShowWalletAlert(false);
+    }
+  }, [user?.user_id]);
+
+  useEffect(() => {
+    if (user?.user_id) {
+      checkWalletChangeRequests();
+    }
+  }, [user?.user_id]);
+
   return (
     <Layout>
       <LoginWelcomePopup open={showPopup} onClose={() => setShowPopup(false)} />
@@ -158,6 +186,19 @@ export default function AdminDashboard() {
         onClose={() => setShowAlert(false)}
       />
 
+      <AlertBox
+        visible={user?.role !== "user" && showWalletAlert}
+        title="Wallet Change Request Pending!"
+        message={
+          <>You have pending wallet change requests. Please review them.</>
+        }
+        buttonLabel="VIEW REQUESTS"
+        buttonAction={() =>
+          router.push("/wallet/change-requests")
+        }
+        onClose={() => setShowWalletAlert(false)}
+      />
+
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
@@ -169,7 +210,7 @@ export default function AdminDashboard() {
         <button
           title="Filter"
           onClick={() => setShowFilterModal(true)}
-          className="w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
+          className="w-12 h-12 rounded-full bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
           text-white flex items-center justify-center shadow-lg"
         >
           <FiFilter size={20} />

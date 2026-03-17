@@ -8,6 +8,10 @@ import Loader from "@/components/common/loader";
 import Layout from "@/layout/Layout";
 import SubmitButton from "@/components/common/submitbutton";
 
+// ─────────────────────────────────────────
+// Interfaces
+// ─────────────────────────────────────────
+
 interface CartItem {
   id: string | number;
   name: string;
@@ -15,13 +19,27 @@ interface CartItem {
   quantity: number;
   image: string;
   description: string;
-  bv?: number; // ✅ added bv
+  bv?: number;
   pv?: number;
   gst?: number;
   whole_gst?: number;
   dealer_price?: number;
   unit_price?: number;
   price_with_gst?: number;
+}
+
+interface ShippingData {
+  tracking_id?: string;
+  courier_partner?: string;
+  dispatch_date?: string;
+  dispatch_time?: string;
+  estimated_delivery?: string;
+  delivered_date?: string;
+  delivered_time?: string;
+  return_reason?: string;
+  remarks?: string;
+  tracking_url?: string;
+  updated_by?: string;
 }
 
 interface OrderData {
@@ -34,9 +52,9 @@ interface OrderData {
   description?: string;
   orderStatus?: string;
   cart: CartItem[];
-  totalAmount: number; // final amount after advance deduction
-  subtotal: number; // full order value before advance
-  advanceDeducted?: number; // advance amount deducted
+  totalAmount: number;
+  subtotal: number;
+  advanceDeducted?: number;
   isFirstOrder?: boolean;
   paymentDate?: string;
   paymentId?: string;
@@ -50,7 +68,6 @@ interface OrderData {
     contact?: string;
     mail?: string;
   };
-
   beneficiary?: {
     user_id: string;
     name?: string;
@@ -58,25 +75,57 @@ interface OrderData {
     mail?: string;
     address?: string;
   };
-
   rewardUsage: {
-    cashback: {
-      used: number;
-      before: number;
-      after: number;
-    };
-    fortnight: {
-      used: number;
-      before: number;
-      after: number;
-    };
-    daily: {
-      used: number;
-      before: number;
-      after: number;
-    };
+    cashback: { used: number; before: number; after: number };
+    fortnight: { used: number; before: number; after: number };
+    daily: { used: number; before: number; after: number };
   };
+  shipping?: ShippingData;
 }
+
+// ─────────────────────────────────────────
+// Status Badge
+// ─────────────────────────────────────────
+
+function StatusBadge({ status }: { status?: string }) {
+  if (!status) return null;
+
+  const map: Record<string, { label: string; classes: string }> = {
+    pending: { label: "Pending", classes: "bg-yellow-100 text-yellow-700" },
+    packed: { label: "Packed", classes: "bg-blue-100 text-blue-700" },
+    dispatched: { label: "Dispatched", classes: "bg-indigo-100 text-indigo-700" },
+    out_for_delivery: { label: "Out for Delivery", classes: "bg-orange-100 text-orange-700" },
+    delivered: { label: "Delivered", classes: "bg-green-100 text-green-700" },
+    returned: { label: "Returned", classes: "bg-red-100 text-red-700" },
+    cancelled: { label: "Cancelled", classes: "bg-gray-100 text-gray-500" },
+  };
+
+  const cfg = map[status] ?? { label: status, classes: "bg-gray-100 text-gray-500" };
+
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cfg.classes}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────
+// Inline KV row used inside the modal
+// ─────────────────────────────────────────
+
+function KVRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <>
+      <span className="font-bold text-black">{label}</span>
+      <span className="font-bold text-black text-center">:</span>
+      <span className="font-normal text-black">{children}</span>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────
 
 export default function ActivationView() {
   const params = useParams();
@@ -85,9 +134,9 @@ export default function ActivationView() {
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [showAddress, setShowAddress] = useState<boolean>(false); // ✅ popup state
+  const [showAddress, setShowAddress] = useState<boolean>(false);
 
-  // Fetch order data
+  // ── fetch order ──────────────────────────
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -112,7 +161,7 @@ export default function ActivationView() {
               quantity: item.quantity,
               image: item.image,
               description: item.description,
-              bv: item.bv, // ✅ map bv
+              bv: item.bv,
               pv: item.pv,
               whole_gst: item.whole_gst,
               gst: item.gst,
@@ -130,6 +179,7 @@ export default function ActivationView() {
             rewardUsed: Number(raw.reward_used) || 0,
             rewardUsage: raw.reward_usage,
             placedBy: raw.placed_by,
+            shipping: raw.shipping, // ✅ mapped
           };
 
           setOrder(mappedOrder);
@@ -147,6 +197,10 @@ export default function ActivationView() {
     if (orderId) fetchOrder();
   }, [orderId]);
 
+  // ─────────────────────────────────────────
+  // Guards
+  // ─────────────────────────────────────────
+
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
@@ -154,8 +208,6 @@ export default function ActivationView() {
       </div>
     );
   }
-
-  // console.log(order?.placed_by)
 
   if (!order) {
     return (
@@ -171,11 +223,17 @@ export default function ActivationView() {
     );
   }
 
-  // console.log(order);
+  const hasTracking = Boolean(order.shipping?.tracking_id);
+
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
+
   return (
     <Layout>
       <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-[100%]">
-        {/* Header - Order Info */}
+
+        {/* ── Header ── */}
         <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row gap-3 xl:items-center xl:pr-1">
           <button
             onClick={() => router.push("/activation/myactivation")}
@@ -186,48 +244,43 @@ export default function ActivationView() {
           </button>
 
           <div className="flex flex-col xl:flex-row max-lg:items-start items-center max-lg:justify-start justify-between gap-4 w-full">
-            <div
-              className=" flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between
-             xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5 "
-            >
+            {/* order meta */}
+            <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5">
               <span className="text-sm font-medium text-gray-600">
                 Order ID:{" "}
-                <span className="text-black font-semibold">
-                  {order.orderId}
-                </span>
+                <span className="text-black font-semibold">{order.orderId}</span>
               </span>
               <span className="text-sm font-medium text-gray-600">
                 Payment Date:{" "}
-                <span className="text-black font-semibold">
-                  {order.paymentDate}
-                </span>
+                <span className="text-black font-semibold">{order.paymentDate}</span>
               </span>
               <span className="text-sm font-medium text-gray-600">
                 Payment ID:{" "}
-                <span className="text-black font-semibold">
-                  {order.paymentId}
-                </span>
+                <span className="text-black font-semibold">{order.paymentId}</span>
+              </span>
+              {/* ✅ status badge — same as OrderDetailView */}
+              <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                Status: <StatusBadge status={order.orderStatus} />
               </span>
             </div>
 
+            {/* ✅ button label matches OrderDetailView */}
             <SubmitButton
               onClick={() => setShowAddress(true)}
-              className=" text-sm transition-colors duration-200 max-lg:items-end max-lg:self-end"
+              className="text-sm transition-colors duration-200 max-lg:items-end max-lg:self-end"
             >
-              View Shipping Details
+              Order Details
             </SubmitButton>
           </div>
         </div>
 
-        {/* Cart - ONLY THIS SCROLLS */}
+        {/* ── Cart (scrollable) ── */}
         <div className="flex-1 overflow-y-auto pr-2">
           {order.cart.length === 0 ? (
-            <p className="text-gray-500 text-center py-6">
-              No items in this order
-            </p>
+            <p className="text-gray-500 text-center py-6">No items in this order</p>
           ) : (
             <>
-              {/* Header Row (Desktop) */}
+              {/* desktop header row */}
               <div className="hidden lg:grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 xl:px-15">
                 <div className="col-span-4">Product</div>
                 <div className="col-span-1 text-center">Quantity</div>
@@ -244,7 +297,7 @@ export default function ActivationView() {
                     key={item.id}
                     className="w-full rounded-xl p-4 transition-all shadow-sm hover:shadow-lg border border-gray-200"
                   >
-                    {/* Desktop */}
+                    {/* Desktop row */}
                     <div className="hidden lg:grid grid-cols-12 items-center xl:px-5">
                       <div className="col-span-4 flex items-center gap-4">
                         <img
@@ -253,44 +306,25 @@ export default function ActivationView() {
                           className="w-16 h-16 object-cover rounded-lg border"
                         />
                         <div>
-                          <p className="font-semibold text-gray-900 text-sm lg:text-base">
-                            {item.name}
-                          </p>
-                          <p className="text-gray-600 text-xs mt-1 line-clamp-1">
-                            {item.description}
-                          </p>
+                          <p className="font-semibold text-gray-900 text-sm lg:text-base">{item.name}</p>
+                          <p className="text-gray-600 text-xs mt-1 line-clamp-1">{item.description}</p>
                           <p className="text-gray-700 text-xs mt-1">
-                            <span className="font-semibold">
-                              ₹ {(item.price || 0).toFixed(2)}
-                            </span>{" "}
+                            <span className="font-semibold">₹ {(item.price || 0).toFixed(2)}</span>{" "}
                             each + GST ({item.gst ?? 0}%)
                           </p>
                         </div>
                       </div>
-                      <div className="col-span-1 text-center font-medium">
-                        {item.quantity}
-                      </div>
-                      <div className="col-span-1 text-right font-medium">
-                        {item.bv || 0}
-                      </div>
-                      <div className="col-span-1 text-right font-medium">
-                        {item.pv || 0}
-                      </div>
-                      <div className="col-span-2 text-center text-gray-700">
-                        ₹ {item.price.toFixed(2)}
-                      </div>
-                      <div className="col-span-1 text-right text-gray-700">
-                        ₹ {(item.whole_gst || 0).toFixed(2)}
-                      </div>
+                      <div className="col-span-1 text-center font-medium">{item.quantity}</div>
+                      <div className="col-span-1 text-right font-medium">{item.bv || 0}</div>
+                      <div className="col-span-1 text-right font-medium">{item.pv || 0}</div>
+                      <div className="col-span-2 text-center text-gray-700">₹ {item.price.toFixed(2)}</div>
+                      <div className="col-span-1 text-right text-gray-700">₹ {(item.whole_gst || 0).toFixed(2)}</div>
                       <div className="col-span-2 text-right font-bold text-gray-900">
-                        ₹{" "}
-                        {((item.price_with_gst || 0) * item.quantity).toFixed(
-                          2,
-                        )}
+                        ₹ {((item.price_with_gst || 0) * item.quantity).toFixed(2)}
                       </div>
                     </div>
 
-                    {/* Mobile */}
+                    {/* Mobile row */}
                     <div className="lg:hidden flex flex-col gap-3">
                       <div className="flex items-start gap-3">
                         <img
@@ -299,24 +333,17 @@ export default function ActivationView() {
                           className="w-16 h-16 object-cover rounded-lg border"
                         />
                         <div className="flex-1">
-                          <p className="font-semibold text-gray-900 text-sm">
-                            {item.name}
-                          </p>
-                          <p className="text-gray-600 text-xs mt-1 line-clamp-1">
-                            {item.description}
-                          </p>
+                          <p className="font-semibold text-gray-900 text-sm">{item.name}</p>
+                          <p className="text-gray-600 text-xs mt-1 line-clamp-1">{item.description}</p>
                           <p className="text-gray-700 text-xs mt-1">
-                            <span className="font-semibold">
-                              ₹ {(item.price || 0).toFixed(2)}
-                            </span>{" "}
+                            <span className="font-semibold">₹ {(item.price || 0).toFixed(2)}</span>{" "}
                             each + GST ({item.gst ?? 0}%)
                           </p>
                         </div>
                       </div>
                       <div className="flex justify-between items-center text-sm pl-1 pt-2">
                         <p className="text-gray-700">
-                          Qty:{" "}
-                          <span className="font-medium">{item.quantity}</span>
+                          Qty: <span className="font-medium">{item.quantity}</span>
                         </p>
                         {item.bv && (
                           <p className="text-gray-700">
@@ -328,12 +355,8 @@ export default function ActivationView() {
                             PV: <span className="font-medium">{item.pv}</span>
                           </p>
                         )}
-
-                        <div className=" text-right font-bold text-gray-700">
-                          ₹{" "}
-                          {((item.price_with_gst || 0) * item.quantity).toFixed(
-                            2,
-                          )}
+                        <div className="text-right font-bold text-gray-700">
+                          ₹ {((item.price_with_gst || 0) * item.quantity).toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -344,18 +367,13 @@ export default function ActivationView() {
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <div className="flex-none border-t pt-4 lg:px-10 bg-white py-3 space-y-2">
-          {/* Show ONLY when reward_used > 1 */}
-          {/* Reward Used – Detailed */}
           {order.rewardUsed > 0 && (
             <>
-              {/* Total Amount */}
               <div className="flex justify-between items-center text-sm text-gray-700">
                 <span>Total Amount</span>
-                <span className="font-semibold">
-                  ₹ {order.subtotal.toFixed(2)}
-                </span>
+                <span className="font-semibold">₹ {order.subtotal.toFixed(2)}</span>
               </div>
               {order.rewardUsage?.cashback?.used > 0 && (
                 <div className="flex justify-between items-center text-sm text-red-600 pl-2">
@@ -363,11 +381,9 @@ export default function ActivationView() {
                   <span>- ₹ {order.rewardUsage.cashback.used.toFixed(2)}</span>
                 </div>
               )}
-
-              {(order.rewardUsage?.fortnight?.used > 0 ||
-                order.rewardUsage?.daily?.used > 0) && (
+              {(order.rewardUsage?.fortnight?.used > 0 || order.rewardUsage?.daily?.used > 0) && (
                 <div className="flex justify-between items-center text-sm text-red-600 pl-2">
-                  <span>Reward </span>
+                  <span>Reward</span>
                   <span>
                     - ₹{" "}
                     {(
@@ -377,12 +393,10 @@ export default function ActivationView() {
                   </span>
                 </div>
               )}
-
               <div className="border-t border-gray-200 my-2"></div>
             </>
           )}
 
-          {/* Always show payable / paid */}
           <div className="flex justify-between items-center sm:text-lg font-semibold mb-1 text-sm">
             <span className="text-md">Total Paid</span>
             <span className="text-green-600">
@@ -392,14 +406,19 @@ export default function ActivationView() {
         </div>
       </div>
 
-      {/* Shipping Address Popup */}
+      {/* ══════════════════════════════════════════
+          Popup — Order Details
+          Mobile  : single column (stacked)
+          Desktop : two columns side-by-side when tracking exists
+      ══════════════════════════════════════════ */}
       {showAddress && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
           onClick={() => setShowAddress(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-lg w-[90%] max-w-md p-6 relative"
+            className={`bg-white rounded-xl shadow-lg w-[95%] p-6 relative max-h-[90vh] overflow-y-auto
+              ${hasTracking ? "max-w-3xl" : "max-w-md"}`}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -410,63 +429,134 @@ export default function ActivationView() {
               ✕
             </button>
 
-            <p className="text-lg font-semibold mb-4">Shipping Details</p>
+            <p className="text-lg font-semibold mb-4">Order Details</p>
 
-            <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
-              <span className="font-bold text-black">Order ID</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.orderId}</span>
+            {/* ── Two-column on desktop when tracking exists, single otherwise ── */}
+            <div className={`flex flex-col ${hasTracking ? "lg:flex-row lg:gap-6" : ""}`}>
 
-              <span className="font-bold text-black ">User ID</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.userId}</span>
+              {/* ── Left / full: Shipping Details ── */}
+              <div className={hasTracking ? "lg:flex-1" : "w-full"}>
+                <p className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">
+                  📦 Shipping Details
+                </p>
+                <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
+                  <KVRow label="Order ID">{order.orderId}</KVRow>
+                  <KVRow label="User ID">{order.userId}</KVRow>
+                  <KVRow label="User Name">{order.userName}</KVRow>
+                  <KVRow label="Email">
+                    <span className="whitespace-pre-line">{order.mail}</span>
+                  </KVRow>
+                  <KVRow label="Contact">{order.contact}</KVRow>
+                  <KVRow label="Payment">{order.payment}</KVRow>
 
-              <span className="font-bold text-black ">User Name</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.userName}</span>
+                  {order.placedBy?.user_id && (
+                    <KVRow label="Placed by">
+                      {order.placedBy.user_id}
+                      {order.placedBy.name ? ` (${order.placedBy.name})` : ""}
+                    </KVRow>
+                  )}
 
-              <span className="font-bold text-black ">Email</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black  whitespace-pre-line">
-                {order.mail}
-              </span>
+                  <KVRow label="Address">
+                    <span className="whitespace-pre-line">
+                      {order.address || "No address available"}
+                    </span>
+                  </KVRow>
+                  <KVRow label="Description">
+                    <span className="whitespace-pre-line">
+                      {order.description || "N/A"}
+                    </span>
+                  </KVRow>
+                  <KVRow label="Order Status">
+                    <StatusBadge status={order.orderStatus} />
+                  </KVRow>
+                </div>
+              </div>
 
-              <span className="font-bold text-black ">Contact</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.contact}</span>
-
-              {order.placedBy?.user_id && (
+              {/* ── Divider ── */}
+              {hasTracking && (
                 <>
-                  <span className="font-bold text-black">Placed by</span>
-                  <span className="font-bold text-black text-center">:</span>
-                  <span className="font-normal text-black">
-                    {order.placedBy.user_id}
-                    {order.placedBy.name ? ` (${order.placedBy.name})` : ""}
-                  </span>
+                  {/* horizontal on mobile */}
+                  <div className="lg:hidden border-t border-dashed border-gray-300 my-4" />
+                  {/* vertical on desktop */}
+                  <div className="hidden lg:block w-px bg-gray-200 self-stretch mx-1" />
                 </>
               )}
 
-              <span className="font-bold text-black ">Payment</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.payment}</span>
+              {/* ── Right: Tracking Info (only when tracking_id exists) ── */}
+              {hasTracking && (
+                <div className="lg:flex-1">
+                  <p className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">
+                    🚚 Tracking Info
+                  </p>
+                  <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
+                    <KVRow label="Courier">
+                      {order.shipping!.courier_partner || "—"}
+                    </KVRow>
 
-              <span className="font-bold text-black ">Address</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black whitespace-pre-line">
-                {order.address || "No address available"}
-              </span>
+                    <KVRow label="Tracking ID">
+                      {order.shipping!.tracking_url ? (
+                        <a
+                          href={order.shipping!.tracking_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 underline break-all"
+                        >
+                          {order.shipping!.tracking_id}
+                        </a>
+                      ) : (
+                        order.shipping!.tracking_id
+                      )}
+                    </KVRow>
 
-              <span className="font-bold text-black ">Description</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black whitespace-pre-line">
-                {order.description || "N/A"}
-              </span>
+                    <KVRow label="Dispatched">
+                      {order.shipping!.dispatch_date || "—"}
+                      {order.shipping!.dispatch_time
+                        ? ` at ${order.shipping!.dispatch_time}`
+                        : ""}
+                    </KVRow>
 
-              <span className="font-bold text-black ">Order Status</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">
-                {order.orderStatus}
-              </span>
+                    <KVRow label="Est. Delivery">
+                      {order.shipping!.estimated_delivery || "—"}
+                    </KVRow>
+
+                    {order.shipping!.delivered_date && (
+                      <>
+                        <span className="font-bold text-black">Delivered On</span>
+                        <span className="font-bold text-black text-center">:</span>
+                        <span className="font-semibold text-green-600">
+                          {order.shipping!.delivered_date}
+                          {order.shipping!.delivered_time
+                            ? ` at ${order.shipping!.delivered_time}`
+                            : ""}
+                        </span>
+                      </>
+                    )}
+
+                    {order.shipping!.return_reason && (
+                      <>
+                        <span className="font-bold text-black">Return Reason</span>
+                        <span className="font-bold text-black text-center">:</span>
+                        <span className="font-normal text-red-600">
+                          {order.shipping!.return_reason}
+                        </span>
+                      </>
+                    )}
+
+                    {order.shipping!.remarks && (
+                      <KVRow label="Remarks">{order.shipping!.remarks}</KVRow>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* not yet dispatched notice */}
+              {!hasTracking &&
+                order.orderStatus !== "pending" &&
+                order.orderStatus !== "cancelled" && (
+                  <p className="mt-4 text-xs text-gray-400 italic">
+                    Tracking details will appear once the order is dispatched.
+                  </p>
+                )}
             </div>
           </div>
         </div>

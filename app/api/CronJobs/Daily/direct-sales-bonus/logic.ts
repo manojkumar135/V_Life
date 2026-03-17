@@ -11,8 +11,10 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { Alert } from "@/models/alert";
 
-import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
+import { getTotalPayout } from "@/services/totalpayout";
+import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
 import { updateClub } from "@/services/clubrank";
+import { determineHoldReasons } from "@/services/payoutHoldService";
 
 import { releaseReferralBonus } from "./referralBonus";
 
@@ -310,25 +312,35 @@ export async function runDirectSalesBonus(): Promise<{
           continue;
         }
 
-        const totalAmount    = Number(orderBV.toFixed(2));
-        const previousPayout = await getTotalPayout(referBy);
-        const afterThis      = previousPayout + totalAmount;
+        const totalAmount = Number(orderBV.toFixed(2));
 
         const now           = new Date();
         const payout_id     = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
         const formattedDate = formatDate(now);
 
-        const wallet  = (await Wallet.findOne({ user_id: referBy }).lean()) as any;
-        const sponsor = (await User.findOne({ user_id: referBy }).lean()) as any;
+        const wallet = (await Wallet.findOne({ user_id: referBy }).lean()) as any;
 
-        /* Determine payout hold status */
-        let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+        // ── Determine payout status ──────────────────────────────────────
+        //
+        //  Hold priority (all 4 conditions checked via determineHoldReasons):
+        //   1. No wallet / no account_number             → OnHold (NO_WALLET)
+        //   2. Wallet exists but inactive                → OnHold (WALLET_INACTIVE)
+        //   3. Wallet change request pending             → OnHold (WALLET_UNDER_REVIEW)
+        //   4. Prior month PV uncleared / this month
+        //      crossed threshold with PV unmet           → OnHold (PV_NOT_FULFILLED)
+        //   5. All clear                                 → Pending
+        //
+        //  evaluateAndUpdateHoldStatus MUST be called first so that
+        //  MonthlyPayoutTracker.total_payout is updated BEFORE
+        //  determineHoldReasons reads it for the PV check.
 
-        if (!wallet || !wallet.account_number) {
-          payoutStatus = "OnHold";
-        } else if (checkHoldStatus(afterThis, sponsor?.pv ?? 0)) {
-          payoutStatus = "OnHold";
-        }
+        // Step 1: Update monthly tracker total (WRITE)
+        await evaluateAndUpdateHoldStatus(referBy, totalAmount);
+
+        // Step 2: Read all 4 hold conditions with full metadata (READ)
+        const hold = await determineHoldReasons(referBy, currentMonth());
+
+        const payoutStatus: "Pending" | "OnHold" | "Completed" = hold.status;
 
         /* ── Amount splits ────────────────────────────────────────── */
         const panVerified    = !!wallet?.pan_verified;
@@ -355,6 +367,12 @@ export async function runDirectSalesBonus(): Promise<{
           transaction_type: "Credit",
           name:             "Direct Sales Bonus",
           title:            "Direct Sales Bonus",
+
+          // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
+          hold_reasons:        hold.reasons,
+          hold_reason_labels:  hold.labels,
+          hold_release_reason: hold.summary,
+
           created_by:       "system",
           created_at:       now,
           last_modified_at: now,
@@ -401,7 +419,7 @@ export async function runDirectSalesBonus(): Promise<{
               role:        "user",
               user_id:     referBy,
               title:       "Direct Sales Bonus On Hold",
-              description: `Your Direct Sales Bonus of ₹${totalAmount.toFixed(2)} is on hold. Please complete your KYC / bank details to release it.`,
+              description: `Your Direct Sales Bonus of ₹${totalAmount.toFixed(2)} is on hold. ${hold.labels.length > 0 ? `Reason: ${hold.labels.join(", ")}.` : "Please complete your KYC / bank details to release it."}`,
               priority:    "medium",
               date:        formattedDate,
               created_at:  now,

@@ -77,35 +77,63 @@ const WalletSchema = Yup.object().shape({
   panDob: Yup.date().required("Date of Birth as in PAN is required"),
   panFile: Yup.mixed<string | File>()
     .required("PAN file is required")
-    .test("fileType-pan", "PAN must be an image or PDF", (value) =>
-      !value || typeof value === "string" ||
-      (value instanceof File && ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+    .test(
+      "fileType-pan",
+      "PAN must be an image or PDF",
+      (value) =>
+        !value ||
+        typeof value === "string" ||
+        (value instanceof File &&
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))),
     ),
   gstNumber: Yup.string()
     .matches(/^[0-9A-Z]{15}$/, "Invalid GSTIN")
-    .notRequired().nullable()
+    .notRequired()
+    .nullable()
     .transform((v) => (v === "" ? null : v)),
-  cheque: Yup.mixed<string | File>().notRequired()
-    .test("fileType-cheque", "Cheque must be an image or PDF", (value) =>
-      !value || typeof value === "string" ||
-      (value instanceof File && ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+  cheque: Yup.mixed<string | File>()
+    .notRequired()
+    .test(
+      "fileType-cheque",
+      "Cheque must be an image or PDF",
+      (value) =>
+        !value ||
+        typeof value === "string" ||
+        (value instanceof File &&
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))),
     ),
-  bankBook: Yup.mixed<string | File>().notRequired()
-    .test("fileType-bankbook", "Bank book must be an image or PDF", (value) =>
-      !value || typeof value === "string" ||
-      (value instanceof File && ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+  bankBook: Yup.mixed<string | File>()
+    .notRequired()
+    .test(
+      "fileType-bankbook",
+      "Bank book must be an image or PDF",
+      (value) =>
+        !value ||
+        typeof value === "string" ||
+        (value instanceof File &&
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))),
     ),
   aadharFront: Yup.mixed<string | File>()
     .required("Aadhaar front is required")
-    .test("fileType-aadharFront", "Aadhaar front must be an image or PDF", (value) =>
-      !value || typeof value === "string" ||
-      (value instanceof File && ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+    .test(
+      "fileType-aadharFront",
+      "Aadhaar front must be an image or PDF",
+      (value) =>
+        !value ||
+        typeof value === "string" ||
+        (value instanceof File &&
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))),
     ),
   aadharBack: Yup.mixed<string | File>()
     .required("Aadhaar back is required")
-    .test("fileType-aadharBack", "Aadhaar back must be an image or PDF", (value) =>
-      !value || typeof value === "string" ||
-      (value instanceof File && ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+    .test(
+      "fileType-aadharBack",
+      "Aadhaar back must be an image or PDF",
+      (value) =>
+        !value ||
+        typeof value === "string" ||
+        (value instanceof File &&
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))),
     ),
 });
 
@@ -115,23 +143,23 @@ const WalletSchema = Yup.object().shape({
 
 const TEXT_COMPARE_FIELDS: Array<[string, string]> = [
   ["Account Holder Name", "account_holder_name"],
-  ["Bank Name",           "bank_name"],
-  ["Account Number",      "account_number"],
-  ["IFSC Code",           "ifsc_code"],
-  ["Aadhaar Number",      "aadhar_number"],
-  ["PAN Number",          "pan_number"],
-  ["Name as in PAN",      "pan_name"],
+  ["Bank Name", "bank_name"],
+  ["Account Number", "account_number"],
+  ["IFSC Code", "ifsc_code"],
+  ["Aadhaar Number", "aadhar_number"],
+  ["PAN Number", "pan_number"],
+  ["Name as in PAN", "pan_name"],
   ["Date of Birth (PAN)", "pan_dob"],
-  ["GST Number",          "gst_number"],
+  ["GST Number", "gst_number"],
 ];
 
 const FILE_COMPARE_FIELDS: Array<[string, string]> = [
-  ["Cancelled Cheque",  "cheque"],
-  ["Bank Book Front",   "bank_book"],
-  ["Aadhaar Front",     "aadhar_front"],
-  ["Aadhaar Back",      "aadhar_back"],
-  ["PAN File",          "pan_file"],
-  ["Aadhaar File",      "aadhar_file"],
+  ["Cancelled Cheque", "cheque"],
+  ["Bank Book Front", "bank_book"],
+  ["Aadhaar Front", "aadhar_front"],
+  ["Aadhaar Back", "aadhar_back"],
+  ["PAN File", "pan_file"],
+  ["Aadhaar File", "aadhar_file"],
 ];
 
 /* ------------------------------------------------------------------ */
@@ -142,26 +170,48 @@ const fileLabel = (url: string | null | undefined): string => {
   if (!url) return "—";
   try {
     const parts = new URL(url).pathname.split("/");
-    const name  = parts[parts.length - 1];
+    const name = parts[parts.length - 1];
     return name.length > 32 ? name.slice(0, 14) + "…" + name.slice(-10) : name;
-  } catch { return "File"; }
+  } catch {
+    return "File";
+  }
 };
 
-const FileCell = ({ url, label }: { url: string | null | undefined; label: string }) => {
+const FileCell = ({
+  url,
+  label,
+}: {
+  url: string | null | undefined;
+  label: string;
+}) => {
   if (!url) return <span className="text-gray-400">—</span>;
   const isImage = /\.(jpg|jpeg|png|gif|webp)(\?|$)/i.test(url);
-  const isPdf   = /\.pdf(\?|$)/i.test(url);
+  const isPdf = /\.pdf(\?|$)/i.test(url);
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer"
-      className="flex items-center gap-2 hover:underline" title={url}>
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 hover:underline"
+      title={url}
+    >
       {isImage ? (
-        <img src={url} alt={label}
+        <img
+          src={url}
+          alt={label}
           className="w-10 h-10 object-cover rounded border border-gray-200 flex-shrink-0"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = "none";
+          }}
+        />
       ) : isPdf ? (
-        <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold flex-shrink-0">PDF</span>
+        <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold flex-shrink-0">
+          PDF
+        </span>
       ) : (
-        <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded flex-shrink-0">FILE</span>
+        <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded flex-shrink-0">
+          FILE
+        </span>
       )}
       <span className="text-blue-600 text-xs break-all">{fileLabel(url)}</span>
     </a>
@@ -198,7 +248,10 @@ const StatusBadge = ({ status }: { status: string }) => {
 /* ------------------------------------------------------------------ */
 
 const SectionCard = ({
-  icon, title, subtitle, children,
+  icon,
+  title,
+  subtitle,
+  children,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -224,15 +277,15 @@ const SectionCard = ({
 /* ================================================================== */
 
 function EditWalletInner() {
-  const router       = useRouter();
-  const params       = useParams();
+  const router = useRouter();
+  const params = useParams();
   const searchParams = useSearchParams();
-  const walletId     = params?.id as string;
-  const { user }     = useVLife();
-  const isAdmin      = user?.role === "admin";
+  const walletId = params?.id as string;
+  const { user } = useVLife();
+  const isAdmin = user?.role === "admin";
 
-  const modeParam     = searchParams?.get("mode")        ?? null;
-  const reqIdParam    = searchParams?.get("request_id")  ?? null;
+  const modeParam = searchParams?.get("mode") ?? null;
+  const reqIdParam = searchParams?.get("request_id") ?? null;
   const isRequestMode = modeParam === "request" && !!reqIdParam;
 
   /* ── Back navigation ─────────────────────────────────────────────── */
@@ -244,21 +297,36 @@ function EditWalletInner() {
     }
   };
 
-  const [loading,           setLoading]           = useState(false);
-  const [verifying,         setVerifying]         = useState(false);
-  const [panVerified,       setPanVerified]       = useState(true);
-  const [pendingRequest,    setPendingRequest]    = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [panVerified, setPanVerified] = useState(true);
+  const [pendingRequest, setPendingRequest] = useState<any>(null);
   const [savedWalletValues, setSavedWalletValues] = useState<any>(null);
-  const [compareOpen,       setCompareOpen]       = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
 
   const [initialValues, setInitialValues] = useState<WalletFormData>({
-    walletId: "", userId: "", userName: "", contact: "",
-    accountHolderName: "", bankName: "", accountNumber: "", ifscCode: "",
-    gstNumber: null, cheque: null, bankBook: null,
-    aadharFront: null, aadharBack: null, aadharNumber: "",
-    panNumber: "", panName: "", panDob: "",
-    panVerify: true, panCategory: "", aadharSeeding: false,
-    aadharFile: null, panFile: null,
+    walletId: "",
+    userId: "",
+    userName: "",
+    contact: "",
+    accountHolderName: "",
+    bankName: "",
+    accountNumber: "",
+    ifscCode: "",
+    gstNumber: null,
+    cheque: null,
+    bankBook: null,
+    aadharFront: null,
+    aadharBack: null,
+    aadharNumber: "",
+    panNumber: "",
+    panName: "",
+    panDob: "",
+    panVerify: true,
+    panCategory: "",
+    aadharSeeding: false,
+    aadharFile: null,
+    panFile: null,
   });
 
   /* ── Populate form on mount ────────────────────────────────────────── */
@@ -269,34 +337,34 @@ function EditWalletInner() {
     } else if (walletId && walletId !== "new") {
       loadFromWallet(walletId);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walletId, isRequestMode, reqIdParam, user]);
 
   /* ── Map source → form values ──────────────────────────────────────── */
   const applySource = (walletMeta: any | null, source: any) => {
     setInitialValues({
-      walletId:          walletMeta?.wallet_id        || source?.wallet_id        || "",
-      userId:            walletMeta?.user_id           || source?.user_id          || "",
-      userName:          walletMeta?.user_name         || source?.user_name        || "",
-      contact:           walletMeta?.contact           || source?.contact          || "",
-      accountHolderName: source?.account_holder_name  || "",
-      bankName:          source?.bank_name             || "",
-      accountNumber:     source?.account_number        || "",
-      ifscCode:          source?.ifsc_code             || "",
-      gstNumber:         source?.gst_number            || null,
-      cheque:            source?.cheque                || null,
-      bankBook:          source?.bank_book             || null,
-      aadharFront:       source?.aadhar_front          || null,
-      aadharBack:        source?.aadhar_back           || null,
-      aadharNumber:      source?.aadhar_number         || "",
-      panNumber:         source?.pan_number            || "",
-      panName:           source?.pan_name              || "",
-      panDob:            source?.pan_dob               || "",
-      panVerify:         source?.pan_verified          || false,
-      panCategory:       source?.pan_category          || "",
-      aadharSeeding:     source?.aadhar_seeding        || false,
-      aadharFile:        source?.aadhar_file           || null,
-      panFile:           source?.pan_file              || null,
+      walletId: walletMeta?.wallet_id || source?.wallet_id || "",
+      userId: walletMeta?.user_id || source?.user_id || "",
+      userName: walletMeta?.user_name || source?.user_name || "",
+      contact: walletMeta?.contact || source?.contact || "",
+      accountHolderName: source?.account_holder_name || "",
+      bankName: source?.bank_name || "",
+      accountNumber: source?.account_number || "",
+      ifscCode: source?.ifsc_code || "",
+      gstNumber: source?.gst_number || null,
+      cheque: source?.cheque || null,
+      bankBook: source?.bank_book || null,
+      aadharFront: source?.aadhar_front || null,
+      aadharBack: source?.aadhar_back || null,
+      aadharNumber: source?.aadhar_number || "",
+      panNumber: source?.pan_number || "",
+      panName: source?.pan_name || "",
+      panDob: source?.pan_dob || "",
+      panVerify: source?.pan_verified || false,
+      panCategory: source?.pan_category || "",
+      aadharSeeding: source?.aadhar_seeding || false,
+      aadharFile: source?.aadhar_file || null,
+      panFile: source?.pan_file || null,
     });
   };
 
@@ -304,12 +372,17 @@ function EditWalletInner() {
   const loadFromWallet = async (wid: string) => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`/api/wallets-operations?wallet_id=${wid}`);
-      if (!data?.data) { ShowToast.error("Wallet not found"); return; }
+      const { data } = await axios.get(
+        `/api/wallets-operations?wallet_id=${wid}`,
+      );
+      if (!data?.data) {
+        ShowToast.error("Wallet not found");
+        return;
+      }
 
-      const wallet  = data.data;
+      const wallet = data.data;
       const pending = await fetchPendingRequest(wallet.user_id);
-      const source  = isAdmin ? wallet : pending?.new_values || wallet;
+      const source = isAdmin ? wallet : pending?.new_values || wallet;
       applySource(wallet, source);
       setPanVerified(source.pan_verified || false);
     } catch (err) {
@@ -326,12 +399,15 @@ function EditWalletInner() {
       setLoading(true);
 
       const { data: reqData } = await axios.get(
-        `/api/wallet-change-requests?search=${requestId}`
+        `/api/wallet-change-requests?search=${requestId}`,
       );
       const requests: any[] = reqData?.data || [];
       const req = requests.find((r: any) => r.request_id === requestId);
 
-      if (!req) { ShowToast.error("Change request not found"); return; }
+      if (!req) {
+        ShowToast.error("Change request not found");
+        return;
+      }
 
       setPendingRequest(req);
       const newVals = req.new_values || {};
@@ -347,10 +423,12 @@ function EditWalletInner() {
       if (req.wallet_id) {
         try {
           const { data: wData } = await axios.get(
-            `/api/wallets-operations?wallet_id=${req.wallet_id}`
+            `/api/wallets-operations?wallet_id=${req.wallet_id}`,
           );
           currentWallet = wData?.data || null;
-        } catch { /* wallet may not exist yet */ }
+        } catch {
+          /* wallet may not exist yet */
+        }
       }
 
       setSavedWalletValues(currentWallet);
@@ -368,7 +446,7 @@ function EditWalletInner() {
   const fetchPendingRequest = async (userId: string) => {
     try {
       const res = await axios.get(
-        `/api/wallet-change-requests?user_id=${userId}&status=pending`
+        `/api/wallet-change-requests?user_id=${userId}&status=pending`,
       );
       if (res.data.success && res.data.data.length > 0) {
         const req = res.data.data[0];
@@ -376,7 +454,9 @@ function EditWalletInner() {
         return req;
       }
       return null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   };
 
   /* ── File upload helper ─────────────────────────────────────────────── */
@@ -399,46 +479,66 @@ function EditWalletInner() {
 
   /* ── PAN verification ─────────────────────────────────────────────── */
   const verifyPanDetails = async (
-    panNumber: string, panName: string, panDob: string,
-    setFieldValue: (field: string, value: any) => void
+    panNumber: string,
+    panName: string,
+    panDob: string,
+    setFieldValue: (field: string, value: any) => void,
   ) => {
     try {
-      setVerifying(true); setLoading(true);
+      setVerifying(true);
+      setLoading(true);
       if (!panNumber || !panName || !panDob) {
-        ShowToast.error("Please fill all PAN details before verifying"); return;
+        ShowToast.error("Please fill all PAN details before verifying");
+        return;
       }
       const res = await axios.post("/api/pancheck-operations", {
-        pan_number: panNumber, pan_name: panName, pan_dob: panDob,
+        pan_number: panNumber,
+        pan_name: panName,
+        pan_dob: panDob,
       });
       const panData = res.data?.data?.data;
       if (res.data.success && panData) {
         if (panData.status === "valid") {
           setPanVerified(true);
           ShowToast.success("PAN verified successfully!");
-          setFieldValue("panVerify",     true);
-          setFieldValue("panCategory",   panData.category || "");
-          setFieldValue("aadharSeeding", panData.aadhaar_seeding_status === "y");
+          setFieldValue("panVerify", true);
+          setFieldValue("panCategory", panData.category || "");
+          setFieldValue(
+            "aadharSeeding",
+            panData.aadhaar_seeding_status === "y",
+          );
         } else {
           setPanVerified(false);
           ShowToast.error("Invalid PAN details. Please check and try again.");
-          setFieldValue("panVerify", false); setFieldValue("panCategory", ""); setFieldValue("aadharSeeding", false);
+          setFieldValue("panVerify", false);
+          setFieldValue("panCategory", "");
+          setFieldValue("aadharSeeding", false);
         }
       } else {
         setPanVerified(false);
         ShowToast.error(res.data.message || "PAN verification failed");
-        setFieldValue("panVerify", false); setFieldValue("panCategory", ""); setFieldValue("aadharSeeding", false);
+        setFieldValue("panVerify", false);
+        setFieldValue("panCategory", "");
+        setFieldValue("aadharSeeding", false);
       }
     } catch (err) {
       console.error("PAN verification error:", err);
       setPanVerified(false);
       ShowToast.error("Failed to verify PAN details. Please try again later.");
-      setFieldValue("panVerify", false); setFieldValue("panCategory", ""); setFieldValue("aadharSeeding", false);
-    } finally { setVerifying(false); setLoading(false); }
+      setFieldValue("panVerify", false);
+      setFieldValue("panCategory", "");
+      setFieldValue("aadharSeeding", false);
+    } finally {
+      setVerifying(false);
+      setLoading(false);
+    }
   };
 
   const resetPanVerification = (setFieldValue: any) => {
     setPanVerified(false);
-    setFieldValue("panVerify", false); setFieldValue("panCategory", ""); setFieldValue("aadharSeeding", false);
+    setFieldValue("panVerify", false);
+    setFieldValue("panCategory", "");
+    setFieldValue("aadharSeeding", false);
   };
 
   /* ── Reject handler ─────────────────────────────────────────────── */
@@ -448,7 +548,7 @@ function EditWalletInner() {
       setLoading(true);
       const res = await axios.patch(
         `/api/wallet-change-requests/${pendingRequest.request_id}`,
-        { action: "rejected", admin_id: user?.user_id }
+        { action: "rejected", admin_id: user?.user_id },
       );
       if (res.data.success) {
         ShowToast.success("Request rejected successfully.");
@@ -457,49 +557,82 @@ function EditWalletInner() {
         ShowToast.error(res.data.message || "Failed to reject request.");
       }
     } catch (error: any) {
-      ShowToast.error(error.response?.data?.message || "Something went wrong while rejecting.");
-    } finally { setLoading(false); }
+      ShowToast.error(
+        error.response?.data?.message ||
+          "Something went wrong while rejecting.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ── Form submit ─────────────────────────────────────────────────── */
-  const handleSubmit = async (values: WalletFormData, actions: FormikHelpers<WalletFormData>) => {
+  const handleSubmit = async (
+    values: WalletFormData,
+    actions: FormikHelpers<WalletFormData>,
+  ) => {
     try {
       setLoading(true);
 
-      let aadharFileUrl:  string | null = typeof values.aadharFile  === "string" ? values.aadharFile  : null;
-      let panFileUrl:     string | null = typeof values.panFile     === "string" ? values.panFile     : null;
-      let aadharFrontUrl: string | null = typeof values.aadharFront === "string" ? values.aadharFront : null;
-      let aadharBackUrl:  string | null = typeof values.aadharBack  === "string" ? values.aadharBack  : null;
-      let chequeUrl:      string | null = typeof values.cheque      === "string" ? values.cheque      : null;
-      let bankBookUrl:    string | null = typeof values.bankBook    === "string" ? values.bankBook    : null;
+      let aadharFileUrl: string | null =
+        typeof values.aadharFile === "string" ? values.aadharFile : null;
+      let panFileUrl: string | null =
+        typeof values.panFile === "string" ? values.panFile : null;
+      let aadharFrontUrl: string | null =
+        typeof values.aadharFront === "string" ? values.aadharFront : null;
+      let aadharBackUrl: string | null =
+        typeof values.aadharBack === "string" ? values.aadharBack : null;
+      let chequeUrl: string | null =
+        typeof values.cheque === "string" ? values.cheque : null;
+      let bankBookUrl: string | null =
+        typeof values.bankBook === "string" ? values.bankBook : null;
 
-      if (values.aadharFile  instanceof File) aadharFileUrl  = await uploadFile(values.aadharFile);
-      if (values.panFile     instanceof File) panFileUrl     = await uploadFile(values.panFile);
-      if (values.aadharFront instanceof File) aadharFrontUrl = await uploadFile(values.aadharFront);
-      if (values.aadharBack  instanceof File) aadharBackUrl  = await uploadFile(values.aadharBack);
-      if (values.cheque      instanceof File) chequeUrl      = await uploadFile(values.cheque);
-      if (values.bankBook    instanceof File) bankBookUrl    = await uploadFile(values.bankBook);
+      if (values.aadharFile instanceof File)
+        aadharFileUrl = await uploadFile(values.aadharFile);
+      if (values.panFile instanceof File)
+        panFileUrl = await uploadFile(values.panFile);
+      if (values.aadharFront instanceof File)
+        aadharFrontUrl = await uploadFile(values.aadharFront);
+      if (values.aadharBack instanceof File)
+        aadharBackUrl = await uploadFile(values.aadharBack);
+      if (values.cheque instanceof File)
+        chequeUrl = await uploadFile(values.cheque);
+      if (values.bankBook instanceof File)
+        bankBookUrl = await uploadFile(values.bankBook);
 
       if (!aadharFrontUrl || !aadharBackUrl) {
         ShowToast.error("Aadhaar front and back are required.");
-        setLoading(false); actions.setSubmitting(false); return;
+        setLoading(false);
+        actions.setSubmitting(false);
+        return;
       }
       if (!panFileUrl) {
         ShowToast.error("PAN file is required.");
-        setLoading(false); actions.setSubmitting(false); return;
+        setLoading(false);
+        actions.setSubmitting(false);
+        return;
       }
 
       const payload = {
         account_holder_name: values.accountHolderName,
-        bank_name: values.bankName, account_number: values.accountNumber,
-        ifsc_code: values.ifscCode, gst_number: values.gstNumber || null,
-        cheque: chequeUrl || null, bank_book: bankBookUrl || null,
-        aadhar_number: values.aadharNumber, aadhar_front: aadharFrontUrl,
-        aadhar_back: aadharBackUrl, aadhar_file: aadharFileUrl || null,
-        pan_number: values.panNumber, pan_name: values.panName,
-        pan_dob: values.panDob, pan_verified: values.panVerify,
-        pan_category: values.panCategory, aadhar_seeding: values.aadharSeeding,
-        pan_file: panFileUrl, last_modified_by: user?.user_id || "admin",
+        bank_name: values.bankName,
+        account_number: values.accountNumber,
+        ifsc_code: values.ifscCode,
+        gst_number: values.gstNumber || null,
+        cheque: chequeUrl || null,
+        bank_book: bankBookUrl || null,
+        aadhar_number: values.aadharNumber,
+        aadhar_front: aadharFrontUrl,
+        aadhar_back: aadharBackUrl,
+        aadhar_file: aadharFileUrl || null,
+        pan_number: values.panNumber,
+        pan_name: values.panName,
+        pan_dob: values.panDob,
+        pan_verified: values.panVerify,
+        pan_category: values.panCategory,
+        aadhar_seeding: values.aadharSeeding,
+        pan_file: panFileUrl,
+        last_modified_by: user?.user_id || "admin",
         requested_role: user.role,
       };
 
@@ -507,10 +640,12 @@ function EditWalletInner() {
       if (isRequestMode && isAdmin && pendingRequest?.status === "pending") {
         const res = await axios.patch(
           `/api/wallet-change-requests/${pendingRequest.request_id}`,
-          { action: "approved", admin_id: user?.user_id }
+          { action: "approved", admin_id: user?.user_id },
         );
         if (res.data.success) {
-          ShowToast.success("Request approved and wallet updated successfully!");
+          ShowToast.success(
+            "Request approved and wallet updated successfully!",
+          );
           handleBack();
         } else {
           ShowToast.error(res.data.message || "Failed to approve request.");
@@ -518,20 +653,31 @@ function EditWalletInner() {
         return;
       }
 
-      const res = await axios.patch(`/api/wallets-operations?wallet_id=${walletId}`, payload);
+      const res = await axios.patch(
+        `/api/wallets-operations?wallet_id=${walletId}`,
+        payload,
+      );
       if (res.data.success) {
         ShowToast.success(
-          isAdmin ? "Wallet updated successfully!" :
-          pendingRequest ? "Your request has been updated. Awaiting admin approval." :
-          "Your changes have been submitted for admin approval."
+          isAdmin
+            ? "Wallet updated successfully!"
+            : pendingRequest
+              ? "Your request has been updated. Awaiting admin approval."
+              : "Your changes have been submitted for admin approval.",
         );
         handleBack();
       } else {
         ShowToast.error(res.data.message || "Failed to update wallet.");
       }
     } catch (error: any) {
-      ShowToast.error(error.response?.data?.message || "Something went wrong while updating wallet.");
-    } finally { setLoading(false); actions.setSubmitting(false); }
+      ShowToast.error(
+        error.response?.data?.message ||
+          "Something went wrong while updating wallet.",
+      );
+    } finally {
+      setLoading(false);
+      actions.setSubmitting(false);
+    }
   };
 
   /* ================================================================ */
@@ -540,12 +686,12 @@ function EditWalletInner() {
   const renderComparisonTable = () => {
     if (!pendingRequest) return null;
 
-    const requestType   = pendingRequest.request_type;
+    const requestType = pendingRequest.request_type;
     const requestStatus = pendingRequest.status || "pending";
 
     /* ── new_wallet: single-column submitted values ── */
     if (requestType === "new_wallet" && isRequestMode) {
-      const newVals  = pendingRequest.new_values || {};
+      const newVals = pendingRequest.new_values || {};
       const textRows = TEXT_COMPARE_FIELDS.filter(([, key]) => newVals[key]);
       const fileRows = FILE_COMPARE_FIELDS.filter(([, key]) => newVals[key]);
       if (textRows.length === 0 && fileRows.length === 0) return null;
@@ -563,11 +709,21 @@ function EditWalletInner() {
                 📋 New Wallet Creation Request
               </span>
               <StatusBadge status={requestStatus} />
-              <span className="text-xs text-blue-500 font-mono">{pendingRequest.request_id}</span>
+              <span className="text-xs text-blue-500 font-mono">
+                {pendingRequest.request_id}
+              </span>
             </div>
-            {compareOpen
-              ? <IoChevronUpOutline size={18} className="text-blue-700 flex-shrink-0" />
-              : <IoChevronDownOutline size={18} className="text-blue-700 flex-shrink-0" />}
+            {compareOpen ? (
+              <IoChevronUpOutline
+                size={18}
+                className="text-blue-700 flex-shrink-0"
+              />
+            ) : (
+              <IoChevronDownOutline
+                size={18}
+                className="text-blue-700 flex-shrink-0"
+              />
+            )}
           </button>
 
           {compareOpen && (
@@ -576,21 +732,33 @@ function EditWalletInner() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-blue-50">
-                      <th className="text-left px-3 py-2 border border-blue-200 font-semibold w-[30%]">Field</th>
-                      <th className="text-left px-3 py-2 border border-blue-200 font-semibold text-green-700 w-[70%]">Submitted Value</th>
+                      <th className="text-left px-3 py-2 border border-blue-200 font-semibold w-[30%]">
+                        Field
+                      </th>
+                      <th className="text-left px-3 py-2 border border-blue-200 font-semibold text-green-700 w-[70%]">
+                        Submitted Value
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {textRows.map(([label, key]) => (
                       <tr key={key} className="even:bg-blue-50/40">
-                        <td className="px-3 py-2 border border-blue-100 font-medium text-gray-700">{label}</td>
-                        <td className="px-3 py-2 border border-blue-100 text-green-700 font-semibold">{newVals[key]}</td>
+                        <td className="px-3 py-2 border border-blue-100 font-medium text-gray-700">
+                          {label}
+                        </td>
+                        <td className="px-3 py-2 border border-blue-100 text-green-700 font-semibold">
+                          {newVals[key]}
+                        </td>
                       </tr>
                     ))}
                     {fileRows.map(([label, key]) => (
                       <tr key={key} className="even:bg-blue-50/40">
-                        <td className="px-3 py-2 border border-blue-100 font-medium text-gray-700">{label}</td>
-                        <td className="px-3 py-2 border border-blue-100"><FileCell url={newVals[key]} label={label} /></td>
+                        <td className="px-3 py-2 border border-blue-100 font-medium text-gray-700">
+                          {label}
+                        </td>
+                        <td className="px-3 py-2 border border-blue-100">
+                          <FileCell url={newVals[key]} label={label} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -598,7 +766,8 @@ function EditWalletInner() {
               </div>
               {isAdmin && requestStatus === "pending" && (
                 <p className="text-xs text-blue-600 mt-2">
-                  Click &apos;Approve Request&apos; to create this wallet, or &apos;Reject Request&apos; to decline.
+                  Click &apos;Approve Request&apos; to create this wallet, or
+                  &apos;Reject Request&apos; to decline.
                 </p>
               )}
             </div>
@@ -613,10 +782,16 @@ function EditWalletInner() {
       const newVals = pendingRequest.new_values || {};
 
       const changedTextRows = TEXT_COMPARE_FIELDS.filter(([, key]) => {
-        return String(newVals[key] ?? "") && String(oldVals[key] ?? "") !== String(newVals[key] ?? "");
+        return (
+          String(newVals[key] ?? "") &&
+          String(oldVals[key] ?? "") !== String(newVals[key] ?? "")
+        );
       });
       const changedFileRows = FILE_COMPARE_FIELDS.filter(([, key]) => {
-        return String(newVals[key] ?? "") && String(oldVals[key] ?? "") !== String(newVals[key] ?? "");
+        return (
+          String(newVals[key] ?? "") &&
+          String(oldVals[key] ?? "") !== String(newVals[key] ?? "")
+        );
       });
 
       const totalChanges = changedTextRows.length + changedFileRows.length;
@@ -632,7 +807,9 @@ function EditWalletInner() {
             <div className="flex items-center gap-2 flex-wrap">
               <MdOutlineCompareArrows size={20} className="text-yellow-700" />
               <span className="font-semibold text-yellow-800 text-sm">
-                {isAdmin ? "Pending Change Request — View changes" : "Your Pending Request — View changes"}
+                {isAdmin
+                  ? "Pending Change Request — View changes"
+                  : "Your Pending Request — View changes"}
               </span>
               <span className="px-2 py-0.5 text-xs rounded-full bg-yellow-200 text-yellow-800 font-semibold">
                 {totalChanges} field{totalChanges > 1 ? "s" : ""} changed
@@ -640,13 +817,23 @@ function EditWalletInner() {
               {isRequestMode && (
                 <>
                   <StatusBadge status={requestStatus} />
-                  <span className="text-xs text-yellow-600 font-mono">{pendingRequest.request_id}</span>
+                  <span className="text-xs text-yellow-600 font-mono">
+                    {pendingRequest.request_id}
+                  </span>
                 </>
               )}
             </div>
-            {compareOpen
-              ? <IoChevronUpOutline size={18} className="text-yellow-700 flex-shrink-0" />
-              : <IoChevronDownOutline size={18} className="text-yellow-700 flex-shrink-0" />}
+            {compareOpen ? (
+              <IoChevronUpOutline
+                size={18}
+                className="text-yellow-700 flex-shrink-0"
+              />
+            ) : (
+              <IoChevronDownOutline
+                size={18}
+                className="text-yellow-700 flex-shrink-0"
+              />
+            )}
           </button>
 
           {compareOpen && (
@@ -655,24 +842,42 @@ function EditWalletInner() {
                 <table className="w-full text-sm border-collapse">
                   <thead>
                     <tr className="bg-yellow-50">
-                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold w-[22%]">Field</th>
-                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold text-red-600 w-[39%]">Old Value</th>
-                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold text-green-700 w-[39%]">New Value</th>
+                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold w-[22%]">
+                        Field
+                      </th>
+                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold text-red-600 w-[39%]">
+                        Old Value
+                      </th>
+                      <th className="text-left px-3 py-2 border border-yellow-300 font-semibold text-green-700 w-[39%]">
+                        New Value
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {changedTextRows.map(([label, key]) => (
                       <tr key={key} className="even:bg-yellow-50/40">
-                        <td className="px-3 py-2 border border-yellow-200 font-medium text-gray-700">{label}</td>
-                        <td className="px-3 py-2 border border-yellow-200 text-red-600 line-through">{oldVals[key] || "—"}</td>
-                        <td className="px-3 py-2 border border-yellow-200 text-green-700 font-semibold">{newVals[key] || "—"}</td>
+                        <td className="px-3 py-2 border border-yellow-200 font-medium text-gray-700">
+                          {label}
+                        </td>
+                        <td className="px-3 py-2 border border-yellow-200 text-red-600 line-through">
+                          {oldVals[key] || "—"}
+                        </td>
+                        <td className="px-3 py-2 border border-yellow-200 text-green-700 font-semibold">
+                          {newVals[key] || "—"}
+                        </td>
                       </tr>
                     ))}
                     {changedFileRows.map(([label, key]) => (
                       <tr key={key} className="even:bg-yellow-50/40">
-                        <td className="px-3 py-2 border border-yellow-200 font-medium text-gray-700">{label}</td>
-                        <td className="px-3 py-2 border border-yellow-200"><FileCell url={oldVals[key]} label={label} /></td>
-                        <td className="px-3 py-2 border border-yellow-200"><FileCell url={newVals[key]} label={label} /></td>
+                        <td className="px-3 py-2 border border-yellow-200 font-medium text-gray-700">
+                          {label}
+                        </td>
+                        <td className="px-3 py-2 border border-yellow-200">
+                          <FileCell url={oldVals[key]} label={label} />
+                        </td>
+                        <td className="px-3 py-2 border border-yellow-200">
+                          <FileCell url={newVals[key]} label={label} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -694,18 +899,23 @@ function EditWalletInner() {
 
   /* ── Derived flags ─────────────────────────────────────────────── */
   const requestStatus = pendingRequest?.status || "pending";
-  const isResolved    = requestStatus === "approved" || requestStatus === "rejected";
-  const formReadOnly  = isRequestMode && isResolved;
+  const isResolved =
+    requestStatus === "approved" || requestStatus === "rejected";
+  const formReadOnly = isRequestMode && isResolved;
 
   const pageTitle = isRequestMode
     ? `Change Request — ${pendingRequest?.request_id || reqIdParam || ""}`
     : "Edit Wallet";
 
-  const submitLabel = loading ? "Submitting..."
-    : isRequestMode && isAdmin && requestStatus === "pending" ? "Approve Request"
-    : isAdmin ? "Update Wallet"
-    : pendingRequest ? "Update Request"
-    : "Submit for Approval";
+  const submitLabel = loading
+    ? "Submitting..."
+    : isRequestMode && isAdmin && requestStatus === "pending"
+      ? "Approve Request"
+      : isAdmin
+        ? "Update Wallet"
+        : pendingRequest
+          ? "Update Request"
+          : "Submit for Approval";
 
   /* ================================================================ */
   /* Render                                                            */
@@ -718,12 +928,19 @@ function EditWalletInner() {
         </div>
       )}
       <div className="p-4 max-md:p-2">
-
         {/* ── Page header ─────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 mb-5 flex-wrap">
-          <IoIosArrowBack size={25} className="cursor-pointer flex-shrink-0" onClick={handleBack} />
-          <h2 className="text-xl max-sm:text-[1rem] font-semibold">{pageTitle}</h2>
-          {isRequestMode && pendingRequest && <StatusBadge status={requestStatus} />}
+          <IoIosArrowBack
+            size={25}
+            className="cursor-pointer flex-shrink-0"
+            onClick={handleBack}
+          />
+          <h2 className="text-xl max-sm:text-[1rem] font-semibold">
+            {pageTitle}
+          </h2>
+          {isRequestMode && pendingRequest && (
+            <StatusBadge status={requestStatus} />
+          )}
         </div>
 
         {/* ── Collapsible comparison table ─────────────────────────────── */}
@@ -741,11 +958,13 @@ function EditWalletInner() {
 
         {/* ── Resolved notice ────────────────────────────────────────────── */}
         {isRequestMode && isResolved && (
-          <div className={`border rounded-lg px-4 py-3 mb-4 text-sm font-medium ${
-            requestStatus === "approved"
-              ? "bg-green-50 border-green-300 text-green-800"
-              : "bg-red-50 border-red-300 text-red-700"
-          }`}>
+          <div
+            className={`border rounded-lg px-4 py-3 mb-4 text-sm font-medium ${
+              requestStatus === "approved"
+                ? "bg-green-50 border-green-300 text-green-800"
+                : "bg-red-50 border-red-300 text-red-700"
+            }`}
+          >
             {requestStatus === "approved"
               ? "✅ This request has been approved and the wallet has been updated."
               : "❌ This request has been rejected. No changes were applied to the wallet."}
@@ -761,7 +980,6 @@ function EditWalletInner() {
         >
           {({ values, setFieldValue, errors, touched, handleBlur }) => (
             <Form className="flex flex-col gap-4">
-
               {/* ══════════════════════════════════════════════════════════
                   SECTION 1 — Account Overview
                   FIXED: grid-cols-3 max (was xl:grid-cols-4)
@@ -774,10 +992,30 @@ function EditWalletInner() {
                 subtitle="Wallet and user identity details"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InputField label="Wallet ID"  name="walletId"  value={values.walletId}  disabled />
-                  <InputField label="User ID"    name="userId"    value={values.userId}    disabled />
-                  <InputField label="User Name"  name="userName"  value={values.userName}  disabled />
-                  <InputField label="Contact"    name="contact"   value={values.contact}   disabled />
+                  <InputField
+                    label="Wallet ID"
+                    name="walletId"
+                    value={values.walletId}
+                    disabled
+                  />
+                  <InputField
+                    label="User ID"
+                    name="userId"
+                    value={values.userId}
+                    disabled
+                  />
+                  <InputField
+                    label="User Name"
+                    name="userName"
+                    value={values.userName}
+                    disabled
+                  />
+                  <InputField
+                    label="Contact"
+                    name="contact"
+                    value={values.contact}
+                    disabled
+                  />
                 </div>
               </SectionCard>
 
@@ -791,40 +1029,92 @@ function EditWalletInner() {
                 subtitle="Bank account information"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InputField label="Account Holder Name" name="accountHolderName"
-                    value={values.accountHolderName} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("accountHolderName", e.target.value)} onBlur={handleBlur}
-                    error={touched.accountHolderName ? errors.accountHolderName : ""} />
+                  <InputField
+                    label="Account Holder Name"
+                    name="accountHolderName"
+                    value={values.accountHolderName}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue("accountHolderName", e.target.value)
+                    }
+                    onBlur={handleBlur}
+                    error={
+                      touched.accountHolderName ? errors.accountHolderName : ""
+                    }
+                  />
 
-                  <InputField label="Bank Name" name="bankName"
-                    value={values.bankName} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("bankName", e.target.value)} onBlur={handleBlur}
-                    error={touched.bankName ? errors.bankName : ""} />
+                  <InputField
+                    label="Bank Name"
+                    name="bankName"
+                    value={values.bankName}
+                    disabled={formReadOnly}
+                    onChange={(e) => setFieldValue("bankName", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.bankName ? errors.bankName : ""}
+                  />
 
-                  <InputField label="Account Number" name="accountNumber"
-                    value={values.accountNumber} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("accountNumber", e.target.value)} onBlur={handleBlur}
-                    error={touched.accountNumber ? errors.accountNumber : ""} />
+                  <InputField
+                    label="Account Number"
+                    name="accountNumber"
+                    value={values.accountNumber}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue("accountNumber", e.target.value)
+                    }
+                    onBlur={handleBlur}
+                    error={touched.accountNumber ? errors.accountNumber : ""}
+                  />
 
-                  <InputField label="IFSC Code" name="ifscCode"
-                    value={values.ifscCode} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("ifscCode", e.target.value)} onBlur={handleBlur}
-                    error={touched.ifscCode ? errors.ifscCode : ""} />
+                  <InputField
+                    label="IFSC Code"
+                    name="ifscCode"
+                    value={values.ifscCode}
+                    disabled={formReadOnly}
+                    onChange={(e) => setFieldValue("ifscCode", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.ifscCode ? errors.ifscCode : ""}
+                  />
 
-                  <FileInput label="Cancelled Cheque" name="cheque" required
-                    value={values.cheque || null} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("cheque", e.currentTarget.files?.[0] || values.cheque)}
-                    onBlur={handleBlur} error={touched.cheque ? (errors as any).cheque : ""} />
+                  <FileInput
+                    label="Bank Book Front"
+                    name="bankBook"
+                    required
+                    value={values.bankBook || null}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "bankBook",
+                        e.currentTarget.files?.[0] || values.bankBook,
+                      )
+                    }
+                    onBlur={handleBlur}
+                    error={touched.bankBook ? (errors as any).bankBook : ""}
+                  />
 
-                  <FileInput label="Bank Book Front" name="bankBook"
-                    value={values.bankBook || null} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("bankBook", e.currentTarget.files?.[0] || values.bankBook)}
-                    onBlur={handleBlur} error={touched.bankBook ? (errors as any).bankBook : ""} />
+                  <FileInput
+                    label="Cancelled Cheque"
+                    name="cheque"
+                    value={values.cheque || null}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "cheque",
+                        e.currentTarget.files?.[0] || values.cheque,
+                      )
+                    }
+                    onBlur={handleBlur}
+                    error={touched.cheque ? (errors as any).cheque : ""}
+                  />
 
-                  <InputField label="GST Number (optional)" name="gstNumber"
-                    value={values.gstNumber || ""} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("gstNumber", e.target.value)} onBlur={handleBlur}
-                    error={touched.gstNumber ? (errors as any).gstNumber : ""} />
+                  <InputField
+                    label="GST Number (optional)"
+                    name="gstNumber"
+                    value={values.gstNumber || ""}
+                    disabled={formReadOnly}
+                    onChange={(e) => setFieldValue("gstNumber", e.target.value)}
+                    onBlur={handleBlur}
+                    error={touched.gstNumber ? (errors as any).gstNumber : ""}
+                  />
                 </div>
               </SectionCard>
 
@@ -845,20 +1135,54 @@ function EditWalletInner() {
                   Aadhaar Details
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  <InputField label="Aadhar Number" name="aadharNumber" required
-                    value={values.aadharNumber} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("aadharNumber", e.target.value)}
-                    onBlur={handleBlur} error={touched.aadharNumber ? (errors as any).aadharNumber : ""} />
+                  <InputField
+                    label="Aadhar Number"
+                    name="aadharNumber"
+                    required
+                    value={values.aadharNumber}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue("aadharNumber", e.target.value)
+                    }
+                    onBlur={handleBlur}
+                    error={
+                      touched.aadharNumber ? (errors as any).aadharNumber : ""
+                    }
+                  />
 
-                  <FileInput label="Aadhar Front" name="aadharFront" required
-                    value={values.aadharFront || null} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("aadharFront", e.currentTarget.files?.[0] || values.aadharFront)}
-                    onBlur={handleBlur} error={touched.aadharFront ? (errors as any).aadharFront : ""} />
+                  <FileInput
+                    label="Aadhar Front"
+                    name="aadharFront"
+                    required
+                    value={values.aadharFront || null}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "aadharFront",
+                        e.currentTarget.files?.[0] || values.aadharFront,
+                      )
+                    }
+                    onBlur={handleBlur}
+                    error={
+                      touched.aadharFront ? (errors as any).aadharFront : ""
+                    }
+                  />
 
-                  <FileInput label="Aadhar Back" name="aadharBack" required
-                    value={values.aadharBack || null} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("aadharBack", e.currentTarget.files?.[0] || values.aadharBack)}
-                    onBlur={handleBlur} error={touched.aadharBack ? (errors as any).aadharBack : ""} />
+                  <FileInput
+                    label="Aadhar Back"
+                    name="aadharBack"
+                    required
+                    value={values.aadharBack || null}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "aadharBack",
+                        e.currentTarget.files?.[0] || values.aadharBack,
+                      )
+                    }
+                    onBlur={handleBlur}
+                    error={touched.aadharBack ? (errors as any).aadharBack : ""}
+                  />
                 </div>
 
                 <div className="border-t border-gray-100 mb-5" />
@@ -868,29 +1192,67 @@ function EditWalletInner() {
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     PAN Details
                   </p>
-                  {panVerified && <RiVerifiedBadgeFill className="text-green-600 text-base" />}
+                  {panVerified && (
+                    <RiVerifiedBadgeFill className="text-green-600 text-base" />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <InputField label="PAN Number" name="panNumber"
-                    value={values.panNumber} disabled={formReadOnly}
-                    onChange={(e) => { setFieldValue("panNumber", e.target.value.toUpperCase()); resetPanVerification(setFieldValue); }}
-                    onBlur={handleBlur} error={touched.panNumber ? errors.panNumber : ""} />
+                  <InputField
+                    label="PAN Number"
+                    name="panNumber"
+                    value={values.panNumber}
+                    disabled={formReadOnly}
+                    onChange={(e) => {
+                      setFieldValue("panNumber", e.target.value.toUpperCase());
+                      resetPanVerification(setFieldValue);
+                    }}
+                    onBlur={handleBlur}
+                    error={touched.panNumber ? errors.panNumber : ""}
+                  />
 
-                  <InputField label="Name as in PAN" name="panName"
-                    value={values.panName} disabled={formReadOnly}
-                    onChange={(e) => { setFieldValue("panName", e.target.value); resetPanVerification(setFieldValue); }}
-                    onBlur={handleBlur} error={touched.panName ? errors.panName : ""} />
+                  <InputField
+                    label="Name as in PAN"
+                    name="panName"
+                    value={values.panName}
+                    disabled={formReadOnly}
+                    onChange={(e) => {
+                      setFieldValue("panName", e.target.value);
+                      resetPanVerification(setFieldValue);
+                    }}
+                    onBlur={handleBlur}
+                    error={touched.panName ? errors.panName : ""}
+                  />
 
-                  <InputField label="Date of Birth as in PAN" type="date" name="panDob"
-                    value={values.panDob} className="uppercase" disabled={formReadOnly}
-                    onChange={(e) => { setFieldValue("panDob", e.target.value); resetPanVerification(setFieldValue); }}
-                    onBlur={handleBlur} error={touched.panDob ? errors.panDob : ""} />
+                  <InputField
+                    label="Date of Birth as in PAN"
+                    type="date"
+                    name="panDob"
+                    value={values.panDob}
+                    className="uppercase"
+                    disabled={formReadOnly}
+                    onChange={(e) => {
+                      setFieldValue("panDob", e.target.value);
+                      resetPanVerification(setFieldValue);
+                    }}
+                    onBlur={handleBlur}
+                    error={touched.panDob ? errors.panDob : ""}
+                  />
 
-                  <FileInput label="Upload PAN" name="panFile"
-                    value={values.panFile || null} disabled={formReadOnly}
-                    onChange={(e) => setFieldValue("panFile", e.currentTarget.files?.[0] || values.panFile)}
-                    onBlur={handleBlur} error={touched.panFile ? (errors as any).panFile : ""} />
+                  <FileInput
+                    label="Upload PAN"
+                    name="panFile"
+                    value={values.panFile || null}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "panFile",
+                        e.currentTarget.files?.[0] || values.panFile,
+                      )
+                    }
+                    onBlur={handleBlur}
+                    error={touched.panFile ? (errors as any).panFile : ""}
+                  />
                 </div>
 
                 {/* Verify PAN — admin only, not when resolved */}
@@ -900,9 +1262,18 @@ function EditWalletInner() {
                       type="button"
                       disabled={verifying}
                       className={`px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer transition-colors ${
-                        verifying ? "bg-gray-400 cursor-not-allowed text-white" : "bg-[#106187] hover:bg-[#0d4f6b] text-white"
+                        verifying
+                          ? "bg-gray-400 cursor-not-allowed text-white"
+                          : "bg-[#106187] hover:bg-[#0d4f6b] text-white"
                       }`}
-                      onClick={() => verifyPanDetails(values.panNumber, values.panName, values.panDob, setFieldValue)}
+                      onClick={() =>
+                        verifyPanDetails(
+                          values.panNumber,
+                          values.panName,
+                          values.panDob,
+                          setFieldValue,
+                        )
+                      }
                     >
                       {verifying ? "Verifying..." : "Verify PAN"}
                     </button>
@@ -926,7 +1297,6 @@ function EditWalletInner() {
                   <SubmitButton type="submit">{submitLabel}</SubmitButton>
                 </div>
               )}
-
             </Form>
           )}
         </Formik>
@@ -941,13 +1311,15 @@ function EditWalletInner() {
 
 export default function EditWalletPage() {
   return (
-    <Suspense fallback={
-      <Layout>
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <Loader />
-        </div>
-      </Layout>
-    }>
+    <Suspense
+      fallback={
+        <Layout>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <Loader />
+          </div>
+        </Layout>
+      }
+    >
       <EditWalletInner />
     </Suspense>
   );

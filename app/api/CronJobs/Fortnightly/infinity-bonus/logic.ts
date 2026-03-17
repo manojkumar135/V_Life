@@ -5,10 +5,12 @@ import { Wallet } from "@/models/wallet";
 import { History } from "@/models/history";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { Alert } from "@/models/alert";
-import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
+import { getTotalPayout } from "@/services/totalpayout";
+import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
 import { updateClub } from "@/services/clubrank";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { getInfinityBonusPercentage } from "@/services/infinityBonusRules";
+import { determineHoldReasons } from "@/services/payoutHoldService";
 
 // ---------------- Helper Functions ----------------
 function formatDate(date: Date): string {
@@ -196,23 +198,27 @@ export async function runInfinityBonus() {
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
       const bonusAmount = payout.amount * bonusPercentage;
 
-      const previousPayout = await getTotalPayout(sponsor.user_id);
-      const afterThis = previousPayout + bonusAmount;
+      // ── Determine payout status ──────────────────────────────────────
+      //
+      //  Hold priority (all 4 conditions checked via determineHoldReasons):
+      //   1. No wallet / no account_number             → OnHold (NO_WALLET)
+      //   2. Wallet exists but inactive                → OnHold (WALLET_INACTIVE)
+      //   3. Wallet change request pending             → OnHold (WALLET_UNDER_REVIEW)
+      //   4. Prior month PV uncleared / this month
+      //      crossed threshold with PV unmet           → OnHold (PV_NOT_FULFILLED)
+      //   5. All clear                                 → Pending
+      //
+      //  evaluateAndUpdateHoldStatus MUST be called first so that
+      //  MonthlyPayoutTracker.total_payout is updated BEFORE
+      //  determineHoldReasons reads it for the PV check.
 
-      let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+      // Step 1: Update monthly tracker total (WRITE)
+      await evaluateAndUpdateHoldStatus(sponsor.user_id, bonusAmount);
 
-      // 1️⃣ If wallet not created → Hold
-      if (!wallet) {
-        payoutStatus = "OnHold";
-      }
-      // 2️⃣ If wallet exists but bank details missing → Hold
-      else if (!wallet.account_number) {
-        payoutStatus = "OnHold";
-      }
-      // 3️⃣ Apply PV-based hold rules
-      else if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
-        payoutStatus = "OnHold";
-      }
+      // Step 2: Read all 4 hold conditions with full metadata (READ)
+      const hold = await determineHoldReasons(sponsor.user_id, currentMonth());
+
+      const payoutStatus: "Pending" | "OnHold" | "Completed" = hold.status;
 
       let withdrawAmount = 0;
       let rewardAmount = 0;
@@ -266,6 +272,11 @@ export async function runInfinityBonus() {
         admin_charge: adminCharge,
         from: payout.user_id,
         to: sponsor.user_id,
+
+        // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
+        hold_reasons:        hold.reasons,
+        hold_reason_labels:  hold.labels,
+        hold_release_reason: hold.summary,
 
         team_users: [
           {

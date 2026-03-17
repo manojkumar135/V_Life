@@ -172,10 +172,9 @@ function DateInput({
   value,
   onChange,
 }: {
-  value: string; // stored as dd-mm-yyyy
+  value: string;
   onChange: (v: string) => void;
 }) {
-  // convert dd-mm-yyyy → yyyy-mm-dd for the native date input
   const toInputVal = (v: string) => {
     if (!v) return "";
     const parts = v.split("-");
@@ -185,7 +184,6 @@ function DateInput({
     return v;
   };
 
-  // convert yyyy-mm-dd → dd-mm-yyyy for storage
   const fromInputVal = (v: string) => {
     if (!v) return "";
     const [y, m, d] = v.split("-");
@@ -222,6 +220,26 @@ function TimeInput({
 }
 
 // ─────────────────────────────────────────
+// Inline KV row used inside the modal
+// ─────────────────────────────────────────
+
+function KVRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <span className="font-bold text-black">{label}</span>
+      <span className="font-bold text-black text-center">:</span>
+      <span className="font-normal text-black">{children}</span>
+    </>
+  );
+}
+
+// ─────────────────────────────────────────
 // Main Component
 // ─────────────────────────────────────────
 
@@ -243,8 +261,7 @@ export default function OrderDetailView() {
   const params = useParams();
   const router = useRouter();
   const orderId = (params as any)?.id as string;
-    const { user } = useVLife();
-  
+  const { user } = useVLife();
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -302,7 +319,7 @@ export default function OrderDetailView() {
             rewardUsed: Number(raw.reward_used) || 0,
             rewardUsage: raw.reward_usage,
             placedBy: raw.placed_by,
-            shipping: raw.shipping, // ✅ mapped
+            shipping: raw.shipping,
           };
 
           setOrder(mappedOrder);
@@ -364,7 +381,6 @@ export default function OrderDetailView() {
         },
       });
 
-      // ✅ reflect locally — no refetch needed
       setOrder((prev) =>
         prev
           ? {
@@ -427,6 +443,8 @@ export default function OrderDetailView() {
   const hasAdvance =
     Boolean(order.isFirstOrder) && (order.advanceDeducted ?? 0) > 0;
 
+  const hasTracking = Boolean(order.shipping?.tracking_id);
+
   // ─────────────────────────────────────────
   // Render
   // ─────────────────────────────────────────
@@ -468,25 +486,23 @@ export default function OrderDetailView() {
                   {order.paymentId}
                 </span>
               </span>
-              {/* ✅ live status badge */}
               <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
                 Status: <StatusBadge status={order.orderStatus} />
               </span>
             </div>
 
-            {/* ✅ action buttons */}
+            {/* action buttons */}
             <div className="flex items-center gap-2 max-lg:self-end">
               {user.role === "admin" && (
-                 <button
-                onClick={openEditTrack}
-                className="text-sm px-4 py-2 rounded-lg border border-gray-300 bg-gray-600
-                           text-white font-medium transition-colors
-                           duration-200 cursor-pointer whitespace-nowrap"
-              >
-                Edit Track
-              </button>
+                <button
+                  onClick={openEditTrack}
+                  className="text-sm px-4 py-2 rounded-lg border border-gray-300 bg-gray-600
+                             text-white font-medium transition-colors
+                             duration-200 cursor-pointer whitespace-nowrap"
+                >
+                  Edit Track
+                </button>
               )}
-             
 
               <SubmitButton
                 onClick={() => setShowAddress(true)}
@@ -706,7 +722,9 @@ export default function OrderDetailView() {
       </div>
 
       {/* ══════════════════════════════════════════
-          Popup 1 — View Shipping Details (unchanged)
+          Popup 1 — View Shipping Details
+          Mobile  : single column (stacked)
+          Desktop : two columns side-by-side
       ══════════════════════════════════════════ */}
       {showAddress && (
         <div
@@ -714,7 +732,8 @@ export default function OrderDetailView() {
           onClick={() => setShowAddress(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-lg w-[90%] max-w-md p-6 relative max-h-[90vh] overflow-y-auto"
+            className={`bg-white rounded-xl shadow-lg w-[95%] p-6 relative max-h-[90vh] overflow-y-auto
+              ${hasTracking ? "max-w-3xl" : "max-w-md"}`}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -725,163 +744,146 @@ export default function OrderDetailView() {
               ✕
             </button>
 
-            <p className="text-lg font-semibold mb-4">Shipping Details</p>
+            <p className="text-lg font-semibold mb-4">Order Details</p>
 
-            <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
-              <span className="font-bold text-black">Order ID</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.orderId}</span>
+            {/* ── Two-column on desktop when tracking exists, single otherwise ── */}
+            <div
+              className={`flex flex-col ${
+                hasTracking ? "lg:flex-row lg:gap-6" : ""
+              }`}
+            >
+              {/* ── Left / full: Shipping Details ── */}
+              <div className={hasTracking ? "lg:flex-1" : "w-full"}>
+                <p className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">
+                  📦 Shipping Details
+                </p>
+                <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
+                  <KVRow label="Order ID">{order.orderId}</KVRow>
+                  <KVRow label="User ID">{order.userId}</KVRow>
+                  <KVRow label="User Name">{order.userName}</KVRow>
+                  <KVRow label="Email">
+                    <span className="whitespace-pre-line">{order.mail}</span>
+                  </KVRow>
+                  <KVRow label="Contact">{order.contact}</KVRow>
+                  <KVRow label="Payment">{order.payment}</KVRow>
 
-              <span className="font-bold text-black">User ID</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.userId}</span>
+                  {order.placedBy?.user_id && (
+                    <KVRow label="Placed by">
+                      {order.placedBy.user_id}
+                      {order.placedBy.name ? ` (${order.placedBy.name})` : ""}
+                    </KVRow>
+                  )}
 
-              <span className="font-bold text-black">User Name</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.userName}</span>
+                  <KVRow label="Address">
+                    <span className="whitespace-pre-line">
+                      {order.address || "No address available"}
+                    </span>
+                  </KVRow>
+                  <KVRow label="Description">
+                    <span className="whitespace-pre-line">
+                      {order.description || "N/A"}
+                    </span>
+                  </KVRow>
+                  <KVRow label="Order Status">
+                    <StatusBadge status={order.orderStatus} />
+                  </KVRow>
+                </div>
+              </div>
 
-              <span className="font-bold text-black">Email</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black whitespace-pre-line">
-                {order.mail}
-              </span>
-
-              <span className="font-bold text-black">Contact</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.contact}</span>
-
-              <span className="font-bold text-black">Payment</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">{order.payment}</span>
-
-              {order.placedBy?.user_id && (
+              {/* ── Divider ── */}
+              {hasTracking && (
                 <>
-                  <span className="font-bold text-black">Placed by</span>
-                  <span className="font-bold text-black text-center">:</span>
-                  <span className="font-normal text-black">
-                    {order.placedBy.user_id}
-                    {order.placedBy.name ? ` (${order.placedBy.name})` : ""}
-                  </span>
+                  {/* horizontal on mobile */}
+                  <div className="lg:hidden border-t border-dashed border-gray-300 my-4" />
+                  {/* vertical on desktop */}
+                  <div className="hidden lg:block w-px bg-gray-200 self-stretch mx-1" />
                 </>
               )}
 
-              <span className="font-bold text-black">Address</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black whitespace-pre-line">
-                {order.address || "No address available"}
-              </span>
-
-              <span className="font-bold text-black">Description</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black whitespace-pre-line">
-                {order.description || "N/A"}
-              </span>
-
-              <span className="font-bold text-black">Order Status</span>
-              <span className="font-bold text-black text-center">:</span>
-              <span>
-                <StatusBadge status={order.orderStatus} />
-              </span>
-
-              {/* ✅ tracking section — only when tracking_id exists */}
-              {order.shipping?.tracking_id && (
-                <>
-                  <div className="col-span-3 border-t border-dashed border-gray-300 my-3" />
-                  <span className="col-span-3 font-bold text-black text-sm mb-1">
+              {/* ── Right: Tracking Info (only when tracking_id exists) ── */}
+              {hasTracking && (
+                <div className="lg:flex-1">
+                  <p className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">
                     🚚 Tracking Info
-                  </span>
+                  </p>
+                  <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
+                    <KVRow label="Courier">
+                      {order.shipping!.courier_partner || "—"}
+                    </KVRow>
 
-                  <span className="font-bold text-black">Courier</span>
-                  <span className="font-bold text-black text-center">:</span>
-                  <span className="font-normal text-black">
-                    {order.shipping.courier_partner || "—"}
-                  </span>
+                    <KVRow label="Tracking ID">
+                      {order.shipping!.tracking_url ? (
+                        <a
+                          href={order.shipping!.tracking_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 underline break-all"
+                        >
+                          {order.shipping!.tracking_id}
+                        </a>
+                      ) : (
+                        order.shipping!.tracking_id
+                      )}
+                    </KVRow>
 
-                  <span className="font-bold text-black">Tracking ID</span>
-                  <span className="font-bold text-black text-center">:</span>
-                  <span className="font-normal text-black">
-                    {order.shipping.tracking_url ? (
-                      <a
-                        href={order.shipping.tracking_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 underline break-all"
-                      >
-                        {order.shipping.tracking_id}
-                      </a>
-                    ) : (
-                      order.shipping.tracking_id
+                    <KVRow label="Dispatched">
+                      {order.shipping!.dispatch_date || "—"}
+                      {order.shipping!.dispatch_time
+                        ? ` at ${order.shipping!.dispatch_time}`
+                        : ""}
+                    </KVRow>
+
+                    <KVRow label="Est. Delivery">
+                      {order.shipping!.estimated_delivery || "—"}
+                    </KVRow>
+
+                    {order.shipping!.delivered_date && (
+                      <>
+                        <span className="font-bold text-black">
+                          Delivered On
+                        </span>
+                        <span className="font-bold text-black text-center">
+                          :
+                        </span>
+                        <span className="font-semibold text-green-600">
+                          {order.shipping!.delivered_date}
+                          {order.shipping!.delivered_time
+                            ? ` at ${order.shipping!.delivered_time}`
+                            : ""}
+                        </span>
+                      </>
                     )}
-                  </span>
 
-                  <span className="font-bold text-black">Dispatched</span>
-                  <span className="font-bold text-black text-center">:</span>
-                  <span className="font-normal text-black">
-                    {order.shipping.dispatch_date || "—"}
-                    {order.shipping.dispatch_time
-                      ? ` at ${order.shipping.dispatch_time}`
-                      : ""}
-                  </span>
+                    {order.shipping!.return_reason && (
+                      <>
+                        <span className="font-bold text-black">
+                          Return Reason
+                        </span>
+                        <span className="font-bold text-black text-center">
+                          :
+                        </span>
+                        <span className="font-normal text-red-600">
+                          {order.shipping!.return_reason}
+                        </span>
+                      </>
+                    )}
 
-                  <span className="font-bold text-black">Est. Delivery</span>
-                  <span className="font-bold text-black text-center">:</span>
-                  <span className="font-normal text-black">
-                    {order.shipping.estimated_delivery || "—"}
-                  </span>
-
-                  {order.shipping.delivered_date && (
-                    <>
-                      <span className="font-bold text-black">Delivered On</span>
-                      <span className="font-bold text-black text-center">
-                        :
-                      </span>
-                      <span className="font-semibold text-green-600">
-                        {order.shipping.delivered_date}
-                        {order.shipping.delivered_time
-                          ? ` at ${order.shipping.delivered_time}`
-                          : ""}
-                      </span>
-                    </>
-                  )}
-
-                  {order.shipping.return_reason && (
-                    <>
-                      <span className="font-bold text-black">
-                        Return Reason
-                      </span>
-                      <span className="font-bold text-black text-center">
-                        :
-                      </span>
-                      <span className="font-normal text-red-600">
-                        {order.shipping.return_reason}
-                      </span>
-                    </>
-                  )}
-
-                  {order.shipping.remarks && (
-                    <>
-                      <span className="font-bold text-black">Remarks</span>
-                      <span className="font-bold text-black text-center">
-                        :
-                      </span>
-                      <span className="font-normal text-black">
-                        {order.shipping.remarks}
-                      </span>
-                    </>
-                  )}
-                </>
+                    {order.shipping!.remarks && (
+                      <KVRow label="Remarks">
+                        {order.shipping!.remarks}
+                      </KVRow>
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* not yet dispatched notice */}
-              {!order.shipping?.tracking_id &&
+              {!hasTracking &&
                 order.orderStatus !== "pending" &&
                 order.orderStatus !== "cancelled" && (
-                  <>
-                    <div className="col-span-3 border-t border-dashed border-gray-300 my-3" />
-                    <span className="col-span-3 text-xs text-gray-400 italic">
-                      Tracking details will appear once the order is dispatched.
-                    </span>
-                  </>
+                  <p className="mt-4 text-xs text-gray-400 italic">
+                    Tracking details will appear once the order is dispatched.
+                  </p>
                 )}
             </div>
           </div>

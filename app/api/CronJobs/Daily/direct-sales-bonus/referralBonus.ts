@@ -18,6 +18,25 @@
 //  (getTotalPayout is still imported — used for club/rank update below).
 //  User.findOne for sponsorId is still present for club/rank update.
 //
+// ─── Latest change ────────────────────────────────────────────────────────
+//
+//  PROBLEM: hold_reasons and hold_reason_labels were always saved as []
+//           even when status was OnHold, making it impossible to know WHY
+//           a payout was held.
+//
+//  FIX:
+//    ADDED import: determineHoldReasons from payoutHoldService
+//    ADDED import: currentMonth from monthlyHoldService
+//
+//    REPLACED status-determination block:
+//      Before: manual wallet check + evaluateAndUpdateHoldStatus separately
+//      After:  evaluateAndUpdateHoldStatus (writes tracker) first,
+//              then determineHoldReasons (reads all 4 conditions) for full
+//              hold metadata.
+//
+//    ADDED to DailyPayout.create():
+//      hold_reasons, hold_reason_labels, hold_release_reason
+//
 //  EVERYTHING ELSE IS IDENTICAL TO THE ORIGINAL.
 //
 // ──────────────────────────────────────────────────────────────────────────
@@ -32,7 +51,8 @@ import { addRewardScore }              from "@/services/updateRewardScore";
 import { updateClub }                  from "@/services/clubrank";
 import { generateUniqueCustomId }      from "@/utils/server/customIdGenerator";
 import { getTotalPayout }              from "@/services/totalpayout";
-import { evaluateAndUpdateHoldStatus } from "@/services/monthlyHoldService";
+import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
+import { determineHoldReasons }        from "@/services/payoutHoldService";
 
 function formatDate(date: Date): string {
   const dd   = String(date.getDate()).padStart(2, "0");
@@ -79,30 +99,25 @@ export async function releaseReferralBonus({
 
   // ── Determine payout status ────────────────────────────────────────────
   //
-  //  Hold priority:
-  //   1. No account_number                      → OnHold (wallet not set up)
-  //   2. Prior month PV obligation uncleared    → OnHold (monthly PV hold)
-  //   3. This month crossed threshold, PV unmet → OnHold (monthly PV hold)
-  //   4. All clear                              → Pending
+  //  Hold priority (all 4 conditions checked via determineHoldReasons):
+  //   1. No wallet / no account_number             → OnHold (NO_WALLET)
+  //   2. Wallet exists but inactive                → OnHold (WALLET_INACTIVE)
+  //   3. Wallet change request pending             → OnHold (WALLET_UNDER_REVIEW)
+  //   4. Prior month PV uncleared / this month
+  //      crossed threshold with PV unmet           → OnHold (PV_NOT_FULFILLED)
+  //   5. All clear                                 → Pending
   //
-  //  evaluateAndUpdateHoldStatus is ALWAYS called (even when wallet hold
-  //  fires first) so MonthlyPayoutTracker.total_payout stays accurate.
+  //  evaluateAndUpdateHoldStatus MUST be called first so that
+  //  MonthlyPayoutTracker.total_payout is updated BEFORE
+  //  determineHoldReasons reads it for the PV check.
 
-  let status: "Pending" | "OnHold" | "Completed" = "Pending";
+  // Step 1: Update monthly tracker total (WRITE)
+  await evaluateAndUpdateHoldStatus(sponsorId, REFERRAL_AMOUNT);
 
-  if (!wallet || !wallet.account_number) {
-    status = "OnHold";
-  }
+  // Step 2: Read all 4 hold conditions with full metadata (READ)
+  const hold = await determineHoldReasons(sponsorId, currentMonth());
 
-  const { status: monthlyStatus } = await evaluateAndUpdateHoldStatus(
-    sponsorId,
-    REFERRAL_AMOUNT
-  );
-
-  // Wallet hold takes precedence; otherwise use the monthly PV decision
-  if (status !== "OnHold") {
-    status = monthlyStatus;
-  }
+  let status: "Pending" | "OnHold" | "Completed" = hold.status;
 
   /* ------------------- Amount Split ------------------- */
 
@@ -167,6 +182,12 @@ export async function releaseReferralBonus({
     order_id:         orderId,
     transaction_type: "Credit",
     status,
+
+    // ✅ Hold metadata — now correctly populated so admin knows WHY
+    hold_reasons:        hold.reasons,
+    hold_reason_labels:  hold.labels,
+    hold_release_reason: hold.summary,
+
     details: isAdvance
       ? `Referral Bonus for activation ${buyerId}`
       : `Referral Bonus for first order ${orderId}`,

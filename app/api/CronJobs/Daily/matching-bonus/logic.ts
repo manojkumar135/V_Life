@@ -7,9 +7,11 @@ import { Wallet } from "@/models/wallet";
 import { Order } from "@/models/order";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { Alert } from "@/models/alert";
-import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout";
+import { getTotalPayout } from "@/services/totalpayout";
+import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
 import { updateClub } from "@/services/clubrank";
 import { addRewardScore } from "@/services/updateRewardScore";
+import { determineHoldReasons } from "@/services/payoutHoldService";
 
 function formatDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, "0");
@@ -352,24 +354,29 @@ export async function runMatchingBonus() {
 
       const walletId = wallet ? wallet.wallet_id : null;
 
-      const previousPayout = await getTotalPayout(u.user_id);
       const totalAmount = 5000;
-      const afterThis = previousPayout + totalAmount;
 
-      let payoutStatus: "Pending" | "OnHold" | "Completed" = "Pending";
+      // ── Determine payout status ──────────────────────────────────────
+      //
+      //  Hold priority (all 4 conditions checked via determineHoldReasons):
+      //   1. No wallet / no account_number             → OnHold (NO_WALLET)
+      //   2. Wallet exists but inactive                → OnHold (WALLET_INACTIVE)
+      //   3. Wallet change request pending             → OnHold (WALLET_UNDER_REVIEW)
+      //   4. Prior month PV uncleared / this month
+      //      crossed threshold with PV unmet           → OnHold (PV_NOT_FULFILLED)
+      //   5. All clear                                 → Pending
+      //
+      //  evaluateAndUpdateHoldStatus MUST be called first so that
+      //  MonthlyPayoutTracker.total_payout is updated BEFORE
+      //  determineHoldReasons reads it for the PV check.
 
-      // 1️⃣ If wallet not created → Hold
-      if (!wallet) {
-        payoutStatus = "OnHold";
-      }
-      // 2️⃣ If wallet exists but bank details missing → Hold
-      else if (!wallet.account_number) {
-        payoutStatus = "OnHold";
-      }
-      // 3️⃣ Apply PV-based hold rules
-      else if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
-        payoutStatus = "OnHold";
-      }
+      // Step 1: Update monthly tracker total (WRITE)
+      await evaluateAndUpdateHoldStatus(u.user_id, totalAmount);
+
+      // Step 2: Read all 4 hold conditions with full metadata (READ)
+      const hold = await determineHoldReasons(u.user_id, currentMonth());
+
+      const payoutStatus: "Pending" | "OnHold" | "Completed" = hold.status;
 
       // Percentages
       let withdrawAmount = 0;
@@ -423,6 +430,12 @@ export async function runMatchingBonus() {
         transaction_type: "Credit",
         status: payoutStatus,
         details: "Daily Matching Bonus",
+
+        // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
+        hold_reasons:        hold.reasons,
+        hold_reason_labels:  hold.labels,
+        hold_release_reason: hold.summary,
+
         left_users: u.left_histories.map((h: any) => ({
           user_id: h.user_id,
           transaction_id: h.transaction_id,

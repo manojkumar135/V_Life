@@ -5,7 +5,8 @@ import { History } from "@/models/history";
 import { Alert } from "@/models/alert";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { getDirectPV } from "@/services/directPV";
-import { getTotalPayout, checkHoldStatus } from "@/services/totalpayout"; 
+import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
+import { determineHoldReasons } from "@/services/payoutHoldService";
 
 const PROMO_AMOUNT = 5000;
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; 
@@ -128,18 +129,29 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
 
     /* -------------------------------------------------------
        ✅ Determine Payout Status (OnHold / Completed)
-    ------------------------------------------------------- */
-    let payoutStatus: "Pending" | "OnHold" | "Completed" = "Completed";
 
-    if (!wallet || !wallet.account_number) {
-      payoutStatus = "OnHold";
-    } else {
-      const previousPayout = await getTotalPayout(userId);
-      const afterThis = previousPayout + PROMO_AMOUNT;
-      if (checkHoldStatus(afterThis, user?.pv ?? 0)) {
-        payoutStatus = "OnHold";
-      }
-    }
+       Hold priority (all 4 conditions checked via determineHoldReasons):
+        1. No wallet / no account_number             → OnHold (NO_WALLET)
+        2. Wallet exists but inactive                → OnHold (WALLET_INACTIVE)
+        3. Wallet change request pending             → OnHold (WALLET_UNDER_REVIEW)
+        4. Prior month PV uncleared / this month
+           crossed threshold with PV unmet           → OnHold (PV_NOT_FULFILLED)
+        5. All clear                                 → Completed
+
+       evaluateAndUpdateHoldStatus MUST be called first so that
+       MonthlyPayoutTracker.total_payout is updated BEFORE
+       determineHoldReasons reads it for the PV check.
+    ------------------------------------------------------- */
+
+    // Step 1: Update monthly tracker total (WRITE)
+    await evaluateAndUpdateHoldStatus(userId, PROMO_AMOUNT);
+
+    // Step 2: Read all 4 hold conditions with full metadata (READ)
+    const hold = await determineHoldReasons(userId, currentMonth());
+
+    // Note: Quick Star uses "Completed" (not "Pending") when all clear
+    const payoutStatus: "Pending" | "OnHold" | "Completed" =
+      hold.status === "OnHold" ? "OnHold" : "Completed";
 
     const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
 
@@ -190,6 +202,11 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       from: "",
       transaction_type: "Credit",
       status: payoutStatus,         // ✅ dynamic status
+
+      // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
+      hold_reasons:        hold.reasons,
+      hold_reason_labels:  hold.labels,
+      hold_release_reason: hold.summary,
 
       details:
         "Quick Star Bonus for achieving 100 PV on both sides within 7 days of activation",

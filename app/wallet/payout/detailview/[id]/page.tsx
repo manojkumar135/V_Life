@@ -35,6 +35,10 @@ interface PayoutFormData {
   transaction_type: string;
   details: string;
   status: string;
+  // ✅ ADDED: hold reason fields
+  hold_reasons: string[];
+  hold_reason_labels: string[];
+  hold_release_reason: string;
 }
 
 export default function PayoutDetailView() {
@@ -66,6 +70,10 @@ export default function PayoutDetailView() {
     transaction_type: "",
     details: "",
     status: "",
+    // ✅ ADDED: hold reason fields
+    hold_reasons: [],
+    hold_reason_labels: [],
+    hold_release_reason: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -113,6 +121,10 @@ export default function PayoutDetailView() {
             transaction_type: p.transaction_type || "",
             details: p.details || "",
             status: p.status || "",
+            // ✅ ADDED: hold reason fields
+            hold_reasons: p.hold_reasons || [],
+            hold_reason_labels: p.hold_reason_labels || [],
+            hold_release_reason: p.hold_release_reason || "",
           });
         } else {
           ShowToast.error("Payout not found.");
@@ -178,6 +190,10 @@ export default function PayoutDetailView() {
           transaction_type: updatedRecord?.transaction_type || "",
           details: updatedRecord?.details || "",
           status: updatedRecord?.status || "",
+          // ✅ ADDED: hold reason fields
+          hold_reasons: updatedRecord?.hold_reasons || [],
+          hold_reason_labels: updatedRecord?.hold_reason_labels || [],
+          hold_release_reason: updatedRecord?.hold_release_reason || "",
         });
 
         setStatus(updatedRecord?.status || "");
@@ -197,6 +213,14 @@ export default function PayoutDetailView() {
       setUpdating(false);
     }
   };
+
+  // ✅ ADDED: derived boolean — true when payout is OnHold AND reasons exist
+  const isOnHold = formData.status === "OnHold";
+  const hasHoldReasons = formData.hold_reason_labels.length > 0;
+  const hasLegacyReason =
+    !hasHoldReasons &&
+    isOnHold &&
+    formData.hold_release_reason.startsWith("Payout held:");
 
   return (
     <Layout>
@@ -218,6 +242,34 @@ export default function PayoutDetailView() {
             Payout Detail View
           </p>
         </div>
+
+        {/* ✅ ADDED: Hold Reason Banner — only shown when status is OnHold */}
+        {isOnHold && (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+            <p className="text-sm font-semibold text-red-700 mb-2">
+              ⚠️ This payout is currently On Hold
+            </p>
+
+            {hasHoldReasons ? (
+              <ul className="list-disc list-inside space-y-1">
+                {formData.hold_reason_labels.map((label, i) => (
+                  <li key={i} className="text-sm text-red-600">
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            ) : hasLegacyReason ? (
+              // Fallback for older payouts that only have hold_release_reason
+              <p className="text-sm text-red-600">
+                {formData.hold_release_reason.replace("Payout held: ", "")}
+              </p>
+            ) : (
+              <p className="text-sm text-red-500 italic">
+                Reason not recorded. Please contact admin.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Detail Form */}
         <div className="rounded-xl px-6 max-md:p-4 bg-white">

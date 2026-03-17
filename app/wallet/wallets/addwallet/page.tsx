@@ -40,6 +40,8 @@ interface WalletFormData {
   panCategory?: string;
   aadharSeeding?: boolean;
   panFile: File | null;
+  rank?: string;
+  club?: string;
 }
 
 export default function AddWalletForm() {
@@ -80,7 +82,7 @@ export default function AddWalletForm() {
     userName: Yup.string().required("* User Name is required"),
     contact: Yup.string().required("* Contact is required"),
     accountHolderName: Yup.string().required(
-      "* Account Holder Name is required"
+      "* Account Holder Name is required",
     ),
     bankName: Yup.string().required("* Bank Name is required"),
     accountNumber: Yup.string()
@@ -107,7 +109,7 @@ export default function AddWalletForm() {
         "* Aadhaar front must be an image or PDF",
         (value) =>
           !value ||
-          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t)),
       ),
     aadharBack: Yup.mixed<File>()
       .required("* Aadhaar back image/pdf is required")
@@ -116,7 +118,7 @@ export default function AddWalletForm() {
         "* Aadhaar back must be an image or PDF",
         (value) =>
           !value ||
-          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t)),
       ),
     aadharFile: Yup.mixed<File>().notRequired(),
     panNumber: Yup.string()
@@ -127,11 +129,11 @@ export default function AddWalletForm() {
     panFile: Yup.mixed<File>()
       .required("* PAN file is required")
       .test(
-        "fileType-pan",
+        "fileType-pan", 
         "* PAN must be an image or PDF",
         (value) =>
           !value ||
-          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t)),
       ),
     chequeFile: Yup.mixed<File>()
       .notRequired()
@@ -140,7 +142,7 @@ export default function AddWalletForm() {
         "* Cheque must be an image or PDF",
         (value) =>
           !value ||
-          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t)),
       ),
     bankBookFile: Yup.mixed<File>()
       .notRequired()
@@ -149,7 +151,7 @@ export default function AddWalletForm() {
         "* Bank book must be an image or PDF",
         (value) =>
           !value ||
-          ["image/", "application/pdf"].some((t) => value.type.startsWith(t))
+          ["image/", "application/pdf"].some((t) => value.type.startsWith(t)),
       ),
   });
 
@@ -174,7 +176,7 @@ export default function AddWalletForm() {
   // ── Fetch user details by ID (admin flow) ───────────────────────────────
   const fetchUserById = async (
     userId: string,
-    setFieldValue: (field: string, value: any) => void
+    setFieldValue: (field: string, value: any) => void,
   ) => {
     try {
       const res = await axios.get(`/api/users-operations?id=${userId}`);
@@ -200,7 +202,7 @@ export default function AddWalletForm() {
     panNumber: string,
     panName: string,
     panDob: string,
-    setFieldValue: (field: string, value: any) => void
+    setFieldValue: (field: string, value: any) => void,
   ) => {
     try {
       setVerifying(true);
@@ -227,7 +229,7 @@ export default function AddWalletForm() {
           setFieldValue("panCategory", panData.category || "");
           setFieldValue(
             "aadharSeeding",
-            panData.aadhaar_seeding_status === "y"
+            panData.aadhaar_seeding_status === "y",
           );
         } else {
           setPanVerified(false);
@@ -259,7 +261,7 @@ export default function AddWalletForm() {
   // ── Form submit ─────────────────────────────────────────────────────────
   const handleSubmit = async (
     values: WalletFormData,
-    actions: FormikHelpers<WalletFormData>
+    actions: FormikHelpers<WalletFormData>,
   ) => {
     try {
       setLoading(true);
@@ -275,11 +277,11 @@ export default function AddWalletForm() {
       // Admin: check if wallet already exists for this user
       if (user.role === "admin") {
         const walletCheck = await axios.get(
-          `/api/wallets-operations?user_id=${values.userId}`
+          `/api/wallets-operations?user_id=${values.userId}`,
         );
         if (!walletCheck.data.success || walletCheck.data.exists) {
           ShowToast.error(
-            "Wallet already exists for this user or user not found"
+            "Wallet already exists for this user or user not found",
           );
           setLoading(false);
           return;
@@ -353,7 +355,7 @@ export default function AddWalletForm() {
         if (user.role === "user") {
           // User's request goes to admin for approval — no wallet created yet
           ShowToast.success(
-            "Your wallet request has been submitted for admin approval!"
+            "Your wallet request has been submitted for admin approval!",
           );
         } else {
           ShowToast.success("Wallet added successfully!");
@@ -366,7 +368,7 @@ export default function AddWalletForm() {
       console.error("Add wallet error:", error);
       ShowToast.error(
         error.response?.data?.message ||
-          "Something went wrong while adding wallet."
+          "Something went wrong while adding wallet.",
       );
     } finally {
       setLoading(false);
@@ -382,7 +384,6 @@ export default function AddWalletForm() {
         </div>
       )}
       <div className="p-4 max-md:p-2">
-
         {/* Header */}
         <div className="flex items-center mb-6 max-md:mb-2">
           <IoIosArrowBack
@@ -405,7 +406,6 @@ export default function AddWalletForm() {
             {({ values, setFieldValue, errors, touched, handleBlur }) => {
               return (
                 <Form className="grid grid-cols-1 gap-6">
-
                   {/* User Fields */}
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                     <InputField
@@ -421,7 +421,7 @@ export default function AddWalletForm() {
                         if (user.role === "admin" && value.length >= 4) {
                           try {
                             const res = await axios.get(
-                              `/api/wallets-operations?user_id=${value}`
+                              `/api/wallets-operations?user_id=${value}`,
                             );
                             if (
                               res.data?.success &&
@@ -429,7 +429,7 @@ export default function AddWalletForm() {
                               res.data.data.length > 0
                             ) {
                               ShowToast.error(
-                                "This User ID already has a wallet"
+                                "This User ID already has a wallet",
                               );
                               setFieldValue("userId", "");
                               setFieldValue("userName", "");
@@ -534,30 +534,15 @@ export default function AddWalletForm() {
                       error={touched.ifscCode ? (errors as any).ifscCode : ""}
                     />
                     <FileInput
-                      label="Cancelled Cheque (optional)"
-                      name="chequeFile"
-                      required
-                      value={values.chequeFile}
-                      onChange={(e) =>
-                        setFieldValue(
-                          "chequeFile",
-                          e.currentTarget.files?.[0] || null
-                        )
-                      }
-                      onBlur={handleBlur}
-                      error={
-                        touched.chequeFile ? (errors as any).chequeFile : ""
-                      }
-                    />
-                    <FileInput
                       label="Bank Book (optional)"
                       className="p-0"
+                      required
                       name="bankBookFile"
                       value={values.bankBookFile}
                       onChange={(e) =>
                         setFieldValue(
                           "bankBookFile",
-                          e.currentTarget.files?.[0] || null
+                          e.currentTarget.files?.[0] || null,
                         )
                       }
                       onBlur={handleBlur}
@@ -565,6 +550,22 @@ export default function AddWalletForm() {
                         touched.bankBookFile ? (errors as any).bankBookFile : ""
                       }
                     />
+                    <FileInput
+                      label="Cancelled Cheque (optional)"
+                      name="chequeFile"
+                      value={values.chequeFile}
+                      onChange={(e) =>
+                        setFieldValue(
+                          "chequeFile",
+                          e.currentTarget.files?.[0] || null,
+                        )
+                      }
+                      onBlur={handleBlur}
+                      error={
+                        touched.chequeFile ? (errors as any).chequeFile : ""
+                      }
+                    />
+
                     <InputField
                       label="GST Number (optional)"
                       className="p-0"
@@ -574,9 +575,7 @@ export default function AddWalletForm() {
                         setFieldValue("gstNumber", e.target.value)
                       }
                       onBlur={handleBlur}
-                      error={
-                        touched.gstNumber ? (errors as any).gstNumber : ""
-                      }
+                      error={touched.gstNumber ? (errors as any).gstNumber : ""}
                     />
                   </div>
 
@@ -600,9 +599,7 @@ export default function AddWalletForm() {
                         setFieldValue("panNumber", e.target.value)
                       }
                       onBlur={handleBlur}
-                      error={
-                        touched.panNumber ? (errors as any).panNumber : ""
-                      }
+                      error={touched.panNumber ? (errors as any).panNumber : ""}
                     />
                     <InputField
                       label="Name as in PAN"
@@ -632,7 +629,7 @@ export default function AddWalletForm() {
                       onChange={(e) =>
                         setFieldValue(
                           "panFile",
-                          e.currentTarget.files?.[0] || null
+                          e.currentTarget.files?.[0] || null,
                         )
                       }
                       onBlur={handleBlur}
@@ -658,7 +655,7 @@ export default function AddWalletForm() {
                             !values.panFile
                           ) {
                             ShowToast.error(
-                              "Please fill all PAN details and upload PAN file before verifying"
+                              "Please fill all PAN details and upload PAN file before verifying",
                             );
                             return;
                           }
@@ -666,7 +663,7 @@ export default function AddWalletForm() {
                             values.panNumber,
                             values.panName,
                             values.panDob,
-                            setFieldValue
+                            setFieldValue,
                           );
                         }}
                       >
@@ -687,9 +684,7 @@ export default function AddWalletForm() {
                       }
                       onBlur={handleBlur}
                       error={
-                        touched.aadharNumber
-                          ? (errors as any).aadharNumber
-                          : ""
+                        touched.aadharNumber ? (errors as any).aadharNumber : ""
                       }
                     />
                     <FileInput
@@ -700,7 +695,7 @@ export default function AddWalletForm() {
                       onChange={(e) =>
                         setFieldValue(
                           "aadharFront",
-                          e.currentTarget.files?.[0] || null
+                          e.currentTarget.files?.[0] || null,
                         )
                       }
                       onBlur={handleBlur}
@@ -716,7 +711,7 @@ export default function AddWalletForm() {
                       onChange={(e) =>
                         setFieldValue(
                           "aadharBack",
-                          e.currentTarget.files?.[0] || null
+                          e.currentTarget.files?.[0] || null,
                         )
                       }
                       onBlur={handleBlur}
@@ -732,7 +727,6 @@ export default function AddWalletForm() {
                       {loading ? "Submitting..." : "Submit"}
                     </SubmitButton>
                   </div>
-
                 </Form>
               );
             }}
