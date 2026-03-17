@@ -7,6 +7,7 @@ import { IoIosArrowBack } from "react-icons/io";
 import Loader from "@/components/common/loader";
 import Layout from "@/layout/Layout";
 import SubmitButton from "@/components/common/submitbutton";
+import { useVLife } from "@/store/context";
 
 // ─────────────────────────────────────────
 // Interfaces
@@ -242,6 +243,8 @@ export default function OrderDetailView() {
   const params = useParams();
   const router = useRouter();
   const orderId = (params as any)?.id as string;
+    const { user } = useVLife();
+  
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -473,7 +476,8 @@ export default function OrderDetailView() {
 
             {/* ✅ action buttons */}
             <div className="flex items-center gap-2 max-lg:self-end">
-              <button
+              {user.role === "admin" && (
+                 <button
                 onClick={openEditTrack}
                 className="text-sm px-4 py-2 rounded-lg border border-gray-300 bg-gray-600
                            text-white font-medium transition-colors
@@ -481,6 +485,8 @@ export default function OrderDetailView() {
               >
                 Edit Track
               </button>
+              )}
+             
 
               <SubmitButton
                 onClick={() => setShowAddress(true)}
