@@ -90,6 +90,21 @@ const OrderSchema = new mongoose.Schema(
     direct_bonus_checked: { type: Boolean, default: false },
     matching_bonus_checked: { type: Boolean, default: false },
 
+    shipping: {
+  tracking_id:        { type: String },
+  courier_partner:    { type: String },
+  dispatch_date:      { type: String },  
+  dispatch_time:      { type: String },   
+  estimated_delivery: { type: String },   
+  delivered_date:     { type: String },
+  delivered_time:     { type: String },
+  return_reason:      { type: String },   
+  remarks:            { type: String },
+  tracking_url:       { type: String },
+  updated_by:         { type: String },  
+  updated_at:         { type: Date },
+},
+
 
     // who placed / paid for the order
     placed_by: {

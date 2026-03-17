@@ -28,9 +28,11 @@ interface AdminDashboardData {
     reorder: number;
   };
   orders: {
-    totalOrders: number;
-    pendingOrders: number;
-    completedOrders: number;
+    totalOrders:      number;
+    pendingOrders:    number;  // ✅ pending + packed
+    dispatchedOrders: number;  // ✅ dispatched + out_for_delivery + delivered
+    deliveredOrders:  number;  // ✅ delivered
+    returnedOrders:   number;  // ✅ returned + cancelled
   };
   team: {
     totalRegistered: number;
@@ -80,10 +82,7 @@ export default function AdminDashboard() {
 
     (async () => {
       try {
-        // 1️⃣ Check first order
         const firstOrderRes = await hasFirstOrder(user.user_id);
-
-        // 2️⃣ Check advance
         const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
         if (!isMounted) return;
@@ -118,12 +117,10 @@ export default function AdminDashboard() {
         user_id: user.user_id,
       };
 
-      // single date
       if (dateFilter?.type === "on") {
         params.date = dateFilter.date;
       }
 
-      // date range
       if (dateFilter?.type === "range") {
         params.from = dateFilter.from;
         params.to = dateFilter.to;
@@ -205,6 +202,7 @@ export default function AdminDashboard() {
             />
           </AdminCard>
 
+          {/* ✅ My Orders card — updated */}
           <AdminCard
             title="My Orders"
             footerLabel="View Report"
@@ -220,7 +218,15 @@ export default function AdminDashboard() {
             />
             <StatRow
               label="Dispatched Orders"
-              value={dashboard?.orders.completedOrders || 0}
+              value={dashboard?.orders.dispatchedOrders || 0}
+            />
+            <StatRow
+              label="Delivered Orders"
+              value={dashboard?.orders.deliveredOrders || 0}
+            />
+            <StatRow
+              label="Returned / Failed"
+              value={dashboard?.orders.returnedOrders || 0}
             />
           </AdminCard>
 
@@ -324,20 +330,15 @@ const AdminCard = ({ title, children, footerLabel, footerLink }: any) => {
 
   return (
     <div className="bg-white rounded-xl border border-gray-300 shadow-sm flex flex-col h-full">
-      {/* Header */}
       <div className="bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded-t-xl">
         {title}
       </div>
-
-      {/* Body */}
       <div className="px-4 py-2 space-y-2 flex-1">{children}</div>
-
-      {/* Footer (optional) */}
       {footerLabel && footerLink && (
-        <div className=" px-4 pb-2 text-right">
+        <div className="px-4 pb-2 text-right">
           <button
             onClick={() => router.push(footerLink)}
-            className="text-sm  text-blue-600 hover:text-blue-800 underline transition cursor-pointer"
+            className="text-sm text-blue-600 hover:text-blue-800 underline transition cursor-pointer"
           >
             {footerLabel}
           </button>

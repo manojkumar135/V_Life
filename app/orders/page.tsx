@@ -251,7 +251,7 @@ export default function OrdersPage() {
         </span>
       ),
     },
-    { field: "payment", headerName: "Status", flex: 1 },
+    { field: "order_status", headerName: "Status", flex: 1 },
     {
       field: "download",
       headerName: "Invoice",
@@ -407,7 +407,7 @@ export default function OrdersPage() {
           setCurrentPage={goToPage}
           rowIdField="_id"
           pageSize={12}
-          statusField="order_status"
+          statusField="order"
           onIdClick={(id) => handleEdit(id)}
           checkboxSelection
           onRowClick={handleRowClick}

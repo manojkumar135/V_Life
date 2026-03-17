@@ -22,7 +22,7 @@ import {
   propagateInfinityUpdateToAncestors,
 } from "@/services/infinity";
 
-import { processPvOrder } from "@/services/processPvOrder"; 
+import { processPvOrder } from "@/services/processPvOrder";
 
 // ----------------- Types -----------------
 interface OrderItem {
@@ -103,6 +103,21 @@ interface OrderPayload {
       used: number;
       after: number;
     };
+  };
+
+
+  shipping?: {
+    tracking_id?: string;
+    courier_partner?: string;
+    dispatch_date?: string;
+    dispatch_time?: string;
+    estimated_delivery?: string;
+    delivered_date?: string;
+    delivered_time?: string;
+    return_reason?: string;
+    remarks?: string;
+    tracking_url?: string;
+    updated_at?: Date;
   };
 }
 
@@ -191,8 +206,8 @@ export async function POST(request: Request) {
     const newOrder = await Order.create({
       ...body,
       order_id,
-      user_id: beneficiary.user_id, 
-            is_first_order: isFirstOrder,
+      user_id: beneficiary.user_id,
+      is_first_order: isFirstOrder,
       amount,
     });
 
@@ -331,20 +346,20 @@ export async function POST(request: Request) {
       user_id: beneficiary.user_id,
     });
 
-        // ✅ ADD THIS BLOCK — PV tracking, fire-and-forget, does not block response
+    // ✅ ADD THIS BLOCK — PV tracking, fire-and-forget, does not block response
     if (totalPV > 0) {
       processPvOrder({
-        user_id:      beneficiary.user_id,
-        order_id:     newOrder.order_id,
-        pv:           totalPV,
+        user_id: beneficiary.user_id,
+        order_id: newOrder.order_id,
+        pv: totalPV,
         order_amount: newOrder.final_amount ?? amount,
         userInfo: {
           user_name: beneficiary.user_name || "",
-          contact:   beneficiary.contact   || "",
-          mail:      beneficiary.mail      || "",
+          contact: beneficiary.contact || "",
+          mail: beneficiary.mail || "",
         },
       }).catch((err) =>
-        console.error("❌ [order-operations] processPvOrder error", err)
+        console.error("❌ [order-operations] processPvOrder error", err),
       );
     }
 
@@ -356,44 +371,43 @@ export async function POST(request: Request) {
 
     /* ---------------- BACKGROUND MLM ---------------- */
     /* ---------------- MLM + RANK + BONUS ---------------- */
-if (freshUser?.referBy) {
-  try {
-    const referrerId = freshUser.referBy;
+    if (freshUser?.referBy) {
+      try {
+        const referrerId = freshUser.referBy;
 
-    if (justActivated) {
-      await User.updateOne(
-        { user_id: referrerId },
-        {
-          $addToSet: { paid_directs: freshUser.user_id },
-          $inc: { paid_directs_count: 1 },
-        },
-      );
+        if (justActivated) {
+          await User.updateOne(
+            { user_id: referrerId },
+            {
+              $addToSet: { paid_directs: freshUser.user_id },
+              $inc: { paid_directs_count: 1 },
+            },
+          );
+        }
+
+        if (shouldTriggerMLM && referrerId) {
+          await updateInfinityTeam(referrerId);
+
+          const totalPayout = await getTotalPayout(referrerId);
+
+          await updateClub(referrerId, totalPayout);
+
+          await checkAndReleasePromotionalBonus(referrerId);
+
+          // 🔥 Non-blocking heavy process
+          propagateInfinityUpdateToAncestors(referrerId)
+            .then(() => console.log("Infinity propagated"))
+            .catch((err) => console.error("Infinity error", err));
+        }
+
+        await User.updateOne(
+          { user_id: referrerId },
+          { $inc: { direct_bv: totalBV, direct_pv: totalPV } },
+        );
+      } catch (err) {
+        console.error("❌ Infinity / Rank error", err);
+      }
     }
-
-   if (shouldTriggerMLM && referrerId) {
-  await updateInfinityTeam(referrerId);
-
-  const totalPayout = await getTotalPayout(referrerId);
-
-  await updateClub(referrerId, totalPayout);
-
-  await checkAndReleasePromotionalBonus(referrerId);
-
-  // 🔥 Non-blocking heavy process
-  propagateInfinityUpdateToAncestors(referrerId)
-    .then(() => console.log("Infinity propagated"))
-    .catch(err => console.error("Infinity error", err));
-}
-
-    await User.updateOne(
-      { user_id: referrerId },
-      { $inc: { direct_bv: totalBV, direct_pv: totalPV } },
-    );
-  } catch (err) {
-    console.error("❌ Infinity / Rank error", err);
-  }
-}
-
 
     /* ---------------- ADMIN ALERT ---------------- */
     await Alert.create({
@@ -412,10 +426,11 @@ if (freshUser?.referBy) {
       delivered_via: "system",
     });
 
-return NextResponse.json(
-  { success: true, data: newOrder, addedBV: totalBV },
-  { status: 201 },
-);  } catch (error: any) {
+    return NextResponse.json(
+      { success: true, data: newOrder, addedBV: totalBV },
+      { status: 201 },
+    );
+  } catch (error: any) {
     console.error("🔥 [ORDER] Fatal error", error);
     return NextResponse.json(
       { success: false, message: error.message },
@@ -431,13 +446,13 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
 
-    const id           = searchParams.get("id") || searchParams.get("order_id");
-    const user_id      = searchParams.get("user_id");
-    const search       = searchParams.get("search");
-    const role         = searchParams.get("role");
-    const date         = searchParams.get("date");
-    const from         = searchParams.get("from");
-    const to           = searchParams.get("to");
+    const id = searchParams.get("id") || searchParams.get("order_id");
+    const user_id = searchParams.get("user_id");
+    const search = searchParams.get("search");
+    const role = searchParams.get("role");
+    const date = searchParams.get("date");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
     const advance_used = searchParams.get("advance_used"); // ✅
 
     // -------------------
@@ -559,9 +574,9 @@ export async function GET(request: Request) {
     if (date && !from && !to) {
       const parsedDate = parseDate(date);
       if (parsedDate) {
-        const day   = ("0" + parsedDate.getDate()).slice(-2);
+        const day = ("0" + parsedDate.getDate()).slice(-2);
         const month = ("0" + (parsedDate.getMonth() + 1)).slice(-2);
-        const year  = parsedDate.getFullYear();
+        const year = parsedDate.getFullYear();
         const formatted = `${day}-${month}-${year}`;
         conditions.push({ payment_date: formatted });
       }
@@ -570,19 +585,19 @@ export async function GET(request: Request) {
     // Date range filter
     if (from || to) {
       const startDate = parseDate(from);
-      const endDate   = parseDate(to);
+      const endDate = parseDate(to);
 
       if (startDate && endDate) {
-        const startDay   = ("0" + startDate.getDate()).slice(-2);
+        const startDay = ("0" + startDate.getDate()).slice(-2);
         const startMonth = ("0" + (startDate.getMonth() + 1)).slice(-2);
-        const startYear  = startDate.getFullYear();
+        const startYear = startDate.getFullYear();
 
-        const endDay   = ("0" + endDate.getDate()).slice(-2);
+        const endDay = ("0" + endDate.getDate()).slice(-2);
         const endMonth = ("0" + (endDate.getMonth() + 1)).slice(-2);
-        const endYear  = endDate.getFullYear();
+        const endYear = endDate.getFullYear();
 
         const startFormatted = `${startDay}-${startMonth}-${startYear}`;
-        const endFormatted   = `${endDay}-${endMonth}-${endYear}`;
+        const endFormatted = `${endDay}-${endMonth}-${endYear}`;
 
         conditions.push({
           payment_date: { $gte: startFormatted, $lte: endFormatted },
@@ -598,10 +613,7 @@ export async function GET(request: Request) {
       } else {
         // Normal orders — field is false OR field doesn't exist at all
         conditions.push({
-          $or: [
-            { advance_used: false },
-            { advance_used: { $exists: false } },
-          ],
+          $or: [{ advance_used: false }, { advance_used: { $exists: false } }],
         });
       }
     }
@@ -628,7 +640,9 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     await connectDB();
-    const { id, order_id, ...rest }: OrderPayload = await request.json();
+
+    const body = await request.json(); // ✅ read ONCE
+    const { id, order_id, ...rest }: OrderPayload = body; // ✅ use body, not request.json() again
     const updateId = id || order_id;
 
     if (!updateId) {
@@ -638,15 +652,43 @@ export async function PUT(request: Request) {
       );
     }
 
+    // Separate shipping from the rest
+    const { shipping, ...topLevelFields } = rest;
+
+    // Build $set payload
+    const setPayload: Record<string, any> = { ...topLevelFields };
+
+    if (shipping) {
+      const existing = await Order.findOne(
+        mongoose.Types.ObjectId.isValid(updateId)
+          ? { _id: updateId }
+          : { order_id: updateId },
+        { shipping: 1 }
+      ).lean();
+
+      const existingShipping = (existing as any)?.shipping ?? {};
+
+      const mergedShipping = {
+        ...existingShipping,
+        ...Object.fromEntries(
+          Object.entries(shipping).filter(([_, v]) => v !== undefined)
+        ),
+      };
+
+      setPayload.shipping = mergedShipping;
+    }
+
     let updatedOrder;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedOrder = await Order.findByIdAndUpdate(updateId, rest, {
-        new: true,
-      });
+      updatedOrder = await Order.findByIdAndUpdate(
+        updateId,
+        { $set: setPayload },
+        { new: true },
+      );
     } else {
       updatedOrder = await Order.findOneAndUpdate(
         { order_id: updateId },
-        rest,
+        { $set: setPayload },
         { new: true },
       );
     }

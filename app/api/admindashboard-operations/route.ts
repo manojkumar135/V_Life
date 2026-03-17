@@ -11,14 +11,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
 
     const user_id = searchParams.get("user_id"); // admin validation
-    const date = searchParams.get("date");       // dd-mm-yyyy | yyyy-mm-dd
-    const from = searchParams.get("from");       // dd-mm-yyyy | yyyy-mm-dd
-    const to = searchParams.get("to");           // dd-mm-yyyy | yyyy-mm-dd
+    const date = searchParams.get("date"); // dd-mm-yyyy | yyyy-mm-dd
+    const from = searchParams.get("from"); // dd-mm-yyyy | yyyy-mm-dd
+    const to = searchParams.get("to"); // dd-mm-yyyy | yyyy-mm-dd
 
     if (!user_id) {
       return NextResponse.json(
         { success: false, message: "User ID required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     if (!adminUser) {
       return NextResponse.json(
         { success: false, message: "User not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -116,70 +116,90 @@ export async function GET(request: Request) {
 
     /* =====================================================
        📦 ORDER COUNTS
+       Single aggregation — replaces 3 separate queries
+       Buckets:
+         pending    = pending + packed
+         dispatched = dispatched + out_for_delivery
+         delivered  = delivered
+         returned   = returned + cancelled
     ===================================================== */
-    const totalOrders = await Order.aggregate([
+    const orderStatusAgg = await Order.aggregate([
       ...orderBasePipeline,
-      { $count: "count" },
+      {
+        $group: {
+          _id: "$order_status",
+          count: { $sum: 1 },
+        },
+      },
     ]);
 
-    const pendingOrders = await Order.aggregate([
-      ...orderBasePipeline,
-      { $match: { order_status: "pending" } },
-      { $count: "count" },
-    ]);
+    // Convert array → map  { "pending": 5, "packed": 2, ... }
+    const s = orderStatusAgg.reduce((acc: Record<string, number>, cur: any) => {
+      acc[cur._id ?? "unknown"] = cur.count;
+      return acc;
+    }, {});
 
-    const completedOrders = await Order.aggregate([
-      ...orderBasePipeline,
-      { $match: { order_status: "completed" } },
-      { $count: "count" },
-    ]);
+    // Total = sum of all statuses
+    const totalOrdersCount = orderStatusAgg.reduce(
+      (sum: number, cur: any) => sum + cur.count,
+      0,
+    );
+
+    // ✅ Logical buckets as per requirement
+    const pendingCount = (s["pending"] || 0) + (s["packed"] || 0);
+    const dispatchedCount =
+      (s["dispatched"] || 0) +
+      (s["out_for_delivery"] || 0) +
+      (s["delivered"] || 0);
+    const deliveredCount = s["delivered"] || 0;
+    const returnedCount = (s["returned"] || 0) + (s["cancelled"] || 0);
 
     /* =====================================================
        👥 USERS (ADMIN – ALL USERS)
     ===================================================== */
-   const userDateMatch =
-  startDate || endDate
-    ? {
-        created_at: {
-          ...(startDate && { $gte: startDate }),
-          ...(endDate && { $lte: endDate }),
-        },
-      }
-    : {};
+    const userDateMatch =
+      startDate || endDate
+        ? {
+            created_at: {
+              ...(startDate && { $gte: startDate }),
+              ...(endDate && { $lte: endDate }),
+            },
+          }
+        : {};
 
-const [
-  totalRegistered,
-  adminActivations,
-  deactivatedIds,
-  normalActivations,
-] = await Promise.all([
-  // Total users registered in date range
-  User.countDocuments({
-    ...userDateMatch,
-  }),
+    const [
+      totalRegistered,
+      adminActivations,
+      deactivatedIds,
+      normalActivations,
+    ] = await Promise.all([
+      // Total users registered in date range
+      User.countDocuments({
+        ...userDateMatch,
+      }),
 
-  // Activated by Admin (Admin Activations)
-  User.countDocuments({
-    ...userDateMatch,
-    status_notes: "Activated by Admin",
-  }),
+      // Activated by Admin (Admin Activations)
+      User.countDocuments({
+        ...userDateMatch,
+        status_notes: "Activated by Admin",
+      }),
 
-  // Deactivated by Admin (Blocked)
-  User.countDocuments({
-    ...userDateMatch,
-    status_notes: "Deactivated by Admin",
-  }),
+      // Deactivated by Admin (Blocked)
+      User.countDocuments({
+        ...userDateMatch,
+        status_notes: "Deactivated by Admin",
+      }),
 
-  // Active users NOT activated by admin (Normal Activations)
-  User.countDocuments({
-    ...userDateMatch,
-    user_status: "active",
-    $or: [
-      { status_notes: { $exists: false } },
-      { status_notes: { $ne: "Activated by Admin" } },
-    ],
-  }),
-]);
+      // Active users NOT activated by admin (Normal Activations)
+      User.countDocuments({
+        ...userDateMatch,
+        user_status: "active",
+        $or: [
+          { status_notes: { $exists: false } },
+          { status_notes: { $ne: "Activated by Admin" } },
+        ],
+      }),
+    ]);
 
     /* =====================================================
        💰 PAYOUTS (DAILY + WEEKLY)
@@ -246,21 +266,18 @@ const [
     ]);
 
     const totalGeneratedPayout =
-      (dailyAgg[0]?.totalPayout || 0) +
-      (weeklyAgg[0]?.totalPayout || 0);
+      (dailyAgg[0]?.totalPayout || 0) + (weeklyAgg[0]?.totalPayout || 0);
 
     const totalReleasedPayout =
-      (dailyAgg[0]?.releasedPayout || 0) +
-      (weeklyAgg[0]?.releasedPayout || 0);
+      (dailyAgg[0]?.releasedPayout || 0) + (weeklyAgg[0]?.releasedPayout || 0);
 
     const totalPendingPayout =
-      (dailyAgg[0]?.pendingPayout || 0) +
-      (weeklyAgg[0]?.pendingPayout || 0);
+      (dailyAgg[0]?.pendingPayout || 0) + (weeklyAgg[0]?.pendingPayout || 0);
 
     const generatedRewardPoints =
-      (dailyAgg[0]?.rewardPoints || 0) +
-      (weeklyAgg[0]?.rewardPoints || 0);
+      (dailyAgg[0]?.rewardPoints || 0) + (weeklyAgg[0]?.rewardPoints || 0);
 
+    // console.log(dispatchedCount)
     /* =====================================================
        📤 RESPONSE
     ===================================================== */
@@ -274,9 +291,11 @@ const [
             reorder: reorderAgg[0]?.total || 0,
           },
           orders: {
-            totalOrders: totalOrders[0]?.count || 0,
-            pendingOrders: pendingOrders[0]?.count || 0,
-            completedOrders: completedOrders[0]?.count || 0,
+            totalOrders: totalOrdersCount, // all statuses combined
+            pendingOrders: pendingCount, // pending + packed
+            dispatchedOrders: dispatchedCount, // dispatched + out_for_delivery
+            deliveredOrders: deliveredCount, // delivered
+            returnedOrders: returnedCount, // returned + cancelled
           },
           team: {
             totalRegistered,
@@ -292,13 +311,13 @@ const [
           },
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: any) {
     console.error("Admin dashboard error:", error);
     return NextResponse.json(
       { success: false, message: error.message || "Server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

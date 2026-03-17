@@ -70,6 +70,11 @@ interface OrderData {
       before: number;
       after: number;
     };
+    daily: {
+      used: number;
+      before: number;
+      after: number;
+    };
   };
 }
 
@@ -280,7 +285,7 @@ export default function ActivationView() {
                       <div className="col-span-2 text-right font-bold text-gray-900">
                         ₹{" "}
                         {((item.price_with_gst || 0) * item.quantity).toFixed(
-                          2
+                          2,
                         )}
                       </div>
                     </div>
@@ -327,7 +332,7 @@ export default function ActivationView() {
                         <div className=" text-right font-bold text-gray-700">
                           ₹{" "}
                           {((item.price_with_gst || 0) * item.quantity).toFixed(
-                            2
+                            2,
                           )}
                         </div>
                       </div>
@@ -359,10 +364,17 @@ export default function ActivationView() {
                 </div>
               )}
 
-              {order.rewardUsed> 0 && (
+              {(order.rewardUsage?.fortnight?.used > 0 ||
+                order.rewardUsage?.daily?.used > 0) && (
                 <div className="flex justify-between items-center text-sm text-red-600 pl-2">
-                  <span>Rewards</span>
-                  <span>- ₹ {order.rewardUsed.toFixed(2)}</span>
+                  <span>Reward </span>
+                  <span>
+                    - ₹{" "}
+                    {(
+                      (order.rewardUsage?.fortnight?.used || 0) +
+                      (order.rewardUsage?.daily?.used || 0)
+                    ).toFixed(2)}
+                  </span>
                 </div>
               )}
 

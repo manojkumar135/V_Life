@@ -8,6 +8,10 @@ import Loader from "@/components/common/loader";
 import Layout from "@/layout/Layout";
 import SubmitButton from "@/components/common/submitbutton";
 
+// ─────────────────────────────────────────
+// Interfaces
+// ─────────────────────────────────────────
+
 interface CartItem {
   id: string | number;
   name: string;
@@ -15,13 +19,41 @@ interface CartItem {
   quantity: number;
   image: string;
   description: string;
-  bv?: number; // ✅ added bv
+  bv?: number;
   pv?: number;
   gst?: number;
   whole_gst?: number;
   dealer_price?: number;
   unit_price?: number;
   price_with_gst?: number;
+}
+
+interface ShippingData {
+  tracking_id?: string;
+  courier_partner?: string;
+  dispatch_date?: string;
+  dispatch_time?: string;
+  estimated_delivery?: string;
+  delivered_date?: string;
+  delivered_time?: string;
+  return_reason?: string;
+  remarks?: string;
+  tracking_url?: string;
+  updated_by?: string;
+}
+
+interface TrackForm {
+  order_status: string;
+  tracking_id: string;
+  courier_partner: string;
+  dispatch_date: string;
+  dispatch_time: string;
+  estimated_delivery: string;
+  delivered_date: string;
+  delivered_time: string;
+  return_reason: string;
+  remarks: string;
+  tracking_url: string;
 }
 
 interface OrderData {
@@ -34,9 +66,9 @@ interface OrderData {
   description?: string;
   orderStatus?: string;
   cart: CartItem[];
-  totalAmount: number; // final amount after advance deduction
-  subtotal: number; // full order value before advance
-  advanceDeducted?: number; // advance amount deducted
+  totalAmount: number;
+  subtotal: number;
+  advanceDeducted?: number;
   isFirstOrder?: boolean;
   paymentDate?: string;
   paymentId?: string;
@@ -50,7 +82,6 @@ interface OrderData {
     contact?: string;
     mail?: string;
   };
-
   beneficiary?: {
     user_id: string;
     name?: string;
@@ -59,18 +90,153 @@ interface OrderData {
     address?: string;
   };
   rewardUsage: {
-    cashback: {
-      used: number;
-      before: number;
-      after: number;
-    };
-    fortnight: {
-      used: number;
-      before: number;
-      after: number;
-    };
+    cashback: { used: number; before: number; after: number };
+    fortnight: { used: number; before: number; after: number };
+    daily: { used: number; before: number; after: number };
   };
+  shipping?: ShippingData;
 }
+
+// ─────────────────────────────────────────
+// Status Badge
+// ─────────────────────────────────────────
+
+function StatusBadge({ status }: { status?: string }) {
+  if (!status) return null;
+
+  const map: Record<string, { label: string; classes: string }> = {
+    pending: { label: "Pending", classes: "bg-yellow-100 text-yellow-700" },
+    packed: { label: "Packed", classes: "bg-blue-100 text-blue-700" },
+    dispatched: {
+      label: "Dispatched",
+      classes: "bg-indigo-100 text-indigo-700",
+    },
+    out_for_delivery: {
+      label: "Out for Delivery",
+      classes: "bg-orange-100 text-orange-700",
+    },
+    delivered: { label: "Delivered", classes: "bg-green-100 text-green-700" },
+    returned: { label: "Returned", classes: "bg-red-100 text-red-700" },
+    cancelled: { label: "Cancelled", classes: "bg-gray-100 text-gray-500" },
+  };
+
+  const cfg = map[status] ?? {
+    label: status,
+    classes: "bg-gray-100 text-gray-500",
+  };
+
+  return (
+    <span
+      className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cfg.classes}`}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────
+// Reusable form field components
+// ─────────────────────────────────────────
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+      {children}
+    </label>
+  );
+}
+
+function TextInput({
+  placeholder,
+  value,
+  onChange,
+}: {
+  placeholder?: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <input
+      type="text"
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
+                 focus:outline-none focus:ring-2 focus:ring-black"
+    />
+  );
+}
+
+function DateInput({
+  value,
+  onChange,
+}: {
+  value: string; // stored as dd-mm-yyyy
+  onChange: (v: string) => void;
+}) {
+  // convert dd-mm-yyyy → yyyy-mm-dd for the native date input
+  const toInputVal = (v: string) => {
+    if (!v) return "";
+    const parts = v.split("-");
+    if (parts.length === 3 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return v;
+  };
+
+  // convert yyyy-mm-dd → dd-mm-yyyy for storage
+  const fromInputVal = (v: string) => {
+    if (!v) return "";
+    const [y, m, d] = v.split("-");
+    return `${d}-${m}-${y}`;
+  };
+
+  return (
+    <input
+      type="date"
+      value={toInputVal(value)}
+      onChange={(e) => onChange(fromInputVal(e.target.value))}
+      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
+                 focus:outline-none focus:ring-2 focus:ring-black"
+    />
+  );
+}
+
+function TimeInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <input
+      type="time"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
+                 focus:outline-none focus:ring-2 focus:ring-black"
+    />
+  );
+}
+
+// ─────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────
+
+const EMPTY_TRACK_FORM: TrackForm = {
+  order_status: "",
+  tracking_id: "",
+  courier_partner: "",
+  dispatch_date: "",
+  dispatch_time: "",
+  estimated_delivery: "",
+  delivered_date: "",
+  delivered_time: "",
+  return_reason: "",
+  remarks: "",
+  tracking_url: "",
+};
 
 export default function OrderDetailView() {
   const params = useParams();
@@ -79,9 +245,17 @@ export default function OrderDetailView() {
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [showAddress, setShowAddress] = useState<boolean>(false); // ✅ popup state
 
-  // Fetch order data
+  // shipping details popup
+  const [showAddress, setShowAddress] = useState<boolean>(false);
+
+  // edit track popup
+  const [showEditTrack, setShowEditTrack] = useState<boolean>(false);
+  const [trackForm, setTrackForm] = useState<TrackForm>(EMPTY_TRACK_FORM);
+  const [trackSaving, setTrackSaving] = useState<boolean>(false);
+  const [trackError, setTrackError] = useState<string>("");
+
+  // ── fetch order ──────────────────────────
   useEffect(() => {
     const fetchOrder = async () => {
       try {
@@ -90,6 +264,7 @@ export default function OrderDetailView() {
 
         if (res?.data?.success) {
           const raw = res.data.data[0];
+
           const mappedOrder: OrderData = {
             orderId: raw.order_id,
             userId: raw.user_id,
@@ -106,7 +281,7 @@ export default function OrderDetailView() {
               quantity: item.quantity,
               image: item.image,
               description: item.description,
-              bv: item.bv, // ✅ map bv
+              bv: item.bv,
               pv: item.pv,
               whole_gst: item.whole_gst,
               gst: item.gst,
@@ -124,6 +299,7 @@ export default function OrderDetailView() {
             rewardUsed: Number(raw.reward_used) || 0,
             rewardUsage: raw.reward_usage,
             placedBy: raw.placed_by,
+            shipping: raw.shipping, // ✅ mapped
           };
 
           setOrder(mappedOrder);
@@ -140,6 +316,88 @@ export default function OrderDetailView() {
 
     if (orderId) fetchOrder();
   }, [orderId]);
+
+  // ── open edit track modal ─────────────────
+  const openEditTrack = () => {
+    if (!order) return;
+    setTrackForm({
+      order_status: order.orderStatus ?? "",
+      tracking_id: order.shipping?.tracking_id ?? "",
+      courier_partner: order.shipping?.courier_partner ?? "",
+      dispatch_date: order.shipping?.dispatch_date ?? "",
+      dispatch_time: order.shipping?.dispatch_time ?? "",
+      estimated_delivery: order.shipping?.estimated_delivery ?? "",
+      delivered_date: order.shipping?.delivered_date ?? "",
+      delivered_time: order.shipping?.delivered_time ?? "",
+      return_reason: order.shipping?.return_reason ?? "",
+      remarks: order.shipping?.remarks ?? "",
+      tracking_url: order.shipping?.tracking_url ?? "",
+    });
+    setTrackError("");
+    setShowEditTrack(true);
+  };
+
+  // ── save track details ────────────────────
+  const saveTrackDetails = async () => {
+    try {
+      setTrackSaving(true);
+      setTrackError("");
+
+      await axios.put("/api/order-operations", {
+        order_id: order?.orderId,
+        order_status: trackForm.order_status,
+        shipping: {
+          tracking_id: trackForm.tracking_id,
+          courier_partner: trackForm.courier_partner,
+          dispatch_date: trackForm.dispatch_date,
+          dispatch_time: trackForm.dispatch_time,
+          estimated_delivery: trackForm.estimated_delivery,
+          delivered_date: trackForm.delivered_date,
+          delivered_time: trackForm.delivered_time,
+          return_reason: trackForm.return_reason,
+          remarks: trackForm.remarks,
+          tracking_url: trackForm.tracking_url,
+          updated_at: new Date(),
+        },
+      });
+
+      // ✅ reflect locally — no refetch needed
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              orderStatus: trackForm.order_status,
+              shipping: {
+                tracking_id: trackForm.tracking_id,
+                courier_partner: trackForm.courier_partner,
+                dispatch_date: trackForm.dispatch_date,
+                dispatch_time: trackForm.dispatch_time,
+                estimated_delivery: trackForm.estimated_delivery,
+                delivered_date: trackForm.delivered_date,
+                delivered_time: trackForm.delivered_time,
+                return_reason: trackForm.return_reason,
+                remarks: trackForm.remarks,
+                tracking_url: trackForm.tracking_url,
+              },
+            }
+          : prev,
+      );
+
+      setShowEditTrack(false);
+    } catch {
+      setTrackError("Failed to save. Please try again.");
+    } finally {
+      setTrackSaving(false);
+    }
+  };
+
+  // ── field updater helper ──────────────────
+  const setField = <K extends keyof TrackForm>(key: K, value: TrackForm[K]) =>
+    setTrackForm((prev) => ({ ...prev, [key]: value }));
+
+  // ─────────────────────────────────────────
+  // Guards
+  // ─────────────────────────────────────────
 
   if (loading) {
     return (
@@ -166,11 +424,14 @@ export default function OrderDetailView() {
   const hasAdvance =
     Boolean(order.isFirstOrder) && (order.advanceDeducted ?? 0) > 0;
 
-  // console.log(order);
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
+
   return (
     <Layout>
-      <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-[100%]">
-        {/* Header - Order Info */}
+      <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-full">
+        {/* ── Header ── */}
         <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row gap-3 xl:items-center xl:pr-1">
           <button
             onClick={() => router.push("/orders")}
@@ -181,9 +442,10 @@ export default function OrderDetailView() {
           </button>
 
           <div className="flex flex-col xl:flex-row max-lg:items-start items-center max-lg:justify-start justify-between gap-4 w-full">
+            {/* order meta */}
             <div
-              className=" flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between
-             xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5 "
+              className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between
+                            xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5"
             >
               <span className="text-sm font-medium text-gray-600">
                 Order ID:{" "}
@@ -203,18 +465,34 @@ export default function OrderDetailView() {
                   {order.paymentId}
                 </span>
               </span>
+              {/* ✅ live status badge */}
+              <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                Status: <StatusBadge status={order.orderStatus} />
+              </span>
             </div>
 
-            <SubmitButton
-              onClick={() => setShowAddress(true)}
-              className=" text-sm transition-colors duration-200 max-lg:items-end max-lg:self-end"
-            >
-              View Shipping Details
-            </SubmitButton>
+            {/* ✅ action buttons */}
+            <div className="flex items-center gap-2 max-lg:self-end">
+              <button
+                onClick={openEditTrack}
+                className="text-sm px-4 py-2 rounded-lg border border-gray-300 bg-gray-600
+                           text-white font-medium transition-colors
+                           duration-200 cursor-pointer whitespace-nowrap"
+              >
+                Edit Track
+              </button>
+
+              <SubmitButton
+                onClick={() => setShowAddress(true)}
+                className="text-sm transition-colors duration-200 max-lg:items-end max-lg:self-end"
+              >
+                Order Details
+              </SubmitButton>
+            </div>
           </div>
         </div>
 
-        {/* Cart - ONLY THIS SCROLLS */}
+        {/* ── Cart (scrollable) ── */}
         <div className="flex-1 overflow-y-auto pr-2">
           {order.cart.length === 0 ? (
             <p className="text-gray-500 text-center py-6">
@@ -222,7 +500,7 @@ export default function OrderDetailView() {
             </p>
           ) : (
             <>
-              {/* Header Row (Desktop) */}
+              {/* desktop header row */}
               <div className="hidden lg:grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 xl:px-15">
                 <div className="col-span-4">Product</div>
                 <div className="col-span-1 text-center">Quantity</div>
@@ -239,7 +517,7 @@ export default function OrderDetailView() {
                     key={item.id}
                     className="w-full rounded-xl p-4 transition-all shadow-sm hover:shadow-lg border border-gray-200"
                   >
-                    {/* Desktop */}
+                    {/* Desktop row */}
                     <div className="hidden lg:grid grid-cols-12 items-center xl:px-5">
                       <div className="col-span-4 flex items-center gap-4">
                         <img
@@ -285,7 +563,7 @@ export default function OrderDetailView() {
                       </div>
                     </div>
 
-                    {/* Mobile */}
+                    {/* Mobile row */}
                     <div className="lg:hidden flex flex-col gap-3">
                       <div className="flex items-start gap-3">
                         <img
@@ -323,8 +601,7 @@ export default function OrderDetailView() {
                             PV: <span className="font-medium">{item.pv}</span>
                           </p>
                         )}
-
-                        <div className=" text-right font-bold text-gray-700">
+                        <div className="text-right font-bold text-gray-700">
                           ₹{" "}
                           {((item.price_with_gst || 0) * item.quantity).toFixed(
                             2,
@@ -339,9 +616,9 @@ export default function OrderDetailView() {
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <div className="flex-none border-t pt-4 lg:px-10 bg-white py-3 space-y-2">
-          {/* ✅ FIRST ORDER + ADVANCE */}
+          {/* first order + advance */}
           {hasAdvance && (
             <>
               <div className="flex justify-between items-center text-sm text-gray-700">
@@ -350,29 +627,23 @@ export default function OrderDetailView() {
                   ₹ {order.subtotal.toFixed(2)}
                 </span>
               </div>
-
               <div className="flex justify-between items-center text-sm text-red-600">
                 <span>Advance Paid</span>
                 <span>- ₹ {order.advanceDeducted!.toFixed(2)}</span>
               </div>
-
-              {/* Reward deductions */}
               {order.rewardUsage?.cashback?.used > 0 && (
                 <div className="flex justify-between items-center text-sm text-red-600 pl-2">
                   <span>Cashback</span>
                   <span>- ₹ {order.rewardUsage.cashback.used.toFixed(2)}</span>
                 </div>
               )}
-
               {order.rewardUsage?.fortnight?.used > 0 && (
                 <div className="flex justify-between items-center text-sm text-red-600 pl-2">
                   <span>Fortnight</span>
                   <span>- ₹ {order.rewardUsage.fortnight.used.toFixed(2)}</span>
                 </div>
               )}
-
-              <div className="border-t border-gray-200 my-2"></div>
-
+              <div className="border-t border-gray-200 my-2" />
               <div className="flex justify-between items-center sm:text-lg font-semibold">
                 <span>Total Paid</span>
                 <span className="text-green-600">
@@ -382,7 +653,7 @@ export default function OrderDetailView() {
             </>
           )}
 
-          {/* ✅ NORMAL ORDER (NO ADVANCE) */}
+          {/* normal order */}
           {!hasAdvance && (
             <>
               {order.rewardUsed > 0 && (
@@ -393,7 +664,6 @@ export default function OrderDetailView() {
                       ₹ {order.subtotal.toFixed(2)}
                     </span>
                   </div>
-
                   {order.rewardUsage?.cashback?.used > 0 && (
                     <div className="flex justify-between items-center text-sm text-red-600 pl-2">
                       <span>Cashback</span>
@@ -402,20 +672,22 @@ export default function OrderDetailView() {
                       </span>
                     </div>
                   )}
-
-                  {order.rewardUsed > 0 && (
+                  {(order.rewardUsage?.fortnight?.used > 0 ||
+                    order.rewardUsage?.daily?.used > 0) && (
                     <div className="flex justify-between items-center text-sm text-red-600 pl-2">
-                      <span>Reward </span>
+                      <span>Reward</span>
                       <span>
-                        - ₹ {order.rewardUsed.toFixed(2)}
+                        - ₹{" "}
+                        {(
+                          (order.rewardUsage?.fortnight?.used || 0) +
+                          (order.rewardUsage?.daily?.used || 0)
+                        ).toFixed(2)}
                       </span>
                     </div>
                   )}
-
-                  <div className="border-t border-gray-200 my-2"></div>
+                  <div className="border-t border-gray-200 my-2" />
                 </>
               )}
-
               <div className="flex justify-between items-center sm:text-lg font-semibold">
                 <span>Total Paid</span>
                 <span className="text-green-600">
@@ -427,14 +699,16 @@ export default function OrderDetailView() {
         </div>
       </div>
 
-      {/* Shipping Address Popup */}
+      {/* ══════════════════════════════════════════
+          Popup 1 — View Shipping Details (unchanged)
+      ══════════════════════════════════════════ */}
       {showAddress && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
           onClick={() => setShowAddress(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-lg w-[90%] max-w-md p-6 relative"
+            className="bg-white rounded-xl shadow-lg w-[90%] max-w-md p-6 relative max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -452,25 +726,25 @@ export default function OrderDetailView() {
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black">{order.orderId}</span>
 
-              <span className="font-bold text-black ">User ID</span>
+              <span className="font-bold text-black">User ID</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black">{order.userId}</span>
 
-              <span className="font-bold text-black ">User Name</span>
+              <span className="font-bold text-black">User Name</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black">{order.userName}</span>
 
-              <span className="font-bold text-black ">Email</span>
+              <span className="font-bold text-black">Email</span>
               <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black  whitespace-pre-line">
+              <span className="font-normal text-black whitespace-pre-line">
                 {order.mail}
               </span>
 
-              <span className="font-bold text-black ">Contact</span>
+              <span className="font-bold text-black">Contact</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black">{order.contact}</span>
 
-              <span className="font-bold text-black ">Payment</span>
+              <span className="font-bold text-black">Payment</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black">{order.payment}</span>
 
@@ -485,23 +759,295 @@ export default function OrderDetailView() {
                 </>
               )}
 
-              <span className="font-bold text-black ">Address</span>
+              <span className="font-bold text-black">Address</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black whitespace-pre-line">
                 {order.address || "No address available"}
               </span>
 
-              <span className="font-bold text-black ">Description</span>
+              <span className="font-bold text-black">Description</span>
               <span className="font-bold text-black text-center">:</span>
               <span className="font-normal text-black whitespace-pre-line">
                 {order.description || "N/A"}
               </span>
 
-              <span className="font-bold text-black ">Order Status</span>
+              <span className="font-bold text-black">Order Status</span>
               <span className="font-bold text-black text-center">:</span>
-              <span className="font-normal text-black">
-                {order.orderStatus}
+              <span>
+                <StatusBadge status={order.orderStatus} />
               </span>
+
+              {/* ✅ tracking section — only when tracking_id exists */}
+              {order.shipping?.tracking_id && (
+                <>
+                  <div className="col-span-3 border-t border-dashed border-gray-300 my-3" />
+                  <span className="col-span-3 font-bold text-black text-sm mb-1">
+                    🚚 Tracking Info
+                  </span>
+
+                  <span className="font-bold text-black">Courier</span>
+                  <span className="font-bold text-black text-center">:</span>
+                  <span className="font-normal text-black">
+                    {order.shipping.courier_partner || "—"}
+                  </span>
+
+                  <span className="font-bold text-black">Tracking ID</span>
+                  <span className="font-bold text-black text-center">:</span>
+                  <span className="font-normal text-black">
+                    {order.shipping.tracking_url ? (
+                      <a
+                        href={order.shipping.tracking_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline break-all"
+                      >
+                        {order.shipping.tracking_id}
+                      </a>
+                    ) : (
+                      order.shipping.tracking_id
+                    )}
+                  </span>
+
+                  <span className="font-bold text-black">Dispatched</span>
+                  <span className="font-bold text-black text-center">:</span>
+                  <span className="font-normal text-black">
+                    {order.shipping.dispatch_date || "—"}
+                    {order.shipping.dispatch_time
+                      ? ` at ${order.shipping.dispatch_time}`
+                      : ""}
+                  </span>
+
+                  <span className="font-bold text-black">Est. Delivery</span>
+                  <span className="font-bold text-black text-center">:</span>
+                  <span className="font-normal text-black">
+                    {order.shipping.estimated_delivery || "—"}
+                  </span>
+
+                  {order.shipping.delivered_date && (
+                    <>
+                      <span className="font-bold text-black">Delivered On</span>
+                      <span className="font-bold text-black text-center">
+                        :
+                      </span>
+                      <span className="font-semibold text-green-600">
+                        {order.shipping.delivered_date}
+                        {order.shipping.delivered_time
+                          ? ` at ${order.shipping.delivered_time}`
+                          : ""}
+                      </span>
+                    </>
+                  )}
+
+                  {order.shipping.return_reason && (
+                    <>
+                      <span className="font-bold text-black">
+                        Return Reason
+                      </span>
+                      <span className="font-bold text-black text-center">
+                        :
+                      </span>
+                      <span className="font-normal text-red-600">
+                        {order.shipping.return_reason}
+                      </span>
+                    </>
+                  )}
+
+                  {order.shipping.remarks && (
+                    <>
+                      <span className="font-bold text-black">Remarks</span>
+                      <span className="font-bold text-black text-center">
+                        :
+                      </span>
+                      <span className="font-normal text-black">
+                        {order.shipping.remarks}
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* not yet dispatched notice */}
+              {!order.shipping?.tracking_id &&
+                order.orderStatus !== "pending" &&
+                order.orderStatus !== "cancelled" && (
+                  <>
+                    <div className="col-span-3 border-t border-dashed border-gray-300 my-3" />
+                    <span className="col-span-3 text-xs text-gray-400 italic">
+                      Tracking details will appear once the order is dispatched.
+                    </span>
+                  </>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════
+          Popup 2 — Edit Track (admin)
+      ══════════════════════════════════════════ */}
+      {showEditTrack && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50"
+          onClick={() => setShowEditTrack(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-lg w-[90%] max-w-xl p-6 relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowEditTrack(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-black text-lg font-bold"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+
+            <p className="text-lg font-semibold mb-5">Edit Tracking Details</p>
+
+            <div className="flex flex-col gap-4">
+              {/* Order Status */}
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Order Status</FieldLabel>
+                <select
+                  value={trackForm.order_status}
+                  onChange={(e) => setField("order_status", e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
+                             focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  <option value="">— Select Status —</option>
+                  <option value="pending">Pending</option>
+                  <option value="packed">Packed</option>
+                  <option value="dispatched">Dispatched</option>
+                  <option value="out_for_delivery">Out for Delivery</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="returned">Returned</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              {/* Courier + Tracking ID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <FieldLabel>Courier Partner</FieldLabel>
+                  <TextInput
+                    placeholder="e.g. Delhivery"
+                    value={trackForm.courier_partner}
+                    onChange={(v) => setField("courier_partner", v)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <FieldLabel>Tracking ID / AWB</FieldLabel>
+                  <TextInput
+                    placeholder="e.g. DL4829301023"
+                    value={trackForm.tracking_id}
+                    onChange={(v) => setField("tracking_id", v)}
+                  />
+                </div>
+              </div>
+
+              {/* Dispatch Date + Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <FieldLabel>Dispatch Date</FieldLabel>
+                  <DateInput
+                    value={trackForm.dispatch_date}
+                    onChange={(v) => setField("dispatch_date", v)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <FieldLabel>Dispatch Time</FieldLabel>
+                  <TimeInput
+                    value={trackForm.dispatch_time}
+                    onChange={(v) => setField("dispatch_time", v)}
+                  />
+                </div>
+              </div>
+
+              {/* Estimated Delivery */}
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Estimated Delivery Date</FieldLabel>
+                <DateInput
+                  value={trackForm.estimated_delivery}
+                  onChange={(v) => setField("estimated_delivery", v)}
+                />
+              </div>
+
+              {/* Delivered Date + Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1">
+                  <FieldLabel>Delivered Date</FieldLabel>
+                  <DateInput
+                    value={trackForm.delivered_date}
+                    onChange={(v) => setField("delivered_date", v)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <FieldLabel>Delivered Time</FieldLabel>
+                  <TimeInput
+                    value={trackForm.delivered_time}
+                    onChange={(v) => setField("delivered_time", v)}
+                  />
+                </div>
+              </div>
+
+              {/* Tracking URL */}
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Tracking URL (optional)</FieldLabel>
+                <input
+                  type="url"
+                  placeholder="https://courier.com/track/..."
+                  value={trackForm.tracking_url}
+                  onChange={(e) => setField("tracking_url", e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
+                             focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+
+              {/* Return Reason */}
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Return Reason (if applicable)</FieldLabel>
+                <TextInput
+                  placeholder="e.g. Customer not available"
+                  value={trackForm.return_reason}
+                  onChange={(v) => setField("return_reason", v)}
+                />
+              </div>
+
+              {/* Remarks */}
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Remarks</FieldLabel>
+                <textarea
+                  rows={2}
+                  placeholder="Any additional notes..."
+                  value={trackForm.remarks}
+                  onChange={(e) => setField("remarks", e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
+                             focus:outline-none focus:ring-2 focus:ring-black resize-none"
+                />
+              </div>
+
+              {/* error */}
+              {trackError && (
+                <p className="text-red-500 text-xs">{trackError}</p>
+              )}
+
+              {/* actions */}
+              <div className="flex justify-end gap-3 pt-1">
+                <button
+                  onClick={() => setShowEditTrack(false)}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm
+                             text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <SubmitButton
+                  onClick={saveTrackDetails}
+                  disabled={trackSaving}
+                  className="text-sm px-6"
+                >
+                  {trackSaving ? "Saving..." : "Save"}
+                </SubmitButton>
+              </div>
             </div>
           </div>
         </div>

@@ -490,13 +490,13 @@ const DashboardPage: React.FC = () => {
             <div className="md:hidden grid grid-cols-2 gap-3">
               <DashBox
                 icon={<BsFillPeopleFill />}
-                title={`Maverick Cycle (${cycles?.matches?.toString() || "0"})`}
+                title={`MAVERICK WINNERS CYCLE (${cycles?.matches?.toString() || "0"})`}
                 value={`${cycles?.remainingDays?.toString() || "0"} days left`}
                 index={2}
               />
               <DashBox
                 icon={<FaGift />}
-                title="Maverick Nexus Fund (MNF)"
+                title="MAVERICK NEXUS"
                 value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
                 index={1}
               />
