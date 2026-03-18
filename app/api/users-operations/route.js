@@ -27,7 +27,7 @@ export async function POST(request) {
     let newWallet = null;
 
     if (body.pan && body.pancheck === true) {
-      const wallet_id = await generateUniqueCustomId("WAL");
+      const wallet_id = await generateUniqueCustomId("WA",Wallet,8,8);
 
       newWallet = await Wallet.create({
         wallet_id,

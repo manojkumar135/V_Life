@@ -13,8 +13,8 @@ import { MdLocationPin } from "react-icons/md";
 import { FaClipboardUser } from "react-icons/fa6";
 import { RiBankFill } from "react-icons/ri";
 import { FaSearch } from "react-icons/fa";
-import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai"; // ✅ NEW
-import { TbRefresh } from "react-icons/tb"; // ✅ NEW
+import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
+import { TbRefresh } from "react-icons/tb";
 
 import InputField from "@/components/InputFields/inputtype1";
 import SelectField from "@/components/InputFields/selectinput";
@@ -169,7 +169,6 @@ export default function ProfileEditPage() {
   const [value, setValue] = useState("");
   const [userMeta, setUserMeta] = useState<any>(null);
 
-  // ✅ NEW: Passkey state (admin only)
   const [passkey, setPasskey] = useState<string | null>(null);
   const [passkeyVisible, setPasskeyVisible] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
@@ -218,23 +217,19 @@ export default function ProfileEditPage() {
     }
   }, [dbValues]);
 
-  // ✅ NEW: Reset passkey state when a different user is loaded
   useEffect(() => {
     setPasskey(null);
     setPasskeyVisible(false);
   }, [userMeta?.user_id]);
 
-  // ✅ NEW: Fetch existing passkey (login_key) from DB on eye click
   const handleTogglePasskey = async () => {
     if (!userMeta?.user_id) return;
 
-    // Already fetched — just toggle visibility
     if (passkey !== null) {
       setPasskeyVisible((prev) => !prev);
       return;
     }
 
-    // First time — fetch from API
     try {
       setPasskeyLoading(true);
       const { data } = await axios.get(
@@ -259,7 +254,6 @@ export default function ProfileEditPage() {
     }
   };
 
-  // ✅ NEW: Generate new passkey → hash saved to `passkey`, plain saved to `login_key`
   const handleGeneratePasskey = async () => {
     if (!userMeta?.user_id) return;
 
@@ -270,7 +264,7 @@ export default function ProfileEditPage() {
       });
 
       if (data?.success) {
-        setPasskey(data.login_key); // API returns plain passkey immediately
+        setPasskey(data.login_key);
         setPasskeyVisible(true);
         ShowToast.success("New passkey generated");
       } else {
@@ -296,11 +290,18 @@ export default function ProfileEditPage() {
     }
   };
 
-  const verifyPan = async (pan: string) => {
+  // ✅ UPDATED: accepts panName and panDob
+  const verifyPan = async (
+    pan: string,
+    panName?: string,
+    panDob?: string,
+  ) => {
     try {
       setPanChecking(true);
       const res = await axios.post("/api/pancheck-operations", {
         pan_number: pan,
+        pan_name: panName || undefined,
+        pan_dob: panDob || undefined,
       });
       const panData = res.data?.data?.data;
       if (res.data.success && panData?.status === "valid") {
@@ -319,7 +320,12 @@ export default function ProfileEditPage() {
     }
   };
 
-  const handleVerifyPan = async (pan: string) => {
+  // ✅ UPDATED: accepts panName and panDob
+  const handleVerifyPan = async (
+    pan: string,
+    panName?: string,
+    panDob?: string,
+  ) => {
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
       ShowToast.error("Enter a valid PAN before verifying");
       return;
@@ -329,7 +335,7 @@ export default function ProfileEditPage() {
       ShowToast.error("PAN already exists");
       return;
     }
-    await verifyPan(pan);
+    await verifyPan(pan, panName, panDob);
   };
 
   /* ---------------- SEARCH ---------------- */
@@ -693,10 +699,9 @@ export default function ProfileEditPage() {
                     ]}
                   />
 
-                  {/* ✅ Passkey field — admin only, shown only when a user is loaded */}
+                  {/* Passkey field — admin only */}
                   {isAdmin && values.userId && (
                     <div className="flex flex-col gap-1 -mb-3 w-full">
-                      {/* Label — matches PasswordInput exactly */}
                       <label className="text-[0.9rem] max-md:text-[0.8rem] font-semibold text-gray-700">
                         Login Passkey
                         <span className="text-gray-400 font-normal ml-1 text-xs">
@@ -706,7 +711,6 @@ export default function ProfileEditPage() {
 
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
-                          {/* Input wrapper — matches PasswordInput layout */}
                           <div className="relative flex items-center flex-1">
                             <input
                               type="text"
@@ -726,17 +730,15 @@ export default function ProfileEditPage() {
                                   : { letterSpacing: "0.18em" }
                               }
                               className="w-full px-4 py-2 border border-gray-400 rounded-lg
-              bg-white text-sm placeholder-gray-400 transition-all
-              cursor-default text-gray-700 pr-10"
+                                bg-white text-sm placeholder-gray-400 transition-all
+                                cursor-default text-gray-700 pr-10"
                             />
-
-                            {/* Eye toggle — matches PasswordInput button exactly */}
                             <button
                               type="button"
                               onClick={handleTogglePasskey}
                               disabled={passkeyLoading || passkeyGenerating}
                               className="absolute right-3 text-gray-600 hover:text-gray-800
-              cursor-pointer disabled:opacity-40"
+                                cursor-pointer disabled:opacity-40"
                               title={
                                 passkeyVisible ? "Hide passkey" : "Show passkey"
                               }
@@ -749,27 +751,22 @@ export default function ProfileEditPage() {
                             </button>
                           </div>
 
-                          {/* Generate button */}
                           <button
                             type="button"
                             onClick={handleGeneratePasskey}
                             disabled={passkeyGenerating || passkeyLoading}
                             title="Generate new passkey"
                             className="h-[38px] px-3 rounded-lg bg-[#106187] text-white
-            hover:bg-[#0e5676] transition flex items-center gap-1.5
-            text-xs font-semibold disabled:opacity-50 whitespace-nowrap shrink-0"
+                              hover:bg-[#0e5676] transition flex items-center gap-1.5
+                              text-xs font-semibold disabled:opacity-50 whitespace-nowrap shrink-0"
                           >
                             <TbRefresh
                               size={15}
-                              className={
-                                passkeyGenerating ? "animate-spin" : ""
-                              }
+                              className={passkeyGenerating ? "animate-spin" : ""}
                             />
                             {passkeyGenerating ? "Generating..." : "Generate"}
                           </button>
                         </div>
-
-                        {/* Empty error placeholder — keeps spacing consistent with other fields */}
                         <div className="text-xs mt-1 opacity-0 h-4">&nbsp;</div>
                       </div>
                     </div>
@@ -1046,6 +1043,7 @@ export default function ProfileEditPage() {
                       }}
                       className="pr-28"
                     />
+                    {/* ✅ UPDATED: pass values.panName and values.panDob */}
                     {isAdmin &&
                       values.panNumber.length === 10 &&
                       /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(values.panNumber) &&
@@ -1054,7 +1052,13 @@ export default function ProfileEditPage() {
                       !errors.panNumber && (
                         <button
                           type="button"
-                          onClick={() => handleVerifyPan(values.panNumber)}
+                          onClick={() =>
+                            handleVerifyPan(
+                              values.panNumber,
+                              values.panName,
+                              values.panDob,
+                            )
+                          }
                           className="absolute right-2 top-[32px] bg-[#106187] text-white px-3 py-1 rounded h-[26px] text-xs"
                         >
                           Verify
