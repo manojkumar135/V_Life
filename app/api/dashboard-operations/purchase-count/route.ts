@@ -26,10 +26,7 @@ export async function GET(request: Request) {
     let daysAfterActivation = 0;
 
     if (user?.activated_date) {
-      // activated_date = "DD-MM-YYYY"
       const [day, month, year] = user.activated_date.split("-");
-
-      // construct valid date: YYYY-MM-DD
       const activated = new Date(`${year}-${month}-${day}`);
       const now = new Date();
 
@@ -56,7 +53,7 @@ export async function GET(request: Request) {
     const totalPayout =
       (dailyPayoutSum[0]?.total || 0) + (weeklyPayoutSum[0]?.total || 0);
 
-    // 🎁 3️⃣ Reward Amount (sum of reward_amount field from both)
+    // 🎁 3️⃣ Reward Amount
     const [dailyReward, weeklyReward] = await Promise.all([
       DailyPayout.aggregate([
         { $match: { user_id } },
@@ -68,9 +65,6 @@ export async function GET(request: Request) {
       ]),
     ]);
 
-    const rewardAmount =
-      (dailyReward[0]?.total || 0) + (weeklyReward[0]?.total || 0);
-
     const rewardValue =
       (dailyReward[0]?.total || 0) + (weeklyReward[0]?.total || 0);
 
@@ -81,12 +75,11 @@ export async function GET(request: Request) {
     ]);
     const matchingBonus = matchingBonusSum[0]?.total || 0;
 
-    // 💎 5️⃣ Infinity Bonus (from Weekly Payouts only)
+    // 💎 5️⃣ Infinity Bonus
     const infinityBonusSum = await WeeklyPayout.aggregate([
       { $match: { user_id, name: "Infinity Matching Bonus" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
-
     const infinityBonus = infinityBonusSum[0]?.total || 0;
 
     // 👥 6️⃣ Direct Team Sales
@@ -108,15 +101,56 @@ export async function GET(request: Request) {
       { $match: { user_id, name: "Matching Bonus" } },
       { $count: "count" },
     ]);
-
     const matches = matchingBonusCountAgg[0]?.count || 0;
 
-    // 🎯 9️⃣ Cashback Points (from Score)
+    // 🎯 9️⃣ Cashback Points
     const scoreDoc = (await Score.findOne(
       { user_id },
       { "cashback.balance": 1 }
     ).lean()) as any;
     const cashbackPoints = scoreDoc?.cashback?.balance || 0;
+
+    // ✅ 🔟 Payout Released — status: completed or pending (case-insensitive)
+    const releasedStatuses = ["completed", "pending"];
+    const releasedRegex = new RegExp(
+      `^(${releasedStatuses.join("|")})$`,
+      "i"
+    );
+
+    const [dailyReleased, weeklyReleased] = await Promise.all([
+      DailyPayout.aggregate([
+        { $match: { user_id, status: { $regex: releasedRegex } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      WeeklyPayout.aggregate([
+        { $match: { user_id, status: { $regex: releasedRegex } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+    ]);
+
+    const payoutReleased =
+      (dailyReleased[0]?.total || 0) + (weeklyReleased[0]?.total || 0);
+
+    // 🔴 1️⃣1️⃣ Payout On Hold — status: onhold or failed (case-insensitive)
+    const holdStatuses = ["onhold", "on hold", "hold", "failed"];
+    const holdRegex = new RegExp(
+      `^(${holdStatuses.join("|")})$`,
+      "i"
+    );
+
+    const [dailyHold, weeklyHold] = await Promise.all([
+      DailyPayout.aggregate([
+        { $match: { user_id, status: { $regex: holdRegex } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+      WeeklyPayout.aggregate([
+        { $match: { user_id, status: { $regex: holdRegex } } },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ]),
+    ]);
+
+    const payoutOnHold =
+      (dailyHold[0]?.total || 0) + (weeklyHold[0]?.total || 0);
 
     return NextResponse.json(
       {
@@ -132,7 +166,10 @@ export async function GET(request: Request) {
           directTeamSales,
           infinityTeamSales,
           daysAfterActivation,
-          cashbackPoints
+          cashbackPoints,
+          // 🆕 New fields
+          payoutReleased,
+          payoutOnHold,
         },
       },
       { status: 200 }
@@ -145,20 +182,3 @@ export async function GET(request: Request) {
     );
   }
 }
-
-// export async function getTotalPayout(user_id: string) {
-//   await connectDB();
-
-//   const [daily, weekly] = await Promise.all([
-//     DailyPayout.aggregate([
-//       { $match: { user_id } },
-//       { $group: { _id: null, total: { $sum: "$amount" } } },
-//     ]),
-//     WeeklyPayout.aggregate([
-//       { $match: { user_id } },
-//       { $group: { _id: null, total: { $sum: "$amount" } } },
-//     ]),
-//   ]);
-
-//   return (daily[0]?.total || 0) + (weekly[0]?.total || 0);
-// }

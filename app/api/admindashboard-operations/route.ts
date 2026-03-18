@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Order } from "@/models/order";
 import { User } from "@/models/user";
 import { DailyPayout, WeeklyPayout } from "@/models/payout";
+import { History } from "@/models/history"; // 🆕
 
 export async function GET(request: Request) {
   try {
@@ -114,6 +115,27 @@ export async function GET(request: Request) {
       { $group: { _id: null, total: { $sum: "$final_amount" } } },
     ]);
 
+    // 🆕 ADVANCE SALES (from History where advance: true)
+    const advanceDateMatch =
+      startDate || endDate
+        ? {
+            advance: true,
+            created_at: {
+              ...(startDate && { $gte: startDate }),
+              ...(endDate && { $lte: endDate }),
+            },
+          }
+        : { advance: true };
+
+    const advanceAgg = await History.aggregate([
+      { $match: advanceDateMatch },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    const advanceSales = advanceAgg[0]?.total || 0;
+    const orderSales = totalSalesAgg[0]?.total || 0;
+    const totalSales = orderSales + advanceSales; // 🆕 combined total
+
     /* =====================================================
        📦 ORDER COUNTS
        Single aggregation — replaces 3 separate queries
@@ -223,19 +245,61 @@ export async function GET(request: Request) {
           totalPayout: { $sum: "$totalamount" },
           releasedPayout: {
             $sum: {
-              $cond: [{ $eq: ["$status", "Completed"] }, "$totalamount", 0],
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(completed|pending)$/i,
+                  },
+                },
+                "$totalamount",
+                0,
+              ],
             },
           },
-          pendingPayout: {
+          holdPayout: {
             $sum: {
               $cond: [
-                { $in: ["$status", ["Pending", "OnHold"]] },
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(onhold|on hold|hold|failed)$/i,
+                  },
+                },
                 "$totalamount",
                 0,
               ],
             },
           },
           rewardPoints: { $sum: "$reward_amount" },
+          releasedRewardPoints: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(completed|pending)$/i,
+                  },
+                },
+                "$reward_amount",
+                0,
+              ],
+            },
+          },
+          holdRewardPoints: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(onhold|on hold|hold|failed)$/i,
+                  },
+                },
+                "$reward_amount",
+                0,
+              ],
+            },
+          },
         },
       },
     ]);
@@ -248,36 +312,81 @@ export async function GET(request: Request) {
           totalPayout: { $sum: "$totalamount" },
           releasedPayout: {
             $sum: {
-              $cond: [{ $eq: ["$status", "Completed"] }, "$totalamount", 0],
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(completed|pending)$/i,
+                  },
+                },
+                "$totalamount",
+                0,
+              ],
             },
           },
-          pendingPayout: {
+          holdPayout: {
             $sum: {
               $cond: [
-                { $in: ["$status", ["Pending", "OnHold"]] },
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(onhold|on hold|hold|failed)$/i,
+                  },
+                },
                 "$totalamount",
                 0,
               ],
             },
           },
           rewardPoints: { $sum: "$reward_amount" },
+          releasedRewardPoints: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(completed|pending)$/i,
+                  },
+                },
+                "$reward_amount",
+                0,
+              ],
+            },
+          },
+          holdRewardPoints: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(onhold|on hold|hold|failed)$/i,
+                  },
+                },
+                "$reward_amount",
+                0,
+              ],
+            },
+          },
         },
       },
     ]);
 
+    // existing
     const totalGeneratedPayout =
       (dailyAgg[0]?.totalPayout || 0) + (weeklyAgg[0]?.totalPayout || 0);
-
     const totalReleasedPayout =
       (dailyAgg[0]?.releasedPayout || 0) + (weeklyAgg[0]?.releasedPayout || 0);
-
-    const totalPendingPayout =
-      (dailyAgg[0]?.pendingPayout || 0) + (weeklyAgg[0]?.pendingPayout || 0);
-
+    const totalHoldPayout =
+      (dailyAgg[0]?.holdPayout || 0) + (weeklyAgg[0]?.holdPayout || 0);
     const generatedRewardPoints =
       (dailyAgg[0]?.rewardPoints || 0) + (weeklyAgg[0]?.rewardPoints || 0);
+    const releasedRewardPoints =
+      (dailyAgg[0]?.releasedRewardPoints || 0) +
+      (weeklyAgg[0]?.releasedRewardPoints || 0);
+    const holdRewardPoints =
+      (dailyAgg[0]?.holdRewardPoints || 0) +
+      (weeklyAgg[0]?.holdRewardPoints || 0);
 
-    // console.log(dispatchedCount)
     /* =====================================================
        📤 RESPONSE
     ===================================================== */
@@ -286,16 +395,17 @@ export async function GET(request: Request) {
         success: true,
         data: {
           sales: {
-            totalSales: totalSalesAgg[0]?.total || 0,
+            totalSales,          // 🆕 orders + advance combined
             firstOrder: firstOrderAgg[0]?.total || 0,
             reorder: reorderAgg[0]?.total || 0,
+            advanceSales,        // 🆕 advance separately
           },
           orders: {
-            totalOrders: totalOrdersCount, // all statuses combined
-            pendingOrders: pendingCount, // pending + packed
-            dispatchedOrders: dispatchedCount, // dispatched + out_for_delivery
-            deliveredOrders: deliveredCount, // delivered
-            returnedOrders: returnedCount, // returned + cancelled
+            totalOrders: totalOrdersCount,
+            pendingOrders: pendingCount,
+            dispatchedOrders: dispatchedCount,
+            deliveredOrders: deliveredCount,
+            returnedOrders: returnedCount,
           },
           team: {
             totalRegistered,
@@ -306,8 +416,10 @@ export async function GET(request: Request) {
           wallet: {
             totalGeneratedPayout,
             totalReleasedPayout,
-            totalPendingPayout,
+            totalHoldPayout,
             generatedRewardPoints,
+            releasedRewardPoints,
+            holdRewardPoints,
           },
         },
       },

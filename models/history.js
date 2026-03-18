@@ -16,8 +16,8 @@ const HistorySchema = new mongoose.Schema(
     placed_by: { type: String },
     placed_by_name: { type: String },
 
-    name:{ type: String },
-title:{ type: String },
+    name: { type: String },
+    title: { type: String },
 
     order_id: { type: String, },
     account_holder_name: { type: String, },
@@ -30,7 +30,7 @@ title:{ type: String },
     amount: { type: Number, required: true },
     transaction_type: { type: String, required: true, enum: ["Credit", "Debit"] },
     details: { type: String },
-    status: { type: String, required: true,  },
+    status: { type: String, required: true, },
     first_payment: { type: Boolean, default: false },
     first_order: { type: Boolean, default: false },
     reward_used: { type: Number, default: 0 },
@@ -50,7 +50,6 @@ title:{ type: String },
     reward_amount: { type: Number, default: 0 },
     tds_amount: { type: Number, default: 0 },
     admin_charge: { type: Number, default: 0 },
-
 
 
     created_at: { type: Date, default: Date.now },

@@ -34,13 +34,13 @@ const NewsTicker = () => {
 
         {/* TICKER BAR */}
         <div
-          className="w-full bg-[#106187] text-white rounded-lg overflow-hidden shadow px-2 py-0.5"
+          className="w-full bg-linear-to-r from-[#106187] to-[#106187]  text-white rounded-lg overflow-hidden shadow px-2 py-0.5"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onTouchStart={() => setPaused(true)}
           onTouchEnd={() => setPaused(false)}
         >
-          <div className="relative overflow-hidden w-full h-[28px] flex items-center">
+          <div className="relative overflow-hidden w-full h-7 flex items-center">
             <div
               className="flex whitespace-nowrap text-sm font-medium"
               style={{

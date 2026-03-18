@@ -211,14 +211,14 @@ function RegisterContent() {
       )}
 
       <div
-        className="absolute top-4 left-4  flex items-center gap-2 cursor-pointer z-30"
+        className="absolute top-4 left-4   flex items-center gap-2 cursor-pointer z-30"
         onClick={() => router.back()}
       >
         <IoIosArrowBack size={28} className="text-white" />
         <p className="font-semibold text-white">Back</p>
       </div>
 
-      <div className="w-full flex flex-col justify-center items-center py-10">
+      <div className="w-full flex flex-col justify-center items-center py-10 mt-4">
         <div
           className="w-[90%] max-sm:w-[92%] md:w-[70%] lg:w-[60%] xl:w-[60%] 
            flex flex-col justify-center items-center py-4 px-8 max-md:px-6

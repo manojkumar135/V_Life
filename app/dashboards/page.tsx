@@ -45,6 +45,8 @@ interface DashboardSummary {
   infinityTeamSales: number;
   daysAfterActivation: number;
   cashbackPoints: number;
+  payoutReleased: number;
+  payoutOnHold: number;
 }
 
 interface CycleStats {
@@ -625,11 +627,29 @@ const DashboardPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-2 gap-4 p-4">
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaRupeeSign />}
+                    title="Total Payout"
+                    value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
+                    index={0}
+                  />
+                </div>
+
+                {/* 🆕 Payout Released — visible on all screens */}
                 <DashBox
-                  icon={<FaRupeeSign />}
-                  title="Total Payout"
-                  value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
+                  icon={<MdOutlineCheckCircle />}
+                  title="Payout Released"
+                  value={`₹ ${summary?.payoutReleased?.toFixed(2) || "0.00"}`}
                   index={0}
+                />
+
+                {/* 🆕 Payout On Hold — visible on all screens */}
+                <DashBox
+                  icon={<FaWallet />}
+                  title="Payout On Hold"
+                  value={`₹ ${summary?.payoutOnHold?.toFixed(2) || "0.00"}`}
+                  index={5}
                 />
                 {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">

@@ -86,7 +86,7 @@ const Page = () => {
                   Matches Report
                 </span>
               </div>
-              {/* <div
+              <div
                 onClick={() => router.push("/pvtracker")}
                 className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
               >
@@ -94,7 +94,7 @@ const Page = () => {
                 <span className="mt-2 text-lg font-semibold">
                   PV Tracker
                 </span>
-              </div> */}
+              </div>
             </>
           )}
         </div>

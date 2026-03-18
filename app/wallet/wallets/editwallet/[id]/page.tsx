@@ -199,17 +199,17 @@ const FileCell = ({
         <img
           src={url}
           alt={label}
-          className="w-10 h-10 object-cover rounded border border-gray-200 flex-shrink-0"
+          className="w-10 h-10 object-cover rounded border border-gray-200 shrink-0"
           onError={(e) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
         />
       ) : isPdf ? (
-        <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold flex-shrink-0">
+        <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-semibold shrink-0">
           PDF
         </span>
       ) : (
-        <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded flex-shrink-0">
+        <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded shrink-0">
           FILE
         </span>
       )}
@@ -299,7 +299,7 @@ function EditWalletInner() {
 
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [panVerified, setPanVerified] = useState(true);
+  const [panVerified, setPanVerified] = useState(false);
   const [pendingRequest, setPendingRequest] = useState<any>(null);
   const [savedWalletValues, setSavedWalletValues] = useState<any>(null);
   const [compareOpen, setCompareOpen] = useState(false);
@@ -322,7 +322,7 @@ function EditWalletInner() {
     panNumber: "",
     panName: "",
     panDob: "",
-    panVerify: true,
+    panVerify: false,
     panCategory: "",
     aadharSeeding: false,
     aadharFile: null,
@@ -496,6 +496,8 @@ function EditWalletInner() {
         pan_name: panName,
         pan_dob: panDob,
       });
+
+      console.log(res,"pan")
       const panData = res.data?.data?.data;
       if (res.data.success && panData) {
         if (panData.status === "valid") {

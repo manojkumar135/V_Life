@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         "cashback.balance": 1,
       }
     ).lean()) as any
-console.log(score)
+// console.log(score)
 
 
     if (!score) {

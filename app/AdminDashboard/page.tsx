@@ -14,9 +14,13 @@ import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
 import NewsTicker from "@/components/NewsTicker";
 import LoginWelcomePopup from "@/components/LoginWelcomePopup";
 
-import { FiFilter } from "react-icons/fi";
+import { FiFilter, FiShoppingCart, FiUsers, FiMessageSquare, FiTrendingUp } from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import Loader from "@/components/common/loader";
+
+import { FaRupeeSign, FaWallet, FaGift, FaBoxOpen, FaTruck, FaCheckCircle, FaTimesCircle, FaClipboardList } from "react-icons/fa";
+import { MdOutlineCheckCircle, MdPendingActions } from "react-icons/md";
+import { HiOutlineUserGroup, HiOutlineUserAdd } from "react-icons/hi";
 
 /* =====================================================
    TYPES
@@ -26,13 +30,14 @@ interface AdminDashboardData {
     totalSales: number;
     firstOrder: number;
     reorder: number;
+    advanceSales: number;
   };
   orders: {
     totalOrders: number;
-    pendingOrders: number; // ✅ pending + packed
-    dispatchedOrders: number; // ✅ dispatched + out_for_delivery + delivered
-    deliveredOrders: number; // ✅ delivered
-    returnedOrders: number; // ✅ returned + cancelled
+    pendingOrders: number;
+    dispatchedOrders: number;
+    deliveredOrders: number;
+    returnedOrders: number;
   };
   team: {
     totalRegistered: number;
@@ -43,8 +48,10 @@ interface AdminDashboardData {
   wallet: {
     totalGeneratedPayout: number;
     totalReleasedPayout: number;
-    totalPendingPayout: number;
+    totalHoldPayout: number;
     generatedRewardPoints: number;
+    releasedRewardPoints: number;
+    holdRewardPoints: number;
   };
 }
 
@@ -114,14 +121,9 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
 
-      const params: any = {
-        user_id: user.user_id,
-      };
+      const params: any = { user_id: user.user_id };
 
-      if (dateFilter?.type === "on") {
-        params.date = dateFilter.date;
-      }
-
+      if (dateFilter?.type === "on") params.date = dateFilter.date;
       if (dateFilter?.type === "range") {
         params.from = dateFilter.from;
         params.to = dateFilter.to;
@@ -151,9 +153,7 @@ export default function AdminDashboard() {
 
     try {
       const res = await axios.get("/api/wallet-change-requests", {
-        params: {
-          status: "pending",
-        },
+        params: { status: "pending" },
       });
 
       if (res.data.success && res.data.data.length > 0) {
@@ -168,10 +168,10 @@ export default function AdminDashboard() {
   }, [user?.user_id]);
 
   useEffect(() => {
-    if (user?.user_id) {
-      checkWalletChangeRequests();
-    }
+    if (user?.user_id) checkWalletChangeRequests();
   }, [user?.user_id]);
+
+  const fmt = (val?: number) => `₹ ${(val ?? 0).toFixed(2)}`;
 
   return (
     <Layout>
@@ -189,13 +189,9 @@ export default function AdminDashboard() {
       <AlertBox
         visible={user?.role !== "user" && showWalletAlert}
         title="Wallet Change Request Pending!"
-        message={
-          <>You have pending wallet change requests. Please review them.</>
-        }
+        message={<>You have pending wallet change requests. Please review them.</>}
         buttonLabel="VIEW REQUESTS"
-        buttonAction={() =>
-          router.push("/wallet/change-requests")
-        }
+        buttonAction={() => router.push("/wallet/change-requests")}
         onClose={() => setShowWalletAlert(false)}
       />
 
@@ -210,8 +206,7 @@ export default function AdminDashboard() {
         <button
           title="Filter"
           onClick={() => setShowFilterModal(true)}
-          className="w-12 h-12 rounded-full bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
-          text-white flex items-center justify-center shadow-lg"
+          className="w-12 h-12 rounded-full bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
         >
           <FiFilter size={20} />
         </button>
@@ -224,83 +219,128 @@ export default function AdminDashboard() {
 
         {/* ================= TOP SECTION ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+          {/* MY SALES */}
           <AdminCard
             title="My Sales"
+            icon={<FiTrendingUp size={16} />}
             footerLabel="View Report"
             footerLink="/orders"
           >
             <StatRow
+              icon={<FaRupeeSign className="text-blue-600" />}
               label="Total Sales"
-              value={`₹ ${dashboard?.sales.totalSales.toFixed(2) || "0.00"}`}
+              value={fmt(dashboard?.sales.totalSales)}
+              highlight
             />
             <StatRow
+              icon={<FaBoxOpen className="text-green-500" />}
               label="First Order"
-              value={`₹ ${dashboard?.sales.firstOrder.toFixed(2) || "0.00"}`}
+              value={fmt(dashboard?.sales.firstOrder)}
             />
             <StatRow
+              icon={<FiShoppingCart className="text-orange-500" />}
               label="Re-Order"
-              value={`₹ ${dashboard?.sales.reorder.toFixed(2) || "0.00"}`}
+              value={fmt(dashboard?.sales.reorder)}
+            />
+            <StatRow
+              icon={<FaWallet className="text-purple-500" />}
+              label="Advance"
+              value={fmt(dashboard?.sales.advanceSales)}
             />
           </AdminCard>
 
-          {/* ✅ My Orders card — updated */}
+          {/* MY ORDERS */}
           <AdminCard
             title="My Orders"
+            icon={<FiShoppingCart size={16} />}
             footerLabel="View Report"
             footerLink="/orders"
           >
             <StatRow
+              icon={<FaClipboardList className="text-blue-600" />}
               label="Total Orders"
-              value={dashboard?.orders.totalOrders || 0}
+              value={dashboard?.orders.totalOrders ?? 0}
+              highlight
             />
             <StatRow
+              icon={<MdPendingActions className="text-yellow-500" />}
               label="Pending Orders"
-              value={dashboard?.orders.pendingOrders || 0}
+              value={dashboard?.orders.pendingOrders ?? 0}
+              badgeColor="yellow"
             />
             <StatRow
+              icon={<FaTruck className="text-blue-500" />}
               label="Dispatched Orders"
-              value={dashboard?.orders.dispatchedOrders || 0}
+              value={dashboard?.orders.dispatchedOrders ?? 0}
+              badgeColor="blue"
             />
             <StatRow
+              icon={<FaCheckCircle className="text-green-500" />}
               label="Delivered Orders"
-              value={dashboard?.orders.deliveredOrders || 0}
+              value={dashboard?.orders.deliveredOrders ?? 0}
+              badgeColor="green"
             />
             <StatRow
+              icon={<FaTimesCircle className="text-red-500" />}
               label="Returned / Failed"
-              value={dashboard?.orders.returnedOrders || 0}
+              value={dashboard?.orders.returnedOrders ?? 0}
+              badgeColor="red"
             />
           </AdminCard>
 
+          {/* MY TEAM */}
           <AdminCard
             title="My Team"
+            icon={<FiUsers size={16} />}
             footerLabel="View Report"
             footerLink="/administration/users"
           >
             <StatRow
+              icon={<HiOutlineUserGroup className="text-blue-600" />}
               label="Total Registered"
-              value={dashboard?.team.totalRegistered || 0}
+              value={dashboard?.team.totalRegistered ?? 0}
+              highlight
             />
             <StatRow
+              icon={<HiOutlineUserAdd className="text-green-500" />}
               label="Activations"
-              value={dashboard?.team.normalActivations || 0}
+              value={dashboard?.team.normalActivations ?? 0}
+              badgeColor="green"
             />
             <StatRow
+              icon={<HiOutlineUserAdd className="text-purple-500" />}
               label="Admin Activations"
-              value={dashboard?.team.adminActivations || 0}
+              value={dashboard?.team.adminActivations ?? 0}
+              badgeColor="purple"
             />
             <StatRow
+              icon={<FaTimesCircle className="text-red-500" />}
               label="Deactivated IDs"
-              value={dashboard?.team.deactivatedIds || 0}
+              value={dashboard?.team.deactivatedIds ?? 0}
+              badgeColor="red"
             />
           </AdminCard>
 
+          {/* MY TICKETS */}
           <AdminCard
             title="My Tickets"
+            icon={<FiMessageSquare size={16} />}
             footerLabel="View Report"
             footerLink="/administration/users"
           >
-            <StatRow label="Open Tickets" value="0" />
-            <StatRow label="Closed Tickets" value="0" />
+            <StatRow
+              icon={<MdPendingActions className="text-yellow-500" />}
+              label="Open Tickets"
+              value="0"
+              badgeColor="yellow"
+            />
+            <StatRow
+              icon={<FaCheckCircle className="text-green-500" />}
+              label="Closed Tickets"
+              value="0"
+              badgeColor="green"
+            />
           </AdminCard>
         </div>
 
@@ -309,44 +349,50 @@ export default function AdminDashboard() {
           <SectionHeader title="My Wallet & Payout" />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-            <MiniCard
+            <DashBox
+              icon={<FaRupeeSign />}
               title="Total Payout Generated"
-              value={`₹ ${
-                dashboard?.wallet.totalGeneratedPayout.toFixed(2) || "0.00"
-              }`}
+              value={fmt(dashboard?.wallet.totalGeneratedPayout)}
             />
-            <MiniCard
+            <DashBox
+              icon={<MdOutlineCheckCircle />}
               title="Total Released Payout"
-              value={`₹ ${
-                dashboard?.wallet.totalReleasedPayout.toFixed(2) || "0.00"
-              }`}
+              value={fmt(dashboard?.wallet.totalReleasedPayout)}
             />
-            <MiniCard
-              title="Total Pending Payout"
-              value={`₹ ${
-                dashboard?.wallet.totalPendingPayout.toFixed(2) || "0.00"
-              }`}
+            <DashBox
+              icon={<FaWallet />}
+              title="Total Payout On Hold"
+              value={fmt(dashboard?.wallet.totalHoldPayout)}
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-            <MiniCard
+            <DashBox
+              icon={<FaGift />}
               title="Generated Reward Points"
-              value={dashboard?.wallet.generatedRewardPoints || 0}
+              value={(dashboard?.wallet.generatedRewardPoints ?? 0).toFixed(2)}
             />
-            <MiniCard title="Released Reward Points" value="0" />
-            <MiniCard title="Pending Reward Points" value="0" />
+            <DashBox
+              icon={<MdOutlineCheckCircle />}
+              title="Released Reward Points"
+              value={(dashboard?.wallet.releasedRewardPoints ?? 0).toFixed(2)}
+            />
+            <DashBox
+              icon={<FaWallet />}
+              title="Pending Reward Points"
+              value={(dashboard?.wallet.holdRewardPoints ?? 0).toFixed(2)}
+            />
           </div>
         </div>
 
         {/* ================= CYCLE ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TimeRemainingCard />
-          <AdminCard title="Cycle Closings">
-            <StatRow label="Current PV (Left Team)" value="0" />
-            <StatRow label="Current PV (Right Team)" value="0" />
-            <StatRow label="Previous PV" value="0" />
-            <StatRow label="Total PV" value="0" />
+          <AdminCard title="Cycle Closings" icon={<FiTrendingUp size={16} />}>
+            <StatRow icon={<FaRupeeSign className="text-blue-500" />} label="Current PV (Left Team)" value="0" />
+            <StatRow icon={<FaRupeeSign className="text-blue-500" />} label="Current PV (Right Team)" value="0" />
+            <StatRow icon={<FaRupeeSign className="text-gray-400" />} label="Previous PV" value="0" />
+            <StatRow icon={<FaRupeeSign className="text-green-500" />} label="Total PV" value="0" highlight />
           </AdminCard>
         </div>
       </div>
@@ -366,22 +412,49 @@ export default function AdminDashboard() {
 
 /* ================= REUSABLE ================= */
 
-const AdminCard = ({ title, children, footerLabel, footerLink }: any) => {
+const AdminCard = ({
+  title,
+  icon,
+  children,
+  footerLabel,
+  footerLink,
+}: {
+  title: string;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+  footerLabel?: string;
+  footerLink?: string;
+}) => {
   const router = useRouter();
 
   return (
-    <div className="bg-white rounded-xl border border-gray-300 shadow-sm flex flex-col h-full">
-      <div className="bg-gray-700 text-white text-sm font-semibold px-4 py-2 rounded-t-xl">
-        {title}
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col h-full overflow-hidden">
+      {/* Card Header */}
+      <div
+        className="flex items-center gap-2 px-4 py-2 bg-gray-700"
+        // style={{
+        //   background: "linear-gradient(135deg, #106187 0%, #106187 60%, #106187 100%)",
+        // }}
+      >
+        {icon && (
+          <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center text-white shrink-0">
+            {icon}
+          </div>
+        )}
+        <span className="text-white font-semibold text-sm tracking-wide">{title}</span>
       </div>
-      <div className="px-4 py-2 space-y-2 flex-1">{children}</div>
+
+      {/* Card Body */}
+      <div className="px-4 py-3 space-y-1 flex-1">{children}</div>
+
+      {/* Card Footer */}
       {footerLabel && footerLink && (
-        <div className="px-4 pb-2 text-right">
+        <div className="px-4 pb-3 pt-1 text-right border-t border-gray-100">
           <button
             onClick={() => router.push(footerLink)}
-            className="text-sm text-blue-600 hover:text-blue-800 underline transition cursor-pointer"
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium underline underline-offset-2 transition cursor-pointer"
           >
-            {footerLabel}
+            {footerLabel} →
           </button>
         </div>
       )}
@@ -389,22 +462,121 @@ const AdminCard = ({ title, children, footerLabel, footerLink }: any) => {
   );
 };
 
-const SectionHeader = ({ title }: any) => (
-  <div className="bg-gray-800 text-white text-center py-2 rounded-lg font-semibold">
+const SectionHeader = ({ title }: { title: string }) => (
+  <div
+    className="text-white bg-gray-700 text-center py-2.5 rounded-xl font-semibold text-sm tracking-wider shadow-sm"
+    // style={{
+    //   background: "linear-gradient(135deg, #0C3978 0%, #106187 60%, #16B8E4 100%)",
+    // }}
+  >
     {title}
   </div>
 );
 
-const StatRow = ({ label, value }: any) => (
-  <div className="flex justify-between items-center text-sm border-b last:border-b-0 pb-1">
-    <span className="text-gray-600">{label}</span>
-    <span className="font-semibold">{value}</span>
+const badgeColorMap: Record<string, string> = {
+  yellow: "bg-yellow-100 text-yellow-700",
+  green:  "bg-green-100 text-green-700",
+  blue:   "bg-blue-100 text-blue-700",
+  red:    "bg-red-100 text-red-700",
+  purple: "bg-purple-100 text-purple-700",
+};
+
+const StatRow = ({
+  icon,
+  label,
+  value,
+  highlight = false,
+  badgeColor,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: string | number;
+  highlight?: boolean;
+  badgeColor?: string;
+}) => (
+  <div
+    className={`flex items-center justify-between py-1 border-b last:border-b-0 border-gray-100 ${
+      highlight ? "bg-blue-50/60 -mx-4 px-4 rounded" : ""
+    }`}
+  >
+    <div className="flex items-center gap-2">
+      {icon && <span className="text-base shrink-0">{icon}</span>}
+      <span className={`text-sm ${highlight ? "font-semibold text-gray-800" : "text-gray-600"}`}>
+        {label}
+      </span>
+    </div>
+    {badgeColor ? (
+      <span
+        className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${badgeColorMap[badgeColor] || "bg-gray-100 text-gray-700"}`}
+      >
+        {value}
+      </span>
+    ) : (
+      <span className={`text-sm font-bold ${highlight ? "text-blue-700" : "text-gray-800"}`}>
+        {value}
+      </span>
+    )}
   </div>
 );
 
-const MiniCard = ({ title, value }: any) => (
+const MiniCard = ({ title, value }: { title: string; value: string | number }) => (
   <div className="bg-white border border-gray-300 rounded-lg p-4 text-center shadow-sm">
     <p className="text-xs text-gray-500">{title}</p>
     <p className="text-lg font-bold mt-1">{value}</p>
+  </div>
+);
+
+const DASH_GRADIENTS = [
+  "linear-gradient(135deg, #0C3978 0%, #106187 50%, #16B8E4 100%)",
+];
+
+const DashBox = ({
+  icon,
+  title,
+  value,
+  index = 0,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  index?: number;
+}) => (
+  <div
+    className="rounded-xl p-4 text-center flex flex-col items-center justify-center relative overflow-hidden hover:scale-[1.01] transition-transform duration-150 bg-white border border-gray-200 shadow-sm"
+  >
+    {/* Decorative corner circle */}
+    <div
+      className="absolute -top-4 -right-4 w-16 h-16 rounded-full pointer-events-none opacity-10"
+      style={{ background: DASH_GRADIENTS[index % DASH_GRADIENTS.length] }}
+    />
+
+    {/* Gradient Icon */}
+    <div
+      className="text-2xl mb-2"
+      style={{
+        background: DASH_GRADIENTS[index % DASH_GRADIENTS.length],
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
+      }}
+    >
+      {icon}
+    </div>
+
+    {/* Title */}
+    <p className="text-xs font-medium text-gray-500">{title}</p>
+
+    {/* Gradient Value */}
+    <p
+      className="text-md font-bold mt-1"
+      style={{
+        background: DASH_GRADIENTS[index % DASH_GRADIENTS.length],
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        backgroundClip: "text",
+      }}
+    >
+      {value}
+    </p>
   </div>
 );

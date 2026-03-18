@@ -48,7 +48,7 @@ export default function AddWalletForm() {
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   // NOTE: panVerified kept true for testing (PAN subscription over)
-  const [panVerified, setPanVerified] = useState(true);
+  const [panVerified, setPanVerified] = useState(false);
   // ── CHANGE 1: track the rank of the user being created for (admin flow) ──
   const [fetchedUserRank, setFetchedUserRank] = useState<string>("none");
 
@@ -71,7 +71,7 @@ export default function AddWalletForm() {
     panNumber: "",
     panName: "",
     panDob: "",
-    panVerify: true, // kept true for testing
+    panVerify: false, // kept true for testing
     panCategory: "",
     aadharSeeding: false,
     panFile: null,
