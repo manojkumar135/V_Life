@@ -344,6 +344,55 @@ export async function evaluateAndUpdateHoldStatus(
   const thisMonthOnHold =
     tracker.pv_required > 0 && !tracker.hold_released;
 
+
+
+
+// // ── FIX: Handle PV requirement increase ───────────────────────────────
+// if (newPvReq > prevPvReq) {
+//   tracker.pv_required = newPvReq;
+// }
+
+// // ✅ ALWAYS re-evaluate hold_released based on current fulfilled vs required
+// // Do NOT rely on the stored hold_released flag alone —
+// // it may be stale if pv_required changed after hold_released was set.
+// if (tracker.pv_required > 0 && tracker.pv_fulfilled < tracker.pv_required) {
+//   // User has not met current requirement → must be on hold
+//   tracker.hold_released    = false;
+//   tracker.hold_released_at = undefined;
+// }
+// // If pv_fulfilled >= pv_required → hold stays released (user met threshold)
+
+// await tracker.save();
+
+// // ── 3. Determine final status ─────────────────────────────────────────
+// const thisMonthOnHold =
+//   tracker.pv_required > 0 && !tracker.hold_released;
+// ```
+
+// ---
+
+// ## Why This Fixes It
+// ```
+// Step 1 — 50 PV placed, pv_required = 50
+//   pv_fulfilled (50) >= pv_required (50) → hold_released = true ✅
+
+// Step 2 — Total crosses ₹3L, pv_required jumps to 100
+//   NEW CHECK: pv_fulfilled (50) < pv_required (100)
+//   → hold_released = false ✅
+
+// Step 3 — Direct Sales Bonus ₹250 processed
+//   newPvReq (100) == prevPvReq (100) → pv_required unchanged
+//   NEW CHECK: pv_fulfilled (50) < pv_required (100)
+//   → hold_released = false ✅  ← BUG IS FIXED
+//   → payout status = OnHold ✅
+
+
+
+
+
+
+
+
   const isOnHold = blockedByPreviousMonth || thisMonthOnHold;
 
   return {

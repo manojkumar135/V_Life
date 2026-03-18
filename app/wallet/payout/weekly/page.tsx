@@ -12,12 +12,34 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import { useVLife } from "@/store/context";
- import { hasAdvancePaid } from "@/services/hasAdvancePaid";
+import { hasAdvancePaid } from "@/services/hasAdvancePaid";
 import { hasFirstOrder } from "@/services/hasFirstOrder";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { FiFilter } from "react-icons/fi";
 import { GridColDef } from "@mui/x-data-grid";
 import { handleDownload } from "@/utils/handleDownload";
+import AlertBox from "@/components/Alerts/advanceAlert";
+
+// ─────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────
+
+interface PvMonthBreakdown {
+  month: string;
+  pv_required: number;
+  pv_fulfilled: number;
+  pv_remaining: number;
+  cleared: boolean;
+}
+
+interface PvAlertSummary {
+  hasAlert: boolean;
+  totalPvRequired: number;
+  totalPvFulfilled: number;
+  totalPvRemaining: number;
+  months: PvMonthBreakdown[];
+  alertMessage: string;
+}
 
 export default function WithdrawPage() {
   const { user } = useVLife();
@@ -27,53 +49,77 @@ export default function WithdrawPage() {
   const [withdrawData, setWithdrawData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
-const [hasPermission, setHasPermission] = useState<boolean>(false);
+  const [hasPermission, setHasPermission] = useState<boolean>(false);
 
-  // ✅ date filter state
   const [dateFilter, setDateFilter] = useState<any>(null);
-  const [showModal, setShowModal] = useState(true); // open modal on page load
+  const [showModal, setShowModal] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
+  // ── PV Alert ──────────────────────────────────────────────────────────
+  const [showPvAlert, setShowPvAlert] = useState(false);
+  const [pvSummary, setPvSummary] = useState<PvAlertSummary | null>(null);
+
   const API_URL = "/api/weeklyPayout-operations";
 
-  // ✅ Check if advance is paid
- useEffect(() => {
-  if (!user?.user_id) return;
+  // ── Permission check ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user?.user_id) return;
 
-  let isMounted = true;
+    let isMounted = true;
 
-  (async () => {
-    try {
-      // 1️⃣ Check first order
-      const firstOrderRes = await hasFirstOrder(user.user_id);
+    (async () => {
+      try {
+        const firstOrderRes = await hasFirstOrder(user.user_id);
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
-      // 2️⃣ Check advance
-      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+        if (!isMounted) return;
 
-      if (!isMounted) return;
+        const hasPermission =
+          firstOrderRes.hasFirstOrder ||
+          advanceRes.hasPermission ||
+          firstOrderRes.activatedByAdmin;
 
-      const hasPermission =
-        firstOrderRes.hasFirstOrder ||
-        advanceRes.hasPermission ||
-        firstOrderRes.activatedByAdmin;
+        setHasPermission(hasPermission);
+      } catch (err) {
+        console.error("Permission check error:", err);
+      }
+    })();
 
-      setHasPermission(hasPermission);
-      // setShowAlert(!hasPermission);
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.user_id]);
 
-    } catch (err) {
-      console.error("Permission check error:", err);
-      // if (isMounted) setShowAlert(true);
-    }
-  })();
+  // ── PV Alert fetch ────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user?.user_id) return;
 
-  return () => {
-    isMounted = false;
-  };
-}, [user?.user_id]);
+    let isMounted = true;
 
+    (async () => {
+      try {
+        const res = await axios.get("/api/pv-alert", {
+          params: { user_id: user.user_id },
+        });
 
-  // ✅ Fetch withdrawals with search + date filter
+        if (!isMounted) return;
+
+        if (res.data.success && res.data.data.hasAlert) {
+          setPvSummary(res.data.data);
+          setShowPvAlert(true);
+        }
+      } catch (err) {
+        console.error("PV alert fetch error:", err);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.user_id]);
+
+  // ── Fetch withdrawals ─────────────────────────────────────────────────
   const fetchWithdrawals = useCallback(async () => {
     try {
       setLoading(true);
@@ -101,16 +147,17 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
       setLoading(false);
     }
   }, [user?.role, user?.user_id, query, dateFilter]);
+
   useEffect(() => {
     if (!user?.user_id) return;
     fetchWithdrawals();
-
     goToPage(1);
   }, [debouncedQuery, user?.user_id, dateFilter]);
 
+  // ── Download ──────────────────────────────────────────────────────────
   const handleDownloadClick = () => {
     handleDownload<any>({
-      rows: selectedRows, // or selected rows if you want selection-based export
+      rows: selectedRows,
       fileName: "Daliy Payouts",
       format: "xlsx",
       excludeHeaders: [
@@ -128,7 +175,7 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
     });
   };
 
-  // ✅ Delete withdrawal
+  // ── Delete ────────────────────────────────────────────────────────────
   const handleDelete = async (id: string) => {
     try {
       await axios.delete(`${API_URL}?withdraw_id=${id}`);
@@ -141,12 +188,11 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
     }
   };
 
-  // ✅ Edit withdrawal
   const handleEdit = (id: string) => {
     router.push(`/wallet/withdraw/detailview/${id}`);
   };
 
-  // ✅ Table columns
+  // ── Columns ───────────────────────────────────────────────────────────
   const columns: GridColDef[] = [
     { field: "payout_id", headerName: "Transaction ID", flex: 1 },
     { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
@@ -157,11 +203,10 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
             field: "rank",
             headerName: "Rank",
             flex: 1,
-              renderCell: (params: any) => {
-  return params.value && params.value !== "none"
-    ? `${params.value} Star`
-    : "-"
-}
+            renderCell: (params: any) =>
+              params.value && params.value !== "none"
+                ? `${params.value} Star`
+                : "-",
           },
         ]
       : []),
@@ -222,32 +267,9 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
       ),
     },
     { field: "status", headerName: "Status", flex: 1 },
-    // {
-    //   field: "actions",
-    //   headerName: "Actions",
-    //   flex: 1,
-    //   sortable: false,
-    //   disableColumnMenu: true,
-    //   renderCell: (params: any) => (
-    //     <div className="flex gap-2 items-center">
-    //       <button
-    //         className="text-green-600 cursor-pointer ml-2"
-    //         onClick={() => handleEdit(params.row._id)}
-    //       >
-    //         <GoPencil size={18} />
-    //       </button>
-    //       <button
-    //         className="text-red-600 cursor-pointer ml-2"
-    //         onClick={() => handleDelete(params.row._id)}
-    //       >
-    //         <FaTrash size={16} />
-    //       </button>
-    //     </div>
-    //   ),
-    // },
   ];
 
-  // ✅ Pagination hook
+  // ── Pagination ────────────────────────────────────────────────────────
   const {
     currentPage,
     totalPages,
@@ -262,18 +284,43 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
     onPageChange: () => {},
   });
 
-  // ✅ Navigation actions
-  const handlePayOut = () => {
-    router.push("/wallet/payout/addpayout");
-  };
+  const handlePayOut = () => router.push("/wallet/payout/addpayout");
+  const onBack = () => router.push("/wallet/payout");
 
-  const onBack = () => {
-    router.push("/wallet/payout");
-  };
+  // ── PV Alert message ──────────────────────────────────────────────────
+  const pvAlertMessage = pvSummary ? (
+    <>
+      {pvSummary.alertMessage}
+      <div className="mt-2 text-xs space-y-1">
+        {pvSummary.months.map((m) => (
+          <div key={m.month} className="flex justify-between gap-4">
+            <span>{m.month}</span>
+            <span>
+              {m.cleared ? "✅ Cleared" : `${m.pv_remaining} PV remaining`}
+            </span>
+          </div>
+        ))}
+        <div className="flex justify-between gap-4 font-semibold border-t pt-1 mt-1">
+          <span>Total Remaining</span>
+          <span>{pvSummary.totalPvRemaining} PV</span>
+        </div>
+      </div>
+    </>
+  ) : null;
 
   return (
     <Layout>
-      <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
+      {/* ── PV Alert ── */}
+      <AlertBox
+        visible={showPvAlert}
+        title="PV Order Required!"
+        message={pvAlertMessage}
+        buttonLabel="PLACE ORDER NOW"
+        buttonAction={() => router.push("/orders/addorder")}
+        onClose={() => setShowPvAlert(false)}
+      />
+
+      <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
@@ -302,21 +349,18 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
         />
 
         {/* Floating Filter Icon */}
-        <div title="Filter" className="fixed  bottom-5 right-6 z-10">
+        <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
-            className="
-                         relative w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
-             shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-gray-400 
-             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] 
-             active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer
-                         "
+            className="relative w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
+              shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-gray-400
+              hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px]
+              active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
             onClick={() => setShowModal(true)}
           >
             <FiFilter size={20} />
           </button>
         </div>
 
-        {/* Table */}
         <Table
           columns={columns}
           rows={withdrawData}
@@ -330,7 +374,6 @@ const [hasPermission, setHasPermission] = useState<boolean>(false);
           onRowClick={(row) => console.log("Payout clicked:", row)}
         />
 
-        {/* Date Filter Modal */}
         <DateFilterModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}

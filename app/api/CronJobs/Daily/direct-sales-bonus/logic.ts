@@ -318,6 +318,7 @@ export async function runDirectSalesBonus(): Promise<{
         const payout_id     = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
         const formattedDate = formatDate(now);
 
+        // ✅ FIX: fetch full wallet object (was already fetched as lean — keep lean for reads)
         const wallet = (await Wallet.findOne({ user_id: referBy }).lean()) as any;
 
         // ── Determine payout status ──────────────────────────────────────
@@ -353,14 +354,28 @@ export async function runDirectSalesBonus(): Promise<{
         const payout = await DailyPayout.create({
           transaction_id:   payout_id,
           payout_id,
+
+          // ✅ FIX: wallet & user identity fields — mirrors releaseReferralBonus
           user_id:          referBy,
-          user_name:        node?.name || "",
+          user_name:        node?.name    || "",
+          contact:          node?.contact || "",
+          mail:             node?.mail    || "",
+          user_status:      node?.status  || "",
+          wallet_id:        wallet?.wallet_id        ?? undefined,
+          rank:             wallet?.rank             ?? undefined,
+          pan_verified:     panVerified,
+
           amount:           totalAmount,
+          totalamount:      totalAmount,
           withdraw_amount:  withdrawAmount,
           reward_amount:    rewardAmount,
           tds_amount:       tdsAmount,
           admin_charge:     adminCharge,
+
           order_id:         order.order_id,
+          to:               referBy,
+          from:             order.user_id,
+
           status:           payoutStatus,
           date:             formattedDate,
           time:             now.toTimeString().slice(0, 5),
@@ -368,13 +383,14 @@ export async function runDirectSalesBonus(): Promise<{
           name:             "Direct Sales Bonus",
           title:            "Direct Sales Bonus",
 
-          // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
+          // ✅ Hold metadata — so admin knows WHY payout is OnHold
           hold_reasons:        hold.reasons,
           hold_reason_labels:  hold.labels,
           hold_release_reason: hold.summary,
 
           created_by:       "system",
           created_at:       now,
+          last_modified_by: "system",
           last_modified_at: now,
         });
 
@@ -385,10 +401,14 @@ export async function runDirectSalesBonus(): Promise<{
           await History.create({
             transaction_id:   payout.transaction_id,
             payout_id:        payout.payout_id,
+            wallet_id:        payout.wallet_id,
             user_id:          referBy,
             user_name:        node?.name || "",
             order_id:         payout.order_id,
+            to:               payout.to,
+            from:             payout.from,
             amount:           payout.amount,
+            total_amount:     payout.amount,
             withdraw_amount:  payout.withdraw_amount,
             reward_amount:    payout.reward_amount,
             tds_amount:       payout.tds_amount,

@@ -9,9 +9,9 @@ import { IoPeople, IoSettings } from "react-icons/io5";
 import { FaWallet, FaHistory } from "react-icons/fa";
 import { MdOutlineVerifiedUser } from "react-icons/md";
 import { VscGraph } from "react-icons/vsc";
-
 import { FaBoxesPacking } from "react-icons/fa6";
 import { IoMdClose } from "react-icons/io";
+import { IoChevronDownOutline } from "react-icons/io5"; // ← NEW arrow icon
 import Images from "@/constant/Image";
 import LogoutModal from "@/components/common/logoutModal";
 import { useVLife } from "@/store/context";
@@ -31,6 +31,14 @@ export default function SideNav({
 
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // ── KEY CHANGE: derive ordersExpanded from pathname so it's always
+  //    open when New Order is active, and remembers toggle otherwise ──
+  const isNewOrderActive = pathname.includes("addorder");
+  const [ordersExpanded, setOrdersExpanded] = useState(isNewOrderActive);
+
+  // If New Order is active, dropdown must stay open regardless of toggle
+  const showNewOrder = ordersExpanded || isNewOrderActive;
 
   const menuItems = [
     {
@@ -70,7 +78,6 @@ export default function SideNav({
           },
         ]
       : []),
-
     {
       href: user?.role === "user" ? "/historys" : "/historys/adminhistory",
       icon: <FaHistory />,
@@ -81,7 +88,7 @@ export default function SideNav({
       href: "/reports",
       icon: <VscGraph />,
       label: "My Reports",
-      match: ["/report"],
+      match: ["/report", "pvtracker"],
     },
     {
       href: "/settings",
@@ -93,7 +100,7 @@ export default function SideNav({
 
   const handleNavigation = (path: string) => {
     router.push(path);
-    setIsOpen(false); // close sidebar on mobile
+    setIsOpen(false);
   };
 
   const handleLogout = async () => {
@@ -101,8 +108,6 @@ export default function SideNav({
       setLoading(true);
       await axios.post("/api/logout");
       clearUser();
-
-      // ⏳ Add a 2-second delay before redirecting
       setTimeout(() => {
         router.push("/auth/login");
         setLoading(false);
@@ -110,8 +115,6 @@ export default function SideNav({
     } catch (err) {
       console.error("Logout failed:", err);
       clearUser();
-
-      // Still delay navigation for 2s even if it fails
       setTimeout(() => {
         router.push("/auth/login");
         setLoading(false);
@@ -121,13 +124,12 @@ export default function SideNav({
 
   return (
     <>
-      {/* Desktop SideNav */}
+      {/* Desktop SideNav — completely unchanged */}
       <div
         className="hidden md:flex flex-col items-center
        w-20 bg-linear-to-b from-[#0C3978] to-[#16B8E4]  pt-20 pb-6 
        rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative"
       >
-        {/* Logo */}
         <div className="absolute left-1/2 -translate-x-1/2 top-4 max-lg:top-6  z-10 ">
           <div className="w-14 h-14 rounded-full bg-white border-2 border-white shadow-lg overflow-hidden relative">
             <Image
@@ -139,7 +141,6 @@ export default function SideNav({
           </div>
         </div>
 
-        {/* Menu Items */}
         <div className="flex flex-col items-center gap-2 grow w-full mt-4 max-lg:mt-8">
           {menuItems.map((item, index) => {
             const isActive = item.match.some((m) => pathname.includes(m));
@@ -155,7 +156,6 @@ export default function SideNav({
                 >
                   <span className="text-[24px]">{item.icon}</span>
                 </button>
-                {/* Tooltip */}
                 <span
                   className="absolute left-full top-1/2 -translate-y-1/2 ml-0 px-2 py-1 text-xs 
                   font-medium text-white bg-gray-700 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-400
@@ -168,7 +168,6 @@ export default function SideNav({
           })}
         </div>
 
-        {/* Logout (Desktop) */}
         <div className="w-full flex justify-center ">
           <div className="relative group ">
             <button
@@ -180,8 +179,6 @@ export default function SideNav({
                 <RiLogoutCircleRLine />
               </span>
             </button>
-
-            {/* Tooltip */}
             <span
               className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs font-medium 
               text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-300
@@ -222,45 +219,88 @@ export default function SideNav({
             alt="logo"
             width={64}
             height={64}
-            className="object-contain  bg-white"
+            className="object-contain bg-white"
           />
         </div>
 
-       {/* Menu Items */}
-<div className="flex flex-col space-y-3 w-[110%]">
-  {menuItems.map((item, index) => {
-    const isActive = item.match.some((m) => pathname.includes(m));
-    const isOrders = item.match.includes("orders");
-    return (
-      <React.Fragment key={index}>
-        <button
-          onClick={() => handleNavigation(item.href)}
-          className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
-            isActive ? "bg-white text-black" : "text-white hover:bg-white/90"
-          }`}
-        >
-          <span className="text-[22px] max-md:text-[18px]">{item.icon}</span>
-          <span className="text-sm font-medium">{item.label}</span>
-        </button>
+        {/* Menu Items */}
+        <div className="flex flex-col space-y-3 w-[110%]">
+          {menuItems.map((item, index) => {
+            const isOrders = item.match.includes("orders");
 
-        {/* New Order sub-item — always visible under My Orders */}
-        {isOrders && (
-          <button
-            onClick={() => handleNavigation("/orders/addorder")}
-            className={`flex items-center gap-3 pl-8 pr-3 py-2 rounded-md transition-all duration-200 -mt-1 ${
-              pathname.includes("addorder")
-                ? "bg-white text-black"
-                : "text-white/80 hover:bg-white/90 hover:text-black"
-            }`}
-          >
-            <span className="text-[16px]">＋</span>
-            <span className="text-sm font-medium">New Order</span>
-          </button>
-        )}
-      </React.Fragment>
-    );
-  })}
-</div>
+            // My Orders row active = on orders pages but NOT on addorder
+            const isOrdersActive =
+              isOrders &&
+              item.match.some((m) => pathname.includes(m)) &&
+              !pathname.includes("addorder");
+
+            // All other items keep original logic
+            const isActive =
+              !isOrders && item.match.some((m) => pathname.includes(m));
+
+            return (
+              <React.Fragment key={index}>
+                <button
+                  onClick={() => {
+                    if (isOrders) {
+                      // ── KEY CHANGE: only allow closing if New Order is NOT active ──
+                      if (!isNewOrderActive) {
+                        setOrdersExpanded((prev) => !prev);
+                      }
+                      router.push(item.href);
+                      // Keep sidebar open so user can pick sub-item
+                    } else {
+                      handleNavigation(item.href);
+                    }
+                  }}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all duration-200 ${
+                    isOrders
+                      ? isOrdersActive
+                        ? "bg-white text-black"
+                        : "text-white hover:bg-white/90 hover:text-black"
+                      : isActive
+                      ? "bg-white text-black"
+                      : "text-white hover:bg-white/90 hover:text-black"
+                  }`}
+                >
+                  <span className="text-[22px] max-md:text-[18px]">
+                    {item.icon}
+                  </span>
+                  <span className="text-sm font-medium flex-1 text-left">
+                    {item.label}
+                  </span>
+
+                  {/* ── NEW: Arrow indicator for My Orders ── */}
+                  {isOrders && (
+                    <IoChevronDownOutline
+                      className={`text-[14px] transition-transform duration-300 ${
+                        showNewOrder ? "rotate-180" : "rotate-0"
+                      }`}
+                    />
+                  )}
+                </button>
+
+                {/* New Order sub-item — visible only when showNewOrder is true */}
+                {isOrders && showNewOrder && (
+                  <button
+                    onClick={() => {
+                      router.push("/orders/addorder");
+                      setIsOpen(false);
+                    }}
+                    className={`flex items-center gap-3 pl-8 pr-3 py-0 rounded-md transition-all duration-200 -mt-1 ${
+                      isNewOrderActive
+                        ? "bg-white text-black"
+                        : "text-white/80 hover:bg-white/90 hover:text-black"
+                    }`}
+                  >
+                    <span className="text-[16px]">＋</span>
+                    <span className="text-sm font-medium">New Order</span>
+                  </button>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
 
         {/* Logout (Mobile) */}
         <button

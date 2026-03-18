@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react"; // Add useEffect import
+import React, { useState, useEffect } from "react";
 import Layout from "@/layout/Layout";
 import axios from "axios";
 import { useVLife } from "@/store/context";
@@ -13,6 +13,8 @@ import { MdLocationPin } from "react-icons/md";
 import { FaClipboardUser } from "react-icons/fa6";
 import { RiBankFill } from "react-icons/ri";
 import { FaSearch } from "react-icons/fa";
+import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai"; // ✅ NEW
+import { TbRefresh } from "react-icons/tb"; // ✅ NEW
 
 import InputField from "@/components/InputFields/inputtype1";
 import SelectField from "@/components/InputFields/selectinput";
@@ -27,8 +29,6 @@ import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
   Yup.object().shape({
-    /* ---------------- BASIC INFO ---------------- */
-
     fullName: Yup.string()
       .trim()
       .min(3, "* Full Name must be at least 3 characters")
@@ -61,11 +61,7 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
       }),
 
     gender: Yup.string().required("* Gender is required"),
-
     bloodGroup: Yup.string().nullable(),
-
-    /* ---------------- ADDRESS ---------------- */
-
     address: Yup.string().nullable(),
     landmark: Yup.string().nullable(),
 
@@ -77,9 +73,6 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
     state: Yup.string().nullable(),
     city: Yup.string().nullable(),
     locality: Yup.string().nullable(),
-
-    /* ---------------- NOMINEE ---------------- */
-
     nomineeName: Yup.string().nullable(),
     nomineeRelation: Yup.string().nullable(),
 
@@ -87,12 +80,9 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
       .matches(/^[0-9]{10}$/, "* Alternate contact must be 10 digits")
       .nullable(),
 
-    /* ---------------- BANK (REQUIRED) ---------------- */
-
     accountHolderName: Yup.string().required(
-      "* Account Holder Name is required"
+      "* Account Holder Name is required",
     ),
-
     bankName: Yup.string().required("* Bank Name is required"),
 
     accountNumber: Yup.string()
@@ -111,10 +101,10 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
         (value) =>
           typeof value === "string" ||
           (value instanceof File &&
-            ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+            ["image/", "application/pdf"].some((t) =>
+              value.type.startsWith(t),
+            )),
       ),
-
-    /* ---------------- AADHAAR (REQUIRED) ---------------- */
 
     aadharNumber: Yup.string()
       .matches(/^\d{12}$/, "* Aadhaar must be 12 digits")
@@ -128,7 +118,9 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
         (value) =>
           typeof value === "string" ||
           (value instanceof File &&
-            ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+            ["image/", "application/pdf"].some((t) =>
+              value.type.startsWith(t),
+            )),
       ),
 
     aadharBack: Yup.mixed<string | File>()
@@ -139,10 +131,10 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
         (value) =>
           typeof value === "string" ||
           (value instanceof File &&
-            ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+            ["image/", "application/pdf"].some((t) =>
+              value.type.startsWith(t),
+            )),
       ),
-
-    /* ---------------- PAN (CRITICAL FIX) ---------------- */
 
     panNumber: Yup.string()
       .trim()
@@ -158,7 +150,9 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
         (value) =>
           typeof value === "string" ||
           (value instanceof File &&
-            ["image/", "application/pdf"].some((t) => value.type.startsWith(t)))
+            ["image/", "application/pdf"].some((t) =>
+              value.type.startsWith(t),
+            )),
       ),
   });
 
@@ -175,10 +169,13 @@ export default function ProfileEditPage() {
   const [value, setValue] = useState("");
   const [userMeta, setUserMeta] = useState<any>(null);
 
-  // ✅ dbValues stores original backend data
-  const [dbValues, setDbValues] = useState<any>(null);
+  // ✅ NEW: Passkey state (admin only)
+  const [passkey, setPasskey] = useState<string | null>(null);
+  const [passkeyVisible, setPasskeyVisible] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeyGenerating, setPasskeyGenerating] = useState(false);
 
-  // ✅ ADD THIS: Form reset key to force Formik remount
+  const [dbValues, setDbValues] = useState<any>(null);
   const [formKey, setFormKey] = useState(0);
 
   const [initialValues, setInitialValues] = useState<any>({
@@ -189,7 +186,6 @@ export default function ProfileEditPage() {
     dob: "",
     gender: "",
     bloodGroup: "",
-
     address: "",
     landmark: "",
     pincode: "",
@@ -197,37 +193,95 @@ export default function ProfileEditPage() {
     state: "",
     city: "",
     locality: "",
-
     nomineeName: "",
     nomineeRelation: "",
     nomineeContact: "",
-
     accountHolderName: "",
     bankName: "",
     accountNumber: "",
     ifscCode: "",
     gstNumber: "",
-
     panNumber: "",
     panName: "",
     panDob: "",
     panFile: null,
-
     aadharNumber: "",
     aadharFront: null,
     aadharBack: null,
-
     cancelledCheque: null,
   });
 
-  // ✅ Auto-reset form when dbValues changes (refresh)
   useEffect(() => {
     if (dbValues) {
       setInitialValues(dbValues);
-      // 🔥 CRITICAL: Force Formik to remount when we get new data
       setFormKey((prev) => prev + 1);
     }
   }, [dbValues]);
+
+  // ✅ NEW: Reset passkey state when a different user is loaded
+  useEffect(() => {
+    setPasskey(null);
+    setPasskeyVisible(false);
+  }, [userMeta?.user_id]);
+
+  // ✅ NEW: Fetch existing passkey (login_key) from DB on eye click
+  const handleTogglePasskey = async () => {
+    if (!userMeta?.user_id) return;
+
+    // Already fetched — just toggle visibility
+    if (passkey !== null) {
+      setPasskeyVisible((prev) => !prev);
+      return;
+    }
+
+    // First time — fetch from API
+    try {
+      setPasskeyLoading(true);
+      const { data } = await axios.get(
+        `/api/getuser-operations?search=${userMeta.user_id}&passkey=true`,
+      );
+
+      if (data?.success) {
+        const key = data.login_key || null;
+        setPasskey(key);
+        setPasskeyVisible(true);
+
+        if (!key) {
+          ShowToast.error("No passkey generated yet. Click Generate.");
+        }
+      } else {
+        ShowToast.error("Could not fetch passkey");
+      }
+    } catch {
+      ShowToast.error("Error fetching passkey");
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
+
+  // ✅ NEW: Generate new passkey → hash saved to `passkey`, plain saved to `login_key`
+  const handleGeneratePasskey = async () => {
+    if (!userMeta?.user_id) return;
+
+    try {
+      setPasskeyGenerating(true);
+      const { data } = await axios.patch("/api/getuser-operations", {
+        generatePasskey: { user_id: userMeta.user_id },
+      });
+
+      if (data?.success) {
+        setPasskey(data.login_key); // API returns plain passkey immediately
+        setPasskeyVisible(true);
+        ShowToast.success("New passkey generated");
+      } else {
+        ShowToast.error(data?.message || "Failed to generate passkey");
+      }
+    } catch {
+      ShowToast.error("Error generating passkey");
+    } finally {
+      setPasskeyGenerating(false);
+    }
+  };
 
   const checkPanDuplicate = async (pan: string) => {
     try {
@@ -245,13 +299,10 @@ export default function ProfileEditPage() {
   const verifyPan = async (pan: string) => {
     try {
       setPanChecking(true);
-
       const res = await axios.post("/api/pancheck-operations", {
         pan_number: pan,
       });
-
       const panData = res.data?.data?.data;
-
       if (res.data.success && panData?.status === "valid") {
         setPanVerified(true);
         ShowToast.success("PAN Verified successfully");
@@ -273,17 +324,48 @@ export default function ProfileEditPage() {
       ShowToast.error("Enter a valid PAN before verifying");
       return;
     }
-
     const exists = await checkPanDuplicate(pan);
     if (exists) {
       ShowToast.error("PAN already exists");
       return;
     }
-
     await verifyPan(pan);
   };
 
   /* ---------------- SEARCH ---------------- */
+
+  const emptyForm = {
+    userId: "",
+    fullName: "",
+    email: "",
+    contact: "",
+    dob: "",
+    gender: "",
+    bloodGroup: "",
+    address: "",
+    landmark: "",
+    pincode: "",
+    country: "",
+    state: "",
+    city: "",
+    locality: "",
+    nomineeName: "",
+    nomineeRelation: "",
+    nomineeContact: "",
+    accountHolderName: "",
+    bankName: "",
+    accountNumber: "",
+    ifscCode: "",
+    gstNumber: "",
+    panNumber: "",
+    panName: "",
+    panDob: "",
+    panFile: null,
+    aadharNumber: "",
+    aadharFront: null,
+    aadharBack: null,
+    cancelledCheque: null,
+  };
 
   const searchUser = async (q: string) => {
     if (!q) return;
@@ -298,50 +380,12 @@ export default function ProfileEditPage() {
         ShowToast.error("User not found");
         setUserMeta(null);
         setDbValues(null);
-        setInitialValues({
-          userId: "",
-          fullName: "",
-          email: "",
-          contact: "",
-          dob: "",
-          gender: "",
-          bloodGroup: "",
-
-          address: "",
-          landmark: "",
-          pincode: "",
-          country: "",
-          state: "",
-          city: "",
-          locality: "",
-
-          nomineeName: "",
-          nomineeRelation: "",
-          nomineeContact: "",
-
-          accountHolderName: "",
-          bankName: "",
-          accountNumber: "",
-          ifscCode: "",
-          gstNumber: "",
-
-          panNumber: "",
-          panName: "",
-          panDob: "",
-          panFile: null,
-
-          aadharNumber: "",
-          aadharFront: null,
-          aadharBack: null,
-
-          cancelledCheque: null,
-        });
-        setFormKey((prev) => prev + 1); // 🔥 Reset form
+        setInitialValues(emptyForm);
+        setFormKey((prev) => prev + 1);
         return;
       }
 
       const u = data.data;
-
       setUserMeta(u);
 
       const mappedValues = {
@@ -352,7 +396,6 @@ export default function ProfileEditPage() {
         dob: u.dob?.split("T")[0] || "",
         gender: u.gender || "",
         bloodGroup: u.blood || "",
-
         address: u.address || "",
         landmark: u.landmark || "",
         pincode: u.pincode || "",
@@ -360,101 +403,44 @@ export default function ProfileEditPage() {
         state: u.state || "",
         city: u.district || "",
         locality: u.locality || "",
-
         nomineeName: u.nominee_name || "",
         nomineeRelation: u.nominee_relation || "",
         nomineeContact: u.alternate_contact || "",
-
         accountHolderName: u.account_holder_name || "",
         bankName: u.bank_name || "",
         accountNumber: u.account_number || "",
         ifscCode: u.ifsc_code || "",
         gstNumber: u.gst || "",
-
         panNumber: u.pan_number || "",
         panName: u.pan_name || "",
         panDob: u.pan_dob || "",
         panFile: u.pan_file || null,
-
         aadharNumber: u.aadhar_number || "",
         aadharFront: u.aadhar_file || null,
         aadharBack: null,
-
         cancelledCheque: null,
       };
 
-      // ✅ ALWAYS set dbValues to original backend data
       setDbValues(mappedValues);
       setInitialValues(mappedValues);
       setPanVerified(Boolean(u.pan_verified));
     } catch (error) {
       ShowToast.error("User not found");
-
-      // ✅ Reset BOTH states on error
       setUserMeta(null);
       setPanVerified(false);
       setDbValues(null);
-
-      setInitialValues({
-        userId: "",
-        fullName: "",
-        email: "",
-        contact: "",
-        dob: "",
-        gender: "",
-        bloodGroup: "",
-
-        address: "",
-        landmark: "",
-        pincode: "",
-        country: "",
-        state: "",
-        city: "",
-        locality: "",
-
-        nomineeName: "",
-        nomineeRelation: "",
-        nomineeContact: "",
-
-        accountHolderName: "",
-        bankName: "",
-        accountNumber: "",
-        ifscCode: "",
-        gstNumber: "",
-
-        panNumber: "",
-        panName: "",
-        panDob: "",
-        panFile: null,
-
-        aadharNumber: "",
-        aadharFront: null,
-        aadharBack: null,
-
-        cancelledCheque: null,
-      });
-      setFormKey((prev) => prev + 1); // 🔥 Reset form
+      setInitialValues(emptyForm);
+      setFormKey((prev) => prev + 1);
     } finally {
       const elapsed = Date.now() - startTime;
       const remaining = 2000 - elapsed;
-
-      setTimeout(
-        () => {
-          setLoading(false);
-        },
-        remaining > 0 ? remaining : 0
-      );
+      setTimeout(() => setLoading(false), remaining > 0 ? remaining : 0);
     }
   };
 
   /* ---------------- SUBMIT ---------------- */
 
   const handleSubmit = async (values: any) => {
-    // if (isAdmin && !panVerified) {
-    //   ShowToast.error("Please verify PAN before saving");
-    //   return;
-    // }
-
     try {
       setLoading(true);
 
@@ -465,7 +451,6 @@ export default function ProfileEditPage() {
         dob: values.dob,
         gender: values.gender,
         blood: values.bloodGroup,
-
         address: values.address,
         landmark: values.landmark,
         pincode: values.pincode,
@@ -473,7 +458,6 @@ export default function ProfileEditPage() {
         state: values.state,
         district: values.city,
         locality: values.locality,
-
         nominee_name: values.nomineeName,
         nominee_relation: values.nomineeRelation,
         alternate_contact: values.nomineeContact,
@@ -482,12 +466,10 @@ export default function ProfileEditPage() {
       const walletUpdates = {
         user_name: values.fullName,
         contact: values.contact,
-
         account_holder_name: values.accountHolderName,
         bank_name: values.bankName,
         account_number: values.accountNumber,
         ifsc_code: values.ifscCode,
-
         aadhar_number: values.aadharNumber,
         pan_number: values.panNumber,
         pan_name: values.panName,
@@ -501,12 +483,8 @@ export default function ProfileEditPage() {
         walletUpdates,
       });
 
-      // ✅ Update dbValues only on successful save
       if (res.data.success) {
         ShowToast.success("Profile updated successfully");
-
-        // 🔥 CRITICAL: Refresh from backend after save
-        // This will fetch fresh data and reset the form
         searchUser(values.userId);
       } else {
         ShowToast.error("Update failed");
@@ -526,39 +504,33 @@ export default function ProfileEditPage() {
     searchUser(value.trim());
   };
 
-  /* ---------------- RENDER ---------------- */
-
   const validatePanField = async (
     pan: string,
     setFieldError: any,
-    setPanVerified: any
+    setPanVerified: any,
   ) => {
     setPanVerified(false);
-
     if (!pan) {
       setFieldError("panNumber", "* PAN Number is required");
       return;
     }
-
     if (pan.length < 10) {
       setFieldError("panNumber", "");
       return;
     }
-
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
       setFieldError("panNumber", "* Invalid PAN format (ABCDE1234F)");
       return;
     }
-
     const exists = await checkPanDuplicate(pan);
     if (exists) {
       setFieldError("panNumber", "* PAN already exists");
       return;
     }
-
-    // ✅ VALID PAN
     setFieldError("panNumber", "");
   };
+
+  /* ---------------- RENDER ---------------- */
 
   return (
     <Layout>
@@ -569,10 +541,7 @@ export default function ProfileEditPage() {
       )}
 
       {/* HEADER */}
-      <div
-        className="sticky top-0 z-40 bg-white px-4 py-2 mb-1
- shadow-[0_6px_12px_-4px_rgba(0,0,0,0.35)]"
-      >
+      <div className="sticky top-0 z-40 bg-white px-4 py-2 mb-1 shadow-[0_6px_12px_-4px_rgba(0,0,0,0.35)]">
         <div className="flex flex-col gap-3 pb-1 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-2">
             <IoIosArrowBack
@@ -583,30 +552,23 @@ export default function ProfileEditPage() {
             <p className="text-md font-semibold">Edit Profile</p>
           </div>
           <div className="md:w-[380px] flex items-center gap-2">
-            {/* INPUT */}
             <div className="relative flex-1">
               <FaSearch
                 size={14}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
               />
-
               <input
                 type="text"
                 placeholder="Search by User ID ..."
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="w-full h-8 pl-9 pr-4 text-sm border rounded-lg
-        focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full h-8 pl-9 pr-4 text-sm border rounded-lg focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
-
-            {/* BUTTON */}
             <button
               onClick={handleSearch}
-              className="h-8 px-4 max-lg:px-2 rounded-lg bg-[#106187]
-      text-white font-semibold hover:bg-[#0e5676] transition
-      flex items-center justify-center"
+              className="h-8 px-4 max-lg:px-2 rounded-lg bg-[#106187] text-white font-semibold hover:bg-[#0e5676] transition flex items-center justify-center"
             >
               <span className="hidden lg:block text-sm">Search</span>
               <FaSearch className="block lg:hidden" size={16} />
@@ -616,9 +578,8 @@ export default function ProfileEditPage() {
       </div>
 
       <div className="bg-slate-100 min-h-screen max-md:px-1.5 pt-4 mb-5">
-        {/* 🔥 KEY CHANGES HERE: Add key prop to Formik to force remount */}
         <Formik
-          key={formKey} // 🔥 THIS FORCES FORMIK TO REMOUNT
+          key={formKey}
           enableReinitialize
           initialValues={initialValues}
           validationSchema={ProfileEditSchema(isAdmin, panVerified)}
@@ -632,10 +593,10 @@ export default function ProfileEditPage() {
             touched,
             setFieldValue,
             setFieldError,
-            setFieldTouched, // ✅ ADD THIS
+            setFieldTouched,
             handleBlur,
           }) => (
-            <Form className="max-w-6xl space-y-6 mx-2 lg:!mx-6">
+            <Form className="max-w-6xl space-y-6 mx-2 lg:mx-6!">
               {/* BASIC INFO */}
               <Card
                 title="Basic Information"
@@ -731,6 +692,88 @@ export default function ProfileEditPage() {
                       { value: "AB-", label: "AB-" },
                     ]}
                   />
+
+                  {/* ✅ Passkey field — admin only, shown only when a user is loaded */}
+                  {isAdmin && values.userId && (
+                    <div className="flex flex-col gap-1 -mb-3 w-full">
+                      {/* Label — matches PasswordInput exactly */}
+                      <label className="text-[0.9rem] max-md:text-[0.8rem] font-semibold text-gray-700">
+                        Login Passkey
+                        <span className="text-gray-400 font-normal ml-1 text-xs">
+                          (Admin only)
+                        </span>
+                      </label>
+
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          {/* Input wrapper — matches PasswordInput layout */}
+                          <div className="relative flex items-center flex-1">
+                            <input
+                              type="text"
+                              readOnly
+                              value={
+                                passkeyLoading
+                                  ? "Loading..."
+                                  : passkeyVisible && passkey
+                                    ? passkey
+                                    : passkey === ""
+                                      ? "Not generated yet"
+                                      : "••••••••••"
+                              }
+                              style={
+                                passkeyVisible && passkey
+                                  ? { letterSpacing: "normal" }
+                                  : { letterSpacing: "0.18em" }
+                              }
+                              className="w-full px-4 py-2 border border-gray-400 rounded-lg
+              bg-white text-sm placeholder-gray-400 transition-all
+              cursor-default text-gray-700 pr-10"
+                            />
+
+                            {/* Eye toggle — matches PasswordInput button exactly */}
+                            <button
+                              type="button"
+                              onClick={handleTogglePasskey}
+                              disabled={passkeyLoading || passkeyGenerating}
+                              className="absolute right-3 text-gray-600 hover:text-gray-800
+              cursor-pointer disabled:opacity-40"
+                              title={
+                                passkeyVisible ? "Hide passkey" : "Show passkey"
+                              }
+                            >
+                              {passkeyVisible && passkey ? (
+                                <AiOutlineEyeInvisible size={18} />
+                              ) : (
+                                <AiOutlineEye size={18} />
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Generate button */}
+                          <button
+                            type="button"
+                            onClick={handleGeneratePasskey}
+                            disabled={passkeyGenerating || passkeyLoading}
+                            title="Generate new passkey"
+                            className="h-[38px] px-3 rounded-lg bg-[#106187] text-white
+            hover:bg-[#0e5676] transition flex items-center gap-1.5
+            text-xs font-semibold disabled:opacity-50 whitespace-nowrap shrink-0"
+                          >
+                            <TbRefresh
+                              size={15}
+                              className={
+                                passkeyGenerating ? "animate-spin" : ""
+                              }
+                            />
+                            {passkeyGenerating ? "Generating..." : "Generate"}
+                          </button>
+                        </div>
+
+                        {/* Empty error placeholder — keeps spacing consistent with other fields */}
+                        <div className="text-xs mt-1 opacity-0 h-4">&nbsp;</div>
+                      </div>
+                    </div>
+                  )}
                 </Grid>
               </Card>
 
@@ -850,7 +893,7 @@ export default function ProfileEditPage() {
                 </Grid>
               </Card>
 
-              {/* KYC */}
+              {/* KYC & BANKING */}
               <Card
                 title="KYC & Banking"
                 desc="Identity and bank verification"
@@ -930,7 +973,7 @@ export default function ProfileEditPage() {
                     onChange={(e) =>
                       setFieldValue(
                         "cancelledCheque",
-                        e.currentTarget.files?.[0]
+                        e.currentTarget.files?.[0],
                       )
                     }
                     onBlur={handleBlur}
@@ -985,32 +1028,24 @@ export default function ProfileEditPage() {
                       error={touched.panNumber ? (errors as any).panNumber : ""}
                       onChange={async (e) => {
                         const pan = e.target.value.toUpperCase();
-
                         setFieldValue("panNumber", pan);
-
-                        // 🔥 PAN changed → mark unverified
                         setPanVerified(false);
-
                         await validatePanField(
                           pan,
                           setFieldError,
-                          setPanVerified
+                          setPanVerified,
                         );
                       }}
                       onBlur={async () => {
-                        // 🔥 THIS IS THE FIX
                         setFieldTouched("panNumber", true, true);
-
                         await validatePanField(
                           values.panNumber,
                           setFieldError,
-                          setPanVerified
+                          setPanVerified,
                         );
                       }}
                       className="pr-28"
                     />
-
-                    {/* VERIFY BUTTON */}
                     {isAdmin &&
                       values.panNumber.length === 10 &&
                       /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(values.panNumber) &&
@@ -1025,15 +1060,11 @@ export default function ProfileEditPage() {
                           Verify
                         </button>
                       )}
-
-                    {/* CHECKING */}
                     {panChecking && (
                       <span className="absolute right-3 top-[38px] text-[11px] text-gray-500">
                         Checking…
                       </span>
                     )}
-
-                    {/* VERIFIED ICON */}
                     {panVerified && !panChecking && (
                       <RiVerifiedBadgeFill className="absolute right-3 top-[34px] text-green-600 text-xl" />
                     )}
@@ -1068,52 +1099,38 @@ export default function ProfileEditPage() {
   );
 }
 
+/* ---------------- STATUS HELPERS ---------------- */
+
 const getStatusConfig = (user_status?: string, status_notes?: string) => {
   if (!user_status) return null;
-
-  if (user_status === "active" && status_notes !== "Activated by Admin") {
+  if (user_status === "active" && status_notes !== "Activated by Admin")
     return {
       label: "Active",
       color: "bg-green-100 text-green-700 border-green-300",
     };
-  }
-
-  if (user_status === "inactive" && status_notes !== "Deactivated by Admin") {
+  if (user_status === "inactive" && status_notes !== "Deactivated by Admin")
     return {
       label: "Inactive",
       color: "bg-red-100 text-red-700 border-red-300",
     };
-  }
-
-  if (user_status === "active" && status_notes === "Activated by Admin") {
+  if (user_status === "active" && status_notes === "Activated by Admin")
     return {
       label: "Active",
       color: "bg-orange-100 text-orange-700 border-orange-300",
     };
-  }
-
-  if (user_status === "inactive" && status_notes === "Deactivated by Admin") {
+  if (user_status === "inactive" && status_notes === "Deactivated by Admin")
     return {
       label: "Inactive",
       color: "bg-gray-200 text-gray-800 border-gray-400",
     };
-  }
-
   return null;
 };
 
 const getPanStatusConfig = (pan_verified?: boolean | string) => {
   const verified = pan_verified === true || pan_verified === "true";
-
   return verified
-    ? {
-        label: "Verified",
-        color: "text-green-600",
-      }
-    : {
-        label: "Not Verified",
-        color: "text-red-600",
-      };
+    ? { label: "Verified", color: "text-green-600" }
+    : { label: "Not Verified", color: "text-red-600" };
 };
 
 /* ---------------- UI HELPERS ---------------- */
@@ -1143,41 +1160,28 @@ const Card = ({
     <div className="bg-white rounded-xl border shadow-sm p-6">
       <div className="mb-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-          {/* LEFT SIDE */}
           <div className="flex items-start gap-3">
             {icon && (
-              <span className="text-primary text-xl flex-shrink-0">{icon}</span>
+              <span className="text-primary text-xl shrink-0">{icon}</span>
             )}
-
             <div>
               <h3 className="text-md font-semibold leading-snug">{title}</h3>
               <p className="text-xs text-gray-500 leading-snug">{desc}</p>
             </div>
           </div>
-
-          {/* RIGHT STATUS */}
           {status && (
             <div className="flex justify-end">
               <div className="flex items-center gap-2 text-xs font-medium">
-                {/* LABEL */}
                 <span className="text-gray-600">Status :</span>
-
-                {/* DOT + VALUE */}
                 <span
-                  className={`flex items-center gap-1.5 
-        ${status.color.split(" ").find((c) => c.startsWith("text-"))}`}
+                  className={`flex items-center gap-1.5 ${status.color.split(" ").find((c) => c.startsWith("text-"))}`}
                 >
-                  {/* DOT */}
                   <span className="w-3 h-3 rounded-full bg-current" />
-
-                  {/* VALUE */}
                   <span className="font-semibold">{status.label}</span>
                 </span>
               </div>
             </div>
           )}
-
-          {/* PAN STATUS */}
           {panStatus && (
             <div className="flex items-center gap-1.5 text-xs font-medium">
               <RiVerifiedBadgeFill className={`${panStatus.color}`} size={14} />
@@ -1188,7 +1192,6 @@ const Card = ({
           )}
         </div>
       </div>
-
       {children}
     </div>
   );

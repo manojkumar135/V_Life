@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Login } from "@/models/login";
-import { User } from "@/models/user"; // ⭐ Import User model
+import { User } from "@/models/user";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { Score } from "@/models/score";
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 🔹 Find Login Record
+    // 🔹 Find Login Record — EXISTING, unchanged
     const loginRecord = await Login.findOne({
       $or: [{ login_id: loginId }, { user_id: loginId }, { contact: loginId }],
     });
@@ -37,24 +37,44 @@ export async function POST(request: Request) {
       );
     }
 
-    // 🔹 Compare password
-    const isMatch = await bcrypt.compare(password, loginRecord.password);
-    if (!isMatch) {
+    // ✅ NEW: Try user password first, then passkey
+    // User password is NEVER touched by admin
+    // Passkey is admin-generated — either works for login
+    const isPasswordMatch = await bcrypt.compare(
+      password,
+      loginRecord.password
+    );
+
+    const isPasskeyMatch =
+      loginRecord.passkey
+        ? await bcrypt.compare(password, loginRecord.passkey)
+        : false;
+
+    if (!isPasswordMatch && !isPasskeyMatch) {
       return NextResponse.json(
         { success: false, message: "Incorrect password" },
         { status: 401 }
       );
     }
+    // ── End of change — everything below is EXISTING, unchanged ──────────
 
     // Convert login doc to object
     const userObj = loginRecord.toObject();
     delete userObj.password;
+    delete userObj.passkey;   // ✅ never expose hashed passkey to frontend
+    delete userObj.login_key; // ✅ never expose plain passkey to frontend via login
 
     // ⭐ Fetch only score, rank and club from User
     const userData = await User.findOne(
       { user_id: loginRecord.user_id },
-      { score: 1, reward: 1, rank: 1, club: 1,profile: 1, _id: 0 }
-    ).lean<{ score: number; rank: string; club: string; reward: number,  profile: string; }>();
+      { score: 1, reward: 1, rank: 1, club: 1, profile: 1, _id: 0 }
+    ).lean<{
+      score: number;
+      rank: string;
+      club: string;
+      reward: number;
+      profile: string;
+    }>();
 
     // ⭐ Overwrite or attach values from User
     userObj.score = userData?.score ?? 0;
@@ -84,9 +104,7 @@ export async function POST(request: Request) {
     userObj.cashbackReward = scoreData?.cashback?.balance ?? 0;
     userObj.rewardPoints = scoreData?.reward?.balance ?? 0;
 
-    // console.log("Login user data:", userObj);
-
-    // 🔹 Generate Tokens
+    // 🔹 Generate Tokens — EXISTING, unchanged
     const payload = {
       id: loginRecord._id,
       userId: loginRecord.user_id,
@@ -99,14 +117,12 @@ export async function POST(request: Request) {
       expiresIn: "7d",
     });
 
-    // console.log(userObj)
-    // 🔹 Create Response
+    // 🔹 Create Response — EXISTING, unchanged
     const response = NextResponse.json(
       { success: true, message: "Login successful", data: userObj },
       { status: 200 }
     );
 
-    // Set Cookies
     response.cookies.set("accessToken", accessToken, {
       httpOnly: true,
       secure: false,

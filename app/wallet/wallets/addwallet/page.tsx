@@ -40,8 +40,6 @@ interface WalletFormData {
   panCategory?: string;
   aadharSeeding?: boolean;
   panFile: File | null;
-  rank?: string;
-  club?: string;
 }
 
 export default function AddWalletForm() {
@@ -51,6 +49,8 @@ export default function AddWalletForm() {
   const [verifying, setVerifying] = useState(false);
   // NOTE: panVerified kept true for testing (PAN subscription over)
   const [panVerified, setPanVerified] = useState(true);
+  // ── CHANGE 1: track the rank of the user being created for (admin flow) ──
+  const [fetchedUserRank, setFetchedUserRank] = useState<string>("none");
 
   const initialValues: WalletFormData = {
     userId: user.role === "user" ? user.user_id : "",
@@ -129,7 +129,7 @@ export default function AddWalletForm() {
     panFile: Yup.mixed<File>()
       .required("* PAN file is required")
       .test(
-        "fileType-pan", 
+        "fileType-pan",
         "* PAN must be an image or PDF",
         (value) =>
           !value ||
@@ -184,14 +184,18 @@ export default function AddWalletForm() {
         const userData = res.data.data;
         setFieldValue("userName", userData.user_name);
         setFieldValue("contact", userData.contact || "");
+        // ── CHANGE 2: store the target user's rank ──
+        setFetchedUserRank(userData.rank || "none");
       } else {
         ShowToast.error("User not found");
         setFieldValue("userName", "");
         setFieldValue("contact", "");
+        setFetchedUserRank("none");
       }
     } catch (error) {
       console.error(error);
       ShowToast.error("Failed to fetch user");
+      setFetchedUserRank("none");
     }
   };
 
@@ -322,7 +326,8 @@ export default function AddWalletForm() {
       const payload = {
         user_id: values.userId,
         user_name: values.userName,
-        rank: user?.rank || "none",
+        // ── CHANGE 3: use target user's rank, not admin's rank ──
+        rank: user.role === "admin" ? fetchedUserRank : (user?.rank || "none"),
         contact: values.contact,
         account_holder_name: values.accountHolderName,
         bank_name: values.bankName,
@@ -434,6 +439,7 @@ export default function AddWalletForm() {
                               setFieldValue("userId", "");
                               setFieldValue("userName", "");
                               setFieldValue("contact", "");
+                              setFetchedUserRank("none");
                               return;
                             }
                             await fetchUserById(value, setFieldValue);

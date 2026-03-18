@@ -9,8 +9,8 @@ import { BsCalendarDay, BsCalendarRange } from "react-icons/bs";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { LuTicketsPlane } from "react-icons/lu";
 import { GiDoubled } from "react-icons/gi";
+import { FaClipboardList } from "react-icons/fa";
 import { FaCrown } from "react-icons/fa";
-
 
 const Page = () => {
   const router = useRouter();
@@ -23,7 +23,7 @@ const Page = () => {
           <IoIosArrowBack
             size={25}
             color="black"
-            className="ml-0 mr-3 mt-1 max-sm:!mt-0 max-sm:mr-1 cursor-pointer z-20 mb-3"
+            className="ml-0 mr-3 mt-1 max-sm:mt-0! max-sm:mr-1 cursor-pointer z-20 mb-3"
             onClick={() => router.back()}
           />
         )}
@@ -66,23 +66,36 @@ const Page = () => {
           </div>
 
           {/* Royal Club */}
-                    <div
-                      onClick={() => router.push("/reports")}
-                      className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
-                    >
-                      <FaCrown  size={32} />
-                      <span className="mt-2 text-lg font-semibold">Royality Club</span>
-                    </div>
+          <div
+            onClick={() => router.push("/reports")}
+            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <FaCrown size={32} />
+            <span className="mt-2 text-lg font-semibold">Royality Club</span>
+          </div>
 
           {/* Matches Report */}
           {user?.role !== "user" && (
-            <div
-              onClick={() => router.push("/matches")}
-              className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
-            >
-              <GiDoubled size={32} />
-              <span className="mt-2 text-lg font-semibold">Matches Report</span>
-            </div>
+            <>
+              <div
+                onClick={() => router.push("/matches")}
+                className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              >
+                <GiDoubled size={32} />
+                <span className="mt-2 text-lg font-semibold">
+                  Matches Report
+                </span>
+              </div>
+              <div
+                onClick={() => router.push("/pvtracker")}
+                className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              >
+                <FaClipboardList size={32} />
+                <span className="mt-2 text-lg font-semibold">
+                  PV Tracker
+                </span>
+              </div>
+            </>
           )}
         </div>
       </div>
