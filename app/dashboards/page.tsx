@@ -624,74 +624,74 @@ const DashboardPage: React.FC = () => {
                 MY BUSINESS SUMMARY
               </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-2 gap-4 p-4">
-  <DashBox
-    icon={<FaRupeeSign />}
-    title="Total Payout"
-    value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
-    index={0}
-  />
-  {/* Hidden on mobile — already shown above */}
-  <div className="hidden md:block">
-    <DashBox
-      icon={<FaGift />}
-      title="Reward Value"
-      value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
-      index={1}
-    />
-  </div>
-  {/* Hidden on mobile — already shown above */}
-  <div className="hidden md:block">
-    <DashBox
-      icon={<BsFillPeopleFill />}
-      title={`Matching pairs (${cycles?.matches?.toString() || "0"})`}
-      value={`${cycles?.remainingDays?.toString() || "0"} days left`}
-      index={2}
-    />
-  </div>
-  <DashBox
-    icon={<MdOutlineCheckCircle />}
-    title="Cashback Points"
-    value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
-    index={3}
-  />
-  {/* Hidden on mobile — already shown above */}
-  <div className="hidden md:block">
-    <DashBox
-      icon={<FaShoppingBag />}
-      title="Matching Bonus"
-      value={`₹ ${summary?.matchingBonus?.toFixed(2) || "0.00"}`}
-      index={4}
-    />
-  </div>
-  {/* Hidden on mobile — already shown above */}
-  <div className="hidden md:block">
-    <DashBox
-      icon={<FaShoppingBag />}
-      title="Infinity Matching Bonus"
-      value={`₹ ${summary?.infinityBonus?.toFixed(2) || "0.00"}`}
-      index={5}
-    />
-  </div>
-  {/* Hidden on mobile — already shown above */}
-  <div className="hidden md:block">
-    <DashBox
-      icon={<FaShoppingBag />}
-      title="Direct Team Sales"
-      value={`₹ ${summary?.directTeamSales?.toFixed(2) || "0.00"}`}
-      index={6}
-    />
-  </div>
-  {/* Hidden on mobile — already shown above */}
-  <div className="hidden md:block">
-    <DashBox
-      icon={<FaShoppingBag />}
-      title="Infinity Team Sales"
-      value={`₹ ${summary?.infinityTeamSales?.toFixed(2) || "0.00"}`}
-      index={7}
-    />
-  </div>
-</div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-2 gap-4 p-4">
+                <DashBox
+                  icon={<FaRupeeSign />}
+                  title="Total Payout"
+                  value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
+                  index={0}
+                />
+                {/* Hidden on mobile — already shown above */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaGift />}
+                    title="Reward Value"
+                    value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
+                    index={1}
+                  />
+                </div>
+                {/* Hidden on mobile — already shown above */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<BsFillPeopleFill />}
+                    title={`Matching pairs (${cycles?.matches?.toString() || "0"})`}
+                    value={`${cycles?.remainingDays?.toString() || "0"} days left`}
+                    index={2}
+                  />
+                </div>
+                <DashBox
+                  icon={<MdOutlineCheckCircle />}
+                  title="Cashback Points"
+                  value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
+                  index={3}
+                />
+                {/* Hidden on mobile — already shown above */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaShoppingBag />}
+                    title="Matching Bonus"
+                    value={`₹ ${summary?.matchingBonus?.toFixed(2) || "0.00"}`}
+                    index={4}
+                  />
+                </div>
+                {/* Hidden on mobile — already shown above */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaShoppingBag />}
+                    title="Infinity Matching Bonus"
+                    value={`₹ ${summary?.infinityBonus?.toFixed(2) || "0.00"}`}
+                    index={5}
+                  />
+                </div>
+                {/* Hidden on mobile — already shown above */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaShoppingBag />}
+                    title="Direct Team Sales"
+                    value={`₹ ${summary?.directTeamSales?.toFixed(2) || "0.00"}`}
+                    index={6}
+                  />
+                </div>
+                {/* Hidden on mobile — already shown above */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaShoppingBag />}
+                    title="Infinity Team Sales"
+                    value={`₹ ${summary?.infinityTeamSales?.toFixed(2) || "0.00"}`}
+                    index={7}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
