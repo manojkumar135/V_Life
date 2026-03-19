@@ -175,7 +175,7 @@ export default function WelcomeLetter() {
                   Veterinary College,
                   <br />
                   Bengaluru - 560024 <br />
-                  Email : info@maverick.com | Toll-Free No : 18002965586
+                  Email : info@maverickmoney.in | Toll-Free No : 18002965586
                 </p>
               </div>
             </div>

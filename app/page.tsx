@@ -142,66 +142,68 @@ const MaverickHome = () => {
       title: "Welcome to",
       brand: "Maverick",
       sub: "Empowering dreamers, doers, and innovators to achieve excellence through a uniquely blended hybrid opportunity.",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1729073810/samples/two-ladies.jpg",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773926204/Smile.jpg_caft5t.jpg",
     },
     {
       tag: "Eco · Smart · Sustainable",
       title: "Discover Our",
       brand: "Products",
-      sub: "From EV bikes to health kits — science-backed products designed to elevate every aspect of your life.",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760075754/DAB-E-electric-bike-1-1_ikf7xa.jpg",
+      sub: "Maverick 360° is a complete wellness combination designed to support hydration, immunity, and overall health in one powerful system.",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773924873/Final_size_copy.jpg_gitslz.jpg",
     },
     {
       tag: "Grow · Earn · Thrive",
       title: "Build Your",
       brand: "Future",
       sub: "Join 10,000+ members already earning with our Quad-Core Plan — achievable, residual, and long-term.",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1729073816/cld-sample-4.jpg",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773925261/Build_you_future.jpg_sdnyqt.jpg",
     },
   ];
 
   /* ─── PRODUCTS ─── */
   const products = [
     {
-      name: "Mobile",
-      tag: "Latest Tech",
-      category: "Technology",
-      desc: "Next-gen mobile devices packed with performance and style.",
-      downloadLabel: "Download Brochure",
-      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911135/Maverick_360_heusla.png",
+      name: "Ionizer",
+      tag: "Maverick 360°",
+      category: "9 planitum plates",
+      desc: "Pure, energized water for daily vitality with Maverick 360°.",
+      downloadLabel: "Download Guide",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773919590/Ionizer_Gery_kdbpnp.png",
     },
     {
-      name: "Electronics",
-      tag: "Smart Living",
-      category: "Electronics",
-      desc: "Smart home and lifestyle electronics for modern living.",
+      name: "Vita Shield",
+      tag: "Maverick 360°",
+      category: "Liposomal",
+      desc: "Improved Bioavailability with Long - Lasting Benefits Through Liposomal Technology.",
+      downloadLabel: "Download Brochure",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773919678/Vita_Shield_copy_dc1css.png",
+    },
+    {
+      name: "Vita Fusion",
+      tag: "Maverick 360°",
+      category: "Rich D3+K2",
+      desc: "Upgrade your health with the perfect D3 & K2 stack..",
       downloadLabel: "Download Catalogue",
       img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911137/Vita_Fusion_q4ccpm.png",
     },
     {
-      name: "EV Bike",
-      tag: "Eco Mobility",
-      category: "Transport",
-      desc: "Zero-emission electric bikes for sustainable commuting.",
-      downloadLabel: "Download Spec Sheet",
-      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911174/360_Combo_vdm2du.png",
-    },
-    {
-      name: "Ionizer",
-      tag: "Pure Air",
-      category: "Wellness",
-      desc: "Advanced air ionizers for a cleaner, healthier environment.",
-      downloadLabel: "Download Guide",
-      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911157/Ionizer_qitnhj.png",
-    },
-    {
-      name: "Health Kit",
-      tag: "Wellness",
-      category: "Health",
-      desc: "Comprehensive health kits for daily wellness routines.",
+      name: "Lipo Fusion",
+      tag: "Maverick 360°",
+      category: "Magnesium Glycinate",
+      desc: "High-absorption magnesium for stress, muscles, and overall wellness.",
       downloadLabel: "Download Health Guide",
       img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911150/Lipo_Fusion_ogvbfs.png",
     },
+    {
+      name: "Combo 360",
+      tag: "Maverick 360°",
+      category: "Ultimate Wellness",
+      desc: "Powerful combo for energy, immunity, and overall health.",
+      downloadLabel: "Download Spec Sheet",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911174/360_Combo_vdm2du.png",
+    },
+    
+    
   ];
 
   const features = [
@@ -682,44 +684,44 @@ const MaverickHome = () => {
             variants={stagger}
             className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-5"
           >
-            {products.map((p, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                whileHover={{ y: -7 }}
-                className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-[#16B8E4]/30 transition-all duration-300 overflow-hidden flex flex-col"
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={p.img}
-                    alt={p.name}
-                    className="w-full h-40 sm:h-44 md:h-48 object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <span className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-sm text-[#0C3978] text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
-                    {p.tag}
-                  </span>
-                </div>
-                <div className="p-4 flex flex-col flex-1">
-                  <p className="text-[10px] font-bold text-[#16B8E4] tracking-wider uppercase mb-0.5">
-                    {p.category}
-                  </p>
-                  <h3 className="text-sm sm:text-base font-extrabold text-gray-900 mb-1.5">
-                    {p.name}
-                  </h3>
-                  <p className="text-gray-500 text-xs leading-relaxed flex-1 mb-3">
-                    {p.desc}
-                  </p>
-                  <a
-                    href="#"
-                    onClick={(e) => e.preventDefault()}
-                    className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-[#0C3978] border border-[#0C3978]/20 rounded-lg px-3 py-2 hover:bg-[#0C3978] hover:text-white hover:border-[#0C3978] transition-all group/dl"
-                  >
-                    <FaDownload className="text-[#16B8E4] group-hover/dl:text-white transition-colors shrink-0 text-[10px]" />
-                    <span className="truncate">{p.downloadLabel}</span>
-                  </a>
-                </div>
-              </motion.div>
-            ))}
+        {products.map((p, i) => (
+  <motion.div
+    key={i}
+    variants={fadeUp}
+    whileHover={{ y: -7 }}
+    className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-[#16B8E4]/30 transition-all duration-300 overflow-hidden flex flex-col"
+  >
+    <div className="relative overflow-hidden bg-gray-50">
+      <img
+        src={p.img}
+        alt={p.name}
+        className="w-full h-56 sm:h-52 md:h-48 object-contain object-center p-3 group-hover:scale-105 transition-transform duration-500"
+      />
+      <span className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-sm text-[#0C3978] text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
+        {p.tag}
+      </span>
+    </div>
+    <div className="p-4 flex flex-col flex-1">
+      <p className="text-[10px] font-bold text-[#16B8E4] tracking-wider uppercase mb-0.5">
+        {p.category}
+      </p>
+      <h3 className="text-sm sm:text-base font-extrabold text-gray-900 mb-1.5">
+        {p.name}
+      </h3>
+      <p className="text-gray-500 text-xs leading-relaxed flex-1 mb-3">
+        {p.desc}
+      </p>
+      <a
+        href="#"
+        onClick={(e) => e.preventDefault()}
+        className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold text-[#0C3978] border border-[#0C3978]/20 rounded-lg px-3 py-2 hover:bg-[#0C3978] hover:text-white hover:border-[#0C3978] transition-all group/dl"
+      >
+        <FaDownload className="text-[#16B8E4] group-hover/dl:text-white transition-colors shrink-0 text-[10px]" />
+        <span className="truncate">{p.downloadLabel}</span>
+      </a>
+    </div>
+  </motion.div>
+))}
           </motion.div>
           <div className="text-center mt-8 sm:mt-10">
             <button
@@ -1315,13 +1317,13 @@ const MaverickHome = () => {
             </motion.div>
             <motion.div variants={fadeUp} className="flex flex-col gap-2.5">
               <a
-                href="mailto:info@maverick.com"
+                href="mailto:info@maverickmoney.in"
                 className="flex items-center gap-3 text-white/55 hover:text-white transition text-sm"
               >
                 <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center shrink-0">
                   <FaEnvelope className="text-[#16B8E4] text-xs" />
                 </div>
-                info@maverick.com
+                info@maverickmoney.in
               </a>
               <a
                 href="tel:+10095447818"

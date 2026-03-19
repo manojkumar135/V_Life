@@ -652,9 +652,9 @@ const MaverickHome = () => {
               <button onClick={() => router.push("/auth/login")} className="flex items-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 border-2 border-white/25 text-white font-semibold text-sm rounded-lg hover:bg-white/8 hover:border-white/50 transition-all">Login to Account</button>
             </motion.div>
             <motion.div variants={fadeUp} className="flex flex-col gap-2.5">
-              <a href="mailto:info@maverick.com" className="flex items-center gap-3 text-white/55 hover:text-white transition text-sm">
+              <a href="mailto:info@maverickmoney.in" className="flex items-center gap-3 text-white/55 hover:text-white transition text-sm">
                 <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center shrink-0"><FaEnvelope className="text-[#16B8E4] text-xs" /></div>
-                info@maverick.com
+                info@maverickmoney.in
               </a>
               <a href="tel:+10095447818" className="flex items-center gap-3 text-white/55 hover:text-white transition text-sm">
                 <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center shrink-0"><FaPhoneAlt className="text-[#16B8E4] text-xs" /></div>

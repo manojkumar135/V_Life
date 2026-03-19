@@ -27,17 +27,17 @@ function mapHistoryToInvoice(record: any, user: any, office: any) {
 
       items: [
         {
-          name: "Ionizer Advance Payment",
-          product_code: "ADV-001",
-          hsn_code: "9997",
+          name: "VITA SHIELD 10 Pack",
+          product_code: "VITASHIELD10",
+          hsn_code: "3004",
           quantity: 1,
-          dealer_price: amount,
-          whole_gst: 0,
-          gst: 0,
-          cgst: 0,
-          sgst: 0,
-          igst: 0,
-          gst_amount: 0,
+          dealer_price: 14285.71,
+          whole_gst: 714.29,
+          gst: 5.0,
+          cgst: 2.5,
+          sgst:2.5,
+          igst: 5.0,
+          gst_amount:714.29 ,
         },
       ],
 

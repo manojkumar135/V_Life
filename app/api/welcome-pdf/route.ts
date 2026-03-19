@@ -147,7 +147,7 @@ export async function GET(req: Request) {
       4
     );
     write(
-      "Email : info@maverick.com | Toll-Free No : 18002965586",
+      "Email : info@maverickmoney.in | Toll-Free No : 18002965586",
       9,
       4
     );
