@@ -116,8 +116,8 @@ the amount will be adjusted in your first order.`;
             {!mode100 ? (
               <>
                 <button
-                  onClick={() => handleOrder(50)}
-                  className="flex-1 cursor-pointer bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
+                  // onClick={() => handleOrder(50)}
+                  className="flex-1 cursor-pointer bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
                   text-white font-semibold py-3 rounded-lg"
                 >
                   Order 50 PV
@@ -125,7 +125,7 @@ the amount will be adjusted in your first order.`;
 
                 <button
                   onClick={() => handleOrder(100)}
-                  className="flex-1 cursor-pointer bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
+                  className="flex-1 cursor-pointer bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
                   text-white font-semibold py-3 rounded-lg"
                 >
                   Order 100 PV
@@ -135,7 +135,7 @@ the amount will be adjusted in your first order.`;
               <>
                 <button
                   onClick={() => placeOrder(100)}
-                  className="flex-1 cursor-pointer bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
+                  className="flex-1 cursor-pointer bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
                   text-white font-semibold py-3 rounded-lg"
                 >
                   Place Order (100 PV)
@@ -144,7 +144,7 @@ the amount will be adjusted in your first order.`;
                 <button
                   onClick={() => setShowPayment(true)}
                   className="cursor-pointer flex-1
-  bg-gradient-to-r from-[#0E8A3A] via-[#16A34A] to-[#22C55E]
+  bg-linear-to-r from-[#0E8A3A] via-[#16A34A] to-[#22C55E]
   text-white font-semibold py-3 rounded-lg"
                 >
                   Pay Advance ₹{ADVANCE_AMOUNT.toLocaleString()}

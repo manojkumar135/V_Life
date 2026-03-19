@@ -32,7 +32,7 @@ const Page = () => {
           {/* Daily Report */}
           <div
             onClick={() => router.push("/reports/daily")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <BsCalendarDay size={32} />
             <span className="mt-2 text-lg font-semibold">Daily Report</span>
@@ -41,7 +41,7 @@ const Page = () => {
           {/* Fortnight Report */}
           <div
             onClick={() => router.push("/reports/fortnight")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <BsCalendarRange size={32} />
             <span className="mt-2 text-lg font-semibold">Fortnight Report</span>
@@ -50,7 +50,7 @@ const Page = () => {
           {/* Cashback Report */}
           <div
             onClick={() => router.push("/reports/cashback")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <RiMoneyRupeeCircleLine size={32} />
             <span className="mt-2 text-lg font-semibold">Cashback Report</span>
@@ -59,7 +59,7 @@ const Page = () => {
           {/* Reward Report */}
           <div
             onClick={() => router.push("/reports/reward")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <LuTicketsPlane size={32} />
             <span className="mt-2 text-lg font-semibold">Reward Report</span>
@@ -68,7 +68,7 @@ const Page = () => {
           {/* Royal Club */}
           <div
             onClick={() => router.push("/reports")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaCrown size={32} />
             <span className="mt-2 text-lg font-semibold">Royality Club</span>
@@ -79,7 +79,7 @@ const Page = () => {
             <>
               <div
                 onClick={() => router.push("/matches")}
-                className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+                className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
               >
                 <GiDoubled size={32} />
                 <span className="mt-2 text-lg font-semibold">
@@ -88,7 +88,7 @@ const Page = () => {
               </div>
               <div
                 onClick={() => router.push("/pvtracker")}
-                className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+                className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
               >
                 <FaClipboardList size={32} />
                 <span className="mt-2 text-lg font-semibold">

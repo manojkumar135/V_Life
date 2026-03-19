@@ -112,7 +112,7 @@ const page = () => {
           {/* Wallets Card */}
           <div
             onClick={() => router.push("/wallet/walletpage")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <Wallet size={32} />
             <span className="mt-2 text-lg font-semibold">
@@ -123,7 +123,7 @@ const page = () => {
           {/* Withdraw Card */}
           <div
             onClick={() => router.push("/wallet/payout")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <Banknote size={32} />
             <span className="mt-2 text-lg font-semibold">Payouts</span>
@@ -133,7 +133,7 @@ const page = () => {
           {user.role === "admin" && (
             <div
               onClick={() => router.push("/tds")}
-              className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
             >
               <FaPercent size={26} />
               <span className="mt-2 text-lg font-semibold">TDS Table</span>
@@ -143,7 +143,7 @@ const page = () => {
           {/* Rewards Card */}
           <div
             onClick={() => router.push("/wallet/rewards")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaGift size={32} />
             <span className="mt-2 text-lg font-semibold">Rewards</span>
@@ -152,7 +152,7 @@ const page = () => {
           {/* Reports Card */}
           {/* <div
             onClick={() => router.push("/reports")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <VscGraph size={32} />
             <span className="mt-2 text-lg font-semibold">Reports</span>
@@ -161,7 +161,7 @@ const page = () => {
           {/* ID activation */}
           {/* {user.status!=="inactive" &&(<div
             onClick={() => router.push("/activation/activationform")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <MdOutlineVerifiedUser  size={32} />
             <span className="mt-2 text-lg font-semibold">Activation</span>
@@ -170,7 +170,7 @@ const page = () => {
           {/* Royal Club */}
           {/* <div
             onClick={() => router.push("/reports")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaCrown  size={32} />
             <span className="mt-2 text-lg font-semibold">Royality Club</span>
@@ -180,7 +180,7 @@ const page = () => {
           {user.role === "admin" && (
             <div
               onClick={() => router.push("/profileedit")}
-              className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
             >
               <FaRegUserCircle size={32} />
               <span className="mt-2 text-lg font-semibold">Profile Management</span>
@@ -188,7 +188,7 @@ const page = () => {
           )}
 
           {/* Convert Card */}
-          {/* <div className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer">
+          {/* <div className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer">
             <Shuffle size={32} />
             <span className="mt-2 text-lg font-semibold">Convert</span>
           </div> */}

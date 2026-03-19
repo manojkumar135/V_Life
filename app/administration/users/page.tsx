@@ -23,7 +23,7 @@ const Page = () => {
           <IoIosArrowBack
             size={25}
             color="black"
-            className="ml-0 mr-3 mt-1 max-sm:!mt-0 max-sm:mr-1 cursor-pointer z-20 mb-3"
+            className="ml-0 mr-3 mt-1 max-sm:mt-0! max-sm:mr-1 cursor-pointer z-20 mb-3"
             onClick={() => router.push("/administration")}
           />
         )}
@@ -31,7 +31,7 @@ const Page = () => {
           {/* Tree View Card */}
           <div
             onClick={() => router.push(`/administration/users/tree`)}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <TreePine size={32} />
             <span className="mt-2 text-lg font-semibold">Tree View</span>
@@ -40,7 +40,7 @@ const Page = () => {
           {/* Left Team Card */}
           <div
             onClick={() => router.push("/administration/users/left")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <Users size={32} className="transform scale-x-[-1]" />
             <span className="mt-2 text-lg font-semibold">Left Team</span>
@@ -49,7 +49,7 @@ const Page = () => {
           {/* Right Team Card */}
           <div
             onClick={() => router.push("/administration/users/right")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <Users size={32} />
             <span className="mt-2 text-lg font-semibold">Right Team</span>
@@ -58,7 +58,7 @@ const Page = () => {
           {/* Direct Team Card */}
           <div
             onClick={() => router.push("/administration/users/direct")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <FaUsers size={32} />
             <span className="mt-2 text-lg font-semibold">Direct Team</span>
@@ -67,7 +67,7 @@ const Page = () => {
           {/* Infinity Team Card */}
           <div
             onClick={() => router.push("/administration/users/infinity")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <IoInfiniteSharp size={32} />
             <span className="mt-2 text-lg font-semibold">Infinity Team</span>
@@ -78,7 +78,7 @@ const Page = () => {
             <>
               <div
                 onClick={() => router.push("/admin-activated")}
-                className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+                className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
               >
                 <FaUserCheck size={32} />
                 <span className="mt-2 text-lg font-semibold">
@@ -87,7 +87,7 @@ const Page = () => {
               </div>
               <div
                 onClick={() => router.push("/admin-deactivated")}
-                className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+                className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
               >
                 <FaUserTimes size={32} />
                 <span className="mt-2 text-lg font-semibold">

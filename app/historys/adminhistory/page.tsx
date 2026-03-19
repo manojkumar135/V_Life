@@ -21,7 +21,7 @@ const page = () => {
           {/* Wallets Card */}
           <div
             onClick={() => router.push("/historys")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <BiTransferAlt size={36} />
             <span className="mt-2 text-lg font-semibold">
@@ -31,7 +31,7 @@ const page = () => {
 
           <div
             onClick={() => router.push("/historys/firstorderhistory")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <LuHandCoins size={36} />
             <span className="mt-2 text-lg font-semibold">First Orders</span>
@@ -39,7 +39,7 @@ const page = () => {
 
  <div
             onClick={() => router.push("/historys/advancehistory")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <GiCash size={36} />
             <span className="mt-2 text-lg font-semibold">Advance Payments</span>
