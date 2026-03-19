@@ -95,29 +95,19 @@ const createWelcomeEmailBody = (
           box-shadow: 0 4px 16px rgba(12, 57, 120, 0.12);
         }
         .header {
-          background: linear-gradient(135deg, #0C3978 0%, #106187 60%, #16B8E4 100%);
           text-align: center;
           padding: 28px 20px 22px;
         }
         .header img {
           max-height: 52px;
-          margin-bottom: 12px;
+          width: auto;
           display: block;
-          margin-left: auto;
-          margin-right: auto;
+          margin: 0 auto 14px auto;
         }
         .header h2 {
           margin: 0;
-          color: #ffffff;
           font-size: 20px;
           letter-spacing: 1px;
-        }
-        .header p {
-          margin: 4px 0 0;
-          color: #a8d8f0;
-          font-size: 11px;
-          letter-spacing: 2px;
-          text-transform: uppercase;
         }
         .body {
           padding: 28px 30px;
@@ -179,9 +169,11 @@ const createWelcomeEmailBody = (
       <div class="container">
 
         <div class="header">
-          <img src="public/maverick-logo.png" alt="Maverick Logo" />
-          <h2>Welcome to Our Platform!</h2>
-          <p>Where Vision Meets Action</p>
+          <img
+            src="https://res.cloudinary.com/df2vugog5/image/upload/v1773936754/maverick-logo_ao66bd.png"
+            alt="Maverick Logo"
+          />
+          <h2>Welcome to Maverick!</h2>
         </div>
 
         <div class="body">

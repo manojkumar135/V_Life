@@ -12,7 +12,7 @@ const createOTPEmailBody = (otp: string) => {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Password Reset OTP</title>
+      <title>Your OTP from Maverick</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -31,75 +31,48 @@ const createOTPEmailBody = (otp: string) => {
           box-shadow: 0 4px 16px rgba(12, 57, 120, 0.12);
         }
         .header {
-          background: linear-gradient(135deg, #0C3978 0%, #106187 60%, #16B8E4 100%);
           text-align: center;
-          padding: 28px 20px 22px;
+          padding: 28px 20px;
         }
         .header img {
-          max-height: 52px;
-          margin-bottom: 12px;
+          max-height: 56px;
+          width: auto;
           display: block;
-          margin-left: auto;
-          margin-right: auto;
-        }
-        .header h2 {
-          margin: 0;
-          color: #ffffff;
-          font-size: 20px;
-          letter-spacing: 1px;
-        }
-        .header p {
-          margin: 4px 0 0;
-          color: #a8d8f0;
-          font-size: 11px;
-          letter-spacing: 2px;
-          text-transform: uppercase;
+          margin: 0 auto;
         }
         .body {
-          padding: 28px 30px;
+          padding: 32px 30px;
+          text-align: center;
         }
         .body p {
           color: #333;
           font-size: 14px;
           margin: 0 0 12px;
+          text-align: left;
         }
         .otp-container {
-          text-align: center;
-          padding: 24px 20px;
-          margin: 18px 0;
-          background-color: #f0f6ff;
-          border: 1px solid #c8dff4;
-          border-radius: 8px;
+          margin: 24px auto;
         }
-        .otp-container p {
-          margin: 0 0 10px;
-          color: #106187;
+        .otp-label {
           font-size: 14px;
+          color: #106187;
+          margin-bottom: 12px;
         }
         .otp-code {
-          font-size: 36px;
+          font-size: 40px;
           font-weight: bold;
-          letter-spacing: 8px;
+          letter-spacing: 10px;
           color: #0C3978;
-          padding: 14px 28px;
-          background-color: #fff;
-          border-radius: 6px;
+          padding: 16px 32px;
+          background-color: #f0f6ff;
+          border-radius: 8px;
           display: inline-block;
-          margin: 10px 0;
           border: 2px dashed #16B8E4;
         }
-        .otp-container .expiry {
-          margin: 10px 0 0;
-          color: #555;
+        .expiry {
+          margin-top: 16px;
           font-size: 13px;
-        }
-        .notice {
-          background: linear-gradient(135deg, #0C3978, #106187);
-          border-radius: 8px;
-          padding: 12px 16px;
-          margin: 16px 0;
-          color: #fff;
-          font-size: 13.5px;
+          color: #777;
         }
         .footer {
           background-color: #0C3978;
@@ -117,24 +90,22 @@ const createOTPEmailBody = (otp: string) => {
       <div class="container">
 
         <div class="header">
-          <img src="public/maverick-logo.png" alt="Maverick Logo" />
-          <h2>Password Reset Request</h2>
-          <p>Where Vision Meets Action</p>
+          <img
+            src="https://res.cloudinary.com/df2vugog5/image/upload/v1773936754/maverick-logo_ao66bd.png"
+            alt="Maverick"
+          />
         </div>
 
         <div class="body">
           <p>Hello,</p>
-          <p>You requested to reset your password. Please use the following One-Time Password (OTP) to complete the process:</p>
+          <p>Your One-Time Password (OTP) from Maverick is:</p>
 
           <div class="otp-container">
-            <p>Your verification code is:</p>
             <div class="otp-code">${otp}</div>
-            <p class="expiry">This code will expire in <strong>2 minutes</strong> for security reasons.</p>
+            <p class="expiry">Use this code within <strong>5 minutes</strong>.</p>
           </div>
 
-          <div class="notice">
-            If you didn't request this password reset, please ignore this email or contact support if you have concerns.
-          </div>
+          <p>Do not share this OTP with anyone.</p>
         </div>
 
         <div class="footer">
@@ -157,7 +128,7 @@ const sendOTP = async (email: string, otp: string) => {
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Your Password Reset OTP",
+      subject: "Your One Time Password (OTP)",
       html: htmlBody,
     };
 

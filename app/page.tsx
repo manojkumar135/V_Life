@@ -155,7 +155,7 @@ const MaverickHome = () => {
       tag: "Grow · Earn · Thrive",
       title: "Build Your",
       brand: "Future",
-      sub: "Join 10,000+ members already earning with our Quad-Core Plan — achievable, residual, and long-term.",
+      sub: "Build your future with Maverick — your journey to financial independence.",
       img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773925261/Build_you_future.jpg_sdnyqt.jpg",
     },
   ];
@@ -200,7 +200,7 @@ const MaverickHome = () => {
       category: "Ultimate Wellness",
       desc: "Powerful combo for energy, immunity, and overall health.",
       downloadLabel: "Download Spec Sheet",
-      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911174/360_Combo_vdm2du.png",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773934875/Untitled_design_26_cytcgr.png",
     },
     
     
@@ -695,7 +695,7 @@ const MaverickHome = () => {
       <img
         src={p.img}
         alt={p.name}
-        className="w-full h-56 sm:h-52 md:h-48 object-contain object-center p-3 group-hover:scale-105 transition-transform duration-500"
+        className="w-full h-56 sm:h-52 object-contain object-center p-0 group-hover:scale-105 transition-transform duration-500"
       />
       <span className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-sm text-[#0C3978] text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm">
         {p.tag}
