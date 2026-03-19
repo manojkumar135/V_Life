@@ -24,6 +24,8 @@ export default function WelcomeLetter() {
 
       const data = {
         user_name: user?.user_name || "Member",
+        login_id: user?.user_id || "xxxxxxxxx",
+        // password: user?.password || "xxxxxxxx",
       };
 
       const blob = await pdf(<WelcomePDF data={data} />).toBlob();
@@ -107,74 +109,62 @@ export default function WelcomeLetter() {
 
             {/* Letter Content */}
             <div className="text-gray-900 leading-relaxed space-y-4 max-md:text-[12px] text-[14px]  px-5 max-md:px-1">
-              <p>
-                <strong className="text-[18px]">Dear {user?.user_name},</strong>
+              <p className="font-bold">
+                To,<br />
+                MAVERICK RESOURCES PVT LTD<br />
+                ANDHRA PRADESH
               </p>
 
               <p>
-                As an Associate, welcome to the Maverick Family! We at Maverick
-                adhere to the timeless ideas of wellbeing and health. Our goal
-                is to make sure that everyone puts their health first and
-                aspires to achievement, progress, and prosperity. According to
-                the Atharva Veda, success is largely dependent on one’s state of
-                health.
+                Welcome to MAVERICK family. Let's start our journey together.
               </p>
 
               <p>
-                As an important part of the Maverick family, you will have the
-                chance to grow financially for the rest of your life by
-                endorsing and utilizing our premium health and wellness
-                supplements.
+                <strong className="text-[18px]">
+                  Dear Mr. / Mrs. {user?.user_name},
+                </strong>
+              </p>
+
+              <p>
+                Congratulations, we extend our warm welcome to you on behalf of
+                MAVERICK Resources Private Limited. We appreciate your
+                discretion to be with us and it is a pleasure to have you with
+                us in transforming lives of our acquaintances and grow together.
               </p>
 
               <p className="text-[16px] font-semibold text-black">
-                Our Commitment to Quality :
+                Your associate Login details are as shown below:
               </p>
 
               <p>
-                Maverick is well known for manufacturing Health & Wellness
-                Products that are safe, effective, and up to international
-                standards.
-              </p>
-
-              <p>We are pleased to own a number of quality certificates:</p>
-
-              <p>
-                • ISO 9001:2015/HACCP <br />
-                • HALAL <br />
-                • KOSHER <br />
-                • FSSAI <br />• 100% Organic Certified Products
-              </p>
-
-              <p className="text-[16px] font-semibold text-black">
-                Unique Business Opportunity :
+                <strong>Login ID :</strong> {user?.user_id || "xxxxxxxxx"}
+                {"   "}
+                {/* <strong>Password :</strong> {user?.password || "xxxxxxxx"} */}
               </p>
 
               <p>
-                Maverick offers a rewarding compensation plan that ensures
-                significantly higher returns for our associates.
-              </p>
-
-              <p className="text-[16px] font-semibold text-black">
-                Support and Feedback :
-              </p>
-
-              <p>
-                We assure you that you are in capable hands and encourage you to
-                reach out to Maverick leadership for support anytime.
+                As has already been manifested to you the benefits and
+                privileges of being with MAVERICK, to add to that, we also
+                render and strive to create a perfect environment for achieving
+                your set goals. We understand that you have an innovative way of
+                stroking energies for the better future and enthusiastic in
+                building the same.
               </p>
 
               <p>
-                For queries, call <strong>18002965586</strong> or email{" "}
-                <strong>dcs@maverick.com</strong>.
+                Commitment, Involvement and Perseverance, the three
+                pre-requisites to become eligible for every success. Attaining
+                & putting these traits into practice is easy here with the
+                support rendered by MAVERICK through MAVERICK Nexus & your
+                success is assured.
               </p>
 
               <p>
-                Wish You Success!
+                WITH BEST WISHES,
                 <br />
-                <strong>Warm Regards!</strong>
+                <strong>MAVERICK</strong>
                 <br />
-                <strong>MAVERICK MANAGEMENT</strong>
+                www.maverickmoney.in
               </p>
 
               <div className="pt-6 border-t border-gray-300">

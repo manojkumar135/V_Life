@@ -1,3 +1,5 @@
+//api/users-operations/helpers.ts
+
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import mongoose from "mongoose";
@@ -82,77 +84,134 @@ const createWelcomeEmailBody = (
           color: #222;
           margin: 0;
           padding: 0;
-          background-color: #f3f3f3;
+          background-color: #eef2f7;
         }
         .container {
           max-width: 600px;
           margin: 0 auto;
-          padding: 20px;
           background-color: #ffffff;
-          border-radius: 8px;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          border-radius: 10px;
+          overflow: hidden;
+          box-shadow: 0 4px 16px rgba(12, 57, 120, 0.12);
         }
         .header {
+          background: linear-gradient(135deg, #0C3978 0%, #106187 60%, #16B8E4 100%);
           text-align: center;
-          padding: 20px 0;
-          border-bottom: 1px solid #e0e0e0;
-          background-color: #ffcc33;
-          border-radius: 8px 8px 0 0;
-          color: #000;
+          padding: 28px 20px 22px;
+        }
+        .header img {
+          max-height: 52px;
+          margin-bottom: 12px;
+          display: block;
+          margin-left: auto;
+          margin-right: auto;
         }
         .header h2 {
           margin: 0;
+          color: #ffffff;
+          font-size: 20px;
+          letter-spacing: 1px;
+        }
+        .header p {
+          margin: 4px 0 0;
+          color: #a8d8f0;
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+        }
+        .body {
+          padding: 28px 30px;
+        }
+        .body p {
+          color: #333;
+          font-size: 14px;
+          margin: 0 0 12px;
+        }
+        .body .greeting {
+          font-size: 15px;
+          font-weight: 600;
+          color: #0C3978;
         }
         .credentials {
-          background-color: #f5f5f5;
-          padding: 20px;
+          background-color: #f0f6ff;
+          border: 1px solid #c8dff4;
+          padding: 18px 20px;
           border-radius: 8px;
-          margin: 20px 0;
+          margin: 18px 0;
         }
         .credential-item {
-          margin: 10px 0;
-          padding: 10px;
+          margin: 8px 0;
+          padding: 10px 14px;
           background-color: #fff;
           border-radius: 6px;
-          border-left: 4px solid #555;
-        }
-        .footer {
-          text-align: center;
-          padding: 15px 0;
-          border-top: 1px solid #e0e0e0;
-          font-size: 12px;
-          color: #777;
+          border-left: 4px solid #16B8E4;
+          font-size: 14px;
+          color: #222;
         }
         .important {
-          color: #ffcc33;
+          color: #16B8E4;
           font-weight: bold;
+        }
+        .notice {
+          background: linear-gradient(135deg, #0C3978, #106187);
+          border-radius: 8px;
+          padding: 12px 16px;
+          margin: 16px 0;
+          color: #fff;
+          font-size: 13.5px;
+        }
+        .notice .important {
+          color: #16B8E4;
+        }
+        .footer {
+          background-color: #0C3978;
+          text-align: center;
+          padding: 16px 20px;
+        }
+        .footer p {
+          margin: 0;
+          font-size: 11px;
+          color: #7aaed4;
         }
       </style>
     </head>
     <body>
       <div class="container">
+
         <div class="header">
+          <img src="public/maverick-logo.png" alt="Maverick Logo" />
           <h2>Welcome to Our Platform!</h2>
+          <p>Where Vision Meets Action</p>
         </div>
-        <p>Hello ${userName},</p>
-        <p>Your account has been successfully created. Here are your login credentials:</p>
-        <div class="credentials">
-          <div class="credential-item">
-            <strong>User ID:</strong> ${userId}
+
+        <div class="body">
+          <p class="greeting">Hello ${userName},</p>
+          <p>Your account has been successfully created. Here are your login credentials:</p>
+
+          <div class="credentials">
+            <div class="credential-item">
+              <strong>User ID:</strong> ${userId}
+            </div>
+            <div class="credential-item">
+              <strong>Contact Number:</strong> ${contact}
+            </div>
+            <div class="credential-item">
+              <strong>Default Password:</strong> ${contact} (your contact number)
+            </div>
           </div>
-          <div class="credential-item">
-            <strong>Contact Number:</strong> ${contact}
+
+          <div class="notice">
+            <span class="important">Important:</span> You can use either your User ID or Contact Number to login.
           </div>
-          <div class="credential-item">
-            <strong>Default Password:</strong> ${contact} (your contact number)
-          </div>
+
+          <p>For security reasons, please change your password in the settings section after your first login.</p>
+          <p>If you have any questions, please contact our support team.</p>
         </div>
-        <p><span class="important">Important:</span> You can use either your User ID or Contact Number to login.</p>
-        <p>For security reasons, please change your password in the settings section after your first login.</p>
-        <p>If you have any questions, please contact our support team.</p>
+
         <div class="footer">
           <p>This is an automated message. Please do not reply to this email.</p>
         </div>
+
       </div>
     </body>
     </html>

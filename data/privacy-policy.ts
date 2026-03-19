@@ -1,6 +1,6 @@
 export const PRIVACY_POLICY = `
 
-At, **MAVERICK RESOURCES PVT LTD**, we value the trust you place in us. That’s why we insist upon the highest standards for secure transactions and customer information privacy. Please read the following statement to learn about our information gathering process and dissemination practices.
+At, **MAVERICK SIGNATURE NETWORK PVT. LTD.**, we value the trust you place in us. That's why we insist upon the highest standards for secure transactions and customer information privacy. Please read the following statement to learn about our information gathering process and dissemination practices.
 
 **Note:** Our Privacy Policy is subject to change at any time without notice. To make sure you are aware of the changes, please keep visiting this page.
 
@@ -18,7 +18,7 @@ This allows us to provide services and features that meet your needs, and to cus
 
 In general, you can browse the Website without telling us who you are or revealing any personal information about yourself. Once you provide us your personal information, you are not anonymous to us.
 
-We may automatically track certain information about you based on your behaviour on our Website. This information is used for internal research on our users’ demographics, interests and behaviour to better understand, protect and serve users. This information is compiled and analysed on an aggregate basis.
+We may automatically track certain information about you based on your behaviour on our Website. This information is used for internal research on our users' demographics, interests and behaviour to better understand, protect and serve users. This information is compiled and analysed on an aggregate basis.
 
 This information may include:
 - The URL you came from or visit next
@@ -77,10 +77,9 @@ If we decide to change our Privacy Policy, we will post those changes on this pa
 
 If you have any questions about this Privacy Statement, the practices of this Website, or your dealings with this Website, you can contact:
 
-**MAVERICK Resources Pvt Ltd**  
-#8/165-111/C, Lakeview Road, 1st Lane,  
-Rajeevnagar, Ongole – 523002, Andhra Pradesh, India  
-Website: www.mymaverick.com  
-Email: support@mymaverick.com
+**Maverick Signature Network Pvt. Ltd.**  
+# 14‑681, Kanuru, NTR Dt., Andhra Pradesh‑520007  
+Website: www.maverickmoney.in  
+Email: mavericksignaturenetwork@gmail.com
 
 `;

@@ -4,7 +4,7 @@ The Authentic way you step into Business, please read the following terms and co
 
 By subscribing to or using any of our services you agree that you have read, understood, and are bound by the Terms, regardless of how you subscribe to or use the services. If you do not want to be bound by the Terms, you must not subscribe to or use our services. 
 
-In these Terms, references to "you", "User" shall mean the end user accessing the Website, its contents and using the Services offered through the Website, "Service Providers" mean independent third-party service providers, and "we", "us" and "our" shall mean MAVERICK Resources Private Limited (here in after referred as 'MAVERICK'), and its affiliates. 
+In these Terms, references to "you", "User" shall mean the end user accessing the Website, its contents and using the Services offered through the Website, "Service Providers" mean independent third-party service providers, and "we", "us" and "our" shall mean MAVERICK Signatue Network Pvt. Ltd. (hereinafter referred as 'MAVERICK'), and its affiliates. 
 
 
 &nbsp;
@@ -12,8 +12,8 @@ In these Terms, references to "you", "User" shall mean the end user accessing th
 
 
 
-a) www.mymaverick.com website ("Website") is an Internet based content and e-commerce portal owned and operated by MAVERICK Resources Private Limited; a company incorporated under the laws of India.  
-b) Use of the Website is offered to you conditioned on acceptance without modification of all the terms, conditions and notices contained in these Terms, as may be posted on the Website from time to time. www.mymaverick.com at its sole discretion reserves the right not to accept a user from registering on the website without assigning any reason thereof. 
+a) www.maverickmoney.in website ("Website") is an Internet based content and e-commerce portal owned and operated by MAVERICK Resources Private Limited; a company incorporated under the laws of India.  
+b) Use of the Website is offered to you conditioned on acceptance without modification of all the terms, conditions and notices contained in these Terms, as may be posted on the Website from time to time. www.maverickmoney.in at its sole discretion reserves the right not to accept a user from registering on the website without assigning any reason thereof. 
 
 &nbsp;
 
@@ -22,14 +22,14 @@ b) Use of the Website is offered to you conditioned on acceptance without modifi
 You will receive a password and account designation upon completing the website's registration process. You are responsible for maintaining the confidentiality of the password and account, and are fully responsible for all activities that occur under your password or account.
 
 You agree to  
-a) Immediately notify www.mymaverick.com of any unauthorized use of your password or account or any other breach of security, and  
-b) Ensure that you exit (log out) from your account at the end of each session. www.mymaverick.com cannot and will not be liable for any loss or damage arising from your failure to comply with this section.
+a) Immediately notify maverickmoney.in of any unauthorized use of your password or account or any other breach of security, and  
+b) Ensure that you exit (log out) from your account at the end of each session. maverickmoney.in cannot and will not be liable for any loss or damage arising from your failure to comply with this section.
 
 &nbsp;
 
 ## **Services Offered**
 
-www.mymaverick.com provides several Internet-based services through the Website (all such services, collectively, the "Service"). One such service enables users to purchase products of MAVERICK such as Health care, Personal care products, food & beverages, Homecare, Lifestyle products, skin care products & Electronic Products, etc., (collectively, "Products"). Upon placing order, MAVERICK or its designated allies shall ship the product to you and be entitled to its payment for the Services. 
+www.maverickmoney.in provides several Internet-based services through the Website (all such services, collectively, the "Service"). One such service enables users to purchase products of MAVERICK such as Health care, Personal care products, food & beverages, Homecare, Lifestyle products, skin care products & Electronic Products, etc., (collectively, "Products"). Upon placing order, MAVERICK or its designated allies shall ship the product to you and be entitled to its payment for the Services. 
 
 &nbsp;
 
@@ -108,7 +108,7 @@ a) The use or the inability to use the services;
 b) Unauthorized access to or alteration of the user's transmissions or data;  
 c) Any other matter relating to the services; including, without limitation, damages for loss of use, data or profits, arising out of or in any way connected with the use or performance of the website or service. 
 
-Neither shall MAVERICK be responsible for the delay or inability to use the website or related services, the provision of or failure to provide services, or for any information, software, products, services, and related graphics obtained through the website, or otherwise arising out of the use of the website, whether based on contract, tort, negligence, strict liability or otherwise. Further, MAVERICK shall not be held responsible for non-availability of the website during periodic maintenance operations or any unplanned suspension of access to the website that may occur due to technical reasons or for any reason beyond MAVERICK’s control.
+Neither shall MAVERICK be responsible for the delay or inability to use the website or related services, the provision of or failure to provide services, or for any information, software, products, services, and related graphics obtained through the website, or otherwise arising out of the use of the website, whether based on contract, tort, negligence, strict liability or otherwise. Further, MAVERICK shall not be held responsible for non-availability of the website during periodic maintenance operations or any unplanned suspension of access to the website that may occur due to technical reasons or for any reason beyond MAVERICK's control.
 
 The user understands and agrees that any material and/or data downloaded or otherwise obtained through the website is done entirely at their own discretion and risk and they will be solely responsible for any damage to their computer systems or loss of data that results from the download of such material and/or data.
 
@@ -122,7 +122,7 @@ You agree to indemnify, defend and hold harmless MAVERICK from and against any a
 
 ## **Pricing**
 
-Prices for products are described on our Website and are incorporated into these Terms by reference. All prices are in Indian rupees. **Prices, products and Services and Promotional Offers may change at MAVERICK’s discretion.**
+Prices for products are described on our Website and are incorporated into these Terms by reference. All prices are in Indian rupees. **Prices, products and Services and Promotional Offers may change at MAVERICK's discretion.**
 
 &nbsp;
 
@@ -164,5 +164,5 @@ As per these Terms, users are solely responsible for every material or content u
 
 Users can be held legally liable for their contents and may be held legally accountable if their contents or material include, for example, defamatory comments or material protected by copyright, trademark, etc.
 
-If you come across any abuse or violation of these Terms, please report to **support@mymaverick.com**
+If you come across any abuse or violation of these Terms, please report to **support@maverickmoney.in**
 `;

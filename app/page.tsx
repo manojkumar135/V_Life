@@ -168,7 +168,7 @@ const MaverickHome = () => {
       category: "Technology",
       desc: "Next-gen mobile devices packed with performance and style.",
       downloadLabel: "Download Brochure",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760763474/ionizers_khpjpn.jpg",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911135/Maverick_360_heusla.png",
     },
     {
       name: "Electronics",
@@ -176,7 +176,7 @@ const MaverickHome = () => {
       category: "Electronics",
       desc: "Smart home and lifestyle electronics for modern living.",
       downloadLabel: "Download Catalogue",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760075754/DAB-E-electric-bike-1-1_ikf7xa.jpg",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911137/Vita_Fusion_q4ccpm.png",
     },
     {
       name: "EV Bike",
@@ -184,7 +184,7 @@ const MaverickHome = () => {
       category: "Transport",
       desc: "Zero-emission electric bikes for sustainable commuting.",
       downloadLabel: "Download Spec Sheet",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1760075763/S500926465_1_qzukvk.webp",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911174/360_Combo_vdm2du.png",
     },
     {
       name: "Ionizer",
@@ -192,7 +192,7 @@ const MaverickHome = () => {
       category: "Wellness",
       desc: "Advanced air ionizers for a cleaner, healthier environment.",
       downloadLabel: "Download Guide",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1756102475/vlife_sample_product_djlcgg.avif",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911157/Ionizer_qitnhj.png",
     },
     {
       name: "Health Kit",
@@ -200,7 +200,7 @@ const MaverickHome = () => {
       category: "Health",
       desc: "Comprehensive health kits for daily wellness routines.",
       downloadLabel: "Download Health Guide",
-      img: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1729073816/cld-sample-4.jpg",
+      img: "https://res.cloudinary.com/df2vugog5/image/upload/v1773911150/Lipo_Fusion_ogvbfs.png",
     },
   ];
 
@@ -958,13 +958,14 @@ const MaverickHome = () => {
                 Who We Are
               </h3>
               <p className="text-gray-600 leading-relaxed text-sm mb-3">
-                We are an emerging Direct Selling company on a mission to
-                manifest{" "}
-                <span className="font-bold text-[#0C3978]">
-                  THE WAY TO HAPPINESS
-                </span>{" "}
-                — helping people achieve balance, freedom, financial abundance,
-                and fulfillment.
+                We are an emerging Direct Selling company on a Mission to
+                manifest Where Vision Meets Action by helping people reach new
+                levels of balance, freedom, financial abundance and fulfillment
+                through promotion of our result oriented, premium products and
+                opportunity. We believe in empowering our associates with
+                uniquely blended super hybrid opportunity program so that they
+                can live their life on their own terms. Be assured that you will
+                grow with MAVERICK.
               </p>
               <p className="text-gray-600 leading-relaxed text-sm">
                 At <span className="font-bold text-[#16B8E4]">Maverick</span>,
@@ -984,13 +985,15 @@ const MaverickHome = () => {
                 <FaRocket />
               </div>
               <h3 className="text-xl sm:text-2xl font-extrabold text-white mb-3 sm:mb-4">
-                Resources, Innovation & Future
+                RESOURCES, INNOVATION & SHAPING FUTURE{" "}
               </h3>
               <p className="text-white/70 leading-relaxed text-sm mb-4">
                 <span className="text-yellow-400 font-semibold">Maverick</span>{" "}
-                is committed to setting market-leading benchmarks through
-                innovation. Every product is backed by science, feasibility, and
-                results.
+                 is all set to set the benchmark for the market to test themselves and try to touch.
+                  This is only possible when the resources are merged with innovation to offer
+                   a superior hybrid opportunity through which the associates shape their future.
+                    Instead of claims, at MAVERICK, result orientation is at top priority while
+                     introducing any products and it is backed up by science.
               </p>
               <p className="text-white/55 text-xs sm:text-sm mb-3 sm:mb-4">
                 Our Quad-Core Plan is:
