@@ -1332,7 +1332,7 @@ const MaverickHome = () => {
                 <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center shrink-0">
                   <FaPhoneAlt className="text-[#16B8E4] text-xs" />
                 </div>
-                +1 (009) 544-7818
+                
               </a>
             </motion.div>
           </motion.div>

@@ -346,7 +346,7 @@ const DashboardPage: React.FC = () => {
             <div
               className="bg-white rounded-2xl shadow-md border-[1.5px] border-gray-300 relative overflow-hidden"
               style={{
-                backgroundImage: "url('/profilebg.png')",
+                backgroundImage: "url('/profilebgnew.png')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
@@ -626,7 +626,7 @@ const DashboardPage: React.FC = () => {
                 MY BUSINESS SUMMARY
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-2 gap-4 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaRupeeSign />}

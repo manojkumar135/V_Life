@@ -58,6 +58,7 @@ async function getLast15DaysEligiblePayouts() {
   console.log(
     `[Infinity Bonus] Found ${filtered.length} payouts (Matching + Direct Sales) in last 15 days`,
   );
+  // console.log(filtered,"infiniserhetet")
   return filtered;
 }
 

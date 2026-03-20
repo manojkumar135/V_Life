@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { boolean } from "yup";
 
 const payoutSchema = new mongoose.Schema({
   transaction_id: { type: String },

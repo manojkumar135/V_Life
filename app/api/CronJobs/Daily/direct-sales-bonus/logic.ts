@@ -12,7 +12,10 @@ import { addRewardScore } from "@/services/updateRewardScore";
 import { Alert } from "@/models/alert";
 
 import { getTotalPayout } from "@/services/totalpayout";
-import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
+import {
+  evaluateAndUpdateHoldStatus,
+  currentMonth,
+} from "@/services/monthlyHoldService";
 import { updateClub } from "@/services/clubrank";
 import { determineHoldReasons } from "@/services/payoutHoldService";
 
@@ -23,8 +26,8 @@ import { releaseReferralBonus } from "./referralBonus";
 /* ------------------------------------------------------------------ */
 
 function formatDate(date: Date): string {
-  const dd   = String(date.getDate()).padStart(2, "0");
-  const mm   = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
   return `${dd}-${mm}-${yyyy}`;
 }
@@ -38,25 +41,25 @@ const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // 330 min in ms
 export function getCurrentWindowIST(): { startUTC: Date; endUTC: Date } {
   const nowIST = new Date(Date.now() + IST_OFFSET_MS);
 
-  const year  = nowIST.getUTCFullYear();
+  const year = nowIST.getUTCFullYear();
   const month = nowIST.getUTCMonth();
-  const date  = nowIST.getUTCDate();
+  const date = nowIST.getUTCDate();
   const hours = nowIST.getUTCHours(); // IST hour 0-23
 
   let startIST_wall: number;
   let endIST_wall: number;
 
   if (hours < 12) {
-    startIST_wall = Date.UTC(year, month, date,  0,  0,  0,   0);
-    endIST_wall   = Date.UTC(year, month, date, 11, 59, 59, 999);
+    startIST_wall = Date.UTC(year, month, date, 0, 0, 0, 0);
+    endIST_wall = Date.UTC(year, month, date, 11, 59, 59, 999);
   } else {
-    startIST_wall = Date.UTC(year, month, date, 12,  0,  0,   0);
-    endIST_wall   = Date.UTC(year, month, date, 23, 59, 59, 999);
+    startIST_wall = Date.UTC(year, month, date, 12, 0, 0, 0);
+    endIST_wall = Date.UTC(year, month, date, 23, 59, 59, 999);
   }
 
   return {
     startUTC: new Date(startIST_wall - IST_OFFSET_MS),
-    endUTC:   new Date(endIST_wall   - IST_OFFSET_MS),
+    endUTC: new Date(endIST_wall - IST_OFFSET_MS),
   };
 }
 
@@ -68,8 +71,8 @@ export function orderToUTCDate(order: any): Date {
   const [day, month, year] = order.payment_date.split("-").map(Number);
 
   let timeStr = order.payment_time.trim();
-  const isPM  = /pm/i.test(timeStr);
-  const isAM  = /am/i.test(timeStr);
+  const isPM = /pm/i.test(timeStr);
+  const isAM = /am/i.test(timeStr);
 
   timeStr = timeStr.replace(/am|pm/i, "").trim();
   let [hours, minutes, seconds] = timeStr.split(":").map(Number);
@@ -113,11 +116,11 @@ export async function getAdvanceHistoryInWindow() {
   const { startUTC, endUTC } = getCurrentWindowIST();
 
   const histories = await History.find({
-    advance:           true,
-    first_payment:     true,
-    transaction_type:  "Debit",
+    advance: true,
+    first_payment: true,
+    transaction_type: "Debit",
     isReferralChecked: { $ne: true },
-    created_at:        { $gte: startUTC, $lte: endUTC },
+    created_at: { $gte: startUTC, $lte: endUTC },
   }).lean();
 
   return histories;
@@ -169,7 +172,7 @@ async function processAdvanceReferral(): Promise<number> {
       if (!sponsorId) {
         await History.updateOne(
           { transaction_id: advance.transaction_id },
-          { $set: { isReferralChecked: true } }
+          { $set: { isReferralChecked: true } },
         );
         continue;
       }
@@ -178,7 +181,7 @@ async function processAdvanceReferral(): Promise<number> {
       if (!node || node.status !== "active") {
         await History.updateOne(
           { transaction_id: advance.transaction_id },
-          { $set: { isReferralChecked: true } }
+          { $set: { isReferralChecked: true } },
         );
         continue;
       }
@@ -186,10 +189,12 @@ async function processAdvanceReferral(): Promise<number> {
       // ✅ Use robust check before releasing
       const alreadyPaid = await isReferralAlreadyPaid(advance.transaction_id);
       if (alreadyPaid) {
-        console.log(`⚠️ Referral bonus already paid for advance ${advance.transaction_id}, skipping.`);
+        console.log(
+          `⚠️ Referral bonus already paid for advance ${advance.transaction_id}, skipping.`,
+        );
         await History.updateOne(
           { transaction_id: advance.transaction_id },
-          { $set: { isReferralChecked: true } }
+          { $set: { isReferralChecked: true } },
         );
         continue;
       }
@@ -204,7 +209,7 @@ async function processAdvanceReferral(): Promise<number> {
 
       await History.updateOne(
         { transaction_id: advance.transaction_id },
-        { $set: { isReferralChecked: true } }
+        { $set: { isReferralChecked: true } },
       );
     } catch (err) {
       console.error("Advance referral error:", err);
@@ -224,7 +229,7 @@ export async function runDirectSalesBonus(): Promise<{
 }> {
   try {
     const orders = await getOrdersInWindow();
-    let totalPayouts       = 0;
+    let totalPayouts = 0;
     let referralBonusCount = 0;
 
     // ✅ In-memory set to prevent duplicate referral bonuses within this run
@@ -234,14 +239,16 @@ export async function runDirectSalesBonus(): Promise<{
     for (const order of orders) {
       try {
         /* ── Resolve sponsor: always User.referBy of the buyer ─────── */
-        const buyer = (await User.findOne({ user_id: order.user_id }).lean()) as any;
+        const buyer = (await User.findOne({
+          user_id: order.user_id,
+        }).lean()) as any;
         const referBy = buyer?.referBy;
 
         /* ── No referrer → mark checked and skip ─────────────────── */
         if (!referBy) {
           await Order.updateOne(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true } }
+            { $set: { direct_bonus_checked: true } },
           );
           continue;
         }
@@ -250,7 +257,7 @@ export async function runDirectSalesBonus(): Promise<{
         if (!node || node.status !== "active") {
           await Order.updateOne(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true } }
+            { $set: { direct_bonus_checked: true } },
           );
           continue;
         }
@@ -260,13 +267,14 @@ export async function runDirectSalesBonus(): Promise<{
         /* ---------------------------------------------------------- */
 
         if (order.is_first_order === true) {
-
           // ✅ GUARD 1 — In-memory: already processed this order in this run
           if (referralProcessedThisRun.has(order.order_id)) {
-            console.log(`⚠️ [In-Memory] Referral bonus already processed this run for order ${order.order_id}`);
+            console.log(
+              `⚠️ [In-Memory] Referral bonus already processed this run for order ${order.order_id}`,
+            );
             await Order.updateOne(
               { order_id: order.order_id },
-              { $set: { direct_bonus_checked: true } }
+              { $set: { direct_bonus_checked: true } },
             );
             continue;
           }
@@ -280,18 +288,20 @@ export async function runDirectSalesBonus(): Promise<{
 
             await releaseReferralBonus({
               sponsorId: referBy,
-              buyerId:   order.user_id,
-              orderId:   order.order_id,
+              buyerId: order.user_id,
+              orderId: order.order_id,
             });
 
             referralBonusCount++;
           } else {
-            console.log(`⚠️ [DB] Referral bonus already paid for order ${order.order_id}, skipping.`);
+            console.log(
+              `⚠️ [DB] Referral bonus already paid for order ${order.order_id}, skipping.`,
+            );
           }
 
           await Order.updateOne(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true } }
+            { $set: { direct_bonus_checked: true } },
           );
 
           continue;
@@ -307,19 +317,21 @@ export async function runDirectSalesBonus(): Promise<{
         if (orderBV <= 0) {
           await Order.updateOne(
             { order_id: order.order_id },
-            { $set: { direct_bonus_checked: true } }
+            { $set: { direct_bonus_checked: true } },
           );
           continue;
         }
 
         const totalAmount = Number(orderBV.toFixed(2));
 
-        const now           = new Date();
-        const payout_id     = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
+        const now = new Date();
+        const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
         const formattedDate = formatDate(now);
 
         // ✅ FIX: fetch full wallet object (was already fetched as lean — keep lean for reads)
-        const wallet = (await Wallet.findOne({ user_id: referBy }).lean()) as any;
+        const wallet = (await Wallet.findOne({
+          user_id: referBy,
+        }).lean()) as any;
 
         // ── Determine payout status ──────────────────────────────────────
         //
@@ -344,52 +356,54 @@ export async function runDirectSalesBonus(): Promise<{
         const payoutStatus: "Pending" | "OnHold" | "Completed" = hold.status;
 
         /* ── Amount splits ────────────────────────────────────────── */
-        const panVerified    = !!wallet?.pan_verified;
-        const withdrawAmount = panVerified ? totalAmount * 0.80 : totalAmount * 0.62;
-        const rewardAmount   = totalAmount * 0.08;
-        const tdsAmount      = panVerified ? totalAmount * 0.02 : totalAmount * 0.20;
-        const adminCharge    = totalAmount * 0.10;
+        const panVerified = !!wallet?.pan_verified;
+        const withdrawAmount = panVerified
+          ? totalAmount * 0.8
+          : totalAmount * 0.62;
+        const rewardAmount = totalAmount * 0.08;
+        const tdsAmount = panVerified ? totalAmount * 0.02 : totalAmount * 0.2;
+        const adminCharge = totalAmount * 0.1;
 
         /* ── Create payout record ─────────────────────────────────── */
         const payout = await DailyPayout.create({
-          transaction_id:   payout_id,
+          transaction_id: payout_id,
           payout_id,
 
           // ✅ FIX: wallet & user identity fields — mirrors releaseReferralBonus
-          user_id:          referBy,
-          user_name:        node?.name    || "",
-          contact:          node?.contact || "",
-          mail:             node?.mail    || "",
-          user_status:      node?.status  || "",
-          wallet_id:        wallet?.wallet_id        ?? undefined,
-          rank:             wallet?.rank             ?? undefined,
-          pan_verified:     panVerified,
+          user_id: referBy,
+          user_name: node?.name || "",
+          contact: node?.contact || "",
+          mail: node?.mail || "",
+          user_status: node?.status || "",
+          wallet_id: wallet?.wallet_id ?? undefined,
+          rank: wallet?.rank ?? undefined,
+          pan_verified: panVerified,
 
-          amount:           totalAmount,
-          totalamount:      totalAmount,
-          withdraw_amount:  withdrawAmount,
-          reward_amount:    rewardAmount,
-          tds_amount:       tdsAmount,
-          admin_charge:     adminCharge,
+          amount: totalAmount,
+          totalamount: totalAmount,
+          withdraw_amount: withdrawAmount,
+          reward_amount: rewardAmount,
+          tds_amount: tdsAmount,
+          admin_charge: adminCharge,
 
-          order_id:         order.order_id,
-          to:               referBy,
-          from:             order.user_id,
+          order_id: order.order_id,
+          to: referBy,
+          from: order.user_id,
 
-          status:           payoutStatus,
-          date:             formattedDate,
-          time:             now.toTimeString().slice(0, 5),
+          status: payoutStatus,
+          date: formattedDate,
+          time: now.toTimeString().slice(0, 5),
           transaction_type: "Credit",
-          name:             "Direct Sales Bonus",
-          title:            "Direct Sales Bonus",
-
+          name: "Direct Sales Bonus",
+          title: "Direct Sales Bonus",
+          details: `Direct Sales Bonus from ${order.user_id}`,
           // ✅ Hold metadata — so admin knows WHY payout is OnHold
-          hold_reasons:        hold.reasons,
-          hold_reason_labels:  hold.labels,
+          hold_reasons: hold.reasons,
+          hold_reason_labels: hold.labels,
           hold_release_reason: hold.summary,
 
-          created_by:       "system",
-          created_at:       now,
+          created_by: "system",
+          created_at: now,
           last_modified_by: "system",
           last_modified_at: now,
         });
@@ -399,60 +413,64 @@ export async function runDirectSalesBonus(): Promise<{
 
           /* ── Mirror into History ────────────────────────────────── */
           await History.create({
-            transaction_id:   payout.transaction_id,
-            payout_id:        payout.payout_id,
-            wallet_id:        payout.wallet_id,
-            user_id:          referBy,
-            user_name:        node?.name || "",
-            order_id:         payout.order_id,
-            to:               payout.to,
-            from:             payout.from,
-            amount:           payout.amount,
-            total_amount:     payout.amount,
-            withdraw_amount:  payout.withdraw_amount,
-            reward_amount:    payout.reward_amount,
-            tds_amount:       payout.tds_amount,
-            admin_charge:     payout.admin_charge,
-            status:           payout.status,
-            date:             payout.date,
-            time:             payout.time,
-            name:             "Direct Sales Bonus",
-            title:            "Direct Sales Bonus",
+            transaction_id: payout.transaction_id,
+            payout_id: payout.payout_id,
+            wallet_id: payout.wallet_id,
+            user_id: referBy,
+            user_name: node?.name || "",
+            order_id: payout.order_id,
+            to: payout.to,
+            from: payout.from,
+            amount: payout.amount,
+            total_amount: payout.amount,
+            withdraw_amount: payout.withdraw_amount,
+            reward_amount: payout.reward_amount,
+            tds_amount: payout.tds_amount,
+            admin_charge: payout.admin_charge,
+            status: payout.status,
+            date: payout.date,
+            time: payout.time,
+            name: "Direct Sales Bonus",
+            title: "Direct Sales Bonus",
             transaction_type: "Credit",
-            created_by:       "system",
-            created_at:       now,
+            created_by: "system",
+            details: payout.details,
+            created_at: now,
             last_modified_at: now,
           });
 
           await addRewardScore({
-            user_id:      referBy,
-            points:       rewardAmount,
-            source:       "direct_sales_bonus",
+            user_id: referBy,
+            points: rewardAmount,
+            source: "direct_sales_bonus",
             reference_id: order.order_id,
-            type:         "daily",
+            type: "daily",
           });
 
           await updateClub(referBy, totalAmount);
 
           if (payoutStatus === "OnHold") {
             await Alert.create({
-              role:        "user",
-              user_id:     referBy,
-              title:       "Direct Sales Bonus On Hold",
+              role: "user",
+              user_id: referBy,
+              title: "Direct Sales Bonus On Hold",
               description: `Your Direct Sales Bonus of ₹${totalAmount.toFixed(2)} is on hold. ${hold.labels.length > 0 ? `Reason: ${hold.labels.join(", ")}.` : "Please complete your KYC / bank details to release it."}`,
-              priority:    "medium",
-              date:        formattedDate,
-              created_at:  now,
+              priority: "medium",
+              date: formattedDate,
+              created_at: now,
             });
           }
         }
 
         await Order.updateOne(
           { order_id: order.order_id },
-          { $set: { direct_bonus_checked: true } }
+          { $set: { direct_bonus_checked: true } },
         );
       } catch (errInner) {
-        console.error(`[Direct Sales Bonus] Order ${order.order_id} error:`, errInner);
+        console.error(
+          `[Direct Sales Bonus] Order ${order.order_id} error:`,
+          errInner,
+        );
       }
     }
 
@@ -465,28 +483,27 @@ export async function runDirectSalesBonus(): Promise<{
 
     if (totalPayouts > 0) {
       await Alert.create({
-        role:        "admin",
-        title:       "Direct Sales Bonus Payouts Released",
+        role: "admin",
+        title: "Direct Sales Bonus Payouts Released",
         description: `${totalPayouts} payout(s) processed successfully.`,
-        priority:    "high",
-        date:        formatDate(new Date()),
-        created_at:  new Date(),
+        priority: "high",
+        date: formatDate(new Date()),
+        created_at: new Date(),
       });
     }
 
     if (referralBonusCount > 0) {
       await Alert.create({
-        role:        "admin",
-        title:       "Referral Bonus Payouts Released",
+        role: "admin",
+        title: "Referral Bonus Payouts Released",
         description: `${referralBonusCount} referral bonus payout(s) processed successfully.`,
-        priority:    "high",
-        date:        formatDate(new Date()),
-        created_at:  new Date(),
+        priority: "high",
+        date: formatDate(new Date()),
+        created_at: new Date(),
       });
     }
 
     return { totalPayouts, referralBonusCount };
-
   } catch (err) {
     console.error("[Direct Sales Bonus] Fatal error:", err);
     throw err;

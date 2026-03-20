@@ -8,7 +8,10 @@ import { Order } from "@/models/order";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { Alert } from "@/models/alert";
 import { getTotalPayout } from "@/services/totalpayout";
-import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
+import {
+  evaluateAndUpdateHoldStatus,
+  currentMonth,
+} from "@/services/monthlyHoldService";
 import { updateClub } from "@/services/clubrank";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { determineHoldReasons } from "@/services/payoutHoldService";
@@ -200,7 +203,9 @@ export async function getUserTeamsAndHistories() {
   console.log(
     `[Matching Bonus] UTC window: ${start.toISOString()} - ${end.toISOString()}`,
   );
-  console.log(`[Matching Bonus] historiesInWindow count: ${historiesInWindow.length}`);
+  console.log(
+    `[Matching Bonus] historiesInWindow count: ${historiesInWindow.length}`,
+  );
 
   const treeNodes = (await TreeNode.find({}).lean()) as any[];
   const allNodesMap = new Map<string, any>(
@@ -220,8 +225,16 @@ export async function getUserTeamsAndHistories() {
   }> = [];
 
   for (const node of treeNodes) {
-    const leftTeamIds = getTeamUserIdsFromMap(allNodesMap, node.user_id, "left");
-    const rightTeamIds = getTeamUserIdsFromMap(allNodesMap, node.user_id, "right");
+    const leftTeamIds = getTeamUserIdsFromMap(
+      allNodesMap,
+      node.user_id,
+      "left",
+    );
+    const rightTeamIds = getTeamUserIdsFromMap(
+      allNodesMap,
+      node.user_id,
+      "right",
+    );
 
     const leftHistories = historiesInWindow.filter((h) =>
       leftTeamIds.includes(h.user_id),
@@ -302,7 +315,9 @@ export async function runMatchingBonus() {
       const match = effectiveLeftPV >= 100 && effectiveRightPV >= 100;
       if (!match) continue;
 
-      const node = (await TreeNode.findOne({ user_id: u.user_id }).lean()) as any;
+      const node = (await TreeNode.findOne({
+        user_id: u.user_id,
+      }).lean()) as any;
       if (!node || node.status !== "active") continue;
 
       const firstOrder = await checkFirstOrder(u.user_id);
@@ -311,7 +326,9 @@ export async function runMatchingBonus() {
       // ✅ GUARD 1 — In-Memory: prevents double payout within this run
       // ─────────────────────────────────────────────────────────────
       if (processedThisRun.has(u.user_id)) {
-        console.log(`⚠️ [In-Memory Guard] Matching Bonus already processed this run for ${u.user_id}, skipping.`);
+        console.log(
+          `⚠️ [In-Memory Guard] Matching Bonus already processed this run for ${u.user_id}, skipping.`,
+        );
         continue;
       }
 
@@ -328,7 +345,9 @@ export async function runMatchingBonus() {
       }).lean();
 
       if (alreadyPaid) {
-        console.log(`⚠️ [DB Guard] Matching Bonus already exists today for ${u.user_id}, skipping.`);
+        console.log(
+          `⚠️ [DB Guard] Matching Bonus already exists today for ${u.user_id}, skipping.`,
+        );
         // Mark histories as checked so they won't reappear
         const historyIds = [...u.left_histories, ...u.right_histories]
           .map((h: any) => h._id)
@@ -349,8 +368,14 @@ export async function runMatchingBonus() {
       const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
       const formattedDate = formatDate(now);
 
-      const wallet = (await Wallet.findOne({ user_id: u.user_id }).lean()) as any;
+      const wallet = (await Wallet.findOne({
+        user_id: u.user_id,
+      }).lean()) as any;
       const user = (await User.findOne({ user_id: u.user_id }).lean()) as any;
+      const isPanVerified =
+        wallet?.pan_verified === true ||
+        wallet?.pan_verified === "Yes" ||
+        wallet?.pan_verified === "yes";
 
       const walletId = wallet ? wallet.wallet_id : null;
 
@@ -405,7 +430,7 @@ export async function runMatchingBonus() {
         user_name: u.name,
         rank: wallet?.rank,
         wallet_id: walletId,
-        pan_verified: wallet?.pan_verified || false,
+        pan_verified: isPanVerified || false,
         mail: u.mail || "",
         contact: u.contact || "",
         user_status: u.status || "active",
@@ -432,8 +457,8 @@ export async function runMatchingBonus() {
         details: "Daily Matching Bonus",
 
         // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
-        hold_reasons:        hold.reasons,
-        hold_reason_labels:  hold.labels,
+        hold_reasons: hold.reasons,
+        hold_reason_labels: hold.labels,
         hold_release_reason: hold.summary,
 
         left_users: u.left_histories.map((h: any) => ({
@@ -595,7 +620,9 @@ export async function runMatchingBonus() {
         date: formatDate(new Date()),
         created_at: new Date(),
       });
-      console.log(`[Matching Bonus] Admin alert created for ${totalPayouts} payouts`);
+      console.log(
+        `[Matching Bonus] Admin alert created for ${totalPayouts} payouts`,
+      );
     }
   } catch (err) {
     console.error("[Matching Bonus] Error:", err);

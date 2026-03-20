@@ -42,7 +42,7 @@ function mapHistoryToInvoice(record: any, user: any, office: any) {
       ],
 
       total_amount: amount,
-      total_gst: 0,
+      total_gst:714.29,
       final_amount: amount,
 
       reward_used: 0,

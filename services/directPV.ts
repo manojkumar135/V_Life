@@ -16,6 +16,7 @@ export const getDirectPV = async (userId: string) => {
   }
 
   const paidDirectIds: string[] = user.paid_directs ?? [];
+  // console.log(paidDirectIds,"paid directs")
 
   // If no directs
   if (!paidDirectIds.length) {
