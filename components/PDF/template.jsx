@@ -183,7 +183,7 @@ export default function InvoiceTemplate({ data }) {
         <View style={styles.headerBox}>
           <View style={styles.headerLeft}>
             <Image
-              src="https://res.cloudinary.com/dtb4vozhy/image/upload/v1764400245/maverick-logo_sddrui.png"
+              src="https://res.cloudinary.com/df2vugog5/image/upload/v1773936754/maverick-logo_ao66bd.png"
               style={styles.logo}
             />
           </View>

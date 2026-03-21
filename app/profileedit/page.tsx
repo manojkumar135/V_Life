@@ -154,6 +154,18 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
               value.type.startsWith(t),
             )),
       ),
+    bankBook: Yup.mixed<string | File>()
+      .required("* Bank passbook is required")
+      .test(
+        "fileType-bankBook",
+        "* Bank passbook must be an image or PDF",
+        (value) =>
+          typeof value === "string" ||
+          (value instanceof File &&
+            ["image/", "application/pdf"].some((t) =>
+              value.type.startsWith(t),
+            )),
+      ),
   });
 
 /* ---------------- PAGE ---------------- */
@@ -208,6 +220,7 @@ export default function ProfileEditPage() {
     aadharFront: null,
     aadharBack: null,
     cancelledCheque: null,
+    bankBook: null,
   });
 
   useEffect(() => {
@@ -291,11 +304,7 @@ export default function ProfileEditPage() {
   };
 
   // ✅ UPDATED: accepts panName and panDob
-  const verifyPan = async (
-    pan: string,
-    panName?: string,
-    panDob?: string,
-  ) => {
+  const verifyPan = async (pan: string, panName?: string, panDob?: string) => {
     try {
       setPanChecking(true);
       const res = await axios.post("/api/pancheck-operations", {
@@ -371,6 +380,7 @@ export default function ProfileEditPage() {
     aadharFront: null,
     aadharBack: null,
     cancelledCheque: null,
+    bankBook: null,
   };
 
   const searchUser = async (q: string) => {
@@ -392,6 +402,7 @@ export default function ProfileEditPage() {
       }
 
       const u = data.data;
+      console.log(u);
       setUserMeta(u);
 
       const mappedValues = {
@@ -422,9 +433,10 @@ export default function ProfileEditPage() {
         panDob: u.pan_dob || "",
         panFile: u.pan_file || null,
         aadharNumber: u.aadhar_number || "",
-        aadharFront: u.aadhar_file || null,
-        aadharBack: null,
-        cancelledCheque: null,
+        aadharFront: u.aadhar_front || null,
+        aadharBack: u.aadhar_back || null,
+        cancelledCheque: u.cheque || null,
+        bankBook: u.bank_book || null,
       };
 
       setDbValues(mappedValues);
@@ -481,6 +493,9 @@ export default function ProfileEditPage() {
         pan_name: values.panName,
         pan_dob: values.panDob,
         pan_verified: panVerified,
+        bank_book: values.bankBook,
+        aadhar_front: values.aadharFront,
+        aadhar_back: values.aadharBack,
       };
 
       const res = await axios.patch("/api/getuser-operations", {
@@ -672,8 +687,8 @@ export default function ProfileEditPage() {
                       { value: "female", label: "Female" },
                       { value: "others", label: "Others" },
                     ]}
-                    onChange={(e: any) =>
-                      setFieldValue("gender", e.target.value || e.value)
+                    onChange={(option: any) =>
+                      setFieldValue("gender", option?.value || "")
                     }
                     onBlur={handleBlur}
                   />
@@ -756,13 +771,15 @@ export default function ProfileEditPage() {
                             onClick={handleGeneratePasskey}
                             disabled={passkeyGenerating || passkeyLoading}
                             title="Generate new passkey"
-                            className="h-[38px] px-3 rounded-lg bg-[#106187] text-white
+                            className="h-9.5 px-3 rounded-lg bg-[#106187] text-white
                               hover:bg-[#0e5676] transition flex items-center gap-1.5
                               text-xs font-semibold disabled:opacity-50 whitespace-nowrap shrink-0"
                           >
                             <TbRefresh
                               size={15}
-                              className={passkeyGenerating ? "animate-spin" : ""}
+                              className={
+                                passkeyGenerating ? "animate-spin" : ""
+                              }
                             />
                             {passkeyGenerating ? "Generating..." : "Generate"}
                           </button>
@@ -958,10 +975,20 @@ export default function ProfileEditPage() {
                     onBlur={handleBlur}
                   />
                   <FileInput
+                    label="Bank Passbook"
+                    name="bankBook"
+                    required
+                    value={values.bankBook}
+                    error={touched.bankBook ? (errors as any).bankBook : ""}
+                    onChange={(e) =>
+                      setFieldValue("bankBook", e.currentTarget.files?.[0])
+                    }
+                    onBlur={handleBlur}
+                  />
+                  <FileInput
                     label="Cancelled Cheque"
                     name="cancelledCheque"
                     value={values.cancelledCheque}
-                    required
                     error={
                       touched.cancelledCheque
                         ? (errors as any).cancelledCheque
@@ -992,7 +1019,6 @@ export default function ProfileEditPage() {
                     label="Aadhaar Front"
                     name="aadharFront"
                     value={values.aadharFront}
-                    required
                     error={
                       touched.aadharFront ? (errors as any).aadharFront : ""
                     }
@@ -1004,7 +1030,6 @@ export default function ProfileEditPage() {
                   <FileInput
                     label="Aadhaar Back"
                     name="aadharBack"
-                    required
                     value={values.aadharBack}
                     error={touched.aadharBack ? (errors as any).aadharBack : ""}
                     onChange={(e) =>

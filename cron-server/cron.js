@@ -52,13 +52,13 @@ cron.schedule("59 23 * * *", async () => {
 });
 
 // 12 PM IST
-cron.schedule("0 14 * * *", async () => {
-    await callDailyCron();
-    await callFortnightlyCron();
+// cron.schedule("0 14 * * *", async () => {
+//     await callDailyCron();
+//     await callFortnightlyCron();
 
-}, {
-    timezone: "Asia/Kolkata"
-});
+// }, {
+//     timezone: "Asia/Kolkata"
+// });
 
 
 // 1st & 16th of every month
@@ -69,12 +69,12 @@ cron.schedule("0 14 * * *", async () => {
 // });
 
 
-cron.schedule("55 13 * * *", async () => {
-    // await callDailyCron();
-    console.log("✅ console working ");
-}, {
-    timezone: "Asia/Kolkata"
-});
+// cron.schedule("55 13 * * *", async () => {
+//     // await callDailyCron();
+//     console.log("✅ console working ");
+// }, {
+//     timezone: "Asia/Kolkata"
+// });
 
 
 console.log("✅ Cron scheduler running...");
