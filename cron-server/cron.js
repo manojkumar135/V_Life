@@ -52,7 +52,7 @@ cron.schedule("59 23 * * *", async () => {
 });
 
 // 12 PM IST
-cron.schedule("0 13 * * *", async () => {
+cron.schedule("0 14 * * *", async () => {
     await callDailyCron();
     await callFortnightlyCron();
 
