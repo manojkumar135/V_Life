@@ -69,7 +69,7 @@ cron.schedule("0 14 * * *", async () => {
 // });
 
 
-cron.schedule("43 12 * * *", async () => {
+cron.schedule("55 13 * * *", async () => {
     // await callDailyCron();
     console.log("✅ console working ");
 }, {
