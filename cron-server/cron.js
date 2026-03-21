@@ -34,31 +34,44 @@ async function callFortnightlyCron() {
 }
 
 // 12 AM IST
-cron.schedule("0 0 * * *", async () => {
+cron.schedule("59 11 * * *", async () => {
     await callDailyCron();
+    await callFortnightlyCron();
+
 }, {
     timezone: "Asia/Kolkata"
 });
 
 // 12 PM IST
-cron.schedule("0 12 * * *", async () => {
+cron.schedule("59 23 * * *", async () => {
     await callDailyCron();
+    await callFortnightlyCron();
+
+}, {
+    timezone: "Asia/Kolkata"
+});
+
+// 12 PM IST
+cron.schedule("0 13 * * *", async () => {
+    await callDailyCron();
+    await callFortnightlyCron();
+
 }, {
     timezone: "Asia/Kolkata"
 });
 
 
 // 1st & 16th of every month
-cron.schedule("0 0 1,16 * *", async () => {
-    await callFortnightlyCron();
-}, {
-    timezone: "Asia/Kolkata"
-});
+// cron.schedule("0 0 1,16 * *", async () => {
+//     await callFortnightlyCron();
+// }, {
+//     timezone: "Asia/Kolkata"
+// });
 
 
-cron.schedule("30 11 * * *", async () => {
+cron.schedule("43 12 * * *", async () => {
     // await callDailyCron();
-        console.log("✅ console working ");
+    console.log("✅ console working ");
 }, {
     timezone: "Asia/Kolkata"
 });

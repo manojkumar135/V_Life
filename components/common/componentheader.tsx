@@ -145,7 +145,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
       <div className="flex justify-end items-center flex-wrap gap-2 w-full xl:w-[70%]">
         {/* Search */}
         {setSearch && (
-          <div className="relative flex-1 min-w-[180px] max-w-xs ">
+          <div className="relative flex-1 min-w-45 max-w-xs ">
             <input
               type="text"
               value={localSearch}
