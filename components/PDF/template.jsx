@@ -203,7 +203,12 @@ export default function InvoiceTemplate({ data }) {
 
         <View style={styles.separator} />
 
-        <Text style={[styles.label, { marginTop: 2 }]}>FROM :</Text>
+        <Text style={[styles.label, { marginTop: 2 }]}>FROM :
+          <Text style={{ fontWeight: "normal" }}>
+            {" "}Maverick Signature Network PVT Ltd
+          </Text>
+
+        </Text>
 
         <View style={{ marginLeft: 3 }}>
           {/* Address */}
@@ -224,17 +229,19 @@ export default function InvoiceTemplate({ data }) {
           >
             {/* Email */}
             <Text>
-              • Email: {data.office?.office_email || "—"}
+                           <Text style={{ fontWeight: "bold" }}>Email :</Text>{" "}
+ {data.office?.office_email || "—"}
             </Text>
 
             {/* Phone */}
             <Text>
-              {data.office?.office_contact || office?.phone || "—"}
+               <Text style={{ fontWeight: "bold" }}>Contact :</Text>{" "}{data.office?.office_contact || office?.phone || "—"}
             </Text>
 
             {/* GST */}
             <Text>
-              GSTIN : {data.office?.office_gst_number || "—"}
+              <Text style={{ fontWeight: "bold" }}>GSTIN :</Text>{" "}
+              {data.office?.office_gst_number || "—"}
             </Text>
           </View>
         </View>
@@ -362,7 +369,7 @@ export default function InvoiceTemplate({ data }) {
               )}
 
               {/* Fortnight */}
-              {data.order.reward_usage?.fortnight?.used > 0 && (
+              {(data.order.reward_usage?.daily?.used > 0 || data.order.reward_usage?.fortnight?.used > 0) && (
                 <View style={styles.totalsRow}>
                   <Text >Reward Points</Text>
                   <Text style={styles.deduction}>

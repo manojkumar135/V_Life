@@ -3,7 +3,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
-const API = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+const API = process.env.NEXT_PUBLIC_BASE_URL || "https://maverickmoney.in";
 // console.log(API)
 
 
@@ -56,8 +56,9 @@ cron.schedule("0 0 1,16 * *", async () => {
 });
 
 
-cron.schedule("0 18 * * *", async () => {
-    await callDailyCron();
+cron.schedule("30 11 * * *", async () => {
+    // await callDailyCron();
+        console.log("✅ console working ");
 }, {
     timezone: "Asia/Kolkata"
 });

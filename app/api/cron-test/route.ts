@@ -9,9 +9,9 @@ export async function GET() {
   console.log("============================================");
 
   try {
-    await runMatchingBonus();
-    await runDirectSalesBonus();
-    await runInfinityBonus();
+    // await runMatchingBonus();
+    // await runDirectSalesBonus();
+    // await runInfinityBonus();
 
     console.log("✅ All cron jobs executed manually!");
     console.log("============================================");
