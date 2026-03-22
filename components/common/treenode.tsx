@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import StatusModal from "@/components/common/userStatusModal";
 import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
+import Loader from "@/components/common/loader";
 
 export interface TreeNode {
   user_id: string;
@@ -292,6 +293,12 @@ const BinaryTreeNode: React.FC<Props> = ({
   };
 
   return (
+    <>
+    {loading && (
+  <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <Loader />
+  </div>
+)}
     <div className="flex flex-col items-center relative w-full xl:w-14/15">
       {/* Node */}
       <div
@@ -560,9 +567,12 @@ const BinaryTreeNode: React.FC<Props> = ({
           }
           selectedUser={selectedUser}
           onConfirm={confirmStatusChange}
+          loading={loading}
         />
       )}
     </div>
+    </>
+    
   );
 };
 

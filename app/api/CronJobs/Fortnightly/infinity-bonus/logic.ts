@@ -6,7 +6,10 @@ import { History } from "@/models/history";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { Alert } from "@/models/alert";
 import { getTotalPayout } from "@/services/totalpayout";
-import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
+import {
+  evaluateAndUpdateHoldStatus,
+  currentMonth,
+} from "@/services/monthlyHoldService";
 import { updateClub } from "@/services/clubrank";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { getInfinityBonusPercentage } from "@/services/infinityBonusRules";
@@ -195,7 +198,9 @@ export async function runInfinityBonus() {
       // ✅ Register in-memory BEFORE creating — so next iteration in this run is blocked
       processedThisRun.add(runKey);
 
-      const now = new Date();
+      const istNow = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+      );
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
       const bonusAmount = payout.amount * bonusPercentage;
 
@@ -258,8 +263,8 @@ export async function runInfinityBonus() {
         bank_name: wallet?.bank_name || "",
         account_number: wallet?.account_number || "",
         ifsc_code: wallet?.ifsc_code || "",
-        date: formatDate(now),
-        time: now.toTimeString().slice(0, 5),
+        date: formatDate(istNow),
+        time: istNow.toTimeString().slice(0, 5),
         available_balance: wallet?.balance || 0,
         amount: bonusAmount,
         transaction_type: "Credit",
@@ -275,8 +280,8 @@ export async function runInfinityBonus() {
         to: sponsor.user_id,
 
         // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
-        hold_reasons:        hold.reasons,
-        hold_reason_labels:  hold.labels,
+        hold_reasons: hold.reasons,
+        hold_reason_labels: hold.labels,
         hold_release_reason: hold.summary,
 
         team_users: [
@@ -290,7 +295,7 @@ export async function runInfinityBonus() {
 
         created_by: "system",
         last_modified_by: "system",
-        last_modified_at: now,
+        last_modified_at: istNow,
       });
 
       const totalPayout = await getTotalPayout(sponsor.user_id);
@@ -313,8 +318,8 @@ export async function runInfinityBonus() {
             read: false,
             link: "/dashboards",
             role: "user",
-            date: formatDate(now),
-            created_at: now,
+            date: formatDate(istNow),
+            created_at: istNow,
           });
         }
 
@@ -328,8 +333,8 @@ export async function runInfinityBonus() {
             read: false,
             link: "/dashboards",
             role: "user",
-            date: formatDate(now),
-            created_at: now,
+            date: formatDate(istNow),
+            created_at: istNow,
           });
         }
       }
@@ -367,7 +372,7 @@ export async function runInfinityBonus() {
         ischecked: true,
         created_by: "system",
         last_modified_by: "system",
-        last_modified_at: now,
+        last_modified_at: istNow,
       });
 
       await addRewardScore({
@@ -413,8 +418,8 @@ export async function runInfinityBonus() {
         role: "user",
         priority: "medium",
         read: false,
-        date: formatDate(now),
-        created_at: now,
+        date: formatDate(istNow),
+        created_at: istNow,
       });
 
       totalCreated++;

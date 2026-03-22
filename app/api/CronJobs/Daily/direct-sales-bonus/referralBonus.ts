@@ -41,22 +41,25 @@
 //
 // ──────────────────────────────────────────────────────────────────────────
 
-import { DailyPayout }                 from "@/models/payout";
-import { Wallet }                      from "@/models/wallet";
-import { User }                        from "@/models/user";
-import TreeNode                        from "@/models/tree";
-import { History }                     from "@/models/history";
-import { Alert }                       from "@/models/alert";
-import { addRewardScore }              from "@/services/updateRewardScore";
-import { updateClub }                  from "@/services/clubrank";
-import { generateUniqueCustomId }      from "@/utils/server/customIdGenerator";
-import { getTotalPayout }              from "@/services/totalpayout";
-import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
-import { determineHoldReasons }        from "@/services/payoutHoldService";
+import { DailyPayout } from "@/models/payout";
+import { Wallet } from "@/models/wallet";
+import { User } from "@/models/user";
+import TreeNode from "@/models/tree";
+import { History } from "@/models/history";
+import { Alert } from "@/models/alert";
+import { addRewardScore } from "@/services/updateRewardScore";
+import { updateClub } from "@/services/clubrank";
+import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+import { getTotalPayout } from "@/services/totalpayout";
+import {
+  evaluateAndUpdateHoldStatus,
+  currentMonth,
+} from "@/services/monthlyHoldService";
+import { determineHoldReasons } from "@/services/payoutHoldService";
 
 function formatDate(date: Date): string {
-  const dd   = String(date.getDate()).padStart(2, "0");
-  const mm   = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
   return `${dd}-${mm}-${yyyy}`;
 }
@@ -69,8 +72,8 @@ export async function releaseReferralBonus({
   orderId,
 }: {
   sponsorId: string;
-  buyerId:   string;
-  orderId:   string;
+  buyerId: string;
+  orderId: string;
 }) {
   // ─────────────────────────────────────────────────────────────
   // ✅ INTERNAL DUPLICATE GUARD
@@ -81,8 +84,8 @@ export async function releaseReferralBonus({
   // ─────────────────────────────────────────────────────────────
   const alreadyExists = await DailyPayout.findOne({
     order_id: orderId,
-    user_id:  sponsorId,
-    name:     "Referral Bonus",
+    user_id: sponsorId,
+    name: "Referral Bonus",
   }).lean();
 
   if (alreadyExists) {
@@ -122,31 +125,33 @@ export async function releaseReferralBonus({
   /* ------------------- Amount Split ------------------- */
 
   let withdraw = 0;
-  let reward   = 0;
-  let tds      = 0;
-  let admin    = 0;
+  let reward = 0;
+  let tds = 0;
+  let admin = 0;
 
   if (wallet?.pan_verified) {
-    withdraw = Math.round(REFERRAL_AMOUNT * 0.8);  // 80%
-    reward   = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
-    tds      = Math.round(REFERRAL_AMOUNT * 0.02); // 2%
-    admin    = Math.round(REFERRAL_AMOUNT * 0.1);  // 10%
+    withdraw = Math.round(REFERRAL_AMOUNT * 0.8); // 80%
+    reward = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
+    tds = Math.round(REFERRAL_AMOUNT * 0.02); // 2%
+    admin = Math.round(REFERRAL_AMOUNT * 0.1); // 10%
   } else {
     withdraw = Math.round(REFERRAL_AMOUNT * 0.62); // 62%
-    reward   = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
-    tds      = Math.round(REFERRAL_AMOUNT * 0.2);  // 20%
-    admin    = Math.round(REFERRAL_AMOUNT * 0.1);  // 10%
+    reward = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
+    tds = Math.round(REFERRAL_AMOUNT * 0.2); // 20%
+    admin = Math.round(REFERRAL_AMOUNT * 0.1); // 10%
   }
 
-  const payout_id     = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
-  const now           = new Date();
-  const formattedDate = formatDate(now);
+  const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
+ const istNow = new Date(
+  new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+);
 
+const formattedDate = formatDate(istNow);
   /* ------------------- Detect Type ------------------- */
   const sourceHistory = await History.findOne({
     transaction_id: orderId,
-    advance:        true,
-    first_payment:  true,
+    advance: true,
+    first_payment: true,
   }).lean();
 
   const isAdvance = !!sourceHistory;
@@ -154,124 +159,125 @@ export async function releaseReferralBonus({
   /* ------------------- Create Daily Payout ------------------- */
 
   const payout = await DailyPayout.create({
-    transaction_id:  payout_id,
+    transaction_id: payout_id,
     payout_id,
-    user_id:      sponsorId,
-    user_name:    node.name,
-    contact:      node.contact,
-    mail:         node.mail,
-    user_status:  node.status,
-    wallet_id:    wallet?.wallet_id,
-    rank:         wallet?.rank,
+    user_id: sponsorId,
+    user_name: node.name,
+    contact: node.contact,
+    mail: node.mail,
+    user_status: node.status,
+    wallet_id: wallet?.wallet_id,
+    rank: wallet?.rank,
     pan_verified: wallet?.pan_verified ?? false,
 
-    name:  "Referral Bonus",
+    name: "Referral Bonus",
     title: "Referral Bonus",
-    date:  formattedDate,
-    time:  now.toTimeString().slice(0, 5),
+    date: formattedDate,
+    time: istNow.toTimeString().slice(0, 5),
 
-    amount:          REFERRAL_AMOUNT,
-    totalamount:     REFERRAL_AMOUNT,
+    amount: REFERRAL_AMOUNT,
+    totalamount: REFERRAL_AMOUNT,
     withdraw_amount: withdraw,
-    reward_amount:   reward,
-    tds_amount:      tds,
-    admin_charge:    admin,
+    reward_amount: reward,
+    tds_amount: tds,
+    admin_charge: admin,
 
-    to:               sponsorId,
-    from:             buyerId,
-    order_id:         orderId,
+    to: sponsorId,
+    from: buyerId,
+    order_id: orderId,
     transaction_type: "Credit",
     status,
 
     // ✅ Hold metadata — now correctly populated so admin knows WHY
-    hold_reasons:        hold.reasons,
-    hold_reason_labels:  hold.labels,
+    hold_reasons: hold.reasons,
+    hold_reason_labels: hold.labels,
     hold_release_reason: hold.summary,
 
     details: isAdvance
       ? `Referral Bonus for activation ${buyerId}`
       : `Referral Bonus for first order ${orderId}`,
 
-    created_by:       "system",
+    created_by: "system",
     last_modified_by: "system",
-    last_modified_at: now,
+    last_modified_at: istNow,
   });
 
   /* ------------------- Create History Entry ------------------- */
 
   await History.create({
-    transaction_id:  payout.transaction_id,
-    wallet_id:       payout.wallet_id,
-    user_id:         payout.user_id,
-    user_name:       node.name,
+    transaction_id: payout.transaction_id,
+    wallet_id: payout.wallet_id,
+    user_id: payout.user_id,
+    user_name: node.name,
 
     // ✅ name field added so isReferralAlreadyPaid() can find it
-    name:  "Referral Bonus",
+    name: "Referral Bonus",
     title: "Referral Bonus",
 
     order_id: orderId,
 
     date: formattedDate,
-    time: now.toTimeString().slice(0, 5),
+    time: istNow.toTimeString().slice(0, 5),
 
-    amount:          payout.amount,
-    total_amount:    payout.amount,
+    amount: payout.amount,
+    total_amount: payout.amount,
     withdraw_amount: payout.withdraw_amount,
-    reward_amount:   payout.reward_amount,
-    tds_amount:      payout.tds_amount,
-    admin_charge:    payout.admin_charge,
+    reward_amount: payout.reward_amount,
+    tds_amount: payout.tds_amount,
+    admin_charge: payout.admin_charge,
 
-    to:               payout.to,
-    from:             payout.from,
+    to: payout.to,
+    from: payout.from,
     transaction_type: "Credit",
 
-    status:  payout.status,
+    status: payout.status,
     details: payout.details,
 
-    first_payment: isAdvance ? true  : false,
-    first_order:   isAdvance ? false : true,
-    advance:       isAdvance ? true  : false,
+    first_payment: isAdvance ? true : false,
+    first_order: isAdvance ? false : true,
+    advance: isAdvance ? true : false,
 
-    ischecked:         false,
+    ischecked: false,
     isReferralChecked: true, // 🔥 VERY IMPORTANT — prevents advance referral reprocessing
 
-    created_by:       "system",
+    created_by: "system",
     last_modified_by: "system",
-    last_modified_at: now,
+    created_at: istNow,
+    last_modified_at: istNow,
   });
 
   /* ------------------- Reward Points ------------------- */
 
   await addRewardScore({
-    user_id:      sponsorId,
-    points:       withdraw,
-    source:       "referral_bonus",
+    user_id: sponsorId,
+    points: withdraw,
+    source: "referral_bonus",
     reference_id: orderId,
-    remarks:      payout.details,
-    type:         "referral",
+    remarks: payout.details,
+    type: "referral",
   });
 
   await addRewardScore({
-    user_id:      sponsorId,
-    points:       reward,
-    source:       "referral_bonus",
+    user_id: sponsorId,
+    points: reward,
+    source: "referral_bonus",
     reference_id: orderId,
-    remarks:      `${payout.details} (reward portion)`,
-    type:         "reward",
+    remarks: `${payout.details} (reward portion)`,
+    type: "reward",
   });
 
   /* ------------------- User Alert ------------------- */
 
   await Alert.create({
-    user_id:     sponsorId,
-    title:       "Referral Bonus Earned 🎉",
+    user_id: sponsorId,
+    title: "Referral Bonus Earned 🎉",
     description: `You earned ₹${REFERRAL_AMOUNT} referral bonus.`,
-    role:        "user",
-    priority:    "medium",
-    read:        false,
-    link:        "/wallet/payout/daily",
-    date:        formattedDate,
-    created_at:  now,
+    role: "user",
+    priority: "medium",
+    read: false,
+    link: "/wallet/payout/daily",
+    date: formattedDate,
+    created_at: istNow,
   });
 
   /* ------------------- Club + Rank Update ------------------- */
@@ -287,29 +293,29 @@ export async function releaseReferralBonus({
   if (updatedClub && beforeUser) {
     if (beforeUser.club !== updatedClub.newClub) {
       await Alert.create({
-        user_id:     sponsorId,
-        title:       `🎉 ${updatedClub.newClub} Club Achieved`,
+        user_id: sponsorId,
+        title: `🎉 ${updatedClub.newClub} Club Achieved`,
         description: `Congrats! Welcome to the ${updatedClub.newClub} Club 🎉`,
-        role:        "user",
-        priority:    "high",
-        read:        false,
-        link:        "/dashboards",
-        date:        formattedDate,
-        created_at:  now,
+        role: "user",
+        priority: "high",
+        read: false,
+        link: "/dashboards",
+        date: formattedDate,
+        created_at: istNow,
       });
     }
 
     if (beforeUser.rank !== updatedClub.newRank) {
       await Alert.create({
-        user_id:     sponsorId,
-        title:       `🎖️ ${updatedClub.newRank} Rank Achieved`,
+        user_id: sponsorId,
+        title: `🎖️ ${updatedClub.newRank} Rank Achieved`,
         description: `Congratulations! You achieved ${updatedClub.newRank} rank 🎖️`,
-        role:        "user",
-        priority:    "high",
-        read:        false,
-        link:        "/dashboards",
-        date:        formattedDate,
-        created_at:  now,
+        role: "user",
+        priority: "high",
+        read: false,
+        link: "/dashboards",
+        date: formattedDate,
+        created_at: istNow,
       });
     }
   }

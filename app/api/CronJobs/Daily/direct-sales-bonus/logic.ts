@@ -325,9 +325,15 @@ export async function runDirectSalesBonus(): Promise<{
         const totalAmount = Number(orderBV.toFixed(2));
 
         const now = new Date();
+        const istNow = new Date(
+          new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        );
         const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
-        const formattedDate = formatDate(now);
-
+        const formattedDate = formatDate(
+          new Date(
+            new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+          ),
+        );
         // ✅ FIX: fetch full wallet object (was already fetched as lean — keep lean for reads)
         const wallet = (await Wallet.findOne({
           user_id: referBy,
@@ -392,7 +398,7 @@ export async function runDirectSalesBonus(): Promise<{
 
           status: payoutStatus,
           date: formattedDate,
-          time: now.toTimeString().slice(0, 5),
+          time: istNow.toTimeString().slice(0, 5),
           transaction_type: "Credit",
           name: "Direct Sales Bonus",
           title: "Direct Sales Bonus",
@@ -403,9 +409,9 @@ export async function runDirectSalesBonus(): Promise<{
           hold_release_reason: hold.summary,
 
           created_by: "system",
-          created_at: now,
+          created_at: istNow,
           last_modified_by: "system",
-          last_modified_at: now,
+          last_modified_at: istNow,
         });
 
         if (payout) {
@@ -435,8 +441,8 @@ export async function runDirectSalesBonus(): Promise<{
             transaction_type: "Credit",
             created_by: "system",
             details: payout.details,
-            created_at: now,
-            last_modified_at: now,
+            created_at: istNow,
+            last_modified_at: istNow,
           });
 
           await addRewardScore({
@@ -457,7 +463,7 @@ export async function runDirectSalesBonus(): Promise<{
               description: `Your Direct Sales Bonus of ₹${totalAmount.toFixed(2)} is on hold. ${hold.labels.length > 0 ? `Reason: ${hold.labels.join(", ")}.` : "Please complete your KYC / bank details to release it."}`,
               priority: "medium",
               date: formattedDate,
-              created_at: now,
+              created_at: istNow,
             });
           }
         }

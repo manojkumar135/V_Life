@@ -337,7 +337,11 @@ export async function runMatchingBonus() {
       // Checks DailyPayout for an existing Matching Bonus for this
       // user today (same date string, same window half-day).
       // ─────────────────────────────────────────────────────────────
-      const todayFormatted = formatDate(new Date());
+      const todayFormatted = formatDate(
+        new Date(
+          new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        ),
+      );
       const alreadyPaid = await DailyPayout.findOne({
         user_id: u.user_id,
         name: "Matching Bonus",
@@ -365,9 +369,15 @@ export async function runMatchingBonus() {
       processedThisRun.add(u.user_id);
 
       const now = new Date();
+      const istNow = new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+      );
       const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
-      const formattedDate = formatDate(now);
-
+      const formattedDate = formatDate(
+        new Date(
+          new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+        ),
+      );
       const wallet = (await Wallet.findOne({
         user_id: u.user_id,
       }).lean()) as any;
@@ -442,7 +452,7 @@ export async function runMatchingBonus() {
         account_number: wallet?.account_number || "",
         ifsc_code: wallet?.ifsc_code || "",
         date: formattedDate,
-        time: now.toTimeString().slice(0, 5),
+        time: istNow.toTimeString().slice(0, 5),
         available_balance: wallet?.balance || 0,
         amount: totalAmount,
         totalamount: totalAmount,
@@ -473,7 +483,7 @@ export async function runMatchingBonus() {
         })),
         created_by: "system",
         last_modified_by: "system",
-        last_modified_at: now,
+        last_modified_at: istNow,
       });
 
       const totalPayout = await getTotalPayout(u.user_id);
@@ -497,7 +507,7 @@ export async function runMatchingBonus() {
             link: "/dashboards",
             role: "user",
             date: formattedDate,
-            created_at: now,
+            created_at: istNow,
           });
         }
 
@@ -512,7 +522,7 @@ export async function runMatchingBonus() {
             link: "/dashboards",
             role: "user",
             date: formattedDate,
-            created_at: now,
+            created_at: istNow,
           });
         }
       }
@@ -553,7 +563,7 @@ export async function runMatchingBonus() {
           ischecked: false,
           created_by: "system",
           last_modified_by: "system",
-          last_modified_at: now,
+          last_modified_at: istNow,
         });
 
         await addRewardScore({
@@ -588,7 +598,7 @@ export async function runMatchingBonus() {
           priority: "medium",
           read: false,
           date: formattedDate,
-          created_at: now,
+          created_at: istNow,
         });
       }
 

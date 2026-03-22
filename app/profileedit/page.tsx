@@ -1132,26 +1132,38 @@ export default function ProfileEditPage() {
 
 const getStatusConfig = (user_status?: string, status_notes?: string) => {
   if (!user_status) return null;
-  if (user_status === "active" && status_notes !== "Activated by Admin")
+
+  const status = user_status.toLowerCase().trim();
+  const notes = status_notes?.toLowerCase().trim();
+
+  if (status === "active" && notes === "activated by admin") {
     return {
       label: "Active",
-      color: "bg-green-100 text-green-700 border-green-300",
+      color: "bg-orange-100 text-orange-400 border-orange-300",
     };
-  if (user_status === "inactive" && status_notes !== "Deactivated by Admin")
-    return {
-      label: "Inactive",
-      color: "bg-red-100 text-red-700 border-red-300",
-    };
-  if (user_status === "active" && status_notes === "Activated by Admin")
-    return {
-      label: "Active",
-      color: "bg-orange-100 text-orange-700 border-orange-300",
-    };
-  if (user_status === "inactive" && status_notes === "Deactivated by Admin")
+  }
+
+  if (status === "inactive" && notes === "deactivated by admin") {
     return {
       label: "Inactive",
       color: "bg-gray-200 text-gray-800 border-gray-400",
     };
+  }
+
+  if (status === "active") {
+    return {
+      label: "Active",
+      color: "bg-green-100 text-green-700 border-green-300",
+    };
+  }
+
+  if (status === "inactive") {
+    return {
+      label: "Inactive",
+      color: "bg-red-100 text-red-700 border-red-300",
+    };
+  }
+
   return null;
 };
 

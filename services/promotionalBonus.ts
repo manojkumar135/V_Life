@@ -155,11 +155,14 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
 
     const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
 
-    const now = new Date();
-    const formattedDate = formatDate(now);
+    const istNow = new Date(
+  new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+);
+
+const formattedDate = formatDate(istNow);
 
     // ✅ IST time instead of server local time
-    const istTime = new Date(now.getTime() + IST_OFFSET_MS)
+    const istTime = new Date(istNow.getTime() + IST_OFFSET_MS)
       .toISOString()
       .slice(11, 16);
 
@@ -213,7 +216,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
 
       created_by: "system",
       last_modified_by: "system",
-      last_modified_at: now,
+      last_modified_at: istNow,
     });
 
     /* -------------------------------------------------------
@@ -262,7 +265,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
 
         created_by: "system",
         last_modified_by: "system",
-        last_modified_at: now,
+        last_modified_at: istNow,
       });
     }
 
@@ -278,7 +281,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       read: false,
       link: "/wallet/payout/daily",
       date: formattedDate,
-      created_at: now,
+      created_at: istNow,
     });
 
     /* -------------------------------------------------------
@@ -290,7 +293,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       description: `Quick Star Bonus of ₹${PROMO_AMOUNT} released for user ${user.user_id} (${user.user_name}).`,
       priority: "high",
       date: formattedDate,
-      created_at: now,
+      created_at: istNow,
     });
 
     console.log(`✅ Quick Star Bonus Released for ${userId}`);

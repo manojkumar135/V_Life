@@ -7,7 +7,8 @@ import TreeNode from "@/models/tree";
 import { Wallet } from "@/models/wallet";
 import { Alert } from "@/models/alert";
 import { addActivatedUserToInfinity } from "@/services/infinity";
-
+import { addRewardScore } from "@/services/updateRewardScore";
+import { Score } from "@/models/score";
 
 export async function PUT(req) {
   try {
@@ -123,13 +124,34 @@ export async function PUT(req) {
 
     // If activated, ensure added into infinity (flat list + leveled lists) and propagate
     if (newStatus === "active") {
-      // Best-effort; don't block response on errors
-      try {
-        await addActivatedUserToInfinity(userIdToUpdate);
-      } catch (err) {
-        console.error("Error adding activated user to infinity:", err);
-      }
+  try {
+    await addActivatedUserToInfinity(userIdToUpdate);
+  } catch (err) {
+    console.error("Error adding activated user to infinity:", err);
+  }
+
+  // ✅ Release 15,000 cashback points — only once, only on activation
+  try {
+    const scoreDoc = await Score.findOne({ user_id: userIdToUpdate });
+
+    const bonusAlreadyGiven = scoreDoc?.cashback?.history?.in?.some(
+      (entry) => entry.source === "activation_bonus"
+    );
+
+    if (!bonusAlreadyGiven) {
+      await addRewardScore({
+        user_id: userIdToUpdate,
+        points: 15000,
+        source: "activation_bonus",
+        reference_id: userIdToUpdate,
+        remarks: "One-time cashback bonus on admin activation",
+        type: "cashback",
+      });
     }
+  } catch (err) {
+    console.error("Error releasing activation cashback bonus:", err);
+  }
+}
 
     // ✅ Include user_id and newStatus in response
     return NextResponse.json({
