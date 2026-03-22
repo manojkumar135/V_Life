@@ -15,9 +15,9 @@ export async function GET(request: Request) {
     const search = searchParams.get("search") || "";
 
     /* ─────────────────────────────────────────────
-       1. Build date range condition (payout only)
-          Score balance is NEVER date-filtered —
-          it is always the live current balance
+       1. Date range — applied to payout records only.
+          Score balance is NEVER date-filtered.
+          It is always the live current balance.
     ───────────────────────────────────────────── */
     const dateCondition: any = {};
     if (from || to) {
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     }
 
     /* ─────────────────────────────────────────────
-       2. Base query — pending, no hold reasons
+       2. Base query — pending + no hold reasons
     ───────────────────────────────────────────── */
     const baseQuery: any = {
       status: { $regex: /^pending$/i },
@@ -61,41 +61,54 @@ export async function GET(request: Request) {
     ];
 
     if (allUserIds.length === 0) {
-      return NextResponse.json({ success: true, data: [] }, { status: 200 });
+      return NextResponse.json({ success: true, data: [], total: 0 }, { status: 200 });
     }
 
     /* ─────────────────────────────────────────────
        5. Fetch wallets + scores in parallel
-          Score.daily.balance   = matching_bonus + direct_sales_bonus
-                                  points earned MINUS points used on orders
-          Score.fortnight.balance = infinity_matching + infinity_direct_sales
-                                  points earned MINUS points used on orders
-          Both are always live — no date filter applied
+
+       WHY Score balance = payable amount:
+         Score.daily.balance     = daily.earned   - daily.used
+         Score.fortnight.balance = fortnight.earned - fortnight.used
+
+         earned = all matching_bonus + direct_sales_bonus points
+                  added over all time (from released payouts)
+         used   = all points spent on orders over all time
+
+         So balance is exactly what the user has left to be paid.
+         If user spent some points on orders before release,
+         balance is already reduced — we pay only the balance.
+         If no points were used, balance == full earned == full payable.
+
+         payout.amount on individual records is the ORIGINAL amount
+         at creation time — it does NOT reflect order deductions.
+         So we IGNORE payout.amount for the payable figure.
+         We use it only to count records and track payout_ids.
     ───────────────────────────────────────────── */
     const [wallets, scores] = await Promise.all([
       Wallet.find({ user_id: { $in: allUserIds } }).lean(),
       Score.find(
         { user_id: { $in: allUserIds } },
         {
-          user_id:              1,
-          "daily.balance":      1,
-          "daily.earned":       1,
-          "daily.used":         1,
-          "fortnight.balance":  1,
-          "fortnight.earned":   1,
-          "fortnight.used":     1,
+          user_id:             1,
+          "daily.balance":     1,
+          "daily.earned":      1,
+          "daily.used":        1,
+          "fortnight.balance": 1,
+          "fortnight.earned":  1,
+          "fortnight.used":    1,
         }
       ).lean(),
     ]);
 
     /* ─────────────────────────────────────────────
-       6. Build wallet eligibility map
-          - wallet_status must be "active"
+       6. Wallet eligibility map
+          - wallet_status === "active"
           - pan_verified in ["yes", "true"]
     ───────────────────────────────────────────── */
     const PAN_VERIFIED_VALUES = new Set(["yes", "true"]);
-
     const eligibleWalletMap = new Map<string, any>();
+
     for (const w of wallets as any[]) {
       const walletActive =
         typeof w.wallet_status === "string" &&
@@ -111,51 +124,52 @@ export async function GET(request: Request) {
     }
 
     /* ─────────────────────────────────────────────
-       7. Build score map — keyed by user_id
+       7. Score map — keyed by user_id
     ───────────────────────────────────────────── */
-    const scoreMap = new Map<string, {
-      daily_balance:      number;
-      daily_earned:       number;
-      daily_used:         number;
-      fortnight_balance:  number;
-      fortnight_earned:   number;
-      fortnight_used:     number;
-    }>();
+    type ScoreEntry = {
+      daily_balance:     number; // ← actual payable for daily
+      daily_earned:      number;
+      daily_used:        number;
+      fortnight_balance: number; // ← actual payable for fortnight
+      fortnight_earned:  number;
+      fortnight_used:    number;
+    };
 
+    const scoreMap = new Map<string, ScoreEntry>();
     for (const s of scores as any[]) {
       scoreMap.set(s.user_id, {
-        daily_balance:      s.daily?.balance      ?? 0,
-        daily_earned:       s.daily?.earned       ?? 0,
-        daily_used:         s.daily?.used         ?? 0,
-        fortnight_balance:  s.fortnight?.balance  ?? 0,
-        fortnight_earned:   s.fortnight?.earned   ?? 0,
-        fortnight_used:     s.fortnight?.used     ?? 0,
+        daily_balance:     s.daily?.balance      ?? 0,
+        daily_earned:      s.daily?.earned       ?? 0,
+        daily_used:        s.daily?.used         ?? 0,
+        fortnight_balance: s.fortnight?.balance  ?? 0,
+        fortnight_earned:  s.fortnight?.earned   ?? 0,
+        fortnight_used:    s.fortnight?.used     ?? 0,
       });
     }
 
     /* ─────────────────────────────────────────────
        8. Group eligible payouts by user
-          Two separate concerns per user:
 
-          A) PAYOUT (money) — pending payout records
-             daily.payout_total     = sum of all pending DailyPayout amounts
-             fortnight.payout_total = sum of all pending WeeklyPayout amounts
+       PER USER:
+         daily.payout_ids / payout_count
+           → which pending daily records exist (for reference)
+         daily.original_total
+           → sum of payout.amount on those records (original, before deductions)
+         daily.payable
+           → Score.daily.balance = actual amount to release
+             (original minus whatever was spent on orders)
 
-          B) SCORE (points) — live balance from Score collection
-             score.daily_balance    = current daily points remaining
-                                      (already net of points used on orders)
-             score.fortnight_balance = current fortnight points remaining
-                                      (already net of points used on orders)
+         Same logic for fortnight.
 
-          These two are independent — payout amount is what
-          will be released as money; score balance is how many
-          points the user currently holds.
+       combined_payable = daily.payable + fortnight.payable
+         → total amount admin will actually release to this user
     ───────────────────────────────────────────── */
     type PayoutGroup = {
-      payout_total: number;
-      payout_count: number;
-      payout_ids:   string[];
-      latest_date:  string;
+      original_total: number; // sum of payout.amount (pre-deduction)
+      payable:        number; // Score.balance (post-deduction, actual release)
+      payout_count:   number;
+      payout_ids:     string[];
+      latest_date:    string;
     };
 
     type UserGroup = {
@@ -170,30 +184,13 @@ export async function GET(request: Request) {
       ifsc_code:      string;
       daily:          PayoutGroup | null;
       fortnight:      PayoutGroup | null;
-      combined_payout_total: number;
-      score: {
-        daily_balance:      number;
-        daily_earned:       number;
-        daily_used:         number;
-        fortnight_balance:  number;
-        fortnight_earned:   number;
-        fortnight_used:     number;
-      };
+      combined_payable: number;
     };
 
     const userMap = new Map<string, UserGroup>();
 
     const getOrCreate = (payout: any, wallet: any): UserGroup => {
       if (!userMap.has(payout.user_id)) {
-        const sc = scoreMap.get(payout.user_id) ?? {
-          daily_balance:     0,
-          daily_earned:      0,
-          daily_used:        0,
-          fortnight_balance: 0,
-          fortnight_earned:  0,
-          fortnight_used:    0,
-        };
-
         userMap.set(payout.user_id, {
           user_id:        payout.user_id,
           user_name:      payout.user_name       || wallet?.user_name      || "",
@@ -206,56 +203,83 @@ export async function GET(request: Request) {
           ifsc_code:      wallet?.ifsc_code      || "",
           daily:          null,
           fortnight:      null,
-          combined_payout_total: 0,
-          score:          sc,
+          combined_payable: 0,
         });
       }
       return userMap.get(payout.user_id)!;
     };
 
-    // Process daily payouts
+    // Process daily payouts — collect ids/count/original only
     for (const payout of dailyPayouts as any[]) {
       if (!eligibleWalletMap.has(payout.user_id)) continue;
       const wallet = eligibleWalletMap.get(payout.user_id);
       const group  = getOrCreate(payout, wallet);
 
       if (!group.daily) {
-        group.daily = { payout_total: 0, payout_count: 0, payout_ids: [], latest_date: "" };
+        // payable will be set from Score.daily.balance after loop
+        group.daily = {
+          original_total: 0,
+          payable:        0,
+          payout_count:   0,
+          payout_ids:     [],
+          latest_date:    "",
+        };
       }
-      group.daily.payout_total += payout.amount || 0;
-      group.daily.payout_count += 1;
+      group.daily.original_total += payout.amount || 0;
+      group.daily.payout_count   += 1;
       group.daily.payout_ids.push(payout.payout_id);
       if (!group.daily.latest_date || payout.created_at > group.daily.latest_date) {
         group.daily.latest_date = payout.created_at;
       }
     }
 
-    // Process fortnight payouts
+    // Process fortnight payouts — collect ids/count/original only
     for (const payout of fortnightPayouts as any[]) {
       if (!eligibleWalletMap.has(payout.user_id)) continue;
       const wallet = eligibleWalletMap.get(payout.user_id);
       const group  = getOrCreate(payout, wallet);
 
       if (!group.fortnight) {
-        group.fortnight = { payout_total: 0, payout_count: 0, payout_ids: [], latest_date: "" };
+        group.fortnight = {
+          original_total: 0,
+          payable:        0,
+          payout_count:   0,
+          payout_ids:     [],
+          latest_date:    "",
+        };
       }
-      group.fortnight.payout_total += payout.amount || 0;
-      group.fortnight.payout_count += 1;
+      group.fortnight.original_total += payout.amount || 0;
+      group.fortnight.payout_count   += 1;
       group.fortnight.payout_ids.push(payout.payout_id);
       if (!group.fortnight.latest_date || payout.created_at > group.fortnight.latest_date) {
         group.fortnight.latest_date = payout.created_at;
       }
     }
 
-    // Compute combined_payout_total
+    /* ─────────────────────────────────────────────
+       9. Set payable from Score.balance
+          and compute combined_payable
+    ───────────────────────────────────────────── */
     for (const group of userMap.values()) {
-      group.combined_payout_total =
-        (group.daily?.payout_total     || 0) +
-        (group.fortnight?.payout_total || 0);
+      const sc = scoreMap.get(group.user_id);
+
+      if (group.daily) {
+        // Score.daily.balance is earned - used (all time)
+        // This is the exact amount remaining to be paid out
+        group.daily.payable = sc?.daily_balance ?? 0;
+      }
+
+      if (group.fortnight) {
+        group.fortnight.payable = sc?.fortnight_balance ?? 0;
+      }
+
+      group.combined_payable =
+        (group.daily?.payable     || 0) +
+        (group.fortnight?.payable || 0);
     }
 
     /* ─────────────────────────────────────────────
-       9. Convert to array and apply search filter
+       10. Convert to array, apply search filter
     ───────────────────────────────────────────── */
     let result = Array.from(userMap.values());
 
@@ -276,9 +300,9 @@ export async function GET(request: Request) {
     }
 
     /* ─────────────────────────────────────────────
-       10. Sort by combined_payout_total descending
+       11. Sort by combined_payable descending
     ───────────────────────────────────────────── */
-    result.sort((a, b) => b.combined_payout_total - a.combined_payout_total);
+    result.sort((a, b) => b.combined_payable - a.combined_payable);
 
     return NextResponse.json(
       { success: true, data: result, total: result.length },
