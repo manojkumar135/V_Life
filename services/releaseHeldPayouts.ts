@@ -104,7 +104,7 @@ export async function releaseHeldPayoutsForMonth({
     { user_id, status: "OnHold", created_at: dateRange },
     {
       $set: {
-        status:              "Pending",
+        status:              "pending",
         hold_released_at:    now,
         hold_release_reason: releaseNote,
         last_modified_by:    "system",
@@ -118,7 +118,7 @@ export async function releaseHeldPayoutsForMonth({
     { user_id, status: "OnHold", created_at: dateRange },
     {
       $set: {
-        status:              "Pending",
+        status:              "pending",
         hold_released_at:    now,
         hold_release_reason: releaseNote,
         last_modified_by:    "system",

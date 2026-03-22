@@ -245,6 +245,7 @@ export default function InfinityTeam() {
             }
             selectedUser={selectedUser} // ✅ pass it here
             onConfirm={confirmStatusChange}
+            loading={loading}
           />
         </div>
       </Layout>

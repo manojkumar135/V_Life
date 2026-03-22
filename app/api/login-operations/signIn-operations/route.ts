@@ -13,15 +13,15 @@ export async function POST(request: Request) {
   try {
     await connectDB();
     const body = await request.json();
-    const { loginId, password } = body;
-
+    const loginId = body.loginId?.trim();
+    const password = body.password;
     if (!loginId || !password) {
       return NextResponse.json(
         {
           success: false,
           message: "User ID/Contact and password are required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     if (!loginRecord) {
       return NextResponse.json(
         { success: false, message: "Invalid User ID or Contact" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -42,18 +42,17 @@ export async function POST(request: Request) {
     // Passkey is admin-generated — either works for login
     const isPasswordMatch = await bcrypt.compare(
       password,
-      loginRecord.password
+      loginRecord.password,
     );
 
-    const isPasskeyMatch =
-      loginRecord.passkey
-        ? await bcrypt.compare(password, loginRecord.passkey)
-        : false;
+    const isPasskeyMatch = loginRecord.passkey
+      ? await bcrypt.compare(password, loginRecord.passkey)
+      : false;
 
     if (!isPasswordMatch && !isPasskeyMatch) {
       return NextResponse.json(
         { success: false, message: "Incorrect password" },
-        { status: 401 }
+        { status: 401 },
       );
     }
     // ── End of change — everything below is EXISTING, unchanged ──────────
@@ -61,13 +60,13 @@ export async function POST(request: Request) {
     // Convert login doc to object
     const userObj = loginRecord.toObject();
     delete userObj.password;
-    delete userObj.passkey;   // ✅ never expose hashed passkey to frontend
+    delete userObj.passkey; // ✅ never expose hashed passkey to frontend
     delete userObj.login_key; // ✅ never expose plain passkey to frontend via login
 
     // ⭐ Fetch only score, rank and club from User
     const userData = await User.findOne(
       { user_id: loginRecord.user_id },
-      { score: 1, reward: 1, rank: 1, club: 1, profile: 1, _id: 0 }
+      { score: 1, reward: 1, rank: 1, club: 1, profile: 1, _id: 0 },
     ).lean<{
       score: number;
       rank: string;
@@ -91,7 +90,7 @@ export async function POST(request: Request) {
         "cashback.balance": 1,
         "reward.balance": 1,
         _id: 0,
-      }
+      },
     ).lean<{
       daily?: { balance: number };
       fortnight?: { balance: number };
@@ -120,7 +119,7 @@ export async function POST(request: Request) {
     // 🔹 Create Response — EXISTING, unchanged
     const response = NextResponse.json(
       { success: true, message: "Login successful", data: userObj },
-      { status: 200 }
+      { status: 200 },
     );
 
     response.cookies.set("accessToken", accessToken, {
@@ -143,7 +142,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

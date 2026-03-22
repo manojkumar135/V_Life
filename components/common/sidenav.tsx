@@ -88,7 +88,7 @@ export default function SideNav({
       href: "/reports",
       icon: <VscGraph />,
       label: "My Reports",
-      match: ["/report", "pvtracker"],
+      match: ["/report", "pvtracker","/payre"],
     },
     {
       href: "/settings",

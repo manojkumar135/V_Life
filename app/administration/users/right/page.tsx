@@ -262,6 +262,7 @@ export default function RightTeam() {
           }
           selectedUser={selectedUser}
           onConfirm={confirmStatusChange}
+          loading={loading}
         />
       </div>
     </Layout>

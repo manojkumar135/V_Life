@@ -11,6 +11,8 @@ import { LuTicketsPlane } from "react-icons/lu";
 import { GiDoubled } from "react-icons/gi";
 import { FaClipboardList } from "react-icons/fa";
 import { FaCrown } from "react-icons/fa";
+import { FaCoins } from "react-icons/fa";
+
 
 const Page = () => {
   const router = useRouter();
@@ -93,6 +95,15 @@ const Page = () => {
                 <FaClipboardList size={32} />
                 <span className="mt-2 text-lg font-semibold">
                   PV Tracker
+                </span>
+              </div>
+               <div
+                onClick={() => router.push("/payrelease")}
+                className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              >
+                <FaCoins  size={32} />
+                <span className="mt-2 text-lg font-semibold">
+                  Pay Release
                 </span>
               </div>
             </>
