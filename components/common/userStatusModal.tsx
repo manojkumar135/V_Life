@@ -17,7 +17,7 @@ export default function StatusConfirm({
   onConfirm,
   currentStatus,
   selectedUser, // ✅ destructured
-  loading
+  loading,
 }: StatusConfirmProps) {
   const nextStatus = currentStatus === "active" ? "Inactive" : "Active";
 
@@ -56,19 +56,19 @@ export default function StatusConfirm({
 
           <div className="mt-6 flex justify-center gap-4">
             {/* Confirm */}
-          <button
-  onClick={onConfirm}
-  disabled={loading}
-  className={`px-6 py-2 rounded-lg font-semibold shadow-lg transition-all duration-200
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className={`px-6 py-2 rounded-lg font-semibold shadow-lg transition-all duration-200
     ${loading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
     ${
       nextStatus === "Active"
         ? "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-500"
         : "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-500"
     }`}
->
-  {loading ? "Processing..." : nextStatus.toUpperCase()}
-</button>
+            >
+              {loading ? "Processing..." : nextStatus.toUpperCase()}
+            </button>
 
             {/* Cancel */}
             <button
