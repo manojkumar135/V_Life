@@ -111,7 +111,7 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
       .required("* Aadhaar Number is required"),
 
     aadharFront: Yup.mixed<string | File>()
-      .required("* Aadhaar front is required")
+      // .required("* Aadhaar front is required")
       .test(
         "fileType-aadharFront",
         "* Aadhaar front must be an image or PDF",
@@ -124,7 +124,7 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
       ),
 
     aadharBack: Yup.mixed<string | File>()
-      .required("* Aadhaar back is required")
+      // .required("* Aadhaar back is required")
       .test(
         "fileType-aadharBack",
         "* Aadhaar back must be an image or PDF",
@@ -431,7 +431,10 @@ export default function ProfileEditPage() {
         panNumber: u.pan_number || "",
         panName: u.pan_name || "",
         panDob: u.pan_dob || "",
-        panFile: u.pan_file || null,
+        panFile:
+          typeof u.pan_file === "string" && u.pan_file.trim() !== ""
+            ? u.pan_file
+            : null,
         aadharNumber: u.aadhar_number || "",
         aadharFront: u.aadhar_front || null,
         aadharBack: u.aadhar_back || null,
@@ -458,11 +461,48 @@ export default function ProfileEditPage() {
 
   /* ---------------- SUBMIT ---------------- */
 
+  // Helper: only pass value if it's a real File or a non-empty string (existing URL).
+  // Returns undefined for null / {} / "" so those keys are omitted from the payload,
+  // leaving the existing DB value untouched.
+  const sanitizeFile = (val: any): File | string | undefined => {
+    // ignore empty object {}
+    if (
+      val &&
+      typeof val === "object" &&
+      !(val instanceof File) &&
+      Object.keys(val).length === 0
+    ) {
+      return undefined;
+    }
+
+    if (val instanceof File) return val;
+
+    if (typeof val === "string" && val.trim() !== "") return val;
+
+    return undefined;
+  };
+
+  // Strips any key whose value is null, undefined, or a plain empty object {}
+  // so nothing bad reaches the API / Mongoose string cast.
+  const stripEmpty = (obj: Record<string, any>): Record<string, any> =>
+    Object.fromEntries(
+      Object.entries(obj).filter(([, v]) => {
+        if (v === null || v === undefined) return false;
+        if (
+          typeof v === "object" &&
+          !(v instanceof File) &&
+          Object.keys(v).length === 0
+        )
+          return false;
+        return true;
+      }),
+    );
+
   const handleSubmit = async (values: any) => {
     try {
       setLoading(true);
 
-      const userUpdates = {
+      const userUpdates = stripEmpty({
         user_name: values.fullName,
         mail: values.email,
         contact: values.contact,
@@ -479,9 +519,10 @@ export default function ProfileEditPage() {
         nominee_name: values.nomineeName,
         nominee_relation: values.nomineeRelation,
         alternate_contact: values.nomineeContact,
-      };
+      });
 
-      const walletUpdates = {
+      // Build walletUpdates — only include file fields when they have a real value
+      const walletUpdates: Record<string, any> = {
         user_name: values.fullName,
         contact: values.contact,
         account_holder_name: values.accountHolderName,
@@ -493,15 +534,28 @@ export default function ProfileEditPage() {
         pan_name: values.panName,
         pan_dob: values.panDob,
         pan_verified: panVerified,
-        bank_book: values.bankBook,
-        aadhar_front: values.aadharFront,
-        aadhar_back: values.aadharBack,
       };
+
+      // Conditionally add file fields only when they carry a real value
+      const bankBook = sanitizeFile(values.bankBook);
+      if (bankBook !== undefined) walletUpdates.bank_book = bankBook;
+
+      const aadharFront = sanitizeFile(values.aadharFront);
+      if (aadharFront !== undefined) walletUpdates.aadhar_front = aadharFront;
+
+      const aadharBack = sanitizeFile(values.aadharBack);
+      if (aadharBack !== undefined) walletUpdates.aadhar_back = aadharBack;
+
+      const cancelledCheque = sanitizeFile(values.cancelledCheque);
+      if (cancelledCheque !== undefined) walletUpdates.cheque = cancelledCheque;
+
+      const panFile = sanitizeFile(values.panFile);
+      if (panFile !== undefined) walletUpdates.pan_file = panFile;
 
       const res = await axios.patch("/api/getuser-operations", {
         user_id: values.userId,
         userUpdates,
-        walletUpdates,
+        walletUpdates: stripEmpty(walletUpdates),
       });
 
       if (res.data.success) {
