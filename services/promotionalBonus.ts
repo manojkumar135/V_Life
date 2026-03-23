@@ -115,9 +115,11 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       tds = 0,
       admin = 0;
 
-      const isPanVerified =
+     const isPanVerified =
   wallet?.pan_verified === true ||
-  String(wallet?.pan_verified).toLowerCase() === "yes";
+  ["yes", "true"].includes(
+    String(wallet?.pan_verified).toLowerCase()
+  );
 
   if (isPanVerified) {
       withdraw = Math.round(PROMO_AMOUNT * 0.8);  // 80%

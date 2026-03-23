@@ -266,7 +266,7 @@ export async function determineHoldReasons(
 
   const isPanVerified =
     wallet?.pan_verified === true ||
-    String(wallet?.pan_verified).toLowerCase() === "yes";
+    ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
 
   const walletFields: Record<string, any> | null = wallet
     ? {
@@ -342,9 +342,9 @@ export async function releasePayoutsForUser(
   const { wallet, walletMissing, walletInactive, walletUnderReview } =
     await evaluateWalletConditions(user_id);
 
-    const isPanVerified =
-  wallet?.pan_verified === true ||
-  String(wallet?.pan_verified).toLowerCase() === "yes";
+  const isPanVerified =
+    wallet?.pan_verified === true ||
+    String(wallet?.pan_verified).toLowerCase() === "yes";
 
   const walletFields: Record<string, any> = wallet
     ? {

@@ -114,7 +114,7 @@ export async function releaseOnHoldPayouts(user_id: string) {
 
   const isPanVerified =
     wallet?.pan_verified === true ||
-    String(wallet?.pan_verified).toLowerCase() === "yes";
+    ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
   const walletFields = {
     wallet_id: wallet.wallet_id,
     account_holder_name: wallet.account_holder_name,

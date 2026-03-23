@@ -131,7 +131,7 @@ export async function releaseReferralBonus({
 
   const isPanVerified =
     wallet?.pan_verified === true ||
-    String(wallet?.pan_verified).toLowerCase() === "yes";
+    ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
 
   if (isPanVerified) {
     withdraw = Math.round(REFERRAL_AMOUNT * 0.8); // 80%

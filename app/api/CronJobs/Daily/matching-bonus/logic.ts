@@ -384,7 +384,7 @@ export async function runMatchingBonus() {
       const user = (await User.findOne({ user_id: u.user_id }).lean()) as any;
       const isPanVerified =
         wallet?.pan_verified === true ||
-        String(wallet?.pan_verified).toLowerCase() === "yes";
+        ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
 
       const walletId = wallet ? wallet.wallet_id : null;
 

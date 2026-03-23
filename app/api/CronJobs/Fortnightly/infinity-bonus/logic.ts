@@ -232,10 +232,10 @@ export async function runInfinityBonus() {
       let adminCharge = 0;
 
       const isPanVerified =
-  wallet?.pan_verified === true ||
-  String(wallet?.pan_verified).toLowerCase() === "yes";
+        wallet?.pan_verified === true ||
+        ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
 
-      if (wallet && wallet.isPanVerified) {
+      if (wallet && isPanVerified) {
         // PAN Verified
         withdrawAmount = Number((bonusAmount * 0.8).toFixed(2));
         rewardAmount = Number((bonusAmount * 0.08).toFixed(2));

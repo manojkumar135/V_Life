@@ -364,7 +364,7 @@ export async function runDirectSalesBonus(): Promise<{
         /* ── Amount splits ────────────────────────────────────────── */
         const isPanVerified =
           wallet?.pan_verified === true ||
-          String(wallet?.pan_verified).toLowerCase() === "yes";
+          ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
         const withdrawAmount = isPanVerified
           ? totalAmount * 0.8
           : totalAmount * 0.62;
