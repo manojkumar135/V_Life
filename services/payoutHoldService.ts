@@ -70,15 +70,15 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { DailyPayout, WeeklyPayout } from "@/models/payout";
-import { Wallet }                    from "@/models/wallet";
-import { WalletChangeRequest }       from "@/models/walletChangeRequest";
-import { MonthlyPayoutTracker }      from "@/models/monthlyPayoutTracker";
-import { Alert }                     from "@/models/alert";
-import { connectDB }                 from "@/lib/mongodb";
+import { Wallet } from "@/models/wallet";
+import { WalletChangeRequest } from "@/models/walletChangeRequest";
+import { MonthlyPayoutTracker } from "@/models/monthlyPayoutTracker";
+import { Alert } from "@/models/alert";
+import { connectDB } from "@/lib/mongodb";
 import {
   hasPreviousUnresolvedHolds,
   currentMonth,
-}                                    from "@/services/monthlyHoldService";
+} from "@/services/monthlyHoldService";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -97,35 +97,35 @@ export type ReleaseTrigger =
   | "pv_fulfilled";
 
 const HOLD_LABELS: Record<HoldReason, string> = {
-  NO_WALLET:           "No wallet set up",
-  WALLET_INACTIVE:     "Wallet is inactive",
+  NO_WALLET: "No wallet set up",
+  WALLET_INACTIVE: "Wallet is inactive",
   WALLET_UNDER_REVIEW: "Wallet is under review (change request pending)",
-  PV_NOT_FULFILLED:    "Monthly PV purchase obligation not fulfilled",
+  PV_NOT_FULFILLED: "Monthly PV purchase obligation not fulfilled",
 };
 
 const TRIGGER_LABELS: Record<ReleaseTrigger, string> = {
-  wallet_created:         "Wallet was created",
-  wallet_activated:       "Wallet was activated",
+  wallet_created: "Wallet was created",
+  wallet_activated: "Wallet was activated",
   wallet_review_approved: "Wallet change request was approved",
-  pv_fulfilled:           "Monthly PV obligation was fulfilled",
+  pv_fulfilled: "Monthly PV obligation was fulfilled",
 };
 
 export interface HoldDecision {
-  status:       "Pending" | "OnHold";
-  reasons:      HoldReason[];
-  labels:       string[];
+  status: "Pending" | "OnHold";
+  reasons: HoldReason[];
+  labels: string[];
   /** Single string summarising all hold reasons — save as hold_release_reason on payout */
-  summary:      string;
+  summary: string;
   /** Wallet bank fields to embed in payout. null if no wallet exists. */
   walletFields: Record<string, any> | null;
 }
 
 export interface ReleaseResult {
-  trigger:        ReleaseTrigger;
-  totalReleased:  number;
-  totalSkipped:   number;
+  trigger: ReleaseTrigger;
+  totalReleased: number;
+  totalSkipped: number;
   releasedMonths: string[];
-  skippedMonths:  Array<{ month: string; reasons: string[] }>;
+  skippedMonths: Array<{ month: string; reasons: string[] }>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -133,15 +133,15 @@ export interface ReleaseResult {
 // ─────────────────────────────────────────────────────────────────────────
 
 function formatDate(date: Date): string {
-  const dd   = String(date.getDate()).padStart(2, "0");
-  const mm   = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
   return `${dd}-${mm}-${yyyy}`;
 }
 
 function toMonthString(date: Date): string {
   const yyyy = date.getFullYear();
-  const mm   = String(date.getMonth() + 1).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
 }
 
@@ -159,37 +159,43 @@ async function walletHasPendingReview(wallet_id: string): Promise<boolean> {
 // ─────────────────────────────────────────────────────────────────────────
 
 interface WalletConditions {
-  wallet:            any | null;
-  walletMissing:     boolean;
-  walletInactive:    boolean;
+  wallet: any | null;
+  walletMissing: boolean;
+  walletInactive: boolean;
   walletUnderReview: boolean;
 }
 
-async function evaluateWalletConditions(user_id: string): Promise<WalletConditions> {
-  const wallet = await Wallet.findOne({ user_id }).lean() as any;
+async function evaluateWalletConditions(
+  user_id: string,
+): Promise<WalletConditions> {
+  const wallet = (await Wallet.findOne({ user_id }).lean()) as any;
 
-  const walletMissing  = !wallet || !wallet.account_number;
+  const walletMissing = !wallet || !wallet.account_number;
   const walletInactive =
-    !walletMissing &&
-    wallet.status &&
-    wallet.status !== "active";
-  const walletUnderReview =
-    !walletMissing
-      ? await walletHasPendingReview(wallet.wallet_id)
-      : false;
+    !walletMissing && wallet.status && wallet.status !== "active";
+  const walletUnderReview = !walletMissing
+    ? await walletHasPendingReview(wallet.wallet_id)
+    : false;
 
   return { wallet, walletMissing, walletInactive, walletUnderReview };
 }
 
 async function evaluatePvCondition(
   user_id: string,
-  month:   string
+  month: string,
 ): Promise<boolean> {
   const blockedByPrior = await hasPreviousUnresolvedHolds(user_id, month);
   if (blockedByPrior) return true;
 
-  const tracker = await MonthlyPayoutTracker.findOne({ user_id, month }).lean() as any;
-  return !!(tracker && tracker.pv_required > 0 && tracker.hold_released === false);
+  const tracker = (await MonthlyPayoutTracker.findOne({
+    user_id,
+    month,
+  }).lean()) as any;
+  return !!(
+    tracker &&
+    tracker.pv_required > 0 &&
+    tracker.hold_released === false
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -233,43 +239,43 @@ async function evaluatePvCondition(
  */
 export async function determineHoldReasons(
   user_id: string,
-  month:   string = currentMonth()
+  month: string = currentMonth(),
 ): Promise<HoldDecision> {
   await connectDB();
 
   const reasons: HoldReason[] = [];
 
   // ── Evaluate all 4 conditions ─────────────────────────────────────────
-  const {
-    wallet,
-    walletMissing,
-    walletInactive,
-    walletUnderReview,
-  } = await evaluateWalletConditions(user_id);
+  const { wallet, walletMissing, walletInactive, walletUnderReview } =
+    await evaluateWalletConditions(user_id);
 
-  if (walletMissing)     reasons.push("NO_WALLET");
-  if (walletInactive)    reasons.push("WALLET_INACTIVE");
+  if (walletMissing) reasons.push("NO_WALLET");
+  if (walletInactive) reasons.push("WALLET_INACTIVE");
   if (walletUnderReview) reasons.push("WALLET_UNDER_REVIEW");
 
   const pvBlocked = await evaluatePvCondition(user_id, month);
-  if (pvBlocked)         reasons.push("PV_NOT_FULFILLED");
+  if (pvBlocked) reasons.push("PV_NOT_FULFILLED");
 
   // ── Build result ──────────────────────────────────────────────────────
-  const labels   = reasons.map((r) => HOLD_LABELS[r]);
+  const labels = reasons.map((r) => HOLD_LABELS[r]);
   const isOnHold = reasons.length > 0;
 
   const summary = isOnHold
     ? `Payout held: ${labels.join("; ")}`
     : "All conditions met";
 
+  const isPanVerified =
+    wallet?.pan_verified === true ||
+    String(wallet?.pan_verified).toLowerCase() === "yes";
+
   const walletFields: Record<string, any> | null = wallet
     ? {
-        wallet_id:           wallet.wallet_id           ?? "",
+        wallet_id: wallet.wallet_id ?? "",
         account_holder_name: wallet.account_holder_name ?? "",
-        bank_name:           wallet.bank_name           ?? "",
-        account_number:      wallet.account_number      ?? "",
-        ifsc_code:           wallet.ifsc_code           ?? "",
-        pan_verified:        wallet.pan_verified        ?? false,
+        bank_name: wallet.bank_name ?? "",
+        account_number: wallet.account_number ?? "",
+        ifsc_code: wallet.ifsc_code ?? "",
+        pan_verified: isPanVerified,
       }
     : null;
 
@@ -320,34 +326,34 @@ export async function determineHoldReasons(
  */
 export async function releasePayoutsForUser(
   user_id: string,
-  trigger: ReleaseTrigger
+  trigger: ReleaseTrigger,
 ): Promise<ReleaseResult> {
   await connectDB();
 
-  const now          = new Date();
+  const now = new Date();
   const triggerLabel = TRIGGER_LABELS[trigger];
-  let   totalReleased  = 0;
-  let   totalSkipped   = 0;
+  let totalReleased = 0;
+  let totalSkipped = 0;
   const releasedMonths = new Set<string>();
   const skippedMonths: Array<{ month: string; reasons: string[] }> = [];
 
   // ── 1. Fetch wallet + pre-compute wallet-level conditions ─────────────
   //  These are the same for all payouts of this user — compute once.
-  const {
-    wallet,
-    walletMissing,
-    walletInactive,
-    walletUnderReview,
-  } = await evaluateWalletConditions(user_id);
+  const { wallet, walletMissing, walletInactive, walletUnderReview } =
+    await evaluateWalletConditions(user_id);
+
+    const isPanVerified =
+  wallet?.pan_verified === true ||
+  String(wallet?.pan_verified).toLowerCase() === "yes";
 
   const walletFields: Record<string, any> = wallet
     ? {
-        wallet_id:           wallet.wallet_id           ?? "",
+        wallet_id: wallet.wallet_id ?? "",
         account_holder_name: wallet.account_holder_name ?? "",
-        bank_name:           wallet.bank_name           ?? "",
-        account_number:      wallet.account_number      ?? "",
-        ifsc_code:           wallet.ifsc_code           ?? "",
-        pan_verified:        wallet.pan_verified        ?? false,
+        bank_name: wallet.bank_name ?? "",
+        account_number: wallet.account_number ?? "",
+        ifsc_code: wallet.ifsc_code ?? "",
+        pan_verified: isPanVerified,
       }
     : {};
 
@@ -362,7 +368,7 @@ export async function releasePayoutsForUser(
   ]);
 
   const allOnHold = [
-    ...dailyOnHold.map((p: any)  => ({ ...p, _model: DailyPayout  })),
+    ...dailyOnHold.map((p: any) => ({ ...p, _model: DailyPayout })),
     ...weeklyOnHold.map((p: any) => ({ ...p, _model: WeeklyPayout })),
   ];
 
@@ -370,9 +376,9 @@ export async function releasePayoutsForUser(
     return {
       trigger,
       totalReleased: 0,
-      totalSkipped:  0,
+      totalSkipped: 0,
       releasedMonths: [],
-      skippedMonths:  [],
+      skippedMonths: [],
     };
   }
 
@@ -396,17 +402,17 @@ export async function releasePayoutsForUser(
 
     // Re-evaluate all 4 conditions fresh
     const remainingReasons: HoldReason[] = [];
-    if (walletMissing)     remainingReasons.push("NO_WALLET");
-    if (walletInactive)    remainingReasons.push("WALLET_INACTIVE");
+    if (walletMissing) remainingReasons.push("NO_WALLET");
+    if (walletInactive) remainingReasons.push("WALLET_INACTIVE");
     if (walletUnderReview) remainingReasons.push("WALLET_UNDER_REVIEW");
 
     const pvBlocked = await pvBlockedForMonth(payoutMonth);
-    if (pvBlocked)         remainingReasons.push("PV_NOT_FULFILLED");
+    if (pvBlocked) remainingReasons.push("PV_NOT_FULFILLED");
 
     if (remainingReasons.length === 0) {
       // ── All clear → RELEASE ──────────────────────────────────────────
       const originalReasons =
-        (payout.hold_reasons as string[] ?? []).join(", ") || "not recorded";
+        ((payout.hold_reasons as string[]) ?? []).join(", ") || "not recorded";
 
       const releaseNote =
         `Released by: ${triggerLabel}. ` +
@@ -417,17 +423,17 @@ export async function releasePayoutsForUser(
         { _id: payout._id },
         {
           $set: {
-            status:               "Pending",
-            hold_reasons:         [],
-            hold_reason_labels:   [],
-            hold_released_at:     now,
-            hold_release_reason:  releaseNote,
+            status: "Pending",
+            hold_reasons: [],
+            hold_reason_labels: [],
+            hold_released_at: now,
+            hold_release_reason: releaseNote,
             hold_release_trigger: trigger,
-            last_modified_by:     "system",
-            last_modified_at:     now,
+            last_modified_by: "system",
+            last_modified_at: now,
             ...walletFields,
           },
-        }
+        },
       );
 
       totalReleased++;
@@ -435,9 +441,8 @@ export async function releasePayoutsForUser(
 
       console.log(
         `[releasePayoutsForUser] ✅ Released ${payout.payout_id} ` +
-        `(${payoutMonth}) — trigger: ${trigger}`
+          `(${payoutMonth}) — trigger: ${trigger}`,
       );
-
     } else {
       // ── Still blocked → UPDATE reasons to current state ───────────────
       //
@@ -451,24 +456,24 @@ export async function releasePayoutsForUser(
         { _id: payout._id },
         {
           $set: {
-            hold_reasons:       remainingReasons,
+            hold_reasons: remainingReasons,
             hold_reason_labels: updatedLabels,
             hold_release_reason: `Still held: ${updatedLabels.join("; ")}`,
-            last_modified_by:   "system",
-            last_modified_at:   now,
+            last_modified_by: "system",
+            last_modified_at: now,
           },
-        }
+        },
       );
 
       totalSkipped++;
       skippedMonths.push({
-        month:   payoutMonth,
+        month: payoutMonth,
         reasons: updatedLabels,
       });
 
       console.log(
         `[releasePayoutsForUser] ⏳ Still held ${payout.payout_id} ` +
-        `(${payoutMonth}) — remaining: ${remainingReasons.join(", ")}`
+          `(${payoutMonth}) — remaining: ${remainingReasons.join(", ")}`,
       );
     }
   }
@@ -477,20 +482,20 @@ export async function releasePayoutsForUser(
   if (totalReleased > 0) {
     await Alert.create({
       user_id,
-      title:       "💰 Held Payouts Released",
+      title: "💰 Held Payouts Released",
       description: `${totalReleased} payout(s) moved to Pending. Reason: ${triggerLabel}.`,
-      role:        "user",
-      priority:    "high",
-      read:        false,
-      link:        "/wallet/payout/daily",
-      date:        formatDate(now),
-      created_at:  now,
+      role: "user",
+      priority: "high",
+      read: false,
+      link: "/wallet/payout/daily",
+      date: formatDate(now),
+      created_at: now,
     });
   }
 
   console.log(
     `[releasePayoutsForUser] Done | user: ${user_id} | trigger: ${trigger} | ` +
-    `released: ${totalReleased} | skipped: ${totalSkipped}`
+      `released: ${totalReleased} | skipped: ${totalSkipped}`,
   );
 
   return {

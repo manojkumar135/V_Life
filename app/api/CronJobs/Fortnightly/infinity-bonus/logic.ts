@@ -231,7 +231,11 @@ export async function runInfinityBonus() {
       let tdsAmount = 0;
       let adminCharge = 0;
 
-      if (wallet && wallet.pan_verified) {
+      const isPanVerified =
+  wallet?.pan_verified === true ||
+  String(wallet?.pan_verified).toLowerCase() === "yes";
+
+      if (wallet && wallet.isPanVerified) {
         // PAN Verified
         withdrawAmount = Number((bonusAmount * 0.8).toFixed(2));
         rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
@@ -252,7 +256,7 @@ export async function runInfinityBonus() {
         user_name: sponsor.user_name,
         rank: sponsor?.rank || "none",
         wallet_id: wallet ? wallet.wallet_id : "",
-        pan_verified: wallet?.pan_verified || false,
+        pan_verified: isPanVerified || false,
         mail: sponsor?.mail || "",
         contact: sponsor?.contact || "",
         user_status: sponsor?.status || "active",

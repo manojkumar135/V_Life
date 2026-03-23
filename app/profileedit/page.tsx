@@ -111,7 +111,6 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
       .required("* Aadhaar Number is required"),
 
     aadharFront: Yup.mixed<string | File>()
-      // .required("* Aadhaar front is required")
       .test(
         "fileType-aadharFront",
         "* Aadhaar front must be an image or PDF",
@@ -124,7 +123,6 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
       ),
 
     aadharBack: Yup.mixed<string | File>()
-      // .required("* Aadhaar back is required")
       .test(
         "fileType-aadharBack",
         "* Aadhaar back must be an image or PDF",
@@ -154,6 +152,7 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
               value.type.startsWith(t),
             )),
       ),
+
     bankBook: Yup.mixed<string | File>()
       .required("* Bank passbook is required")
       .test(
@@ -235,6 +234,8 @@ export default function ProfileEditPage() {
     setPasskeyVisible(false);
   }, [userMeta?.user_id]);
 
+  /* ---------------- PASSKEY HANDLERS (unchanged) ---------------- */
+
   const handleTogglePasskey = async () => {
     if (!userMeta?.user_id) return;
 
@@ -253,10 +254,7 @@ export default function ProfileEditPage() {
         const key = data.login_key || null;
         setPasskey(key);
         setPasskeyVisible(true);
-
-        if (!key) {
-          ShowToast.error("No passkey generated yet. Click Generate.");
-        }
+        if (!key) ShowToast.error("No passkey generated yet. Click Generate.");
       } else {
         ShowToast.error("Could not fetch passkey");
       }
@@ -290,6 +288,8 @@ export default function ProfileEditPage() {
     }
   };
 
+  /* ---------------- PAN HANDLERS (unchanged) ---------------- */
+
   const checkPanDuplicate = async (pan: string) => {
     try {
       setPanChecking(true);
@@ -303,7 +303,6 @@ export default function ProfileEditPage() {
     }
   };
 
-  // ✅ UPDATED: accepts panName and panDob
   const verifyPan = async (pan: string, panName?: string, panDob?: string) => {
     try {
       setPanChecking(true);
@@ -329,7 +328,6 @@ export default function ProfileEditPage() {
     }
   };
 
-  // ✅ UPDATED: accepts panName and panDob
   const handleVerifyPan = async (
     pan: string,
     panName?: string,
@@ -347,7 +345,55 @@ export default function ProfileEditPage() {
     await verifyPan(pan, panName, panDob);
   };
 
-  /* ---------------- SEARCH ---------------- */
+  const validatePanField = async (
+    pan: string,
+    setFieldError: any,
+    setPanVerifiedLocal: any,
+  ) => {
+    setPanVerifiedLocal(false);
+    if (!pan) {
+      setFieldError("panNumber", "* PAN Number is required");
+      return;
+    }
+    if (pan.length < 10) {
+      setFieldError("panNumber", "");
+      return;
+    }
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+      setFieldError("panNumber", "* Invalid PAN format (ABCDE1234F)");
+      return;
+    }
+    const exists = await checkPanDuplicate(pan);
+    if (exists) {
+      setFieldError("panNumber", "* PAN already exists");
+      return;
+    }
+    setFieldError("panNumber", "");
+  };
+
+  /* ---------------- S3 FILE UPLOAD HELPER ---------------- */
+  // Uploads a single File to S3 via your existing /api/getFileUrl endpoint.
+  // Returns the S3 URL string on success, or null on failure.
+  // A toast is shown automatically on failure so the caller just checks null.
+
+  const uploadFileToS3 = async (file: File): Promise<string | null> => {
+    try {
+      const fileForm = new FormData();
+      fileForm.append("file", file);
+      const res = await axios.post("/api/getFileUrl", fileForm, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (res.data.success) return res.data.fileUrl as string;
+      ShowToast.error(res.data.message || "File upload failed");
+      return null;
+    } catch (error) {
+      console.error("File upload error:", error);
+      ShowToast.error("Failed to upload file");
+      return null;
+    }
+  };
+
+  /* ---------------- SEARCH (unchanged) ---------------- */
 
   const emptyForm = {
     userId: "",
@@ -461,101 +507,96 @@ export default function ProfileEditPage() {
 
   /* ---------------- SUBMIT ---------------- */
 
-  // Helper: only pass value if it's a real File or a non-empty string (existing URL).
-  // Returns undefined for null / {} / "" so those keys are omitted from the payload,
-  // leaving the existing DB value untouched.
-  const sanitizeFile = (val: any): File | string | undefined => {
-    // ignore empty object {}
-    if (
-      val &&
-      typeof val === "object" &&
-      !(val instanceof File) &&
-      Object.keys(val).length === 0
-    ) {
-      return undefined;
-    }
-
-    if (val instanceof File) return val;
-
-    if (typeof val === "string" && val.trim() !== "") return val;
-
-    return undefined;
-  };
-
-  // Strips any key whose value is null, undefined, or a plain empty object {}
-  // so nothing bad reaches the API / Mongoose string cast.
-  const stripEmpty = (obj: Record<string, any>): Record<string, any> =>
-    Object.fromEntries(
-      Object.entries(obj).filter(([, v]) => {
-        if (v === null || v === undefined) return false;
-        if (
-          typeof v === "object" &&
-          !(v instanceof File) &&
-          Object.keys(v).length === 0
-        )
-          return false;
-        return true;
-      }),
-    );
-
   const handleSubmit = async (values: any) => {
     try {
       setLoading(true);
 
-      const userUpdates = stripEmpty({
-        user_name: values.fullName,
-        mail: values.email,
-        contact: values.contact,
-        dob: values.dob,
-        gender: values.gender,
-        blood: values.bloodGroup,
-        address: values.address,
-        landmark: values.landmark,
-        pincode: values.pincode,
-        country: values.country,
-        state: values.state,
-        district: values.city,
-        locality: values.locality,
-        nominee_name: values.nomineeName,
-        nominee_relation: values.nomineeRelation,
-        alternate_contact: values.nomineeContact,
-      });
+      // ── Step 1: Upload new File picks to S3, resolve existing URLs ──────
+      //
+      // For each file field:
+      //   • File object  → upload to S3 via /api/getFileUrl, get back URL
+      //   • string (URL) → already in S3, pass through unchanged
+      //   • null / {}    → omit entirely; DB keeps its existing value
+      //
+      // If any upload fails, uploadFileToS3 shows a toast and returns null.
+      // We abort the whole save so the user can retry just that file.
 
-      // Build walletUpdates — only include file fields when they have a real value
+      const fileFields = [
+        { formikKey: "bankBook",        dbKey: "bank_book"    },
+        { formikKey: "aadharFront",     dbKey: "aadhar_front" },
+        { formikKey: "aadharBack",      dbKey: "aadhar_back"  },
+        { formikKey: "cancelledCheque", dbKey: "cheque"       },
+        { formikKey: "panFile",         dbKey: "pan_file"     },
+      ] as const;
+
+      const resolvedUrls: Record<string, string> = {};
+
+      for (const { formikKey, dbKey } of fileFields) {
+        const val = values[formikKey];
+
+        if (val instanceof File) {
+          // New file selected — upload to S3 first
+          const url = await uploadFileToS3(val);
+          if (!url) {
+            // Toast already shown inside uploadFileToS3; abort save
+            setLoading(false);
+            return;
+          }
+          resolvedUrls[dbKey] = url;
+        } else if (typeof val === "string" && val.trim() !== "") {
+          // Existing S3 URL — keep as-is
+          resolvedUrls[dbKey] = val;
+        }
+        // null / undefined / {} → omit; DB retains the current value
+      }
+
+      // ── Step 2: Build userUpdates (scalar fields only) ─────────────────
+      const userUpdates: Record<string, any> = {};
+      const userScalars: Record<string, any> = {
+        user_name:         values.fullName,
+        mail:              values.email,
+        contact:           values.contact,
+        dob:               values.dob,
+        gender:            values.gender,
+        blood:             values.bloodGroup,
+        address:           values.address,
+        landmark:          values.landmark,
+        pincode:           values.pincode,
+        country:           values.country,
+        state:             values.state,
+        district:          values.city,
+        locality:          values.locality,
+        nominee_name:      values.nomineeName,
+        nominee_relation:  values.nomineeRelation,
+        alternate_contact: values.nomineeContact,
+      };
+      for (const [k, v] of Object.entries(userScalars)) {
+        if (v !== null && v !== undefined && v !== "") userUpdates[k] = v;
+      }
+
+      // ── Step 3: Build walletUpdates (scalars + resolved S3 URLs) ────────
       const walletUpdates: Record<string, any> = {
-        user_name: values.fullName,
-        contact: values.contact,
+        user_name:           values.fullName,
+        contact:             values.contact,
         account_holder_name: values.accountHolderName,
-        bank_name: values.bankName,
-        account_number: values.accountNumber,
-        ifsc_code: values.ifscCode,
-        aadhar_number: values.aadharNumber,
-        pan_number: values.panNumber,
-        pan_name: values.panName,
-        pan_dob: values.panDob,
-        pan_verified: panVerified,
+        bank_name:           values.bankName,
+        account_number:      values.accountNumber,
+        ifsc_code:           values.ifscCode,
+        aadhar_number:       values.aadharNumber,
+        pan_number:          values.panNumber,
+        pan_name:            values.panName,
+        pan_dob:             values.panDob,
+        pan_verified:        panVerified,
+        // Spread only the file fields that were provided/resolved
+        ...resolvedUrls,
       };
 
-      // Conditionally add file fields only when they carry a real value
-      const bankBook = sanitizeFile(values.bankBook);
-      if (bankBook !== undefined) walletUpdates.bank_book = bankBook;
-
-      const aadharFront = sanitizeFile(values.aadharFront);
-      if (aadharFront !== undefined) walletUpdates.aadhar_front = aadharFront;
-
-      const aadharBack = sanitizeFile(values.aadharBack);
-      if (aadharBack !== undefined) walletUpdates.aadhar_back = aadharBack;
-
-      const cancelledCheque = sanitizeFile(values.cancelledCheque);
-      if (cancelledCheque !== undefined) walletUpdates.cheque = cancelledCheque;
-
-      const panFile = sanitizeFile(values.panFile);
-      if (panFile !== undefined) walletUpdates.pan_file = panFile;
-
+      // ── Step 4: Send as plain JSON — no FormData needed ─────────────────
+      // All file values are now S3 URL strings, safe to JSON-serialise.
       const res = await axios.patch("/api/getuser-operations", {
-        user_id: values.userId,
+        user_id:      values.userId,
         userUpdates,
-        walletUpdates: stripEmpty(walletUpdates),
+        walletUpdates,
       });
 
       if (res.data.success) {
@@ -579,33 +620,7 @@ export default function ProfileEditPage() {
     searchUser(value.trim());
   };
 
-  const validatePanField = async (
-    pan: string,
-    setFieldError: any,
-    setPanVerified: any,
-  ) => {
-    setPanVerified(false);
-    if (!pan) {
-      setFieldError("panNumber", "* PAN Number is required");
-      return;
-    }
-    if (pan.length < 10) {
-      setFieldError("panNumber", "");
-      return;
-    }
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
-      setFieldError("panNumber", "* Invalid PAN format (ABCDE1234F)");
-      return;
-    }
-    const exists = await checkPanDuplicate(pan);
-    if (exists) {
-      setFieldError("panNumber", "* PAN already exists");
-      return;
-    }
-    setFieldError("panNumber", "");
-  };
-
-  /* ---------------- RENDER ---------------- */
+  /* ---------------- RENDER (unchanged) ---------------- */
 
   return (
     <Layout>
@@ -1122,7 +1137,6 @@ export default function ProfileEditPage() {
                       }}
                       className="pr-28"
                     />
-                    {/* ✅ UPDATED: pass values.panName and values.panDob */}
                     {isAdmin &&
                       values.panNumber.length === 10 &&
                       /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(values.panNumber) &&

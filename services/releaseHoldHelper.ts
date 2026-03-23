@@ -54,9 +54,9 @@
 // ──────────────────────────────────────────────────────────────────────────
 
 import { DailyPayout, WeeklyPayout } from "@/models/payout";
-import { Wallet }                    from "@/models/wallet";
-import { MonthlyPayoutTracker }      from "@/models/monthlyPayoutTracker";
-import { Alert }                     from "@/models/alert";
+import { Wallet } from "@/models/wallet";
+import { MonthlyPayoutTracker } from "@/models/monthlyPayoutTracker";
+import { Alert } from "@/models/alert";
 import { hasPreviousUnresolvedHolds } from "@/services/monthlyHoldService";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -64,8 +64,8 @@ import { hasPreviousUnresolvedHolds } from "@/services/monthlyHoldService";
 // ─────────────────────────────────────────────────────────────────────────
 
 function formatDate(date: Date): string {
-  const dd   = String(date.getDate()).padStart(2, "0");
-  const mm   = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   const yyyy = date.getFullYear();
   return `${dd}-${mm}-${yyyy}`;
 }
@@ -74,14 +74,14 @@ function monthDateRange(month: string): { $gte: Date; $lt: Date } {
   const [yyyy, mm] = month.split("-").map(Number);
   return {
     $gte: new Date(yyyy, mm - 1, 1),
-    $lt:  new Date(yyyy, mm,     1),
+    $lt: new Date(yyyy, mm, 1),
   };
 }
 
 /** Converts a Date to its "YYYY-MM" month string */
 function toMonthString(date: Date): string {
   const yyyy = date.getFullYear();
-  const mm   = String(date.getMonth() + 1).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
   return `${yyyy}-${mm}`;
 }
 
@@ -112,18 +112,21 @@ export async function releaseOnHoldPayouts(user_id: string) {
   const wallet = await Wallet.findOne({ user_id });
   if (!wallet || !wallet.account_number) return; // no wallet yet → skip
 
+  const isPanVerified =
+    wallet?.pan_verified === true ||
+    String(wallet?.pan_verified).toLowerCase() === "yes";
   const walletFields = {
-    wallet_id:           wallet.wallet_id,
+    wallet_id: wallet.wallet_id,
     account_holder_name: wallet.account_holder_name,
-    bank_name:           wallet.bank_name,
-    account_number:      wallet.account_number,
-    ifsc_code:           wallet.ifsc_code,
-    pan_verified:        wallet.pan_verified,
+    bank_name: wallet.bank_name,
+    account_number: wallet.account_number,
+    ifsc_code: wallet.ifsc_code,
+    pan_verified: isPanVerified,
   };
 
-  const now           = new Date();
-  let   totalReleased = 0;
-  let   totalSkipped  = 0;
+  const now = new Date();
+  let totalReleased = 0;
+  let totalSkipped = 0;
 
   // ── 2. Find all tracked months for this user ──────────────────────────
   const trackers = await MonthlyPayoutTracker.find({ user_id })
@@ -138,13 +141,13 @@ export async function releaseOnHoldPayouts(user_id: string) {
 
     // Is this month's own PV obligation met?
     const pvObligationMet =
-      tracker.pv_required === 0 ||     // no obligation for this month
-      tracker.hold_released === true;   // obligation was fully met
+      tracker.pv_required === 0 || // no obligation for this month
+      tracker.hold_released === true; // obligation was fully met
 
     if (!pvObligationMet) {
       console.log(
         `[releaseOnHoldPayouts] Skipping ${month} for ${user_id} — ` +
-        `PV obligation not met (${tracker.pv_fulfilled}/${tracker.pv_required} PV).`
+          `PV obligation not met (${tracker.pv_fulfilled}/${tracker.pv_required} PV).`,
       );
       totalSkipped++;
       continue;
@@ -155,7 +158,7 @@ export async function releaseOnHoldPayouts(user_id: string) {
     if (blockedByPrior) {
       console.log(
         `[releaseOnHoldPayouts] Skipping ${month} for ${user_id} — ` +
-        `blocked by a prior month's uncleared PV obligation.`
+          `blocked by a prior month's uncleared PV obligation.`,
       );
       totalSkipped++;
       continue;
@@ -173,28 +176,28 @@ export async function releaseOnHoldPayouts(user_id: string) {
       { user_id, status: "OnHold", created_at: dateRange },
       {
         $set: {
-          status:              "pending",
-          hold_released_at:    now,
+          status: "pending",
+          hold_released_at: now,
           hold_release_reason: releaseNote,
-          last_modified_by:    "system",
-          last_modified_at:    now,
+          last_modified_by: "system",
+          last_modified_at: now,
           ...walletFields,
         },
-      }
+      },
     );
 
     const weeklyResult = await WeeklyPayout.updateMany(
       { user_id, status: "OnHold", created_at: dateRange },
       {
         $set: {
-          status:              "pending",
-          hold_released_at:    now,
+          status: "pending",
+          hold_released_at: now,
           hold_release_reason: releaseNote,
-          last_modified_by:    "system",
-          last_modified_at:    now,
+          last_modified_by: "system",
+          last_modified_at: now,
           ...walletFields,
         },
-      }
+      },
     );
 
     const released = dailyResult.modifiedCount + weeklyResult.modifiedCount;
@@ -202,7 +205,7 @@ export async function releaseOnHoldPayouts(user_id: string) {
 
     if (released > 0) {
       console.log(
-        `[releaseOnHoldPayouts] Released ${released} payouts for ${user_id} in ${month}.`
+        `[releaseOnHoldPayouts] Released ${released} payouts for ${user_id} in ${month}.`,
       );
     }
   }
@@ -236,35 +239,35 @@ export async function releaseOnHoldPayouts(user_id: string) {
   }
 
   for (const month of untrackedMonthsSet) {
-    const dateRange   = monthDateRange(month);
+    const dateRange = monthDateRange(month);
     const releaseNote = `Wallet set up — pre-system payout released (${month})`;
 
     const dailyResult = await DailyPayout.updateMany(
       { user_id, status: "OnHold", created_at: dateRange },
       {
         $set: {
-          status:              "pending",
-          hold_released_at:    now,
+          status: "pending",
+          hold_released_at: now,
           hold_release_reason: releaseNote,
-          last_modified_by:    "system",
-          last_modified_at:    now,
+          last_modified_by: "system",
+          last_modified_at: now,
           ...walletFields,
         },
-      }
+      },
     );
 
     const weeklyResult = await WeeklyPayout.updateMany(
       { user_id, status: "OnHold", created_at: dateRange },
       {
         $set: {
-          status:              "Pending",
-          hold_released_at:    now,
+          status: "Pending",
+          hold_released_at: now,
           hold_release_reason: releaseNote,
-          last_modified_by:    "system",
-          last_modified_at:    now,
+          last_modified_by: "system",
+          last_modified_at: now,
           ...walletFields,
         },
-      }
+      },
     );
 
     const released = dailyResult.modifiedCount + weeklyResult.modifiedCount;
@@ -272,7 +275,7 @@ export async function releaseOnHoldPayouts(user_id: string) {
 
     if (released > 0) {
       console.log(
-        `[releaseOnHoldPayouts] Released ${released} pre-system payouts for ${user_id} in ${month}.`
+        `[releaseOnHoldPayouts] Released ${released} pre-system payouts for ${user_id} in ${month}.`,
       );
     }
   }
@@ -281,24 +284,24 @@ export async function releaseOnHoldPayouts(user_id: string) {
   if (totalReleased > 0) {
     await Alert.create({
       user_id,
-      title:       "💰 Held Payouts Released",
+      title: "💰 Held Payouts Released",
       description: `${totalReleased} held payout(s) have been released to Pending after your wallet was set up.`,
-      role:        "user",
-      priority:    "high",
-      read:        false,
-      link:        "/wallet/payout/daily",
-      date:        formatDate(now),
-      created_at:  now,
+      role: "user",
+      priority: "high",
+      read: false,
+      link: "/wallet/payout/daily",
+      date: formatDate(now),
+      created_at: now,
     });
   }
 
   if (totalSkipped > 0) {
     console.log(
-      `[releaseOnHoldPayouts] ${user_id} — ${totalSkipped} month(s) still on hold due to unmet PV obligation.`
+      `[releaseOnHoldPayouts] ${user_id} — ${totalSkipped} month(s) still on hold due to unmet PV obligation.`,
     );
   }
 
   console.log(
-    `[releaseOnHoldPayouts] Done for ${user_id} — released: ${totalReleased}, skipped months: ${totalSkipped}`
+    `[releaseOnHoldPayouts] Done for ${user_id} — released: ${totalReleased}, skipped months: ${totalSkipped}`,
   );
 }

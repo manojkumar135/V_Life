@@ -115,7 +115,11 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       tds = 0,
       admin = 0;
 
-    if (wallet?.pan_verified) {
+      const isPanVerified =
+  wallet?.pan_verified === true ||
+  String(wallet?.pan_verified).toLowerCase() === "yes";
+
+  if (isPanVerified) {
       withdraw = Math.round(PROMO_AMOUNT * 0.8);  // 80%
       reward   = Math.round(PROMO_AMOUNT * 0.08); // 8%
       tds      = Math.round(PROMO_AMOUNT * 0.02); // 2%
@@ -162,9 +166,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
 const formattedDate = formatDate(istNow);
 
     // ✅ IST time instead of server local time
-    const istTime = new Date(istNow.getTime() + IST_OFFSET_MS)
-      .toISOString()
-      .slice(11, 16);
+   const istTime = istNow.toTimeString().slice(0, 5);
 
     /* -------------------------------------------------------
        5️⃣ Create Daily Payout
@@ -177,7 +179,7 @@ const formattedDate = formatDate(istNow);
       user_name: user.user_name,
       rank: wallet?.rank || user.rank,
       wallet_id: wallet?.wallet_id,
-      pan_verified: wallet?.pan_verified || false,
+      pan_verified: isPanVerified || false,
       mail: user.mail || "",
       contact: user.contact || "",
       user_status: user.user_status || "active",

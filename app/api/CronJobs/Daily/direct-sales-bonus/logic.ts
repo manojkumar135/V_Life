@@ -362,12 +362,16 @@ export async function runDirectSalesBonus(): Promise<{
         const payoutStatus: "Pending" | "OnHold" | "Completed" = hold.status;
 
         /* ── Amount splits ────────────────────────────────────────── */
-        const panVerified = !!wallet?.pan_verified;
-        const withdrawAmount = panVerified
+        const isPanVerified =
+          wallet?.pan_verified === true ||
+          String(wallet?.pan_verified).toLowerCase() === "yes";
+        const withdrawAmount = isPanVerified
           ? totalAmount * 0.8
           : totalAmount * 0.62;
         const rewardAmount = totalAmount * 0.08;
-        const tdsAmount = panVerified ? totalAmount * 0.02 : totalAmount * 0.2;
+        const tdsAmount = isPanVerified
+          ? totalAmount * 0.02
+          : totalAmount * 0.2;
         const adminCharge = totalAmount * 0.1;
 
         /* ── Create payout record ─────────────────────────────────── */
@@ -383,7 +387,7 @@ export async function runDirectSalesBonus(): Promise<{
           user_status: node?.status || "",
           wallet_id: wallet?.wallet_id ?? undefined,
           rank: wallet?.rank ?? undefined,
-          pan_verified: panVerified,
+          pan_verified: isPanVerified,
 
           amount: totalAmount,
           totalamount: totalAmount,

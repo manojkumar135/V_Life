@@ -7,8 +7,31 @@ import { Wallet } from "@/models/wallet";
 import { Login } from "@/models/login";
 
 /* =====================================================
+   HELPER — strips "", null, undefined, and plain {}
+   from any object before it reaches Mongoose.
+   Plain {} appears when a File field is sent over JSON
+   without being uploaded first (File → JSON → {}).
+   Since the frontend now uploads files to S3 before
+   calling this route, {} should never arrive here —
+   but this guard stays as a safety net.
+===================================================== */
+const cleanObject = (obj: any): Record<string, any> =>
+  Object.fromEntries(
+    Object.entries(obj || {}).filter(([, v]) => {
+      if (v === "" || v === null || v === undefined) return false;
+      if (
+        typeof v === "object" &&
+        !(v instanceof File) &&
+        Object.keys(v).length === 0
+      )
+        return false;
+      return true;
+    }),
+  );
+
+/* =====================================================
    GET : Search user by user_id | mail | contact
-         ?passkey=true  → returns login_key (plain passkey) for admin
+         ?passkey=true  → returns login_key (plain) for admin
 ===================================================== */
 export async function GET(request: Request) {
   try {
@@ -16,31 +39,28 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
-    const fetchPasskey = searchParams.get("passkey") === "true"; // ✅ NEW
+    const fetchPasskey = searchParams.get("passkey") === "true";
 
     if (!search) {
       return NextResponse.json(
         { success: false, message: "Search parameter is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // ✅ NEW: Admin fetching passkey (login_key) only
+    // ── Admin fetching passkey only ───────────────────────────────────────
     if (fetchPasskey) {
       const loginRecord = (await Login.findOne({ user_id: search })
         .select("login_key")
         .lean()) as any;
 
       return NextResponse.json(
-        {
-          success: true,
-          login_key: loginRecord?.login_key || null,
-        },
-        { status: 200 }
+        { success: true, login_key: loginRecord?.login_key || null },
+        { status: 200 },
       );
     }
 
-    // ── EXISTING: Normal user search ──────────────────────────────────────
+    // ── Normal user search ────────────────────────────────────────────────
     const user = (await User.findOne({
       $or: [{ user_id: search }, { mail: search }, { contact: search }],
     }).lean()) as any;
@@ -48,32 +68,50 @@ export async function GET(request: Request) {
     if (!user) {
       return NextResponse.json(
         { success: false, message: "User not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const wallet = await Wallet.findOne({ user_id: user.user_id }).lean();
 
-    const combinedData = {
-      ...user,
-      ...(wallet || {}),
-    };
+    const combinedData = { ...user, ...(wallet || {}) };
 
     return NextResponse.json(
       { success: true, data: combinedData },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 /* =====================================================
-   PATCH : Update User and/or Wallet
-           Special case: body.generatePasskey → generate & save passkey only
+   PATCH : Update User and/or Wallet  (plain JSON only)
+
+   Two operation modes — both sent as application/json:
+
+   ── A) Generate passkey ─────────────────────────────
+   Body: { generatePasskey: { user_id: string } }
+
+   ── B) Profile + KYC update ─────────────────────────
+   Body: {
+     user_id:       string,
+     userUpdates:   { ...scalar user fields },
+     walletUpdates: {
+       ...scalar wallet fields,
+       // File fields are S3 URLs (strings) uploaded by
+       // the frontend BEFORE this call. No File objects
+       // ever reach this route.
+       bank_book?:    string,
+       aadhar_front?: string,
+       aadhar_back?:  string,
+       cheque?:       string,
+       pan_file?:     string,
+     }
+   }
 ===================================================== */
 export async function PATCH(request: Request) {
   try {
@@ -81,43 +119,41 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
 
-    /* ── ✅ NEW: Generate passkey branch ───────────────────────────────── */
+    /* ── A) Generate passkey ─────────────────────────────────────────── */
     if (body.generatePasskey) {
       const { user_id } = body.generatePasskey;
 
       if (!user_id) {
         return NextResponse.json(
           { success: false, message: "user_id is required" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
-      // Generate random 10-char passkey: letters + digits
       const chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
       const plain = Array.from({ length: 10 }, () =>
-        chars.charAt(Math.floor(Math.random() * chars.length))
+        chars.charAt(Math.floor(Math.random() * chars.length)),
       ).join("");
 
-      // Hash passkey for login comparison
       const hashed = await bcrypt.hash(plain, 10);
 
       const updated = await Login.findOneAndUpdate(
         { user_id },
         {
           $set: {
-            passkey: hashed,        // hashed — used during login bcrypt compare
-            login_key: plain,       // plain — shown to admin only
+            passkey: hashed,
+            login_key: plain,
             last_modified_at: new Date(),
           },
         },
-        { new: true }
+        { returnDocument: "after" },
       );
 
       if (!updated) {
         return NextResponse.json(
           { success: false, message: "Login record not found for this user" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -125,33 +161,26 @@ export async function PATCH(request: Request) {
         {
           success: true,
           message: "Passkey generated successfully",
-          login_key: plain, // return plain so UI can show immediately without extra fetch
+          login_key: plain,
         },
-        { status: 200 }
+        { status: 200 },
       );
     }
-    /* ─────────────────────────────────────────────────────────────────── */
 
-    /* ── EXISTING: Normal user + wallet update ───────────────────────── */
+    /* ── B) Normal profile + KYC update ─────────────────────────────── */
     const { user_id, userUpdates, walletUpdates } = body;
 
     if (!user_id) {
       return NextResponse.json(
         { success: false, message: "user_id is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
-
-    const cleanObject = (obj: any) =>
-      Object.fromEntries(
-        Object.entries(obj || {}).filter(
-          ([_, v]) => v !== "" && v !== null && v !== undefined
-        )
-      );
 
     const cleanUserUpdates = cleanObject(userUpdates);
     const cleanWalletUpdates = cleanObject(walletUpdates);
 
+    // Normalise pan_verified to boolean
     if ("pan_verified" in cleanWalletUpdates) {
       cleanWalletUpdates.pan_verified =
         cleanWalletUpdates.pan_verified === true ||
@@ -165,7 +194,7 @@ export async function PATCH(request: Request) {
       updatedUser = await User.findOneAndUpdate(
         { user_id },
         { $set: cleanUserUpdates },
-        { new: true }
+        { returnDocument: "after" },
       );
     }
 
@@ -173,14 +202,14 @@ export async function PATCH(request: Request) {
       updatedWallet = await Wallet.findOneAndUpdate(
         { user_id },
         { $set: cleanWalletUpdates },
-        { new: true, upsert: true }
+        { returnDocument: "after", upsert: true },
       );
     }
 
     if (!updatedUser && !updatedWallet) {
       return NextResponse.json(
         { success: false, message: "Nothing to update" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -190,12 +219,12 @@ export async function PATCH(request: Request) {
         message: "Updated successfully",
         data: { user: updatedUser, wallet: updatedWallet },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

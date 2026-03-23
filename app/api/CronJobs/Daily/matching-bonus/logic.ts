@@ -384,8 +384,7 @@ export async function runMatchingBonus() {
       const user = (await User.findOne({ user_id: u.user_id }).lean()) as any;
       const isPanVerified =
         wallet?.pan_verified === true ||
-        wallet?.pan_verified === "Yes" ||
-        wallet?.pan_verified === "yes";
+        String(wallet?.pan_verified).toLowerCase() === "yes";
 
       const walletId = wallet ? wallet.wallet_id : null;
 
@@ -419,7 +418,7 @@ export async function runMatchingBonus() {
       let tdsAmount = 0;
       let adminCharge = 0;
 
-      if (wallet && wallet.pan_verified) {
+      if (wallet && isPanVerified) {
         // PAN Verified
         withdrawAmount = Number((totalAmount * 0.8).toFixed(2));
         rewardAmount = Number((totalAmount * 0.08).toFixed(2));

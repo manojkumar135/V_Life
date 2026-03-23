@@ -129,7 +129,11 @@ export async function releaseReferralBonus({
   let tds = 0;
   let admin = 0;
 
-  if (wallet?.pan_verified) {
+  const isPanVerified =
+    wallet?.pan_verified === true ||
+    String(wallet?.pan_verified).toLowerCase() === "yes";
+
+  if (isPanVerified) {
     withdraw = Math.round(REFERRAL_AMOUNT * 0.8); // 80%
     reward = Math.round(REFERRAL_AMOUNT * 0.08); // 8%
     tds = Math.round(REFERRAL_AMOUNT * 0.02); // 2%
@@ -142,11 +146,11 @@ export async function releaseReferralBonus({
   }
 
   const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
- const istNow = new Date(
-  new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-);
+  const istNow = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+  );
 
-const formattedDate = formatDate(istNow);
+  const formattedDate = formatDate(istNow);
   /* ------------------- Detect Type ------------------- */
   const sourceHistory = await History.findOne({
     transaction_id: orderId,
@@ -168,7 +172,7 @@ const formattedDate = formatDate(istNow);
     user_status: node.status,
     wallet_id: wallet?.wallet_id,
     rank: wallet?.rank,
-    pan_verified: wallet?.pan_verified ?? false,
+    pan_verified: isPanVerified,
 
     name: "Referral Bonus",
     title: "Referral Bonus",
