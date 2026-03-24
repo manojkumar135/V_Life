@@ -53,13 +53,13 @@ cron.schedule("0 15 * * *", async () => {
 });
 
 // 12 PM IST
-cron.schedule("59 23 * * *", async () => {
-    await callDailyCron();
-    await callFortnightlyCron();
+// cron.schedule("59 23 * * *", async () => {
+//     await callDailyCron();
+//     await callFortnightlyCron();
 
-}, {
-    timezone: "Asia/Kolkata"
-});
+// }, {
+//     timezone: "Asia/Kolkata"
+// });
 
 // 2 PM IST
 // cron.schedule("0 14 * * *", async () => {
