@@ -34,7 +34,7 @@ async function callFortnightlyCron() {
 }
 
 // 12 AM IST
-cron.schedule("0 13 * * *", async () => {
+cron.schedule("30 13 * * *", async () => {
     await callDailyCron();
     await callFortnightlyCron();
 
