@@ -187,6 +187,117 @@ function getTeamUserIdsFromMap(
   return result;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ✅ HELPER: Determine if the current cycle's contributors are completely
+//    different from an already-released payout's contributors.
+//
+//  TWO checks (either one passing → allow new payout):
+//
+//  CHECK 1 — IST Window:
+//    Convert existing payout's created_at (UTC in DB) → IST hour.
+//    If existing payout was in AM window (0–11 IST) and now is PM (12–23 IST)
+//    or vice versa → completely different cycle → ALLOW.
+//
+//  CHECK 2 — User Overlap:
+//    Compare user_ids in existing payout's left_users + right_users
+//    vs current cycle's left_histories + right_histories user_ids.
+//    If there is ZERO overlap → different contributing users → ALLOW.
+//    If ANY overlap exists → same cycle contributors → BLOCK.
+//
+//  Both checks failing → BLOCK (same window + same contributing users).
+// ─────────────────────────────────────────────────────────────────────────────
+function isCompletelyDifferentCycle(
+  existingPayout: any,
+  currentLeftHistories: any[],
+  currentRightHistories: any[],
+): boolean {
+  // ── CHECK 1: IST Window comparison ──────────────────────────────────────
+  // Pick the best timestamp from the existing payout (prefer created_at)
+  const existingTimestampUTC = existingPayout.created_at
+    ? new Date(existingPayout.created_at)
+    : existingPayout.last_modified_at
+      ? new Date(existingPayout.last_modified_at)
+      : null;
+
+  if (existingTimestampUTC && !isNaN(existingTimestampUTC.getTime())) {
+    // Convert UTC → IST by adding 5h 30m (IST = UTC + 5:30)
+    const existingIST = new Date(
+      existingTimestampUTC.getTime() + 5.5 * 60 * 60 * 1000,
+    );
+    // getUTCHours() on an IST-shifted date gives the IST hour correctly
+    const existingHourIST = existingIST.getUTCHours();
+    const existingWindowHalf = existingHourIST < 12 ? "AM" : "PM";
+
+    // Current time in IST
+    const nowIST = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000);
+    const nowHourIST = nowIST.getUTCHours();
+    const currentWindowHalf = nowHourIST < 12 ? "AM" : "PM";
+
+    console.log(
+      `[Cycle Check] Existing payout window: ${existingWindowHalf} (IST hour: ${existingHourIST}), ` +
+        `Current window: ${currentWindowHalf} (IST hour: ${nowHourIST})`,
+    );
+
+    if (existingWindowHalf !== currentWindowHalf) {
+      // ✅ Different half-window → definitely a different cycle
+      console.log(
+        `[Cycle Check] ✅ DIFFERENT window (${existingWindowHalf} vs ${currentWindowHalf}) → allow new payout.`,
+      );
+      return true;
+    }
+  }
+
+  // ── CHECK 2: User ID overlap ─────────────────────────────────────────────
+  // Collect all user_ids from the existing released payout
+  const existingUserIds = new Set<string>([
+    ...(existingPayout.left_users || [])
+      .map((u: any) => u.user_id)
+      .filter(Boolean),
+    ...(existingPayout.right_users || [])
+      .map((u: any) => u.user_id)
+      .filter(Boolean),
+  ]);
+
+  // Collect all user_ids from the current cycle's histories
+  const currentUserIds = new Set<string>([
+    ...currentLeftHistories.map((h: any) => h.user_id).filter(Boolean),
+    ...currentRightHistories.map((h: any) => h.user_id).filter(Boolean),
+  ]);
+
+  console.log(
+    `[Cycle Check] Existing payout user_ids: [${[...existingUserIds].join(", ")}]`,
+  );
+  console.log(
+    `[Cycle Check] Current cycle user_ids:   [${[...currentUserIds].join(", ")}]`,
+  );
+
+  // Find any overlap
+  let overlapFound = false;
+  for (const uid of currentUserIds) {
+    if (existingUserIds.has(uid)) {
+      overlapFound = true;
+      console.log(
+        `[Cycle Check] ❌ Overlap found on user_id: ${uid} → same cycle contributors.`,
+      );
+      break;
+    }
+  }
+
+  if (!overlapFound) {
+    // ✅ Zero overlap → completely different contributing users
+    console.log(
+      `[Cycle Check] ✅ No user overlap → completely different contributors → allow new payout.`,
+    );
+    return true;
+  }
+
+  // ❌ Same window + overlapping users → block
+  console.log(
+    `[Cycle Check] ❌ Same window + overlapping users → SAME CYCLE → block.`,
+  );
+  return false;
+}
+
 // Get all users with left/right teams and histories (uses created_at window)
 export async function getUserTeamsAndHistories() {
   await connectDB();
@@ -311,7 +422,7 @@ export async function runMatchingBonus() {
       const effectiveLeftPV = Math.min(leftPV, 100);
       const effectiveRightPV = Math.min(rightPV, 100);
 
-      // ✅ compulsory condition
+      // ✅ compulsory condition: both sides must have 100 PV
       const match = effectiveLeftPV >= 100 && effectiveRightPV >= 100;
       if (!match) continue;
 
@@ -333,36 +444,69 @@ export async function runMatchingBonus() {
       }
 
       // ─────────────────────────────────────────────────────────────
-      // ✅ GUARD 2 — DB: prevents double payout if cron runs twice today
-      // Checks DailyPayout for an existing Matching Bonus for this
-      // user today (same date string, same window half-day).
+      // ✅ GUARD 2 — DB: Smart cycle-aware check
+      //
+      //  Fetches ALL matching bonus payouts for this user today.
+      //  For each existing payout, runs isCompletelyDifferentCycle():
+      //    → If existing payout was in a different IST half-window (AM/PM)
+      //      OR the contributing user_ids have zero overlap with current
+      //      cycle's user_ids → treat as a NEW cycle → allow payout.
+      //    → If ANY existing payout is from the SAME cycle (same window
+      //      + overlapping user_ids) → block to prevent duplicate.
       // ─────────────────────────────────────────────────────────────
       const todayFormatted = formatDate(
         new Date(
           new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
         ),
       );
-      const alreadyPaid = await DailyPayout.findOne({
+
+      // Fetch all today's matching bonus payouts for this user
+      const existingPayouts = (await DailyPayout.find({
         user_id: u.user_id,
         name: "Matching Bonus",
         date: todayFormatted,
-      }).lean();
+      })
+        .select("left_users right_users created_at last_modified_at")
+        .lean()) as any[];
 
-      if (alreadyPaid) {
-        console.log(
-          `⚠️ [DB Guard] Matching Bonus already exists today for ${u.user_id}, skipping.`,
-        );
-        // Mark histories as checked so they won't reappear
-        const historyIds = [...u.left_histories, ...u.right_histories]
-          .map((h: any) => h._id)
-          .filter(Boolean);
-        if (historyIds.length > 0) {
-          await History.updateMany(
-            { _id: { $in: historyIds } },
-            { $set: { ischecked: true } },
+      if (existingPayouts.length > 0) {
+        let shouldBlock = false;
+
+        for (const existingPayout of existingPayouts) {
+          const isDifferentCycle = isCompletelyDifferentCycle(
+            existingPayout,
+            u.left_histories,
+            u.right_histories,
           );
+
+          if (!isDifferentCycle) {
+            // This existing payout belongs to the same cycle → block
+            shouldBlock = true;
+            console.log(
+              `⚠️ [DB Guard] Existing payout for ${u.user_id} is from the SAME cycle → blocking.`,
+            );
+            break;
+          }
         }
-        continue;
+
+        if (shouldBlock) {
+          // Mark histories as checked so they won't reappear in next run
+          const historyIds = [...u.left_histories, ...u.right_histories]
+            .map((h: any) => h._id)
+            .filter(Boolean);
+          if (historyIds.length > 0) {
+            await History.updateMany(
+              { _id: { $in: historyIds } },
+              { $set: { ischecked: true } },
+            );
+          }
+          continue;
+        }
+
+        // ✅ All existing payouts are from different cycles → proceed
+        console.log(
+          `✅ [DB Guard] Existing payout(s) for ${u.user_id} are from different cycle(s) → allowing new payout.`,
+        );
       }
 
       // ✅ Register in-memory BEFORE creating payout
@@ -399,10 +543,6 @@ export async function runMatchingBonus() {
       //   4. Prior month PV uncleared / this month
       //      crossed threshold with PV unmet           → OnHold (PV_NOT_FULFILLED)
       //   5. All clear                                 → Pending
-      //
-      //  evaluateAndUpdateHoldStatus MUST be called first so that
-      //  MonthlyPayoutTracker.total_payout is updated BEFORE
-      //  determineHoldReasons reads it for the PV check.
 
       // Step 1: Update monthly tracker total (WRITE)
       await evaluateAndUpdateHoldStatus(u.user_id, totalAmount);
@@ -465,7 +605,7 @@ export async function runMatchingBonus() {
         status: payoutStatus,
         details: "Daily Matching Bonus",
 
-        // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
+        // ✅ hold metadata — so admin knows WHY payout is OnHold
         hold_reasons: hold.reasons,
         hold_reason_labels: hold.labels,
         hold_release_reason: hold.summary,
@@ -483,6 +623,7 @@ export async function runMatchingBonus() {
         created_by: "system",
         last_modified_by: "system",
         last_modified_at: istNow,
+        created_at: istNow,
       });
 
       const totalPayout = await getTotalPayout(u.user_id);

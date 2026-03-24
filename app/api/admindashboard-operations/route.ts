@@ -120,16 +120,27 @@ export async function GET(request: Request) {
       startDate || endDate
         ? {
             advance: true,
+            transaction_type: "Debit", // ✅ only real advance payments
+            details: { $regex: "Advance Payment", $options: "i" }, // ✅ extra safety
             created_at: {
               ...(startDate && { $gte: startDate }),
               ...(endDate && { $lte: endDate }),
             },
           }
-        : { advance: true };
+        : {
+            advance: true,
+            transaction_type: "Debit", // ✅ important
+            details: { $regex: "Advance Payment", $options: "i" }, // ✅ optional but safe
+          };
 
     const advanceAgg = await History.aggregate([
       { $match: advanceDateMatch },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$amount" },
+        },
+      },
     ]);
 
     const advanceSales = advanceAgg[0]?.total || 0;
@@ -387,6 +398,7 @@ export async function GET(request: Request) {
       (dailyAgg[0]?.holdRewardPoints || 0) +
       (weeklyAgg[0]?.holdRewardPoints || 0);
 
+    const round2 = (num: any) => Number(Math.round(num).toFixed(2));
     /* =====================================================
        📤 RESPONSE
     ===================================================== */
@@ -395,10 +407,10 @@ export async function GET(request: Request) {
         success: true,
         data: {
           sales: {
-            totalSales,          // 🆕 orders + advance combined
-            firstOrder: firstOrderAgg[0]?.total || 0,
-            reorder: reorderAgg[0]?.total || 0,
-            advanceSales,        // 🆕 advance separately
+            totalSales: round2(totalSales),
+            firstOrder: round2(firstOrderAgg[0]?.total),
+            reorder: round2(reorderAgg[0]?.total),
+            advanceSales: round2(advanceSales),
           },
           orders: {
             totalOrders: totalOrdersCount,

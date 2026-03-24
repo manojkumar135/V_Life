@@ -35,7 +35,7 @@ const TimeRemainingCard = () => {
       nextCycle = now.add(1, "day").hour(0).minute(0).second(0).millisecond(0);
     }
 
-    const diff = nextCycle.diff(now, "second");
+  const diff = nextCycle.diff(now, "second") - 60;
     return diff > 0 ? diff : 0;
   };
 

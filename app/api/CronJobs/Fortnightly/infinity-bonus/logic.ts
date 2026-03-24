@@ -61,7 +61,7 @@ async function getLast15DaysEligiblePayouts() {
   console.log(
     `[Infinity Bonus] Found ${filtered.length} payouts (Matching + Direct Sales) in last 15 days`,
   );
-  // console.log(filtered,"infiniserhetet")
+
   return filtered;
 }
 
@@ -85,10 +85,12 @@ export async function runInfinityBonus() {
       return;
     }
 
-    // ✅ IN-MEMORY dedup Set — key: "fromUserId__sponsorId__infinityTitle"
+    // ✅ IN-MEMORY dedup Set
+    // Key: "sourceTransactionId__sponsorId__infinityTitle"
     // This is the PRIMARY guard. It prevents any duplicate infinity payout
-    // within this single cron run, regardless of how many DailyPayout records
-    // exist for the same user (different transaction_ids, different dates, etc.)
+    // within this single cron run based on the exact source payout that
+    // triggered it. Two different source payouts (different transaction_ids)
+    // for the same user will produce different keys and both will be allowed.
     const processedThisRun = new Set<string>();
 
     let totalCreated = 0;
@@ -153,18 +155,19 @@ export async function runInfinityBonus() {
 
       // ─────────────────────────────────────────────────────────────
       // ✅ GUARD 1 — In-Memory Set
-      // Catches ALL duplicates within this single cron run.
-      // Covers cases where:
-      //   - DailyPayout has 2 records for same user+type (different transaction_ids)
-      //   - DailyPayout has 2 records for same user+type (different dates)
-      //   - Any other scenario producing multiple source payouts for same user
+      //
+      // Key is based on the SOURCE payout's transaction_id + sponsor + type.
+      // This means:
+      //   - Same source payout processed twice in one run → BLOCKED (duplicate)
+      //   - Different source payout (different payout_id, different cycle)
+      //     for same user → ALLOWED (different key)
       // ─────────────────────────────────────────────────────────────
-      const runKey = `${payout.user_id}__${sponsor.user_id}__${infinityTitle}`;
+      const runKey = `${payout.transaction_id}__${sponsor.user_id}__${infinityTitle}`;
       if (processedThisRun.has(runKey)) {
         console.log(
-          `⚠️ [In-Memory Guard] Duplicate skipped this run: ${payout.user_id} → ${sponsor.user_id} (${infinityTitle})`,
+          `⚠️ [In-Memory Guard] Duplicate skipped this run: source=${payout.transaction_id} → sponsor=${sponsor.user_id} (${infinityTitle})`,
         );
-        // Still mark the source payout as checked so it won't appear again next run
+        // Still mark the source payout as checked so it won't appear again
         await DailyPayout.updateOne(
           { _id: payout._id },
           { $set: { is_checked: true } },
@@ -174,19 +177,28 @@ export async function runInfinityBonus() {
 
       // ─────────────────────────────────────────────────────────────
       // ✅ GUARD 2 — DB Check
-      // Catches duplicates if the cron runs more than once today
-      // (e.g. manual trigger, retry, scheduler overlap)
+      //
+      // OLD behavior: check from + to + name + date
+      //   → Blocked 2nd cycle payout because same from/to/name/date ❌
+      //
+      // NEW behavior: check if an infinity payout already exists for
+      //   this EXACT source payout transaction_id (stored in team_users).
+      //   → Each source payout (different transaction_id = different cycle)
+      //     gets its own infinity payout. Same source payout never gets
+      //     two infinity payouts. ✅
+      //
+      // team_users stores the source payout's transaction_id, so we can
+      // query: "has this exact source payout already been used?"
       // ─────────────────────────────────────────────────────────────
-      const todayFormatted = formatDate(new Date());
       const alreadyExists = await WeeklyPayout.findOne({
-        from: payout.user_id,
         to: sponsor.user_id,
         name: infinityTitle,
-        date: todayFormatted,
-      });
+        "team_users.transaction_id": payout.transaction_id,
+      }).lean();
+
       if (alreadyExists) {
         console.log(
-          `⚠️ [DB Guard] Already released today: ${payout.user_id} → ${sponsor.user_id} (${infinityTitle})`,
+          `⚠️ [DB Guard] Infinity payout already exists for source payout ${payout.transaction_id} → sponsor ${sponsor.user_id} (${infinityTitle}), skipping.`,
         );
         await DailyPayout.updateOne(
           { _id: payout._id },
@@ -283,17 +295,20 @@ export async function runInfinityBonus() {
         from: payout.user_id,
         to: sponsor.user_id,
 
-        // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
+        // ✅ hold metadata — so admin knows WHY payout is OnHold
         hold_reasons: hold.reasons,
         hold_reason_labels: hold.labels,
         hold_release_reason: hold.summary,
 
+        // ✅ team_users stores the source payout's transaction_id
+        // This is the key used by GUARD 2 to prevent re-processing
+        // the same source payout in future cron runs.
         team_users: [
           {
             user_id: payout.user_id,
             amount: payout.amount,
             bonus_type: payout.name,
-            transaction_id: payout.transaction_id,
+            transaction_id: payout.transaction_id, // ← source payout tx_id
           },
         ],
 
@@ -428,7 +443,7 @@ export async function runInfinityBonus() {
 
       totalCreated++;
       console.log(
-        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (${payout.name} from ${user.user_id})`,
+        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (${payout.name} from ${user.user_id}) source=${payout.transaction_id}`,
       );
     }
 

@@ -34,7 +34,7 @@ async function callFortnightlyCron() {
 }
 
 // 12 AM IST
-cron.schedule("30 13 * * *", async () => {
+cron.schedule("59 11 * * *", async () => {
     await callDailyCron();
     await callFortnightlyCron();
 
@@ -44,7 +44,7 @@ cron.schedule("30 13 * * *", async () => {
 
 
 // 12 AM IST
-cron.schedule("0 15 * * *", async () => {
+cron.schedule("59 23 * * *", async () => {
     await callDailyCron();
     await callFortnightlyCron();
 
