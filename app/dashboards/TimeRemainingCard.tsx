@@ -24,20 +24,27 @@ const TimeRemainingCard = () => {
   const [isCritical, setIsCritical] = useState(false);
 
   // ✅ Get seconds left to next cycle (12 PM or 12 AM IST)
-  const calculateSecondsLeft = () => {
-    const now = dayjs().tz("Asia/Kolkata");
+ const calculateSecondsLeft = () => {
+  const now = dayjs().tz("Asia/Kolkata");
 
-    let nextCycle;
+  let nextCycle;
 
-    if (now.hour() < 12) {
-      nextCycle = now.hour(12).minute(0).second(0).millisecond(0);
-    } else {
-      nextCycle = now.add(1, "day").hour(0).minute(0).second(0).millisecond(0);
-    }
+  if (now.hour() < 12) {
+    nextCycle = now.hour(12).minute(0).second(0).millisecond(0);
+  } else {
+    nextCycle = now.add(1, "day").hour(0).minute(0).second(0).millisecond(0);
+  }
 
-  const diff = nextCycle.diff(now, "second") - 60;
-    return diff > 0 ? diff : 0;
-  };
+  const actualDiff = nextCycle.diff(now, "second");
+
+  // ✅ If last 60 seconds → hold at 00:00:00
+  if (actualDiff <= 60) {
+    return 0;
+  }
+
+  // ✅ Otherwise run normally (but shifted by 60 sec)
+  return actualDiff - 60;
+};
 
   // 📌 Fetch team data API
   const fetchTeamData = async () => {

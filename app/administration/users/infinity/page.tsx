@@ -151,14 +151,34 @@ export default function InfinityTeam() {
     {
       field: "rank",
       headerName: "Rank",
-      flex: 0.8,
-      renderCell: (params: any) =>
-        params.value && params.value !== "none"
-  ? !isNaN(params.value)
-    ? "Star"
-    : `${params.value} Star`
-  : "-"
+      flex: 1,
+      renderCell: (params: any) => {
+        const value = params.value;
 
+        if (
+          value === null ||
+          value === undefined ||
+          value === "" ||
+          value === "none" ||
+          String(value).toLowerCase() === "null"
+        ) {
+          return "-";
+        }
+
+        const num = Number(value);
+
+        // If number between 1–5
+        if (!isNaN(num) && num >= 1 && num <= 5) {
+          if (num === 1) return "1 Star";
+          return "2 Star"; // for 2–5
+        }
+
+        // String case → capitalize only (no "Star")
+        return (
+          String(value).charAt(0).toUpperCase() +
+          String(value).slice(1).toLowerCase()
+        );
+      },
     },
     { field: "bv", headerName: "BV", flex: 0.6 },
         { field: "pv", headerName: "PV", flex: 0.6 },
