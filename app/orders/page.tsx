@@ -108,10 +108,12 @@ export default function OrdersPage() {
 
             total_price: item.price_with_gst,
 
+            // ✅ Individual invoice — hits the [order_id] dynamic route which returns single PDF
             invoice_download: invoiceAdded
               ? ""
               : `${window.location.origin}/api/invoice/${order.order_id}`,
 
+            // ✅ All invoices merged into ONE PDF — hits /api/invoices/download?orders=id1,id2,...
             download_all_invoices:
               !downloadAllAdded && !invoiceAdded
                 ? `${window.location.origin}/api/invoices/download?orders=${orderIds}`

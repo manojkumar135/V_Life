@@ -26,9 +26,9 @@ export async function getInfinityBonusPercentage(
   }
 
   // ✅ Base qualification
-  if (leftDirectPV >= 100 && rightDirectPV >= 100) {
-    return 0.25;
-  }
+  // if (leftDirectPV >= 100 && rightDirectPV >= 100) {
+  //   return 0.25;
+  // }
 
   return 0;
 }

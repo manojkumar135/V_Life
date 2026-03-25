@@ -1,6 +1,7 @@
+// app/api/invoices/download/route.tsx
+
 import { NextResponse } from "next/server";
 import axios from "axios";
-import JSZip from "jszip";
 import { pdf } from "@react-pdf/renderer";
 import InvoiceTemplate from "@/components/PDF/downloadTemplate";
 
@@ -17,12 +18,17 @@ export async function GET(req: Request) {
     }
 
     const orderIds = ordersParam.split(",");
-    const zip = new JSZip();
+
+    // ✅ Fetch office ONCE — not inside the loop
+    const officeRes = await axios.get(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/office-operations`
+    );
+    const office = officeRes?.data?.data;
+
+    const invoicesData: any[] = [];
 
     for (const order_id of orderIds) {
-
       try {
-
         const orderRes = await axios.get(
           `${process.env.NEXT_PUBLIC_BASE_URL}/api/order-operations?id=${order_id}`
         );
@@ -30,38 +36,31 @@ export async function GET(req: Request) {
         const order = orderRes?.data?.data?.[0];
         if (!order) continue;
 
-        const officeRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_BASE_URL}/api/office-operations`
-        );
-
-        const office = officeRes?.data?.data;
-
-        const pdfData = { order, office };
-
-        const blob = await pdf(<InvoiceTemplate data={pdfData} />).toBlob();
-        const arrayBuffer = await blob.arrayBuffer();
-
-        zip.file(`Invoice_${order.order_id}.pdf`, arrayBuffer);
+        invoicesData.push({ order, office });
 
       } catch (err) {
         console.error("Skipping order:", order_id);
       }
     }
 
-    const zipBuffer = await zip.generateAsync({ type: "arraybuffer" });
+    // ✅ ONE merged PDF with all invoices — each invoice on its own page
+    const blob = await pdf(
+      <InvoiceTemplate data={invoicesData} isBulk />
+    ).toBlob();
 
-    return new NextResponse(zipBuffer, {
+    const arrayBuffer = await blob.arrayBuffer();
+
+    return new NextResponse(arrayBuffer, {
       headers: {
-        "Content-Type": "application/zip",
-        "Content-Disposition": "attachment; filename=invoices.zip",
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=all_invoices.pdf`,
       },
     });
 
   } catch (error) {
-    console.error("ZIP error:", error);
-
+    console.error("Merged PDF error:", error);
     return NextResponse.json(
-      { error: "Failed to download invoices" },
+      { error: "Failed to generate merged PDF" },
       { status: 500 }
     );
   }

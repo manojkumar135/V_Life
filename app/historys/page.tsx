@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,19 @@ import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { handleDownload } from "@/utils/handleDownload";
 import { formatDate } from "@/components/common/formatDate";
 
+// ✅ Filter tab definitions
+type FilterTab = "All" | "Orders" | "Daily" | "Infinity" | "Quick Star";
+
+const FILTER_TABS: FilterTab[] = ["All", "Orders", "Daily", "Infinity", "Quick Star"];
+
+const FILTER_KEYWORDS: Record<FilterTab, string[]> = {
+  All: [],
+  Orders: ["Advance Payment", "Order placed by", "Order Payment"],
+  Daily: ["Daily Matching Bonus", "Referral Bonus for first", "Direct Sales Bonus"],
+  Infinity: ["Infinity Matching Bonus", "Infinity Sales Bonus"],
+  "Quick Star": ["Quick Star Bonus"],
+};
+
 export default function TransactionHistory() {
   const router = useRouter();
   const { user } = useVLife();
@@ -36,6 +49,9 @@ export default function TransactionHistory() {
   const [hasPermission, setHasPermission] = useState<boolean>(false);
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+
+  // ✅ Active filter tab state (only used for non-user roles)
+  const [activeFilter, setActiveFilter] = useState<FilterTab>("All");
 
   const API_URL = "/api/history-operations";
 
@@ -63,39 +79,34 @@ export default function TransactionHistory() {
 
   // ✅ Check if advance is paid
   useEffect(() => {
-  if (!user?.user_id) return;
+    if (!user?.user_id) return;
 
-  let isMounted = true;
+    let isMounted = true;
 
-  (async () => {
-    try {
-      // 1️⃣ Check first order
-      const firstOrderRes = await hasFirstOrder(user.user_id);
+    (async () => {
+      try {
+        const firstOrderRes = await hasFirstOrder(user.user_id);
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
-      // 2️⃣ Check advance
-      const advanceRes = await hasAdvancePaid(user.user_id, 15000);
+        if (!isMounted) return;
 
-      if (!isMounted) return;
+        const hasPermission =
+          firstOrderRes.hasFirstOrder ||
+          advanceRes.hasPermission ||
+          firstOrderRes.activatedByAdmin;
 
-      const hasPermission =
-        firstOrderRes.hasFirstOrder ||
-        advanceRes.hasPermission ||
-        firstOrderRes.activatedByAdmin;
+        setHasPermission(hasPermission);
+        setShowAlert(!hasPermission);
+      } catch (err) {
+        console.error("Permission check error:", err);
+        if (isMounted) setShowAlert(true);
+      }
+    })();
 
-      setHasPermission(hasPermission);
-      setShowAlert(!hasPermission);
-
-    } catch (err) {
-      console.error("Permission check error:", err);
-      if (isMounted) setShowAlert(true);
-    }
-  })();
-
-  return () => {
-    isMounted = false;
-  };
-}, [user?.user_id]);
-
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.user_id]);
 
   // ✅ Fetch transactions with date filters
   const fetchHistory = useCallback(async () => {
@@ -137,22 +148,29 @@ export default function TransactionHistory() {
     fetchHistory();
   }, [fetchHistory]);
 
+  // ✅ Client-side filtered data based on active tab (only for non-user roles)
+  const filteredHistoryData = useMemo(() => {
+    if (user?.role === "user" || activeFilter === "All") return historyData;
+    const keywords = FILTER_KEYWORDS[activeFilter];
+    return historyData.filter((row) => {
+      const detail: string = String(row.details ?? "").toLowerCase();
+      return keywords.some((kw) => detail.includes(kw.toLowerCase()));
+    });
+  }, [historyData, activeFilter, user?.role]);
+
   const formatTime = (value: string) => {
     console.log("Formatting time:", value);
     if (!value) return "";
 
-    // CASE 1: Already in 12-hour format (contains AM/PM)
     if (/am|pm/i.test(value)) {
       return value.toUpperCase();
     }
 
-    // CASE 2: Convert 24-hour → 12-hour format
     const [hourStr, minuteStr] = value.split(":");
     let hour = Number(hourStr);
     const minute = minuteStr?.padStart(2, "0") || "00";
 
     const ampm = hour >= 12 ? "PM" : "AM";
-
     hour = hour % 12 || 12;
 
     return `${hour.toString().padStart(2, "0")}:${minute} ${ampm}`;
@@ -162,7 +180,6 @@ export default function TransactionHistory() {
   const columns: GridColDef[] = [
     { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
 
-    // Admin only
     user?.role === "admin" && {
       field: "user_id",
       headerName: "User ID",
@@ -198,7 +215,6 @@ export default function TransactionHistory() {
         const isUser = user?.role === "user";
         const isCredit = type === "credit";
 
-        // ✅ Match color logic with role
         const textColor = isUser
           ? isCredit
             ? "text-green-600"
@@ -224,7 +240,6 @@ export default function TransactionHistory() {
         const isUser = user?.role === "user";
         const isCredit = type === "credit";
 
-        // ✅ Invert icons & colors for admin
         const Icon = isUser
           ? isCredit
             ? FaPlusCircle
@@ -255,7 +270,7 @@ export default function TransactionHistory() {
     endItem,
     goToPage,
   } = usePagination({
-    totalItems,
+    totalItems: filteredHistoryData.length,
     itemsPerPage: 12,
     onPageChange: () => {},
   });
@@ -274,7 +289,7 @@ export default function TransactionHistory() {
         onClose={() => setShowAlert(false)}
       />
 
-      <div className=" max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
+      <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
         {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
@@ -295,12 +310,35 @@ export default function TransactionHistory() {
           showMoreOptions
           currentPage={currentPage}
           totalPages={totalPages}
-          totalItems={totalItems}
+          totalItems={filteredHistoryData.length}
           startItem={startItem}
           endItem={endItem}
           onNext={nextPage}
           onPrev={prevPage}
         />
+
+        {/* ✅ Filter Tabs — only for non-user roles */}
+        {user?.role !== "user" && (
+          <div className="flex flex-wrap gap-2 mt-3 mb-2 px-1">
+            {FILTER_TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveFilter(tab);
+                  goToPage(1);
+                }}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer
+                  ${
+                    activeFilter === tab
+                      ? "bg-[#0C3978] text-white border-[#0C3978] shadow-sm"
+                      : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978] hover:text-[#0C3978]"
+                  }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
@@ -316,7 +354,7 @@ export default function TransactionHistory() {
 
         <Table
           columns={columns}
-          rows={historyData}
+          rows={filteredHistoryData}
           currentPage={currentPage}
           setCurrentPage={goToPage}
           rowIdField="_id"
