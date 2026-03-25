@@ -5,15 +5,12 @@ import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import { Wallet } from "@/models/wallet";
 import { Login } from "@/models/login";
+import TreeNode from "@/models/tree";
+import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 
 /* =====================================================
    HELPER — strips "", null, undefined, and plain {}
    from any object before it reaches Mongoose.
-   Plain {} appears when a File field is sent over JSON
-   without being uploaded first (File → JSON → {}).
-   Since the frontend now uploads files to S3 before
-   calling this route, {} should never arrive here —
-   but this guard stays as a safety net.
 ===================================================== */
 const cleanObject = (obj: any): Record<string, any> =>
   Object.fromEntries(
@@ -91,27 +88,27 @@ export async function GET(request: Request) {
 /* =====================================================
    PATCH : Update User and/or Wallet  (plain JSON only)
 
-   Two operation modes — both sent as application/json:
+   Two operation modes:
 
    ── A) Generate passkey ─────────────────────────────
    Body: { generatePasskey: { user_id: string } }
 
-   ── B) Profile + KYC update ─────────────────────────
+   ── B) Partial profile + KYC update ─────────────────
    Body: {
      user_id:       string,
-     userUpdates:   { ...scalar user fields },
-     walletUpdates: {
-       ...scalar wallet fields,
-       // File fields are S3 URLs (strings) uploaded by
-       // the frontend BEFORE this call. No File objects
-       // ever reach this route.
-       bank_book?:    string,
-       aadhar_front?: string,
-       aadhar_back?:  string,
-       cheque?:       string,
-       pan_file?:     string,
-     }
+     userUpdates:   { ...only the scalar user fields being changed },
+     walletUpdates: { ...only the scalar/file fields being changed }
    }
+
+   Cross-collection sync (only when values are present):
+     • contact  → also updated in Login.contact, TreeNode.contact, Wallet.contact
+     • user_name → also updated in Login.user_name, TreeNode.name, Wallet.user_name
+
+   Wallet logic:
+     1. Find existing wallet by user_id.
+     2. If found  → $set only the provided fields (partial update).
+     3. If NOT found → Wallet.create() with a generated wallet_id
+        plus all provided fields + safe defaults for required fields.
 ===================================================== */
 export async function PATCH(request: Request) {
   try {
@@ -167,7 +164,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    /* ── B) Normal profile + KYC update ─────────────────────────────── */
+    /* ── B) Partial profile + KYC update ─────────────────────────────── */
     const { user_id, userUpdates, walletUpdates } = body;
 
     if (!user_id) {
@@ -177,19 +174,21 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const cleanUserUpdates = cleanObject(userUpdates);
+    // Strip empty / null / undefined — only real values reach Mongoose
+    const cleanUserUpdates   = cleanObject(userUpdates);
     const cleanWalletUpdates = cleanObject(walletUpdates);
 
-    // Normalise pan_verified to boolean
+    // Normalise pan_verified to boolean when present
     if ("pan_verified" in cleanWalletUpdates) {
       cleanWalletUpdates.pan_verified =
         cleanWalletUpdates.pan_verified === true ||
         cleanWalletUpdates.pan_verified === "true";
     }
 
-    let updatedUser = null;
+    let updatedUser   = null;
     let updatedWallet = null;
 
+    /* ── Update User only when there are fields to write ── */
     if (Object.keys(cleanUserUpdates).length) {
       updatedUser = await User.findOneAndUpdate(
         { user_id },
@@ -198,12 +197,99 @@ export async function PATCH(request: Request) {
       );
     }
 
+    /* ── Cross-collection sync for contact and user_name ─────────────────
+       These fields are stored in Login, TreeNode, and Wallet as well.
+       We sync them whenever they appear in userUpdates (the source of truth
+       for personal details). Each sync is fire-and-forget — we only update
+       the specific field that changed, touching nothing else.
+    ── */
+
+    // Sync contact → Login.contact, TreeNode.contact, Wallet.contact
+    if (cleanUserUpdates.contact) {
+      await Promise.all([
+        Login.updateOne(
+          { user_id },
+          { $set: { contact: cleanUserUpdates.contact } },
+        ),
+        TreeNode.updateOne(
+          { user_id },
+          { $set: { contact: cleanUserUpdates.contact } },
+        ),
+        // Wallet.contact is handled below inside the wallet block,
+        // but we sync here too in case walletUpdates is empty.
+        Wallet.updateOne(
+          { user_id },
+          { $set: { contact: cleanUserUpdates.contact } },
+        ),
+      ]);
+    }
+
+    // Sync user_name → Login.user_name, TreeNode.name, Wallet.user_name
+    if (cleanUserUpdates.user_name) {
+      await Promise.all([
+        Login.updateOne(
+          { user_id },
+          { $set: { user_name: cleanUserUpdates.user_name } },
+        ),
+        TreeNode.updateOne(
+          { user_id },
+          { $set: { name: cleanUserUpdates.user_name } },
+        ),
+        // Wallet.user_name is handled below inside the wallet block,
+        // but we sync here too in case walletUpdates is empty.
+        Wallet.updateOne(
+          { user_id },
+          { $set: { user_name: cleanUserUpdates.user_name } },
+        ),
+      ]);
+    }
+
+    /* ── Wallet: find → update OR create ──────────────────────────────
+       We do NOT use upsert:true because Mongoose would insert a new
+       document with wallet_id:null, hitting the unique-index E11000 error.
+       Instead we check existence ourselves and call Wallet.create()
+       with a properly generated wallet_id when needed.
+    ── */
     if (Object.keys(cleanWalletUpdates).length) {
-      updatedWallet = await Wallet.findOneAndUpdate(
-        { user_id },
-        { $set: cleanWalletUpdates },
-        { returnDocument: "after", upsert: true },
-      );
+      const existingWallet = await Wallet.findOne({ user_id });
+
+      if (existingWallet) {
+        // ── Wallet exists → partial update (only provided fields) ──
+        updatedWallet = await Wallet.findOneAndUpdate(
+          { user_id },
+          { $set: cleanWalletUpdates },
+          { returnDocument: "after" },
+        );
+      } else {
+        // ── No wallet yet → create with a generated wallet_id ──────
+        // Fetch the user record to seed name / contact / mail / gender
+        // into the new wallet (mirrors the registration pattern).
+        const userRecord = (await User.findOne({ user_id }).lean()) as any;
+
+        const wallet_id = await generateUniqueCustomId("WA", Wallet, 8, 8);
+
+        updatedWallet = await Wallet.create({
+          wallet_id,
+          user_id,
+
+          // Seed from user record, fall back to walletUpdates values
+          user_name:    userRecord?.user_name ?? cleanWalletUpdates.user_name ?? "",
+          contact:      userRecord?.contact   ?? cleanWalletUpdates.contact   ?? "",
+          mail:         userRecord?.mail      ?? cleanWalletUpdates.mail      ?? "",
+          gender:       userRecord?.gender    ?? cleanWalletUpdates.gender    ?? "",
+          rank:         userRecord?.rank      ?? "",
+          user_status:  "Active",
+          wallet_status: "Active",
+          balance:       0,
+          total_earnings: 0,
+          total_withdrawn: 0,
+          activated_date: new Date(),
+          created_by:   user_id,
+
+          // Spread all the KYC / banking fields the admin is saving
+          ...cleanWalletUpdates,
+        });
+      }
     }
 
     if (!updatedUser && !updatedWallet) {

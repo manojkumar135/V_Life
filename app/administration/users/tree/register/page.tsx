@@ -425,7 +425,7 @@ function RegisterContent() {
                       )}
                       onChange={(opt) => {
                         formik.setFieldValue("gender", opt?.value || "", true);
-                        formik.setFieldTouched("gender", false);
+                        // formik.setFieldTouched("gender", true);
                       }}
                       onBlur={() => formik.setFieldTouched("gender", true)}
                       styles={{
@@ -525,7 +525,7 @@ function RegisterContent() {
                       // Team Select
                       onChange={(opt) => {
                         formik.setFieldValue("team", opt?.value || "");
-                        formik.setFieldTouched("team",false);
+                        // formik.setFieldTouched("team",false);
                       }}
                       onBlur={() => formik.setFieldTouched("team", true)}
                       styles={customSelectStyles}

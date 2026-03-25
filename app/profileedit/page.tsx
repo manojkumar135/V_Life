@@ -25,10 +25,27 @@ import ShowToast from "@/components/common/Toast/toast";
 import DateField from "@/components/InputFields/dateField";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
 
-/* ---------------- VALIDATION ---------------- */
+/* ─────────────────────────────────────────────────────────────────────────────
+   VALIDATION
+   
+   Rules:
+   • fullName / dob / gender are always required (personal basics).
+   • email / contact required only for admin (unchanged from original).
+   • ALL KYC / banking fields (scalars + files) are OPTIONAL.
+       - If a scalar has a value it must pass the format check.
+       - If a file field has a value it must be an image or PDF.
+       - If the field is empty / null → no error (admin can save partial data).
+   • No .when() cross-references → zero cyclic-dependency risk.
+     Cross-field "if any KYC field is filled, the others should be filled too"
+     is NOT enforced at schema level; the admin decides what to save.
+───────────────────────────────────────────────────────────────────────────── */
+
+/** True when a value is an already-saved S3 URL → counts as "provided" */
+const isExistingUrl = (v: any) => typeof v === "string" && v.trim() !== "";
 
 export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
   Yup.object().shape({
+    /* ── Personal (always required) ── */
     fullName: Yup.string()
       .trim()
       .min(3, "* Full Name must be at least 3 characters")
@@ -56,118 +73,113 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
         const birthDate = new Date(value);
         let age = today.getFullYear() - birthDate.getFullYear();
         const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate()))
+          age--;
         return age >= 18;
       }),
 
     gender: Yup.string().required("* Gender is required"),
+
+    /* ── Address / Nominee (all optional, format-checked when present) ── */
     bloodGroup: Yup.string().nullable(),
     address: Yup.string().nullable(),
     landmark: Yup.string().nullable(),
-
     pincode: Yup.string()
-      .matches(/^[0-9]{6}$/, "* Pincode must be 6 digits")
-      .nullable(),
-
+      .nullable()
+      .test("pincode-format", "* Pincode must be 6 digits", (v) =>
+        !v ? true : /^[0-9]{6}$/.test(v),
+      ),
     country: Yup.string().nullable(),
     state: Yup.string().nullable(),
     city: Yup.string().nullable(),
     locality: Yup.string().nullable(),
     nomineeName: Yup.string().nullable(),
     nomineeRelation: Yup.string().nullable(),
-
     nomineeContact: Yup.string()
-      .matches(/^[0-9]{10}$/, "* Alternate contact must be 10 digits")
-      .nullable(),
+      .nullable()
+      .test("nomineeContact-format", "* Alternate contact must be 10 digits", (v) =>
+        !v ? true : /^[0-9]{10}$/.test(v),
+      ),
 
-    accountHolderName: Yup.string().required(
-      "* Account Holder Name is required",
-    ),
-    bankName: Yup.string().required("* Bank Name is required"),
+    /* ── KYC scalars — optional, but validated when present ── */
+    accountHolderName: Yup.string().nullable(),
+
+    bankName: Yup.string().nullable(),
 
     accountNumber: Yup.string()
-      .matches(/^\d{9,18}$/, "* Account number must be 9–18 digits")
-      .required("* Account Number is required"),
+      .nullable()
+      .test("accountNumber-format", "* Account number must be 9–18 digits", (v) =>
+        !v ? true : /^\d{9,18}$/.test(v),
+      ),
 
     ifscCode: Yup.string()
-      .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "* Invalid IFSC code")
-      .required("* IFSC Code is required"),
-
-    cancelledCheque: Yup.mixed<string | File>()
-      .required("* Cancelled cheque is required")
-      .test(
-        "fileType-cheque",
-        "* Cheque must be an image or PDF",
-        (value) =>
-          typeof value === "string" ||
-          (value instanceof File &&
-            ["image/", "application/pdf"].some((t) =>
-              value.type.startsWith(t),
-            )),
+      .nullable()
+      .test("ifscCode-format", "* Invalid IFSC code", (v) =>
+        !v ? true : /^[A-Z]{4}0[A-Z0-9]{6}$/.test(v),
       ),
 
     aadharNumber: Yup.string()
-      .matches(/^\d{12}$/, "* Aadhaar must be 12 digits")
-      .required("* Aadhaar Number is required"),
-
-    aadharFront: Yup.mixed<string | File>()
-      .test(
-        "fileType-aadharFront",
-        "* Aadhaar front must be an image or PDF",
-        (value) =>
-          typeof value === "string" ||
-          (value instanceof File &&
-            ["image/", "application/pdf"].some((t) =>
-              value.type.startsWith(t),
-            )),
-      ),
-
-    aadharBack: Yup.mixed<string | File>()
-      .test(
-        "fileType-aadharBack",
-        "* Aadhaar back must be an image or PDF",
-        (value) =>
-          typeof value === "string" ||
-          (value instanceof File &&
-            ["image/", "application/pdf"].some((t) =>
-              value.type.startsWith(t),
-            )),
+      .nullable()
+      .test("aadharNumber-format", "* Aadhaar must be 12 digits", (v) =>
+        !v ? true : /^\d{12}$/.test(v),
       ),
 
     panNumber: Yup.string()
-      .trim()
-      .uppercase()
-      .matches(/^[A-Z]{5}[0-9]{4}[A-Z]$/, "* Invalid PAN format (ABCDE1234F)")
-      .required("* PAN Number is required"),
+      .nullable()
+      .test("panNumber-format", "* Invalid PAN format (ABCDE1234F)", (v) =>
+        !v ? true : /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v.trim().toUpperCase()),
+      ),
+
+    /* ── File fields — optional, but type-checked when a new file is picked ── */
+    cancelledCheque: Yup.mixed<string | File>()
+      .nullable()
+      .test("cancelledCheque-type", "* Cheque must be an image or PDF", (v) =>
+        !v || isExistingUrl(v)
+          ? true
+          : v instanceof File &&
+            ["image/", "application/pdf"].some((t) => v.type.startsWith(t)),
+      ),
+
+    aadharFront: Yup.mixed<string | File>()
+      .nullable()
+      .test("aadharFront-type", "* Aadhaar front must be an image or PDF", (v) =>
+        !v || isExistingUrl(v)
+          ? true
+          : v instanceof File &&
+            ["image/", "application/pdf"].some((t) => v.type.startsWith(t)),
+      ),
+
+    aadharBack: Yup.mixed<string | File>()
+      .nullable()
+      .test("aadharBack-type", "* Aadhaar back must be an image or PDF", (v) =>
+        !v || isExistingUrl(v)
+          ? true
+          : v instanceof File &&
+            ["image/", "application/pdf"].some((t) => v.type.startsWith(t)),
+      ),
 
     panFile: Yup.mixed<string | File>()
-      .required("* PAN document is required")
-      .test(
-        "fileType-pan",
-        "* PAN must be an image or PDF",
-        (value) =>
-          typeof value === "string" ||
-          (value instanceof File &&
-            ["image/", "application/pdf"].some((t) =>
-              value.type.startsWith(t),
-            )),
+      .nullable()
+      .test("panFile-type", "* PAN must be an image or PDF", (v) =>
+        !v || isExistingUrl(v)
+          ? true
+          : v instanceof File &&
+            ["image/", "application/pdf"].some((t) => v.type.startsWith(t)),
       ),
 
     bankBook: Yup.mixed<string | File>()
-      .required("* Bank passbook is required")
-      .test(
-        "fileType-bankBook",
-        "* Bank passbook must be an image or PDF",
-        (value) =>
-          typeof value === "string" ||
-          (value instanceof File &&
-            ["image/", "application/pdf"].some((t) =>
-              value.type.startsWith(t),
-            )),
+      .nullable()
+      .test("bankBook-type", "* Bank passbook must be an image or PDF", (v) =>
+        !v || isExistingUrl(v)
+          ? true
+          : v instanceof File &&
+            ["image/", "application/pdf"].some((t) => v.type.startsWith(t)),
       ),
   });
 
-/* ---------------- PAGE ---------------- */
+/* ─────────────────────────────────────────────────────────────────────────────
+   PAGE
+───────────────────────────────────────────────────────────────────────────── */
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -179,6 +191,9 @@ export default function ProfileEditPage() {
   const [panChecking, setPanChecking] = useState(false);
   const [value, setValue] = useState("");
   const [userMeta, setUserMeta] = useState<any>(null);
+
+  /* Tracks the PAN loaded from DB so duplicate-check is skipped when unchanged */
+  const [originalPan, setOriginalPan] = useState<string>("");
 
   const [passkey, setPasskey] = useState<string | null>(null);
   const [passkeyVisible, setPasskeyVisible] = useState(false);
@@ -288,9 +303,11 @@ export default function ProfileEditPage() {
     }
   };
 
-  /* ---------------- PAN HANDLERS (unchanged) ---------------- */
+  /* ---------------- PAN HANDLERS ---------------- */
 
   const checkPanDuplicate = async (pan: string) => {
+    /* Skip duplicate check if the PAN hasn't changed from what was loaded */
+    if (pan === originalPan) return false;
     try {
       setPanChecking(true);
       const res = await axios.get(`/api/panfind-operations?pan=${pan}`);
@@ -352,7 +369,8 @@ export default function ProfileEditPage() {
   ) => {
     setPanVerifiedLocal(false);
     if (!pan) {
-      setFieldError("panNumber", "* PAN Number is required");
+      /* PAN is optional — clear any error when field is emptied */
+      setFieldError("panNumber", "");
       return;
     }
     if (pan.length < 10) {
@@ -363,18 +381,18 @@ export default function ProfileEditPage() {
       setFieldError("panNumber", "* Invalid PAN format (ABCDE1234F)");
       return;
     }
-    const exists = await checkPanDuplicate(pan);
-    if (exists) {
-      setFieldError("panNumber", "* PAN already exists");
-      return;
+    /* Only check duplicate when PAN has changed from DB value */
+    if (pan !== originalPan) {
+      const exists = await checkPanDuplicate(pan);
+      if (exists) {
+        setFieldError("panNumber", "* PAN already exists");
+        return;
+      }
     }
     setFieldError("panNumber", "");
   };
 
-  /* ---------------- S3 FILE UPLOAD HELPER ---------------- */
-  // Uploads a single File to S3 via your existing /api/getFileUrl endpoint.
-  // Returns the S3 URL string on success, or null on failure.
-  // A toast is shown automatically on failure so the caller just checks null.
+  /* ---------------- S3 FILE UPLOAD HELPER (unchanged) ---------------- */
 
   const uploadFileToS3 = async (file: File): Promise<string | null> => {
     try {
@@ -393,7 +411,7 @@ export default function ProfileEditPage() {
     }
   };
 
-  /* ---------------- SEARCH (unchanged) ---------------- */
+  /* ---------------- SEARCH ---------------- */
 
   const emptyForm = {
     userId: "",
@@ -442,6 +460,7 @@ export default function ProfileEditPage() {
         ShowToast.error("User not found");
         setUserMeta(null);
         setDbValues(null);
+        setOriginalPan("");
         setInitialValues(emptyForm);
         setFormKey((prev) => prev + 1);
         return;
@@ -490,11 +509,13 @@ export default function ProfileEditPage() {
 
       setDbValues(mappedValues);
       setInitialValues(mappedValues);
+      setOriginalPan(u.pan_number || "");
       setPanVerified(Boolean(u.pan_verified));
     } catch (error) {
       ShowToast.error("User not found");
       setUserMeta(null);
       setPanVerified(false);
+      setOriginalPan("");
       setDbValues(null);
       setInitialValues(emptyForm);
       setFormKey((prev) => prev + 1);
@@ -512,15 +533,6 @@ export default function ProfileEditPage() {
       setLoading(true);
 
       // ── Step 1: Upload new File picks to S3, resolve existing URLs ──────
-      //
-      // For each file field:
-      //   • File object  → upload to S3 via /api/getFileUrl, get back URL
-      //   • string (URL) → already in S3, pass through unchanged
-      //   • null / {}    → omit entirely; DB keeps its existing value
-      //
-      // If any upload fails, uploadFileToS3 shows a toast and returns null.
-      // We abort the whole save so the user can retry just that file.
-
       const fileFields = [
         { formikKey: "bankBook",        dbKey: "bank_book"    },
         { formikKey: "aadharFront",     dbKey: "aadhar_front" },
@@ -535,10 +547,8 @@ export default function ProfileEditPage() {
         const val = values[formikKey];
 
         if (val instanceof File) {
-          // New file selected — upload to S3 first
           const url = await uploadFileToS3(val);
           if (!url) {
-            // Toast already shown inside uploadFileToS3; abort save
             setLoading(false);
             return;
           }
@@ -547,11 +557,10 @@ export default function ProfileEditPage() {
           // Existing S3 URL — keep as-is
           resolvedUrls[dbKey] = val;
         }
-        // null / undefined / {} → omit; DB retains the current value
+        // null / undefined → omit; DB retains its current value
       }
 
-      // ── Step 2: Build userUpdates (scalar fields only) ─────────────────
-      const userUpdates: Record<string, any> = {};
+      // ── Step 2: Build userUpdates — only non-empty scalar fields ────────
       const userScalars: Record<string, any> = {
         user_name:         values.fullName,
         mail:              values.email,
@@ -570,12 +579,15 @@ export default function ProfileEditPage() {
         nominee_relation:  values.nomineeRelation,
         alternate_contact: values.nomineeContact,
       };
+
+      const userUpdates: Record<string, any> = {};
       for (const [k, v] of Object.entries(userScalars)) {
         if (v !== null && v !== undefined && v !== "") userUpdates[k] = v;
       }
 
-      // ── Step 3: Build walletUpdates (scalars + resolved S3 URLs) ────────
-      const walletUpdates: Record<string, any> = {
+      // ── Step 3: Build walletUpdates — only non-empty scalars + resolved URLs
+      //   Omit any field that is empty so the DB never gets blanked.
+      const walletScalars: Record<string, any> = {
         user_name:           values.fullName,
         contact:             values.contact,
         account_holder_name: values.accountHolderName,
@@ -586,13 +598,25 @@ export default function ProfileEditPage() {
         pan_number:          values.panNumber,
         pan_name:            values.panName,
         pan_dob:             values.panDob,
-        pan_verified:        panVerified,
-        // Spread only the file fields that were provided/resolved
-        ...resolvedUrls,
       };
 
-      // ── Step 4: Send as plain JSON — no FormData needed ─────────────────
-      // All file values are now S3 URL strings, safe to JSON-serialise.
+      const walletUpdates: Record<string, any> = {};
+      for (const [k, v] of Object.entries(walletScalars)) {
+        if (v !== null && v !== undefined && v !== "") walletUpdates[k] = v;
+      }
+
+      // Include pan_verified whenever any wallet data is being saved
+      if (
+        Object.keys(walletUpdates).length > 0 ||
+        Object.keys(resolvedUrls).length > 0
+      ) {
+        walletUpdates.pan_verified = panVerified;
+      }
+
+      // Merge resolved file URLs into walletUpdates
+      Object.assign(walletUpdates, resolvedUrls);
+
+      // ── Step 4: Send as plain JSON ───────────────────────────────────────
       const res = await axios.patch("/api/getuser-operations", {
         user_id:      values.userId,
         userUpdates,
@@ -997,7 +1021,6 @@ export default function ProfileEditPage() {
                     label="Bank Name"
                     name="bankName"
                     value={values.bankName}
-                    required
                     disabled={!isAdmin}
                     error={touched.bankName ? (errors as any).bankName : ""}
                     onChange={(e) => setFieldValue("bankName", e.target.value)}
@@ -1007,7 +1030,6 @@ export default function ProfileEditPage() {
                     label="Account Holder Name"
                     name="accountHolderName"
                     value={values.accountHolderName}
-                    required
                     disabled={!isAdmin}
                     error={
                       touched.accountHolderName
@@ -1023,7 +1045,6 @@ export default function ProfileEditPage() {
                     label="Account Number"
                     name="accountNumber"
                     value={values.accountNumber}
-                    required
                     disabled={!isAdmin}
                     error={
                       touched.accountNumber ? (errors as any).accountNumber : ""
@@ -1037,7 +1058,6 @@ export default function ProfileEditPage() {
                     label="IFSC Code"
                     name="ifscCode"
                     value={values.ifscCode}
-                    required
                     disabled={!isAdmin}
                     error={touched.ifscCode ? (errors as any).ifscCode : ""}
                     onChange={(e) => setFieldValue("ifscCode", e.target.value)}
@@ -1046,7 +1066,6 @@ export default function ProfileEditPage() {
                   <FileInput
                     label="Bank Passbook"
                     name="bankBook"
-                    required
                     value={values.bankBook}
                     error={touched.bankBook ? (errors as any).bankBook : ""}
                     onChange={(e) =>
@@ -1075,7 +1094,6 @@ export default function ProfileEditPage() {
                     label="Aadhaar Number"
                     name="aadharNumber"
                     value={values.aadharNumber}
-                    required
                     error={
                       touched.aadharNumber ? (errors as any).aadharNumber : ""
                     }
@@ -1112,7 +1130,6 @@ export default function ProfileEditPage() {
                     <InputField
                       label="PAN Number"
                       name="panNumber"
-                      required
                       value={values.panNumber}
                       readOnly={!isAdmin}
                       maxLength={10}
@@ -1137,11 +1154,13 @@ export default function ProfileEditPage() {
                       }}
                       className="pr-28"
                     />
+                    {/* Show Verify button only when PAN is new (changed from DB value) */}
                     {isAdmin &&
-                      values.panNumber.length === 10 &&
+                      values.panNumber?.length === 10 &&
                       /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(values.panNumber) &&
                       !panChecking &&
                       !panVerified &&
+                      values.panNumber !== originalPan &&
                       !errors.panNumber && (
                         <button
                           type="button"
@@ -1170,7 +1189,6 @@ export default function ProfileEditPage() {
                   <FileInput
                     label="PAN Document"
                     name="panFile"
-                    required
                     value={values.panFile}
                     error={touched.panFile ? (errors as any).panFile : ""}
                     onChange={(e) =>
@@ -1196,7 +1214,7 @@ export default function ProfileEditPage() {
   );
 }
 
-/* ---------------- STATUS HELPERS ---------------- */
+/* ---------------- STATUS HELPERS (unchanged) ---------------- */
 
 const getStatusConfig = (user_status?: string, status_notes?: string) => {
   if (!user_status) return null;
@@ -1242,7 +1260,7 @@ const getPanStatusConfig = (pan_verified?: boolean | string) => {
     : { label: "Not Verified", color: "text-red-600" };
 };
 
-/* ---------------- UI HELPERS ---------------- */
+/* ---------------- UI HELPERS (unchanged) ---------------- */
 
 const Card = ({
   title,
