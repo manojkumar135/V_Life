@@ -101,8 +101,9 @@ export async function GET(request: Request) {
    }
 
    Cross-collection sync (only when values are present):
-     • contact  → also updated in Login.contact, TreeNode.contact, Wallet.contact
-     • user_name → also updated in Login.user_name, TreeNode.name, Wallet.user_name
+     • contact   → also updated in Login.contact,   TreeNode.contact,   Wallet.contact
+     • user_name → also updated in Login.user_name, TreeNode.name,      Wallet.user_name
+     • mail      → also updated in Login.mail,      TreeNode.mail,      Wallet.mail
 
    Wallet logic:
      1. Find existing wallet by user_id.
@@ -185,6 +186,21 @@ export async function PATCH(request: Request) {
         cleanWalletUpdates.pan_verified === "true";
     }
 
+    /* ── Mirror shared personal fields from userUpdates → walletUpdates ──
+       Wallet stores its own copy of user_name, contact, and mail.
+       Injecting them here means the single wallet write below always
+       keeps the wallet in sync — no separate Wallet.updateOne needed.
+    ── */
+    if (cleanUserUpdates.user_name) {
+      cleanWalletUpdates.user_name = cleanUserUpdates.user_name;
+    }
+    if (cleanUserUpdates.contact) {
+      cleanWalletUpdates.contact = cleanUserUpdates.contact;
+    }
+    if (cleanUserUpdates.mail) {
+      cleanWalletUpdates.mail = cleanUserUpdates.mail;
+    }
+
     let updatedUser   = null;
     let updatedWallet = null;
 
@@ -197,14 +213,12 @@ export async function PATCH(request: Request) {
       );
     }
 
-    /* ── Cross-collection sync for contact and user_name ─────────────────
-       These fields are stored in Login, TreeNode, and Wallet as well.
-       We sync them whenever they appear in userUpdates (the source of truth
-       for personal details). Each sync is fire-and-forget — we only update
-       the specific field that changed, touching nothing else.
+    /* ── Cross-collection sync for contact, user_name, and mail ──────────
+       Wallet is now kept in sync via the mirror block above + the wallet
+       write below, so only Login and TreeNode are fanned out to here.
     ── */
 
-    // Sync contact → Login.contact, TreeNode.contact, Wallet.contact
+    // Sync contact → Login.contact, TreeNode.contact
     if (cleanUserUpdates.contact) {
       await Promise.all([
         Login.updateOne(
@@ -215,16 +229,10 @@ export async function PATCH(request: Request) {
           { user_id },
           { $set: { contact: cleanUserUpdates.contact } },
         ),
-        // Wallet.contact is handled below inside the wallet block,
-        // but we sync here too in case walletUpdates is empty.
-        Wallet.updateOne(
-          { user_id },
-          { $set: { contact: cleanUserUpdates.contact } },
-        ),
       ]);
     }
 
-    // Sync user_name → Login.user_name, TreeNode.name, Wallet.user_name
+    // Sync user_name → Login.user_name, TreeNode.name
     if (cleanUserUpdates.user_name) {
       await Promise.all([
         Login.updateOne(
@@ -235,11 +243,19 @@ export async function PATCH(request: Request) {
           { user_id },
           { $set: { name: cleanUserUpdates.user_name } },
         ),
-        // Wallet.user_name is handled below inside the wallet block,
-        // but we sync here too in case walletUpdates is empty.
-        Wallet.updateOne(
+      ]);
+    }
+
+    // Sync mail → Login.mail, TreeNode.mail
+    if (cleanUserUpdates.mail) {
+      await Promise.all([
+        Login.updateOne(
           { user_id },
-          { $set: { user_name: cleanUserUpdates.user_name } },
+          { $set: { mail: cleanUserUpdates.mail } },
+        ),
+        TreeNode.updateOne(
+          { user_id },
+          { $set: { mail: cleanUserUpdates.mail } },
         ),
       ]);
     }
@@ -273,18 +289,18 @@ export async function PATCH(request: Request) {
           user_id,
 
           // Seed from user record, fall back to walletUpdates values
-          user_name:    userRecord?.user_name ?? cleanWalletUpdates.user_name ?? "",
-          contact:      userRecord?.contact   ?? cleanWalletUpdates.contact   ?? "",
-          mail:         userRecord?.mail      ?? cleanWalletUpdates.mail      ?? "",
-          gender:       userRecord?.gender    ?? cleanWalletUpdates.gender    ?? "",
-          rank:         userRecord?.rank      ?? "",
-          user_status:  "Active",
-          wallet_status: "Active",
-          balance:       0,
+          user_name:      userRecord?.user_name ?? cleanWalletUpdates.user_name ?? "",
+          contact:        userRecord?.contact   ?? cleanWalletUpdates.contact   ?? "",
+          mail:           userRecord?.mail      ?? cleanWalletUpdates.mail      ?? "",
+          gender:         userRecord?.gender    ?? cleanWalletUpdates.gender    ?? "",
+          rank:           userRecord?.rank      ?? "",
+          user_status:    "Active",
+          wallet_status:  "Active",
+          balance:        0,
           total_earnings: 0,
           total_withdrawn: 0,
           activated_date: new Date(),
-          created_by:   user_id,
+          created_by:     user_id,
 
           // Spread all the KYC / banking fields the admin is saving
           ...cleanWalletUpdates,

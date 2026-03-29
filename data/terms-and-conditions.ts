@@ -12,7 +12,7 @@ In these Terms, references to "you", "User" shall mean the end user accessing th
 
 
 
-a) www.maverickmoney.in website ("Website") is an Internet based content and e-commerce portal owned and operated by MAVERICK Resources Private Limited; a company incorporated under the laws of India.  
+a) www.maverickmoney.in website ("Website") is an Internet based content and e-commerce portal owned and operated by  Maverick Signature Network PVT Ltd; a company incorporated under the laws of India.  
 b) Use of the Website is offered to you conditioned on acceptance without modification of all the terms, conditions and notices contained in these Terms, as may be posted on the Website from time to time. www.maverickmoney.in at its sole discretion reserves the right not to accept a user from registering on the website without assigning any reason thereof. 
 
 &nbsp;

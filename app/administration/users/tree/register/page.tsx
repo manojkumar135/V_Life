@@ -427,7 +427,12 @@ function RegisterContent() {
                         formik.setFieldValue("gender", opt?.value || "", true);
                         // formik.setFieldTouched("gender", true);
                       }}
-                      onBlur={() => formik.setFieldTouched("gender", true)}
+                      onBlur={() => {
+                        setTimeout(
+                          () => formik.setFieldTouched("gender", true),
+                          200,
+                        ); // ✅ delayed blur
+                      }}
                       styles={{
                         ...customSelectStyles,
                         control: (base, state) => ({
@@ -477,10 +482,18 @@ function RegisterContent() {
                   <FaPhone className="absolute left-3 top-2 text-gray-500" />
                   <input
                     type="text"
+                    inputMode="numeric" // ✅ numeric keyboard on mobile
+                    pattern="[0-9]*" // ✅ hints to mobile browsers
                     name="contact"
                     placeholder="Contact Number"
                     value={formik.values.contact}
-                    onChange={formik.handleChange}
+                    onChange={(e) => {
+                      const numeric = e.target.value.replace(/\D/g, ""); // ✅ strip non-digits
+                      if (numeric.length <= 10) {
+                        // ✅ max 10 digits
+                        formik.setFieldValue("contact", numeric);
+                      }
+                    }}
                     onBlur={formik.handleBlur}
                     className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
                   />
@@ -527,10 +540,16 @@ function RegisterContent() {
                         formik.setFieldValue("team", opt?.value || "");
                         // formik.setFieldTouched("team",false);
                       }}
-                      onBlur={() => formik.setFieldTouched("team", true)}
+                      onBlur={() => {
+                        setTimeout(
+                          () => formik.setFieldTouched("team", true),
+                          200,
+                        );
+                      }}
                       styles={customSelectStyles}
                       placeholder="Select Team"
                       className="w-full"
+                      
                     />
                   )}
                 </div>

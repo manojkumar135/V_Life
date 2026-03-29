@@ -27,17 +27,16 @@ import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    VALIDATION
-   
+
    Rules:
-   • fullName / dob / gender are always required (personal basics).
-   • email / contact required only for admin (unchanged from original).
+   • ALL personal fields (fullName / dob / gender / email / contact) are OPTIONAL.
+       - If a value is present it must pass the format check.
+       - If empty / null → no error.
    • ALL KYC / banking fields (scalars + files) are OPTIONAL.
        - If a scalar has a value it must pass the format check.
        - If a file field has a value it must be an image or PDF.
        - If the field is empty / null → no error (admin can save partial data).
    • No .when() cross-references → zero cyclic-dependency risk.
-     Cross-field "if any KYC field is filled, the others should be filled too"
-     is NOT enforced at schema level; the admin decides what to save.
 ───────────────────────────────────────────────────────────────────────────── */
 
 /** True when a value is an already-saved S3 URL → counts as "provided" */
@@ -45,30 +44,30 @@ const isExistingUrl = (v: any) => typeof v === "string" && v.trim() !== "";
 
 export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
   Yup.object().shape({
-    /* ── Personal (always required) ── */
+    /* ── Personal (all optional, format-checked when present) ── */
     fullName: Yup.string()
       .trim()
       .min(3, "* Full Name must be at least 3 characters")
-      .required("* Full Name is required"),
+      .nullable(),
 
     email: isAdmin
       ? Yup.string()
           .email("* Invalid email address")
           .transform((val) => (val ? val.toLowerCase() : val))
-          .required("* Email is required")
+          .nullable()
       : Yup.string().nullable(),
 
     contact: isAdmin
       ? Yup.string()
           .matches(/^[0-9]{10}$/, "* Contact must be 10 digits")
-          .required("* Contact is required")
+          .nullable()
       : Yup.string().nullable(),
 
     dob: Yup.date()
-      .required("* Date of Birth is required")
+      .nullable()
       .max(new Date(), "* Date of Birth cannot be in the future")
       .test("age", "* You must be at least 18 years old", (value) => {
-        if (!value) return false;
+        if (!value) return true; // empty is allowed
         const today = new Date();
         const birthDate = new Date(value);
         let age = today.getFullYear() - birthDate.getFullYear();
@@ -78,7 +77,7 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
         return age >= 18;
       }),
 
-    gender: Yup.string().required("* Gender is required"),
+    gender: Yup.string().nullable(),
 
     /* ── Address / Nominee (all optional, format-checked when present) ── */
     bloodGroup: Yup.string().nullable(),
@@ -264,7 +263,7 @@ export default function ProfileEditPage() {
       const { data } = await axios.get(
         `/api/getuser-operations?search=${userMeta.user_id}&passkey=true`,
       );
-
+console.log(data)
       if (data?.success) {
         const key = data.login_key || null;
         setPasskey(key);
@@ -732,7 +731,7 @@ export default function ProfileEditPage() {
                     label="Full Name"
                     name="fullName"
                     value={values.fullName}
-                    required
+                    // required
                     disabled={!isAdmin}
                     error={touched.fullName ? (errors as any).fullName : ""}
                     onChange={(e) => setFieldValue("fullName", e.target.value)}
@@ -742,7 +741,7 @@ export default function ProfileEditPage() {
                     label="Email"
                     name="email"
                     value={values.email}
-                    required
+                    // required
                     disabled={!isAdmin}
                     error={touched.email ? (errors as any).email : ""}
                     onChange={(e) => setFieldValue("email", e.target.value)}
@@ -752,7 +751,7 @@ export default function ProfileEditPage() {
                     label="Contact"
                     name="contact"
                     value={values.contact}
-                    required
+                    // required
                     disabled={!isAdmin}
                     error={touched.contact ? (errors as any).contact : ""}
                     onChange={(e) => setFieldValue("contact", e.target.value)}
@@ -762,7 +761,7 @@ export default function ProfileEditPage() {
                     label="DOB"
                     name="dob"
                     value={values.dob}
-                    required
+                    // required
                     disabled={!isAdmin}
                     error={touched.dob ? (errors as any).dob : ""}
                     onChange={(e: any) => setFieldValue("dob", e.target.value)}
@@ -771,7 +770,7 @@ export default function ProfileEditPage() {
                   <SelectField
                     label="Gender"
                     name="gender"
-                    required
+                    // required
                     value={values.gender}
                     disabled={!isAdmin}
                     error={touched.gender ? (errors as any).gender : ""}

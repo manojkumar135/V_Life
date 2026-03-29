@@ -117,7 +117,7 @@ export default function WelcomePDF({ data }) {
 
                     <Text style={[styles.paragraph, styles.bold]}>
                         To,{"\n"}
-                        MAVERICK RESOURCES PVT LTD{"\n"}
+                        Maverick Signature Network PVT Ltd{"\n"}
                         ANDHRA PRADESH
                     </Text>
 
@@ -173,12 +173,11 @@ export default function WelcomePDF({ data }) {
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.bold}>Maverick Private Limited</Text>
+                    <Text style={styles.bold}>Maverick Signature Network PVT Ltd</Text>
                     <Text>
-                        No.3, Bellary Road, Yadavananda Building, 2nd Floor, Opp. To
-                        Veterinary College,
+                        14‑681, Kanuru, Andhra Pradesh - 520007,
                     </Text>
-                    <Text>Bengaluru - 560024</Text>
+                    {/* <Text>Bengaluru - 560024</Text> */}
                     <Text>
                         Email : info@maverickmoney.in | Toll-Free No : 18002965586
                     </Text>

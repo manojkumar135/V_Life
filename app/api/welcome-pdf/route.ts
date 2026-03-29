@@ -140,14 +140,14 @@ export async function GET(req: Request) {
 
     y -= 14;
 
-    write("Maverick Private Limited", 9, 4);
+    write("Maverick Signature Network PVT Ltd", 9, 4);
     write(
-      "No.3, Bellary Road, Yadavananda Building, 2nd Floor, Opp. To Veterinary College, Bengaluru - 560024",
+      "14‑681, Kanuru, Andhra Pradesh - 520007",
       9,
       4
     );
     write(
-      "Email : info@maverickmoney.in | Toll-Free No : 18002965586",
+      "Email : info@maverickmoney.in ",
       9,
       4
     );

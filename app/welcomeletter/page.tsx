@@ -111,7 +111,7 @@ export default function WelcomeLetter() {
             <div className="text-gray-900 leading-relaxed space-y-4 max-md:text-[12px] text-[14px]  px-5 max-md:px-1">
               <p className="font-bold">
                 To,<br />
-                MAVERICK RESOURCES PVT LTD<br />
+                Maverick Signature Network PVT Ltd<br />
                 ANDHRA PRADESH
               </p>
 
@@ -127,7 +127,7 @@ export default function WelcomeLetter() {
 
               <p>
                 Congratulations, we extend our warm welcome to you on behalf of
-                MAVERICK Resources Private Limited. We appreciate your
+                 Maverick Signature Network PVT Ltd. We appreciate your
                 discretion to be with us and it is a pleasure to have you with
                 us in transforming lives of our acquaintances and grow together.
               </p>
@@ -169,13 +169,12 @@ export default function WelcomeLetter() {
 
               <div className="pt-6 border-t border-gray-300">
                 <p className="text-sm max-md:text-xs">
-                  <strong>Maverick Private Limited</strong>
+                  <strong>Maverick Signature Network PVT Ltd</strong>
                   <br />
-                  No.3, Bellary Road, Yadavananda Building, 2nd Floor, Opp. To
-                  Veterinary College,
+                 14‑681, Kanuru, Andhra Pradesh - 520007
                   <br />
-                  Bengaluru - 560024 <br />
-                  Email : info@maverickmoney.in | Toll-Free No : 18002965586
+                  {/* Bengaluru - 560024 <br /> */}
+                  Email : info@maverickmoney.in 
                 </p>
               </div>
             </div>
