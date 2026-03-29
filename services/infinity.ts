@@ -334,6 +334,66 @@ export async function rebuildInfinityReferredFromReferredUsers(
 }
 
 /**
+ * ✅ NEW: Adds a newly activated user to their sponsor's paid_directs
+ * while PRESERVING the order from referred_users (source of truth).
+ *
+ * This is the ONLY fix needed. Replaces all bare $addToSet { paid_directs }
+ * calls in order-operations, history-operations, and status-operations routes.
+ *
+ * Why: $addToSet inserts in activation-time order, not enrolment order.
+ * The odd/even infinity assignment depends on position in paid_directs,
+ * so wrong order = wrong infinity assignment for every member.
+ *
+ * - Idempotent: skips if newDirectId already in paid_directs
+ * - Rebuilds paid_directs by filtering referred_users to paid members only
+ * - Updates paid_directs_count in the same DB call
+ */
+export async function addToPaidDirectsOrdered(
+  sponsorId: string,
+  newDirectId: string
+) {
+  try {
+    const sponsor: any = await User.findOne({ user_id: sponsorId }).exec();
+    if (!sponsor) return;
+
+    const currentPaid: string[] = Array.isArray(sponsor.paid_directs)
+      ? sponsor.paid_directs.map(idStr)
+      : [];
+
+    // Idempotent: already present, nothing to do
+    if (currentPaid.includes(idStr(newDirectId))) return;
+
+    const referredUsers: string[] = Array.isArray(sponsor.referred_users)
+      ? sponsor.referred_users.map(idStr)
+      : [];
+
+    // Build set of all paid members including the new one
+    const paidSet = new Set(currentPaid);
+    paidSet.add(idStr(newDirectId));
+
+    // Re-derive paid_directs in referred_users order (source of truth)
+    const ordered = referredUsers.filter((uid) => paidSet.has(uid));
+
+    // Safety: if newDirectId is somehow not in referred_users, append at end
+    if (!ordered.includes(idStr(newDirectId))) {
+      ordered.push(idStr(newDirectId));
+    }
+
+    await User.updateOne(
+      { user_id: sponsorId },
+      {
+        $set: {
+          paid_directs: ordered,
+          paid_directs_count: ordered.length,
+        },
+      }
+    ).exec();
+  } catch (err) {
+    console.error("addToPaidDirectsOrdered error:", err);
+  }
+}
+
+/**
  * Main function to rebuild infinity tree for a user.
  *
  * - Rebuilds infinity_referred_users from referred_users (active only) to maintain ordering and correctness.
@@ -454,6 +514,7 @@ export default {
   detectInfinitySide,
   updateInfinitySideCount,
   addToInfinityTeam,
+  addToPaidDirectsOrdered,
   processInfinityLevels,
   updateInfinityTeam,
   propagateInfinityUpdateToAncestors,

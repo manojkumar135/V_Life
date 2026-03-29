@@ -16,10 +16,10 @@ import { getTotalPayout } from "@/services/totalpayout";
 import { updateClub } from "@/services/clubrank";
 import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
 
-
 import {
   updateInfinityTeam,
   propagateInfinityUpdateToAncestors,
+  addToPaidDirectsOrdered,
 } from "@/services/infinity";
 
 
@@ -380,13 +380,9 @@ export async function POST(request) {
           if (freshUser?.referBy) {
             const referrerId = freshUser.referBy;
 
-            await User.updateOne(
-              { user_id: referrerId },
-              {
-                $addToSet: { paid_directs: freshUser.user_id },
-                $inc: { paid_directs_count: 1 },
-              }
-            );
+            // ✅ FIX: use ordered insert to preserve referred_users position
+            // This ensures odd/even infinity assignment is always correct
+            await addToPaidDirectsOrdered(referrerId, freshUser.user_id);
 
             if (earnedPV > 0) {
               await User.updateOne(

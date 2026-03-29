@@ -27,7 +27,7 @@ function createEncryptedInviteLink(
     SECRET_KEY!
   ).toString();
 
-  return `https://v-life-gules.vercel.app/auth/register?ref=${encodeURIComponent(
+  return `https://maverickmoney.in/auth/register?ref=${encodeURIComponent(
     encrypted
   )}`;
 }

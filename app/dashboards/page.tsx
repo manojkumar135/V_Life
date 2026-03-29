@@ -293,7 +293,7 @@ const DashboardPage: React.FC = () => {
       SECRET_KEY,
     ).toString();
 
-    const link = `https://v-life-gules.vercel.app/auth/register?ref=${encodeURIComponent(
+    const link = `https://maverickmoney.in/auth/register?ref=${encodeURIComponent(
       encrypted,
     )}`;
 

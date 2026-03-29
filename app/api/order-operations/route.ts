@@ -20,6 +20,7 @@ import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
 import {
   updateInfinityTeam,
   propagateInfinityUpdateToAncestors,
+  addToPaidDirectsOrdered,
 } from "@/services/infinity";
 
 import { processPvOrder } from "@/services/processPvOrder";
@@ -376,13 +377,9 @@ export async function POST(request: Request) {
         const referrerId = freshUser.referBy;
 
         if (justActivated) {
-          await User.updateOne(
-            { user_id: referrerId },
-            {
-              $addToSet: { paid_directs: freshUser.user_id },
-              $inc: { paid_directs_count: 1 },
-            },
-          );
+          // ✅ FIX: use ordered insert to preserve referred_users position
+          // This ensures odd/even infinity assignment is always correct
+          await addToPaidDirectsOrdered(referrerId, freshUser.user_id);
         }
 
         if (shouldTriggerMLM && referrerId) {
