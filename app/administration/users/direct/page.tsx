@@ -119,6 +119,7 @@ export default function DirectTeam() {
             u._id === id ? { ...u, user_status: res.data.data.user_status } : u
           )
         );
+         setIsStatusModalOpen(false);
       }
     } catch (error) {
       console.error("Error updating status:", error);

@@ -144,6 +144,7 @@ export default function LeftTeam() {
               : u,
           ),
         );
+         setIsStatusModalOpen(false);
       }
     } catch (error) {
       console.error("Error updating status:", error);

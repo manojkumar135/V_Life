@@ -141,6 +141,7 @@ export default function RightTeam() {
               : u,
           ),
         );
+        setIsStatusModalOpen(false);
       }
     } catch (error) {
       console.error("Error updating status:", error);

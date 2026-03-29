@@ -79,7 +79,7 @@ export default function InfinityTeam() {
         setLoading(false);
       }
     },
-    [user?.user_id]
+    [user?.user_id],
   );
 
   useEffect(() => {
@@ -116,9 +116,10 @@ export default function InfinityTeam() {
         // ✅ Update UI
         setUsersData((prev: User[]) =>
           prev.map((u) =>
-            u._id === id ? { ...u, user_status: res.data.data.user_status } : u
-          )
+            u._id === id ? { ...u, user_status: res.data.data.user_status } : u,
+          ),
         );
+        setIsStatusModalOpen(false);
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -142,8 +143,7 @@ export default function InfinityTeam() {
           { field: "mail", headerName: "Email", flex: 1.5 },
         ]
       : []),
-          { field: "referBy", headerName: "Sponsor", flex: 0.8 },
-
+    { field: "referBy", headerName: "Sponsor", flex: 0.8 },
 
     { field: "team", headerName: "Team", flex: 0.6 },
     { field: "level", headerName: "Level", flex: 0.6 },
@@ -181,10 +181,9 @@ export default function InfinityTeam() {
       },
     },
     { field: "bv", headerName: "BV", flex: 0.6 },
-        { field: "pv", headerName: "PV", flex: 0.6 },
+    { field: "pv", headerName: "PV", flex: 0.6 },
 
-        { field: "cumulativeBV", headerName: "C.BV", flex: 0.6 },
-
+    { field: "cumulativeBV", headerName: "C.BV", flex: 0.6 },
 
     { field: "user_status", headerName: "Status", flex: 0.6 },
   ];
