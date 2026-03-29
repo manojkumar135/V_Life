@@ -363,21 +363,10 @@ export async function addToPaidDirectsOrdered(
     // Idempotent: already present, nothing to do
     if (currentPaid.includes(idStr(newDirectId))) return;
 
-    const referredUsers: string[] = Array.isArray(sponsor.referred_users)
-      ? sponsor.referred_users.map(idStr)
-      : [];
-
-    // Build set of all paid members including the new one
-    const paidSet = new Set(currentPaid);
-    paidSet.add(idStr(newDirectId));
-
-    // Re-derive paid_directs in referred_users order (source of truth)
-    const ordered = referredUsers.filter((uid) => paidSet.has(uid));
-
-    // Safety: if newDirectId is somehow not in referred_users, append at end
-    if (!ordered.includes(idStr(newDirectId))) {
-      ordered.push(idStr(newDirectId));
-    }
+    // ✅ FIXED: Simply append in activation order — do NOT re-sort by referred_users.
+    // paid_directs must reflect the order users actually activated (first-come-first-served).
+    // The odd/even infinity assignment depends on this order being stable.
+    const ordered = [...currentPaid, idStr(newDirectId)];
 
     await User.updateOne(
       { user_id: sponsorId },

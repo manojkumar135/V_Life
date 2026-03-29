@@ -103,7 +103,7 @@ export async function GET(request: Request) {
    Cross-collection sync (only when values are present):
      • contact   → also updated in Login.contact,   TreeNode.contact,   Wallet.contact
      • user_name → also updated in Login.user_name, TreeNode.name,      Wallet.user_name
-     • mail      → also updated in Login.mail,      TreeNode.mail,      Wallet.mail
+     • mail      → also updated in Login.mail,      TreeNode.mail
 
    Wallet logic:
      1. Find existing wallet by user_id.
@@ -186,21 +186,6 @@ export async function PATCH(request: Request) {
         cleanWalletUpdates.pan_verified === "true";
     }
 
-    /* ── Mirror shared personal fields from userUpdates → walletUpdates ──
-       Wallet stores its own copy of user_name, contact, and mail.
-       Injecting them here means the single wallet write below always
-       keeps the wallet in sync — no separate Wallet.updateOne needed.
-    ── */
-    if (cleanUserUpdates.user_name) {
-      cleanWalletUpdates.user_name = cleanUserUpdates.user_name;
-    }
-    if (cleanUserUpdates.contact) {
-      cleanWalletUpdates.contact = cleanUserUpdates.contact;
-    }
-    if (cleanUserUpdates.mail) {
-      cleanWalletUpdates.mail = cleanUserUpdates.mail;
-    }
-
     let updatedUser   = null;
     let updatedWallet = null;
 
@@ -214,11 +199,13 @@ export async function PATCH(request: Request) {
     }
 
     /* ── Cross-collection sync for contact, user_name, and mail ──────────
-       Wallet is now kept in sync via the mirror block above + the wallet
-       write below, so only Login and TreeNode are fanned out to here.
+       These fields are stored in Login, TreeNode, and/or Wallet as well.
+       We sync them whenever they appear in userUpdates (the source of truth
+       for personal details). Each sync is fire-and-forget — we only update
+       the specific field that changed, touching nothing else.
     ── */
 
-    // Sync contact → Login.contact, TreeNode.contact
+    // Sync contact → Login.contact, TreeNode.contact, Wallet.contact
     if (cleanUserUpdates.contact) {
       await Promise.all([
         Login.updateOne(
@@ -229,10 +216,16 @@ export async function PATCH(request: Request) {
           { user_id },
           { $set: { contact: cleanUserUpdates.contact } },
         ),
+        // Wallet.contact is handled below inside the wallet block,
+        // but we sync here too in case walletUpdates is empty.
+        Wallet.updateOne(
+          { user_id },
+          { $set: { contact: cleanUserUpdates.contact } },
+        ),
       ]);
     }
 
-    // Sync user_name → Login.user_name, TreeNode.name
+    // Sync user_name → Login.user_name, TreeNode.name, Wallet.user_name
     if (cleanUserUpdates.user_name) {
       await Promise.all([
         Login.updateOne(
@@ -242,6 +235,12 @@ export async function PATCH(request: Request) {
         TreeNode.updateOne(
           { user_id },
           { $set: { name: cleanUserUpdates.user_name } },
+        ),
+        // Wallet.user_name is handled below inside the wallet block,
+        // but we sync here too in case walletUpdates is empty.
+        Wallet.updateOne(
+          { user_id },
+          { $set: { user_name: cleanUserUpdates.user_name } },
         ),
       ]);
     }
@@ -261,23 +260,27 @@ export async function PATCH(request: Request) {
     }
 
     /* ── Wallet: find → update OR create ──────────────────────────────
-       We do NOT use upsert:true because Mongoose would insert a new
-       document with wallet_id:null, hitting the unique-index E11000 error.
-       Instead we check existence ourselves and call Wallet.create()
-       with a properly generated wallet_id when needed.
+       Rules:
+         • Existing wallet  → $set only the non-empty fields provided.
+                              Never blank out existing values.
+         • No wallet yet    → create ONLY when pan_number is present
+                              (it is required by the Wallet schema).
+                              If pan_number is absent, skip silently —
+                              the admin can fill KYC details later.
+       We do NOT use upsert:true to avoid wallet_id:null E11000 errors.
     ── */
     if (Object.keys(cleanWalletUpdates).length) {
       const existingWallet = await Wallet.findOne({ user_id });
 
       if (existingWallet) {
-        // ── Wallet exists → partial update (only provided fields) ──
+        // ── Wallet exists → partial update (only non-empty provided fields) ──
         updatedWallet = await Wallet.findOneAndUpdate(
           { user_id },
           { $set: cleanWalletUpdates },
           { returnDocument: "after" },
         );
-      } else {
-        // ── No wallet yet → create with a generated wallet_id ──────
+      } else if (cleanWalletUpdates.pan_number) {
+        // ── No wallet yet → only create when pan_number is supplied ──────
         // Fetch the user record to seed name / contact / mail / gender
         // into the new wallet (mirrors the registration pattern).
         const userRecord = (await User.findOne({ user_id }).lean()) as any;
@@ -289,26 +292,27 @@ export async function PATCH(request: Request) {
           user_id,
 
           // Seed from user record, fall back to walletUpdates values
-          user_name:      userRecord?.user_name ?? cleanWalletUpdates.user_name ?? "",
-          contact:        userRecord?.contact   ?? cleanWalletUpdates.contact   ?? "",
-          mail:           userRecord?.mail      ?? cleanWalletUpdates.mail      ?? "",
-          gender:         userRecord?.gender    ?? cleanWalletUpdates.gender    ?? "",
-          rank:           userRecord?.rank      ?? "",
-          user_status:    "Active",
-          wallet_status:  "Active",
-          balance:        0,
-          total_earnings: 0,
+          user_name:       userRecord?.user_name ?? cleanWalletUpdates.user_name ?? "",
+          contact:         userRecord?.contact   ?? cleanWalletUpdates.contact   ?? "",
+          mail:            userRecord?.mail      ?? cleanWalletUpdates.mail      ?? "",
+          gender:          userRecord?.gender    ?? cleanWalletUpdates.gender    ?? "",
+          rank:            userRecord?.rank      ?? "",
+          user_status:     "Active",
+          wallet_status:   "Active",
+          balance:         0,
+          total_earnings:  0,
           total_withdrawn: 0,
-          activated_date: new Date(),
-          created_by:     user_id,
+          activated_date:  new Date(),
+          created_by:      user_id,
 
           // Spread all the KYC / banking fields the admin is saving
           ...cleanWalletUpdates,
         });
       }
+      // else: no wallet + no pan_number → skip wallet creation silently
     }
 
-    if (!updatedUser && !updatedWallet) {
+    if (!updatedUser && !updatedWallet && !Object.keys(cleanUserUpdates).length && !Object.keys(cleanWalletUpdates).length) {
       return NextResponse.json(
         { success: false, message: "Nothing to update" },
         { status: 400 },
