@@ -9,7 +9,6 @@ export async function GET(request: Request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
-    const filter = searchParams.get("filter") || "all"; // all | daily | fortnight
     const from   = searchParams.get("from")   || null;
     const to     = searchParams.get("to")     || null;
     const search = searchParams.get("search") || "";
@@ -46,8 +45,8 @@ export async function GET(request: Request) {
        3. Fetch pending payouts from both collections
     ───────────────────────────────────────────── */
     const [dailyPayouts, fortnightPayouts] = await Promise.all([
-      filter !== "fortnight" ? DailyPayout.find(baseQuery).lean()  : [],
-      filter !== "daily"     ? WeeklyPayout.find(baseQuery).lean() : [],
+      DailyPayout.find(baseQuery).lean(),
+      WeeklyPayout.find(baseQuery).lean(),
     ]);
 
     /* ─────────────────────────────────────────────
@@ -104,9 +103,10 @@ export async function GET(request: Request) {
     /* ─────────────────────────────────────────────
        6. Wallet eligibility map
           - wallet_status === "active"
-          - pan_verified in ["yes", "true"]
+          (pan_verified not required — payout may have been
+           released before PAN was verified; status=pending
+           is the source of truth for display)
     ───────────────────────────────────────────── */
-    const PAN_VERIFIED_VALUES = new Set(["yes", "true"]);
     const eligibleWalletMap = new Map<string, any>();
 
     for (const w of wallets as any[]) {
@@ -114,11 +114,7 @@ export async function GET(request: Request) {
         typeof w.wallet_status === "string" &&
         w.wallet_status.toLowerCase() === "active";
 
-      const panVerified =
-        typeof w.pan_verified === "string" &&
-        PAN_VERIFIED_VALUES.has(w.pan_verified.toLowerCase());
-
-      if (walletActive && panVerified) {
+      if (walletActive) {
         eligibleWalletMap.set(w.user_id, w);
       }
     }
@@ -127,10 +123,10 @@ export async function GET(request: Request) {
        7. Score map — keyed by user_id
     ───────────────────────────────────────────── */
     type ScoreEntry = {
-      daily_balance:     number; // ← actual payable for daily
+      daily_balance:     number;
       daily_earned:      number;
       daily_used:        number;
-      fortnight_balance: number; // ← actual payable for fortnight
+      fortnight_balance: number;
       fortnight_earned:  number;
       fortnight_used:    number;
     };
@@ -161,30 +157,32 @@ export async function GET(request: Request) {
 
          Same logic for fortnight.
 
-       combined_payable = daily.payable + fortnight.payable
-         → total amount admin will actually release to this user
+         total_release = daily.payable + fortnight.payable
+           → single combined amount admin will actually release to this user
     ───────────────────────────────────────────── */
     type PayoutGroup = {
-      original_total: number; // sum of payout.amount (pre-deduction)
-      payable:        number; // Score.balance (post-deduction, actual release)
+      original_total: number;
+      payable:        number;
       payout_count:   number;
       payout_ids:     string[];
       latest_date:    string;
     };
 
     type UserGroup = {
-      user_id:        string;
-      user_name:      string;
-      contact:        string;
-      rank:           string;
-      wallet_id:      string;
-      pan_number:     string;
-      bank_name:      string;
-      account_number: string;
-      ifsc_code:      string;
-      daily:          PayoutGroup | null;
-      fortnight:      PayoutGroup | null;
-      combined_payable: number;
+      user_id:              string;
+      user_name:            string;
+      account_holder_name:  string; // ← from wallet — actual bank-registered name
+      contact:              string; // ← preferred from wallet (more up-to-date)
+      mail:                 string; // ← from wallet
+      rank:                 string;
+      wallet_id:            string;
+      pan_number:           string;
+      bank_name:            string;
+      account_number:       string;
+      ifsc_code:            string;
+      daily:                PayoutGroup | null;
+      fortnight:            PayoutGroup | null;
+      total_release:        number; // ← single amount: daily.payable + fortnight.payable
     };
 
     const userMap = new Map<string, UserGroup>();
@@ -192,31 +190,34 @@ export async function GET(request: Request) {
     const getOrCreate = (payout: any, wallet: any): UserGroup => {
       if (!userMap.has(payout.user_id)) {
         userMap.set(payout.user_id, {
-          user_id:        payout.user_id,
-          user_name:      payout.user_name       || wallet?.user_name      || "",
-          contact:        payout.contact         || wallet?.contact        || "",
-          rank:           payout.rank            || wallet?.rank           || "",
-          wallet_id:      wallet?.wallet_id      || "",
-          pan_number:     wallet?.pan_number     || "",
-          bank_name:      wallet?.bank_name      || "",
-          account_number: wallet?.account_number || "",
-          ifsc_code:      wallet?.ifsc_code      || "",
-          daily:          null,
-          fortnight:      null,
-          combined_payable: 0,
+          user_id:             payout.user_id,
+          user_name:           payout.user_name  || wallet?.user_name  || "",
+          // account_holder_name is the bank-registered name — always prefer wallet
+          account_holder_name: wallet?.account_holder_name || payout.account_holder_name || payout.user_name || "",
+          // contact — wallet is more up-to-date than the payout snapshot
+          contact:             wallet?.contact   || payout.contact     || "",
+          mail:                wallet?.mail      || payout.mail        || "",
+          rank:                payout.rank       || wallet?.rank       || "",
+          wallet_id:           wallet?.wallet_id      || "",
+          pan_number:          wallet?.pan_number     || "",
+          bank_name:           wallet?.bank_name      || "",
+          account_number:      wallet?.account_number || "",
+          ifsc_code:           wallet?.ifsc_code      || "",
+          daily:               null,
+          fortnight:           null,
+          total_release:       0,
         });
       }
       return userMap.get(payout.user_id)!;
     };
 
-    // Process daily payouts — collect ids/count/original only
+    // Process daily payouts
     for (const payout of dailyPayouts as any[]) {
       if (!eligibleWalletMap.has(payout.user_id)) continue;
       const wallet = eligibleWalletMap.get(payout.user_id);
       const group  = getOrCreate(payout, wallet);
 
       if (!group.daily) {
-        // payable will be set from Score.daily.balance after loop
         group.daily = {
           original_total: 0,
           payable:        0,
@@ -233,7 +234,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Process fortnight payouts — collect ids/count/original only
+    // Process fortnight payouts
     for (const payout of fortnightPayouts as any[]) {
       if (!eligibleWalletMap.has(payout.user_id)) continue;
       const wallet = eligibleWalletMap.get(payout.user_id);
@@ -258,14 +259,12 @@ export async function GET(request: Request) {
 
     /* ─────────────────────────────────────────────
        9. Set payable from Score.balance
-          and compute combined_payable
+          and compute total_release (daily + fortnight)
     ───────────────────────────────────────────── */
     for (const group of userMap.values()) {
       const sc = scoreMap.get(group.user_id);
 
       if (group.daily) {
-        // Score.daily.balance is earned - used (all time)
-        // This is the exact amount remaining to be paid out
         group.daily.payable = sc?.daily_balance ?? 0;
       }
 
@@ -273,7 +272,8 @@ export async function GET(request: Request) {
         group.fortnight.payable = sc?.fortnight_balance ?? 0;
       }
 
-      group.combined_payable =
+      // total_release is the single amount shown in UI and used in IDFC download
+      group.total_release =
         (group.daily?.payable     || 0) +
         (group.fortnight?.payable || 0);
     }
@@ -292,17 +292,18 @@ export async function GET(request: Request) {
       result = result.filter((row) =>
         terms.some(
           (t) =>
-            row.user_id.toLowerCase().includes(t)   ||
-            row.user_name.toLowerCase().includes(t) ||
+            row.user_id.toLowerCase().includes(t)                  ||
+            row.user_name.toLowerCase().includes(t)                ||
+            row.account_holder_name.toLowerCase().includes(t)      ||
             row.contact.toLowerCase().includes(t)
         )
       );
     }
 
     /* ─────────────────────────────────────────────
-       11. Sort by combined_payable descending
+       11. Sort by total_release descending
     ───────────────────────────────────────────── */
-    result.sort((a, b) => b.combined_payable - a.combined_payable);
+    result.sort((a, b) => b.total_release - a.total_release);
 
     return NextResponse.json(
       { success: true, data: result, total: result.length },
