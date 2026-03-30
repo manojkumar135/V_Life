@@ -23,20 +23,20 @@ import AlertBox from "@/components/Alerts/advanceAlert";
 // ─────────────────────────────────────────────────────────────────────────
 
 interface PvMonthBreakdown {
-  month:        string;
-  pv_required:  number;
+  month: string;
+  pv_required: number;
   pv_fulfilled: number;
   pv_remaining: number;
-  cleared:      boolean;
+  cleared: boolean;
 }
 
 interface PvAlertSummary {
-  hasAlert:         boolean;
-  totalPvRequired:  number;
+  hasAlert: boolean;
+  totalPvRequired: number;
   totalPvFulfilled: number;
   totalPvRemaining: number;
-  months:           PvMonthBreakdown[];
-  alertMessage:     string;
+  months: PvMonthBreakdown[];
+  alertMessage: string;
 }
 
 export default function DailyPayoutPage() {
@@ -56,7 +56,7 @@ export default function DailyPayoutPage() {
 
   // ── PV Alert ──────────────────────────────────────────────────────────
   const [showPvAlert, setShowPvAlert] = useState(false);
-  const [pvSummary,   setPvSummary]   = useState<PvAlertSummary | null>(null);
+  const [pvSummary, setPvSummary] = useState<PvAlertSummary | null>(null);
 
   const API_URL = "/api/dailyPayout-operations";
 
@@ -69,7 +69,7 @@ export default function DailyPayoutPage() {
     (async () => {
       try {
         const firstOrderRes = await hasFirstOrder(user.user_id);
-        const advanceRes    = await hasAdvancePaid(user.user_id, 15000);
+        const advanceRes = await hasAdvancePaid(user.user_id, 15000);
 
         if (!isMounted) return;
 
@@ -84,7 +84,9 @@ export default function DailyPayoutPage() {
       }
     })();
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [user?.user_id]);
 
   // ── PV Alert fetch ────────────────────────────────────────────────────
@@ -110,7 +112,9 @@ export default function DailyPayoutPage() {
       }
     })();
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [user?.user_id]);
 
   // ── Download ──────────────────────────────────────────────────────────
@@ -120,9 +124,15 @@ export default function DailyPayoutPage() {
       fileName: "Daliy Payouts",
       format: "xlsx",
       excludeHeaders: [
-        "_id", "__v", "created_at", "last_modified_at",
-        "is_checked", "left_users", "right_users",
-        "created_by", "last_modified_by",
+        "_id",
+        "__v",
+        "created_at",
+        "last_modified_at",
+        "is_checked",
+        "left_users",
+        "right_users",
+        "created_by",
+        "last_modified_by",
       ],
       onFinish: () => setDownloading(false),
     });
@@ -138,8 +148,11 @@ export default function DailyPayoutPage() {
           role: user?.role,
           ...(user?.role === "user" && { user_id: user?.user_id }),
           search: query,
-          ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
-          ...(dateFilter?.type === "range" && { from: dateFilter.from, to: dateFilter.to }),
+          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
+          ...(dateFilter?.type === "range" && {
+            from: dateFilter.from,
+            to: dateFilter.to,
+          }),
         },
       });
 
@@ -171,69 +184,95 @@ export default function DailyPayoutPage() {
     ...(user?.role !== "user"
       ? [
           { field: "user_id", headerName: "User ID", flex: 1 },
-         {
-      field: "rank",
-      headerName: "Rank",
-      flex: 1,
-      renderCell: (params: any) => {
-        const value = params.value;
+          { field: "user_name", headerName: "Name", flex: 1 },
+          {
+            field: "rank",
+            headerName: "Rank",
+            flex: 0.6,
+            renderCell: (params: any) => {
+              const value = params.value;
 
-        if (
-          value === null ||
-          value === undefined ||
-          value === "" ||
-          value === "none" ||
-          String(value).toLowerCase() === "null"
-        ) {
-          return "-";
-        }
+              if (
+                value === null ||
+                value === undefined ||
+                value === "" ||
+                value === "none" ||
+                String(value).toLowerCase() === "null"
+              ) {
+                return "-";
+              }
 
-        const num = Number(value);
+              const num = Number(value);
 
-        // If number between 1–5
-        if (!isNaN(num) && num >= 1 && num <= 5) {
-          if (num === 1) return "1 Star";
-          return "2 Star"; // for 2–5
-        }
+              // If number between 1–5
+              if (!isNaN(num) && num >= 1 && num <= 5) {
+                if (num === 1) return "1 Star";
+                return "2 Star"; // for 2–5
+              }
 
-        // String case → capitalize only (no "Star")
-        return (
-          String(value).charAt(0).toUpperCase() +
-          String(value).slice(1).toLowerCase()
-        );
-      },
-    },
+              // String case → capitalize only (no "Star")
+              return (
+                String(value).charAt(0).toUpperCase() +
+                String(value).slice(1).toLowerCase()
+              );
+            },
+          },
         ]
       : []),
     { field: "date", headerName: "Date", flex: 1 },
     {
-      field: "amount", headerName: "Amount ( ₹ )", align: "right", flex: 1,
+      field: "amount",
+      headerName: "Amount ( ₹ )",
+      align: "right",
+      flex: 1,
       renderCell: (params) => (
-        <span className="pr-5">₹ {Number(params.value)?.toFixed(2) || "0.00"}</span>
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
       ),
     },
     {
-      field: "withdraw_amount", headerName: "Withdraw ( ₹ )", align: "right", flex: 1,
+      field: "withdraw_amount",
+      headerName: "Withdraw ( ₹ )",
+      align: "right",
+      flex: 1,
       renderCell: (params) => (
-        <span className="pr-5">₹ {Number(params.value)?.toFixed(2) || "0.00"}</span>
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
       ),
     },
     {
-      field: "reward_amount", headerName: "Reward ( ₹ )", align: "right", flex: 1,
+      field: "reward_amount",
+      headerName: "Reward ( ₹ )",
+      align: "right",
+      flex: 1,
       renderCell: (params) => (
-        <span className="pr-5">₹ {Number(params.value)?.toFixed(2) || "0.00"}</span>
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
       ),
     },
     {
-      field: "admin_charge", headerName: "Admin ( ₹ )", align: "right", flex: 1,
+      field: "admin_charge",
+      headerName: "Admin ( ₹ )",
+      align: "right",
+      flex: 1,
       renderCell: (params) => (
-        <span className="pr-5">₹ {Number(params.value)?.toFixed(2) || "0.00"}</span>
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
       ),
     },
     {
-      field: "tds_amount", headerName: "TDS ( ₹ )", align: "right", flex: 1,
+      field: "tds_amount",
+      headerName: "TDS ( ₹ )",
+      align: "right",
+      flex: 1,
       renderCell: (params) => (
-        <span className="pr-5">₹ {Number(params.value)?.toFixed(2) || "0.00"}</span>
+        <span className="pr-5">
+          ₹ {Number(params.value)?.toFixed(2) || "0.00"}
+        </span>
       ),
     },
     { field: "status", headerName: "Status", flex: 1 },
@@ -241,8 +280,13 @@ export default function DailyPayoutPage() {
 
   // ── Pagination ────────────────────────────────────────────────────────
   const {
-    currentPage, totalPages, nextPage, prevPage,
-    startItem, endItem, goToPage,
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
   } = usePagination({
     totalItems,
     itemsPerPage: 12,
@@ -250,7 +294,7 @@ export default function DailyPayoutPage() {
   });
 
   const handlePayOut = () => router.push("/wallet/payout/addpayout");
-  const onBack       = () => router.push("/wallet/payout");
+  const onBack = () => router.push("/wallet/payout");
 
   // ── PV Alert message ──────────────────────────────────────────────────
   const pvAlertMessage = pvSummary ? (
@@ -275,7 +319,6 @@ export default function DailyPayoutPage() {
 
   return (
     <Layout>
-
       {/* ── PV Alert ── */}
       <AlertBox
         visible={showPvAlert}

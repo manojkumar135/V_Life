@@ -196,41 +196,42 @@ export default function WithdrawPage() {
   const columns: GridColDef[] = [
     { field: "payout_id", headerName: "Transaction ID", flex: 1 },
     { field: "wallet_id", headerName: "Wallet ID", flex: 1 },
-    { field: "user_id", headerName: "User ID", flex: 1 },
     ...(user?.role === "admin"
       ? [
-         {
-      field: "rank",
-      headerName: "Rank",
-      flex: 1,
-      renderCell: (params: any) => {
-        const value = params.value;
+          { field: "user_id", headerName: "User ID", flex: 1 },
+          { field: "user_name", headerName: "Name", flex: 1 },
+          {
+            field: "rank",
+            headerName: "Rank",
+            flex: 0.6,
+            renderCell: (params: any) => {
+              const value = params.value;
 
-        if (
-          value === null ||
-          value === undefined ||
-          value === "" ||
-          value === "none" ||
-          String(value).toLowerCase() === "null"
-        ) {
-          return "-";
-        }
+              if (
+                value === null ||
+                value === undefined ||
+                value === "" ||
+                value === "none" ||
+                String(value).toLowerCase() === "null"
+              ) {
+                return "-";
+              }
 
-        const num = Number(value);
+              const num = Number(value);
 
-        // If number between 1–5
-        if (!isNaN(num) && num >= 1 && num <= 5) {
-          if (num === 1) return "1 Star";
-          return "2 Star"; // for 2–5
-        }
+              // If number between 1–5
+              if (!isNaN(num) && num >= 1 && num <= 5) {
+                if (num === 1) return "1 Star";
+                return "2 Star"; // for 2–5
+              }
 
-        // String case → capitalize only (no "Star")
-        return (
-          String(value).charAt(0).toUpperCase() +
-          String(value).slice(1).toLowerCase()
-        );
-      },
-    },
+              // String case → capitalize only (no "Star")
+              return (
+                String(value).charAt(0).toUpperCase() +
+                String(value).slice(1).toLowerCase()
+              );
+            },
+          },
         ]
       : []),
     { field: "date", headerName: "Date", flex: 1.5 },
