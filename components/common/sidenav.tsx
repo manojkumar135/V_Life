@@ -44,7 +44,7 @@ export default function SideNav({
     {
       href: user?.role === "admin" ? "/AdminDashboard" : "/dashboards",
       icon: <LuLayoutDashboard />,
-      label: "My Profile",
+      label: "My Dashboard",
       match: ["dashboard", "AdminDashboard"],
     },
     {
@@ -93,7 +93,7 @@ export default function SideNav({
     {
       href: "/settings",
       icon: <IoSettings />,
-      label: "Settings",
+      label: "My Profile",
       match: ["settings", "welcomeletter"],
     },
   ];

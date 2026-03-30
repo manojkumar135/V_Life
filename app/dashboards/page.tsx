@@ -488,23 +488,26 @@ const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* ── NEW: Maverick Cycle + MNF — mobile only, under Total Earnings ── */}
+            {/* ── Maverick Cycle + MNF — mobile only ── */}
+            {/* ✅ UPDATED: onClick navigates to rewards with correct tab param */}
             <div className="md:hidden grid grid-cols-2 gap-3">
               <DashBox
                 icon={<BsFillPeopleFill />}
                 title={`MAVERICK WINNERS CYCLE (${cycles?.matches?.toString() || "0"})`}
                 value={`${cycles?.remainingDays?.toString() || "0"} days left`}
                 index={2}
+                onClick={() => router.push("/wallet/rewards?tab=matching")}
               />
               <DashBox
                 icon={<FaGift />}
                 title="MAVERICK NEXUS"
                 value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
                 index={1}
+                onClick={() => router.push("/wallet/rewards?tab=score")}
               />
             </div>
 
-            {/* ── NEW: Direct Sales Bonus + Infinity Sales Bonus — mobile only ── */}
+            {/* ── Direct Sales Bonus + Infinity Sales Bonus — mobile only ── */}
             <div className="md:hidden grid grid-cols-2 gap-3">
               <DashBox
                 icon={<FaShoppingBag />}
@@ -520,7 +523,7 @@ const DashboardPage: React.FC = () => {
               />
             </div>
 
-            {/* ── NEW: Matching Bonus + Infinity Matching Bonus — mobile only ── */}
+            {/* ── Matching Bonus + Infinity Matching Bonus — mobile only ── */}
             <div className="md:hidden grid grid-cols-2 gap-3">
               <DashBox
                 icon={<FaShoppingBag />}
@@ -566,29 +569,6 @@ const DashboardPage: React.FC = () => {
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
-                    {/* <p className="text-black text-center text-sm font-semibold mt-2">
-                      {hasRank ? (
-                        isNumericRank ? (
-                          <span className="text-black text-lg font-extrabold">
-                            STAR
-                          </span>
-                        ) : (
-                          <>
-                            <span className="text-black text-lg font-extrabold">
-                              {user!.rank}
-                            </span>{" "}
-                            STAR
-                          </>
-                        )
-                      ) : (
-                        <>
-                          <span className="text-black text-lg font-bold">
-                            NO
-                          </span>{" "}
-                          STAR
-                        </>
-                      )}
-                    </p> */}
                   </div>
                 </InfoCard>
               </div>
@@ -620,13 +600,38 @@ const DashboardPage: React.FC = () => {
               <NewsTicker />
             </div>
 
-            {/* My Business Summary — unchanged, shown on all screen sizes */}
+            {/* My Business Summary */}
             <div className="bg-gray-50 rounded-2xl shadow-md border border-gray-100 my-0 py-0">
               <div className="bg-gray-700 text-white max-md:text-sm text-center py-2 rounded-t-2xl font-semibold shadow-md font-sans">
                 MY BUSINESS SUMMARY
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
+
+                {/* Hidden on mobile — already shown above */}
+                {/* ✅ UPDATED: onClick navigates to rewards with tab=matching */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<BsFillPeopleFill />}
+                    title={`MAVERICK CYCLE (${cycles?.matches?.toString() || "0"})`}
+                    value={`${cycles?.remainingDays?.toString() || "0"} days left`}
+                    index={2}
+                    onClick={() => router.push("/wallet/rewards?tab=matching")}
+                  />
+                </div>
+
+                {/* Hidden on mobile — already shown above */}
+                {/* ✅ UPDATED: onClick navigates to rewards with tab=score */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaGift />}
+                    title="MAVERICK NEXUS"
+                    value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
+                    index={1}
+                    onClick={() => router.push("/wallet/rewards?tab=score")}
+                  />
+                </div>
+
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaRupeeSign />}
@@ -636,7 +641,7 @@ const DashboardPage: React.FC = () => {
                   />
                 </div>
 
-                {/* 🆕 Payout Released — visible on all screens */}
+                {/* Payout Released — visible on all screens */}
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Payout Released"
@@ -644,37 +649,21 @@ const DashboardPage: React.FC = () => {
                   index={0}
                 />
 
-                {/* 🆕 Payout On Hold — visible on all screens */}
+                {/* Payout On Hold — visible on all screens */}
                 <DashBox
                   icon={<FaWallet />}
                   title="Payout On Hold"
                   value={`₹ ${summary?.payoutOnHold?.toFixed(2) || "0.00"}`}
                   index={5}
                 />
-                {/* Hidden on mobile — already shown above */}
-                <div className="hidden md:block">
-                  <DashBox
-                    icon={<FaGift />}
-                    title="Reward Value"
-                    value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
-                    index={1}
-                  />
-                </div>
-                {/* Hidden on mobile — already shown above */}
-                <div className="hidden md:block">
-                  <DashBox
-                    icon={<BsFillPeopleFill />}
-                    title={`Matching pairs (${cycles?.matches?.toString() || "0"})`}
-                    value={`${cycles?.remainingDays?.toString() || "0"} days left`}
-                    index={2}
-                  />
-                </div>
+
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Cashback Points"
                   value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
                   index={3}
                 />
+
                 {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">
                   <DashBox
@@ -684,6 +673,7 @@ const DashboardPage: React.FC = () => {
                     index={4}
                   />
                 </div>
+
                 {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">
                   <DashBox
@@ -693,6 +683,7 @@ const DashboardPage: React.FC = () => {
                     index={5}
                   />
                 </div>
+
                 {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">
                   <DashBox
@@ -702,6 +693,7 @@ const DashboardPage: React.FC = () => {
                     index={6}
                   />
                 </div>
+
                 {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">
                   <DashBox
@@ -774,20 +766,26 @@ const DASH_GRADIENTS = [
   "linear-gradient(135deg, #0C3978 0%, #106187 50%, #16B8E4 100%)",
 ];
 
+// ✅ UPDATED: DashBox now accepts an optional onClick prop
 const DashBox = ({
   icon,
   title,
   value,
   index = 0,
+  onClick,
 }: {
   icon: React.ReactNode;
   title: string;
   value: string;
   index?: number;
+  onClick?: () => void;
 }) => (
   <div
-    className="rounded-xl p-3 text-center flex flex-col items-center justify-center relative overflow-hidden hover:scale-[1.01] transition-transform duration-150"
+    className={`rounded-xl p-3 text-center flex flex-col items-center justify-center relative overflow-hidden hover:scale-[1.01] transition-transform duration-150 ${
+      onClick ? "cursor-pointer" : ""
+    }`}
     style={{ background: DASH_GRADIENTS[index % DASH_GRADIENTS.length] }}
+    onClick={onClick}
   >
     <div
       className="absolute -top-4 -right-4 w-16 h-16 rounded-full pointer-events-none"

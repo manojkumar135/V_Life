@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "maverickmoney-2026.s3.ap-south-1.amazonaws.com",
       },
+      {
+        protocol: "https",
+        hostname: "wonbillsnew.s3.ap-south-1.amazonaws.com", // ✅ ADD THIS
+      },
        {
         protocol: "https",
         hostname: "res.cloudinary.com",

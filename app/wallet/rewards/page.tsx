@@ -13,7 +13,9 @@ import { FaEdit } from "react-icons/fa";
 import { LiaGiftsSolid } from "react-icons/lia";
 import { IoIosArrowBack } from "react-icons/io";
 import { IoRemove, IoAdd } from "react-icons/io5";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { BsFillPeopleFill } from "react-icons/bs";
+import { FaGift } from "react-icons/fa6";
 
 interface MatchStats {
   matches: number;
@@ -25,9 +27,11 @@ interface MatchStats {
   matchingBonus?: number;
 }
 
+// 🔹 Tab type: "score" = Maverick NEXUS | "matching" = Maverick Cycle
+type RewardTab = "score" | "matching";
+
 export default function RewardsPage() {
   const { user, setUser } = useVLife();
-  // console.log(user)
   const [rewards, setRewards] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<{ [key: string]: number }>({});
@@ -48,11 +52,22 @@ export default function RewardsPage() {
 
   // 🔐 Track which reward type is currently selected ("score" | "matching")
   const [selectedType, setSelectedType] = useState<"score" | "matching" | null>(
-    null
+    null,
   );
 
-  // console.log(user.dailyReward)
+  // 🔹 Active tab state — null means show landing cards
+  const [activeTab, setActiveTab] = useState<RewardTab | null>(null);
+
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // 🔹 On mount: check URL param for direct tab navigation from dashboard
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "matching" || tab === "score") {
+      setActiveTab(tab as RewardTab);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetch60Stats = async () => {
@@ -81,14 +96,12 @@ export default function RewardsPage() {
         if (res.data.success) {
           const bookings = res.data.data || [];
 
-          // Count matches used in same cycle only
           const usedMatches = bookings.reduce((total: number, b: any) => {
             return b.cycleIndex === matchStats.cycleIndex
               ? total + (b.total_matches_used || 0)
               : total;
           }, 0);
 
-          // Update UI to show actual remaining matches
           setMatchStats((prev) => ({
             ...prev,
             matches: (prev.matches || 0) - usedMatches,
@@ -166,35 +179,31 @@ export default function RewardsPage() {
   const handleSelect = (reward: any) => {
     const isAlreadySelected = !!selected[reward.reward_id];
 
-    // If already selected → unselect it
     if (isAlreadySelected) {
       const newSelected = { ...selected };
       delete newSelected[reward.reward_id];
       setSelected(newSelected);
 
-      // If no rewards left, clear selectedType lock
       if (Object.keys(newSelected).length === 0) {
         setSelectedType(null);
       }
       return;
     }
 
-    // If a type is already locked and user tries other type → error
     if (selectedType && selectedType !== reward.type) {
       ShowToast.error(
-        "Please select only one reward type.\nChoose either Score rewards or Matching rewards."
+        "Please select only one reward type.\nChoose either Score rewards or Matching rewards.",
       );
       return;
     }
 
-    // First selection or adding same type
     setSelected({
       ...selected,
       [reward.reward_id]: 1,
     });
 
     if (!selectedType) {
-      setSelectedType(reward.type); // lock to "score" or "matching"
+      setSelectedType(reward.type);
     }
   };
 
@@ -212,7 +221,6 @@ export default function RewardsPage() {
     }));
   };
 
-  // (Kept for compatibility – no longer used because quantity is not typed)
   const handleQuantityChange = (id: string, value: number, max: number) => {
     setSelected((prev) => ({
       ...prev,
@@ -251,7 +259,6 @@ export default function RewardsPage() {
         const isMatchingReward = reward.type === "matching";
 
         const score_used = !isMatchingReward ? reward.points_required * qty : 0;
-
         const matches_used = isMatchingReward
           ? reward.matches_required * qty
           : 0;
@@ -292,18 +299,12 @@ export default function RewardsPage() {
       address,
       description: "",
       rewards: rewardsArray,
-
-      type: bookingType, // 🆕 ADD THIS LINE
-
-      // Score values
+      type: bookingType,
       total_score_used,
       remaining_score,
-
-      // Matching values
       total_matches_used,
       cycleIndex: matchStats.cycleIndex,
       remaining_matches,
-
       status: "pending",
       date: new Date().toLocaleDateString(),
       time: new Date().toLocaleTimeString(),
@@ -335,7 +336,7 @@ export default function RewardsPage() {
     }
   };
 
-  // 📊 Summary footer (Points OR Matches based on selected type)
+  // 📊 Summary footer
   const hasSelection = Object.keys(selected).length > 0;
   let summaryTotalLabel = "Total Points Used:";
   let summaryTotalValue = 0;
@@ -363,6 +364,109 @@ export default function RewardsPage() {
     }
   }
 
+  // 🔹 Filter rewards by active tab type
+  const filteredRewards = activeTab
+    ? rewards.filter((r) => r.type === activeTab)
+    : [];
+
+  // ─────────────────────────────────────────────
+  // 🏠 LANDING VIEW — two big cards (like wallet page)
+  // ─────────────────────────────────────────────
+  if (activeTab === null) {
+    return (
+      <Layout>
+        <div className="p-2 px-6 flex flex-col h-[calc(100vh-4rem)]">
+          {loading && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <Loader />
+            </div>
+          )}
+
+          {/* ── Header ── */}
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 w-full mb-4">
+            <div className="flex flex-wrap items-center w-full gap-2">
+              <IoIosArrowBack
+                size={25}
+                color="black"
+                className="cursor-pointer z-20"
+                onClick={() => router.push("/wallet")}
+              />
+              <p className="text-2xl max-md:text-xl font-bold text-black">
+                Rewards
+              </p>
+            </div>
+
+            <div className="flex flex-row gap-3 w-full sm:w-auto">
+              {user?.role === "admin" && (
+                <Link
+                  href="/wallet/rewards/addreward"
+                  className="w-full sm:w-39"
+                >
+                  <SubmitButton className="w-full px-4 py-2 font-semibold rounded-md">
+                    + Add Reward
+                  </SubmitButton>
+                </Link>
+              )}
+              <Link href="/wallet/rewards/Bookings" className="w-full sm:w-39">
+                <SubmitButton className="w-full px-4 py-2 font-semibold rounded-md bg-blue-500">
+                  {user?.role === "admin" ? "Bookings" : "My Bookings"}
+                </SubmitButton>
+              </Link>
+            </div>
+          </div>
+
+          {/* ── Big Landing Cards ── */}
+<div className="px-6 py-3 w-full">
+  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+
+    {/* Maverick Cycle Card */}
+    <div
+      onClick={() => setActiveTab("matching")}
+      className="bg-linear-to-br from-[#106187] via-[#106187] to-[#339AB5]
+      text-white rounded-md p-6 flex flex-col items-center justify-center
+      hover:shadow-md transition cursor-pointer"
+    >
+      <BsFillPeopleFill size={32} />
+      <span className="mt-2 text-lg font-semibold text-center">
+        Maverick Cycle
+      </span>
+
+      {/* {matchStats.matches > 0 && (
+        <span className="text-xs mt-2 font-semibold px-3 py-1 rounded-full bg-white/20">
+          {matchStats.matches} matches available
+        </span>
+      )} */}
+    </div>
+
+    {/* Maverick NEXUS Card */}
+    <div
+      onClick={() => setActiveTab("score")}
+      className="bg-linear-to-br from-[#106187] via-[#106187] to-[#339AB5]
+      text-white rounded-md p-6 flex flex-col items-center justify-center
+      hover:shadow-md transition cursor-pointer"
+    >
+      <FaGift size={32} />
+      <span className="mt-2 text-lg font-semibold text-center">
+        Maverick NEXUS
+      </span>
+
+      {/* {user?.rewardPoints !== undefined && (
+        <span className="text-xs mt-2 font-semibold px-3 py-1 rounded-full bg-white/20">
+          {scoreLeft} points available
+        </span>
+      )} */}
+    </div>
+
+  </div>
+</div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // 📋 REWARDS LIST VIEW — shown after card click
+  // ─────────────────────────────────────────────
   return (
     <Layout>
       <div className="p-2 px-6 space-y-1 flex flex-col h-[calc(100vh-4rem)]">
@@ -372,21 +476,34 @@ export default function RewardsPage() {
           </div>
         )}
 
+        {/* ── Header ── */}
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-1 w-full max-md:mb-2">
           <div className="flex flex-wrap items-center w-full gap-2">
+            {/* Back goes to landing cards view */}
             <IoIosArrowBack
               size={25}
               color="black"
               className="cursor-pointer z-20"
-              onClick={() => router.push("/wallet")}
+              onClick={() => {
+                setActiveTab(null);
+                setSelected({});
+                setSelectedType(null);
+              }}
             />
             <p className="text-2xl max-md:text-xl font-bold text-black">
-              Rewards
+              {activeTab === "matching" ? "Maverick Cycle" : "Maverick NEXUS"}
             </p>
-            {user?.score !== undefined && (
+            {activeTab === "score" && user?.score !== undefined && (
               <p className="text-sm max-md:text-xs font-medium text-gray-700 mt-1">
                 ( Your Score:{" "}
                 <span className="text-[#0c3978] font-bold">{scoreLeft}</span> )
+              </p>
+            )}
+            {activeTab === "matching" && (
+              <p className="text-sm max-md:text-xs font-medium text-gray-700 mt-1">
+                ( Matches:{" "}
+                <span className="text-[#0c3978] font-bold">{matchesLeft}</span>{" "}
+                / 60 )
               </p>
             )}
           </div>
@@ -407,22 +524,23 @@ export default function RewardsPage() {
           </div>
         </div>
 
+        {/* ── Rewards Grid ── */}
         <div
           className="flex-1 max-lg:w-[103%] w-[101%] overflow-y-auto scroll-smooth
           [&::-webkit-scrollbar]:w-1.5
           [&::-webkit-scrollbar]:bg-transparent
-          hover:[&::-webkit-scrollbar-thumb]:bg-gradient-to-b
+          hover:[&::-webkit-scrollbar-thumb]:bg-linear-to-b
           hover:[&::-webkit-scrollbar-thumb]:from-[#0c3978]
           hover:[&::-webkit-scrollbar-thumb]:to-[#16b8e4]
           hover:[&::-webkit-scrollbar-thumb]:rounded-full"
         >
-          {rewards.length === 0 ? (
+          {filteredRewards.length === 0 ? (
             <p className="text-gray-500 text-center py-10">
               No rewards available.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4 pr-1 pb-25">
-              {rewards.map((reward) => {
+              {filteredRewards.map((reward) => {
                 const isActive = reward.status === "active";
                 if (!isActive && user?.role !== "admin") return null;
 
@@ -433,21 +551,18 @@ export default function RewardsPage() {
                 const isSelected = selected[reward.reward_id] !== undefined;
                 const baseSelectedQty = selected[reward.reward_id] || 0;
 
-                // 🎯 For score rewards, max based on user's score & cost
                 const maxTickets =
                   isScoreReward && reward.points_required > 0
                     ? Math.floor(
-                        scoreLeft / reward.points_required + baseSelectedQty
+                        scoreLeft / reward.points_required + baseSelectedQty,
                       )
                     : 0;
 
-                // 🎯 For matching rewards, max based on user's matches & requirement
                 const maxMatchQty =
                   isMatchingReward && reward.matches_required > 0
                     ? Math.floor(matchStats.matches / reward.matches_required)
                     : 0;
 
-                // 🧠 Matching reward eligibility checks
                 const insufficientMatches =
                   isMatchingReward &&
                   matchStats.matches < reward.matches_required;
@@ -457,7 +572,6 @@ export default function RewardsPage() {
 
                 const handleIncreaseClick = () => {
                   if (!isActive) return;
-
                   if (isScoreReward) {
                     if (maxTickets > 0) {
                       handleIncreaseQuantity(reward.reward_id, maxTickets);
@@ -546,7 +660,7 @@ export default function RewardsPage() {
                       )}
                     </div>
 
-                    {/* ⭐ Always at bottom */}
+                    {/* ⭐ Bottom actions */}
                     <div className="flex items-center justify-between px-4 pb-3 mt-1 gap-2">
                       {isSelected ? (
                         <div className="flex items-center rounded-full px-2 py-1 w-fit border border-gray-300">
@@ -568,7 +682,7 @@ export default function RewardsPage() {
                               handleQuantityChange(
                                 reward.reward_id,
                                 parseInt(e.target.value),
-                                maxTickets
+                                maxTickets,
                               )
                             }
                             className="mx-2 w-8 text-center text-[0.85rem] font-semibold text-gray-800 border-2 border-gray-600 rounded no-spinner"
@@ -620,19 +734,20 @@ export default function RewardsPage() {
                               isCycleExpired ||
                               (isScoreReward &&
                                 scoreLeft < reward.points_required) ||
-                              (!!selectedType && selectedType !== reward.type) // fixed
+                              (!!selectedType && selectedType !== reward.type)
                             }
                             className={`px-3 py-1.5 font-semibold rounded-md transition-all duration-200
-            ${
-              !isActive ||
-              insufficientMatches ||
-              isCycleExpired ||
-              (isScoreReward && scoreLeft < reward.points_required)
-                ? "bg-gray-400 text-white cursor-not-allowed"
-                : selectedType && selectedType !== reward.type
-                ? "bg-gray-400 text-white cursor-not-allowed" // 🆕 Visual lock
-                : "bg-[#106187] text-white cursor-pointer"
-            }`}
+                              ${
+                                !isActive ||
+                                insufficientMatches ||
+                                isCycleExpired ||
+                                (isScoreReward &&
+                                  scoreLeft < reward.points_required)
+                                  ? "bg-gray-400 text-white cursor-not-allowed"
+                                  : selectedType && selectedType !== reward.type
+                                    ? "bg-gray-400 text-white cursor-not-allowed"
+                                    : "bg-[#106187] text-white cursor-pointer"
+                              }`}
                           >
                             Redeem
                           </button>
@@ -655,17 +770,16 @@ export default function RewardsPage() {
         </div>
 
         {Object.keys(selected).length > 0 && (
-          <>
-            <div
-              className="fixed bottom-8 right-8 z-50 bg-gradient-to-tr from-[#0C3978] via-[#106187] to-[#16B8E4] rounded-full p-3 flex items-center justify-center cursor-pointer hover:scale-106 transition-all duration-300 animate-pulseGlow"
-              onClick={() => setShowModal(true)}
-            >
-              <LiaGiftsSolid size={36} className="text-white" />
-            </div>
-          </>
+          <div
+            className="fixed bottom-8 right-8 z-50 bg-gradient-to-tr from-[#0C3978] via-[#106187] to-[#16B8E4] rounded-full p-3 flex items-center justify-center cursor-pointer hover:scale-106 transition-all duration-300 animate-pulseGlow"
+            onClick={() => setShowModal(true)}
+          >
+            <LiaGiftsSolid size={36} className="text-white" />
+          </div>
         )}
       </div>
 
+      {/* ── Summary Modal ── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/60 z-[999] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-md sm:max-w-lg md:max-w-md p-4 relative">
@@ -746,11 +860,11 @@ export default function RewardsPage() {
                 }}
                 disabled={!address || address === "No address available"}
                 className={`w-1/2 sm:w-auto px-5 py-2 rounded-md font-semibold
-                ${
-                  !address || address === "No address available"
-                    ? "bg-gray-400 text-white cursor-not-allowed"
-                    : "bg-[#106187] text-white cursor-pointer"
-                }`}
+                  ${
+                    !address || address === "No address available"
+                      ? "bg-gray-400 text-white cursor-not-allowed"
+                      : "bg-[#106187] text-white cursor-pointer"
+                  }`}
               >
                 Book Now
               </button>

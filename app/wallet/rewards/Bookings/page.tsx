@@ -16,20 +16,45 @@ import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import ShowToast from "@/components/common/Toast/toast";
 import { handleDownload } from "@/utils/handleDownload";
 
+type TabType = "all" | "score" | "matching";
+
 export default function BookingsPage() {
   const { user } = useVLife();
   const router = useRouter();
 
   const { query, setQuery, debouncedQuery } = useSearch();
   const [bookingsData, setBookingsData] = useState<any[]>([]);
+  const [filteredData, setFilteredData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
   const [dateFilter, setDateFilter] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [downloading, setDownloading] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("all");
 
   const API_URL = "/api/booking-operations";
+
+  // 🔹 Filter tabs config
+  const tabs: { label: string; value: TabType }[] = [
+    { label: "All", value: "all" },
+    { label: "Score", value: "score" },
+    { label: "Matching", value: "matching" },
+  ];
+
+  // 🔹 Apply tab filter whenever bookingsData or activeTab changes
+  useEffect(() => {
+    if (activeTab === "all") {
+      setFilteredData(bookingsData);
+      setTotalItems(bookingsData.length);
+    } else {
+      const filtered = bookingsData.filter(
+        (b) => b.type?.toLowerCase() === activeTab
+      );
+      setFilteredData(filtered);
+      setTotalItems(filtered.length);
+    }
+  }, [activeTab, bookingsData]);
 
   // 🔹 Download bookings
   const handleDownloadClick = () => {
@@ -83,7 +108,6 @@ export default function BookingsPage() {
           });
 
           setBookingsData(bookings);
-          setTotalItems(bookings.length);
         } else {
           ShowToast.error("Failed to load bookings");
         }
@@ -107,7 +131,6 @@ export default function BookingsPage() {
     try {
       await axios.delete(`${API_URL}?booking_id=${id}`);
       setBookingsData((prev) => prev.filter((b) => b._id !== id));
-      setTotalItems((prev) => prev - 1);
       ShowToast.success("Booking deleted successfully!");
     } catch (err) {
       console.error("Error deleting booking:", err);
@@ -121,7 +144,6 @@ export default function BookingsPage() {
   };
 
   // 🔹 Columns
-  // 🔹 Smart columns to show type-based used/remaining values
   const columns: GridColDef[] = [
     { field: "booking_id", headerName: "Booking ID", flex: 1 },
 
@@ -159,13 +181,11 @@ export default function BookingsPage() {
 
         const num = Number(value);
 
-        // If number between 1–5
         if (!isNaN(num) && num >= 1 && num <= 5) {
           if (num === 1) return "1 Star";
-          return "2 Star"; // for 2–5
+          return "2 Star";
         }
 
-        // String case → capitalize only (no "Star")
         return (
           String(value).charAt(0).toUpperCase() +
           String(value).slice(1).toLowerCase()
@@ -239,9 +259,9 @@ export default function BookingsPage() {
         {/* Floating Filter Icon */}
         <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
-            className="relative w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
+            className="relative w-12 h-12 rounded-full bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
              shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-gray-400 
-             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px] 
+             hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-0.5 
              active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
             onClick={() => setShowModal(true)}
           >
@@ -269,10 +289,31 @@ export default function BookingsPage() {
           onPrev={prevPage}
         />
 
+        {/* 🔹 Filter Tabs */}
+        <div className="flex gap-2 mt-3 mb-2 flex-wrap">
+          {tabs.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => {
+                setActiveTab(tab.value);
+                goToPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-all duration-200 cursor-pointer
+                ${
+                  activeTab === tab.value
+                    ? "bg-[#0C3978] text-white border-[#0C3978] shadow-md"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978] hover:text-[#0C3978]"
+                }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* Table */}
         <Table
           columns={columns}
-          rows={bookingsData}
+          rows={filteredData}
           currentPage={currentPage}
           setCurrentPage={goToPage}
           rowIdField="_id"
