@@ -78,7 +78,15 @@ function resolveBadge(user: any): string {
 
   if (!rank || rank === "none" || rank === "0") return "associate";
 
-  if (club === "Star" || !isNaN(Number(rank))) return "star";
+  // ✅ Handle numeric star ranks
+  const numericRank = Number(rank);
+  if (!isNaN(numericRank)) {
+    if (numericRank === 1) return "star";
+    if (numericRank >= 2 && numericRank <= 5) return "twostar";
+  }
+
+  // Keep club fallback if needed
+  if (club === "Star") return "star";
 
   const namedRanks: Record<string, string> = {
     Bronze: "bronze",
@@ -94,6 +102,7 @@ function resolveBadge(user: any): string {
     "Royal Crown Diamond": "royalcrowndiamond",
     Royality: "royalcrowndiamond",
   };
+
   if (namedRanks[rank]) return namedRanks[rank];
 
   return "associate";

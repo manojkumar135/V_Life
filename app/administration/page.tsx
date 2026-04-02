@@ -16,7 +16,7 @@ const page = () => {
           {/* Groups Card */}
           <div
             onClick={() => router.push("/administration/groups")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center 
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center 
             justify-center hover:shadow-md transition cursor-pointer"
           >
             <UserPlus size={32} />
@@ -26,7 +26,7 @@ const page = () => {
           {/* Roles Card */}
           <div
             onClick={() => router.push("/administration/roles")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center 
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center 
             justify-center hover:shadow-md transition cursor-pointer"
           >
             <Network size={32} />
@@ -36,7 +36,7 @@ const page = () => {
           {/* Users Card */}
           <div
             onClick={() => router.push("/administration/users")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center 
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center 
             justify-center hover:shadow-md transition cursor-pointer"
           >
             <Users size={32} />

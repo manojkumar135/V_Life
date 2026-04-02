@@ -117,7 +117,7 @@ const PayoutPage = () => {
           {/* Daily Payout Card */}
           <div
             onClick={() => router.push("/wallet/payout/daily")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187] to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <CalendarDays size={32} />
             <span className="mt-2 text-lg font-semibold">Daily Payouts</span>
@@ -126,7 +126,7 @@ const PayoutPage = () => {
           {/* Weekly Payout Card */}
           <div
             onClick={() => router.push("/wallet/payout/weekly")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <CalendarRange size={32} />
             <span className="mt-2 text-lg font-semibold">Fortnightly Payouts</span>

@@ -28,7 +28,7 @@ const WalletPage = () => {
           {/* Daily Payout Card */}
           <div
             onClick={() => router.push("/wallet/wallets")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <MdOutlineContactMail size={32} />
             <span className="mt-2 text-lg font-semibold">KYC</span>
@@ -37,7 +37,7 @@ const WalletPage = () => {
           {/* Weekly Payout Card */}
           <div
             onClick={() => router.push("/wallet/change-requests")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <IoIosMail size={32} />
             <span className="mt-2 text-lg font-semibold">KYC Requests</span>

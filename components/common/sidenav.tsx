@@ -54,7 +54,7 @@ export default function SideNav({
           : "/administration/users",
       icon: <IoPeople />,
       label: "My Team",
-      match: ["administration", "/admin"],
+      match: ["administration", "/admin-"],
     },
     {
       href: "/wallet",

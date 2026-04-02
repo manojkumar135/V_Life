@@ -316,71 +316,78 @@ export async function GET(request: Request) {
     ]);
 
     const weeklyAgg = await WeeklyPayout.aggregate([
-      { $match: payoutDateMatch },
-      {
-        $group: {
-          _id: null,
-          totalPayout: { $sum: "$totalamount" },
-          releasedPayout: {
-            $sum: {
-              $cond: [
-                {
-                  $regexMatch: {
-                    input: { $ifNull: ["$status", ""] },
-                    regex: /^(completed|pending)$/i,
-                  },
-                },
-                "$totalamount",
-                0,
-              ],
+  { $match: payoutDateMatch },
+  {
+    $group: {
+      _id: null,
+      totalPayout: { $sum: "$amount" }, // ✅ FIXED
+
+      releasedPayout: {
+        $sum: {
+          $cond: [
+            {
+              $regexMatch: {
+                input: { $ifNull: ["$status", ""] },
+                regex: /^(completed|pending)$/i,
+              },
             },
-          },
-          holdPayout: {
-            $sum: {
-              $cond: [
-                {
-                  $regexMatch: {
-                    input: { $ifNull: ["$status", ""] },
-                    regex: /^(onhold|on hold|hold|failed)$/i,
-                  },
-                },
-                "$totalamount",
-                0,
-              ],
-            },
-          },
-          rewardPoints: { $sum: "$reward_amount" },
-          releasedRewardPoints: {
-            $sum: {
-              $cond: [
-                {
-                  $regexMatch: {
-                    input: { $ifNull: ["$status", ""] },
-                    regex: /^(completed|pending)$/i,
-                  },
-                },
-                "$reward_amount",
-                0,
-              ],
-            },
-          },
-          holdRewardPoints: {
-            $sum: {
-              $cond: [
-                {
-                  $regexMatch: {
-                    input: { $ifNull: ["$status", ""] },
-                    regex: /^(onhold|on hold|hold|failed)$/i,
-                  },
-                },
-                "$reward_amount",
-                0,
-              ],
-            },
-          },
+            "$amount", // ✅ FIXED
+            0,
+          ],
         },
       },
-    ]);
+
+      holdPayout: {
+        $sum: {
+          $cond: [
+            {
+              $regexMatch: {
+                input: { $ifNull: ["$status", ""] },
+                regex: /^(onhold|on hold|hold|failed)$/i,
+              },
+            },
+            "$amount", // ✅ FIXED
+            0,
+          ],
+        },
+      },
+
+      rewardPoints: { $sum: "$reward_amount" },
+
+      releasedRewardPoints: {
+        $sum: {
+          $cond: [
+            {
+              $regexMatch: {
+                input: { $ifNull: ["$status", ""] },
+                regex: /^(completed|pending)$/i,
+              },
+            },
+            "$reward_amount",
+            0,
+          ],
+        },
+      },
+
+      holdRewardPoints: {
+        $sum: {
+          $cond: [
+            {
+              $regexMatch: {
+                input: { $ifNull: ["$status", ""] },
+                regex: /^(onhold|on hold|hold|failed)$/i,
+              },
+            },
+            "$reward_amount",
+            0,
+          ],
+        },
+      },
+    },
+  },
+]);
+
+    // console.log(dailyAgg,weeklyAgg)
 
     // existing
     const totalGeneratedPayout =

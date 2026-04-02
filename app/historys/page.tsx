@@ -128,7 +128,7 @@ export default function TransactionHistory() {
       });
       const history = data.data || [];
       if (isMounted) {
-        setHistoryData(history);
+        setHistoryData(history.reverse());
         setTotalItems(history.length);
       }
     } catch (error) {

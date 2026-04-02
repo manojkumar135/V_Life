@@ -4,6 +4,14 @@ import { connectDB } from "@/lib/mongodb";
 import { DailyPayout, WeeklyPayout } from "@/models/payout";
 import { Wallet } from "@/models/wallet";
 
+function formatToDDMMYYYY(input: string) {
+  const d = new Date(input);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
 export async function GET(req: Request) {
   try {
     await connectDB();
@@ -18,10 +26,11 @@ export async function GET(req: Request) {
 
     // GROUP DAILY + WEEKLY
     const pipeline: PipelineStage[] = [
-      {
-        $match: {
-          ...(user_id && { user_id }),
-         ...(search && {
+     {
+  $match: {
+    ...(user_id && { user_id }),
+
+    ...(search && {
       $or: [
         { user_id: { $regex: search, $options: "i" } },
         { user_name: { $regex: search, $options: "i" } },
@@ -30,13 +39,22 @@ export async function GET(req: Request) {
         { pan_number: { $regex: search, $options: "i" } },
       ],
     }),
-          ...(date && { created_at: new Date(date) }),
-          ...(from &&
-            to && {
-              created_at: { $gte: new Date(from), $lte: new Date(to) },
-            }),
+
+    // ✅ FIXED DATE FILTER
+    ...(date && {
+      date: formatToDDMMYYYY(date),
+    }),
+
+    // ✅ FIXED RANGE FILTER
+    ...(from &&
+      to && {
+        date: {
+          $gte: formatToDDMMYYYY(from),
+          $lte: formatToDDMMYYYY(to),
         },
-      },
+      }),
+  },
+},
       {
         $group: {
           _id: {

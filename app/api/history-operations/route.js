@@ -630,8 +630,10 @@ export async function GET(request) {
     let histories = await History.find(finalQuery).sort({
       // date:-1,
       // last_modified_at: -1,
-      created_at: -1,
+      // created_at: -1,
     });
+
+    
 
     if (role === "user") {
       histories = histories.filter((h) => {

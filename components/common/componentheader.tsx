@@ -104,7 +104,7 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
               onClick={handleBack}
             />
           )}
-          <p className="text-[1.6rem] max-md:text-[1.2rem] font-medium text-green-900 m-0">
+          <p className="text-[1.5rem] max-sm:text-[0.9rem] md:text-[1rem] lg:text-[1.2rem] xl:text-[1.5rem] font-medium text-green-900 m-0">
             {title}
           </p>
         </div>
