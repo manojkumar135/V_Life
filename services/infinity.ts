@@ -219,41 +219,70 @@ export async function updateInfinityReferredCount(ownerId: string) {
 }
 
 // ============================================================
-// REMOVE REFERRAL FROM OWNER LEVELS
+// REMOVE REFERRAL FROM OWNER — BOTH LEVELS AND FLAT LIST
 // ============================================================
 
 /**
- * Remove a referral from owner.infinity_users levels (keeps infinity_referred_users intact).
- * Ensures owner does not list the referral inside any level arrays.
+ * FIX 1: Removes a referral from BOTH:
+ *   - owner.infinity_users (the levelled array)
+ *   - owner.infinity_referred_users (the flat list)
+ *
+ * Previously removeReferralFromOwnerLevels only cleaned the levelled array,
+ * leaving stale entries in the flat list and causing duplicate appearances
+ * across multiple members' infinity teams.
  */
-export async function removeReferralFromOwnerLevels(
+export async function removeReferralFromOwner(
   ownerId: string,
   referralId: string
 ) {
   try {
     const ownerDoc: any = await User.findOne({ user_id: ownerId }).exec();
-    if (!ownerDoc || !Array.isArray(ownerDoc.infinity_users)) return;
+    if (!ownerDoc) return;
 
     let modified = false;
-    for (const lvl of ownerDoc.infinity_users) {
-      if (Array.isArray(lvl.users) && lvl.users.includes(referralId)) {
-        lvl.users = lvl.users.filter(
-          (u: string) => idStr(u) !== idStr(referralId)
-        );
-        modified = true;
+
+    // Remove from levelled infinity_users array
+    if (Array.isArray(ownerDoc.infinity_users)) {
+      for (const lvl of ownerDoc.infinity_users) {
+        if (Array.isArray(lvl.users) && lvl.users.includes(referralId)) {
+          lvl.users = lvl.users.filter(
+            (u: string) => idStr(u) !== idStr(referralId)
+          );
+          modified = true;
+        }
       }
+      ownerDoc.infinity_users = ownerDoc.infinity_users.filter(
+        (e: any) => Array.isArray(e.users) && e.users.length > 0
+      );
     }
 
-    ownerDoc.infinity_users = ownerDoc.infinity_users.filter(
-      (e: any) => Array.isArray(e.users) && e.users.length > 0
-    );
+    // FIX 1: Also remove from flat infinity_referred_users list
+    if (Array.isArray(ownerDoc.infinity_referred_users)) {
+      const before = ownerDoc.infinity_referred_users.length;
+      ownerDoc.infinity_referred_users = ownerDoc.infinity_referred_users.filter(
+        (u: string) => idStr(u) !== idStr(referralId)
+      );
+      if (ownerDoc.infinity_referred_users.length !== before) modified = true;
+    }
 
     if (modified) {
+      ownerDoc.infinity_referred_count = ownerDoc.infinity_referred_users.length;
       await ownerDoc.save();
     }
   } catch (err) {
-    console.error("removeReferralFromOwnerLevels error:", err);
+    console.error("removeReferralFromOwner error:", err);
   }
+}
+
+/**
+ * Kept for backward compatibility — delegates to removeReferralFromOwner
+ * which now cleans both arrays.
+ */
+export async function removeReferralFromOwnerLevels(
+  ownerId: string,
+  referralId: string
+) {
+  return removeReferralFromOwner(ownerId, referralId);
 }
 
 // ============================================================
@@ -502,8 +531,10 @@ export async function addToPaidDirectsOrdered(
  * OPTIMIZED:
  * - Preloads ALL TreeNodes once into a Map (zero per-node DB queries)
  * - paid_directs is the ONLY source of truth for odd/even placement
- * - odd positions → self, even positions → sponsor (if exists) else self
- * - Removed the conflicting infinity_referred_users second loop
+ * - odd positions → self
+ * - even positions → owner.infinity (the infinity upline sponsor), NOT owner.referBy
+ * - Uses removeReferralFromOwner which cleans BOTH infinity_users levels
+ *   AND infinity_referred_users flat list to prevent duplicate appearances
  */
 export async function updateInfinityTeam(userId: string) {
   const user: any = await User.findOne({ user_id: userId }).exec();
@@ -522,31 +553,43 @@ export async function updateInfinityTeam(userId: string) {
 
   // 1) paid_directs is the ONLY source of truth for odd/even infinity placement
   if (Array.isArray(owner.paid_directs) && owner.paid_directs.length > 0) {
-    if (!owner.referBy) {
-      // Root user: all paid_directs go to self
+
+    // FIX 2: Use owner.infinity (the infinity upline) — NOT owner.referBy (the recruitment sponsor).
+    // These are two different people. The rule is:
+    //   odd  → self's infinity team
+    //   even → infinity upline's infinity team  (owner.infinity field)
+    const infinitySponsorId: string | null = owner.infinity
+      ? idStr(owner.infinity)
+      : null;
+
+    if (!infinitySponsorId) {
+      // No infinity sponsor — all paid_directs go to self
       for (const childId of owner.paid_directs) {
         const level = getInfinityLevelFromMap(nodeMap, userId, childId);
         await addToInfinityTeam(userId, childId, level, nodeMap);
         await processInfinityLevels(userId, childId, nodeMap);
       }
     } else {
-      // Has sponsor: odd → self, even → sponsor
+      // Has infinity sponsor: odd → self, even → infinity sponsor
       for (let i = 0; i < owner.paid_directs.length; i++) {
         const childId = owner.paid_directs[i];
         if ((i + 1) % 2 === 1) {
-          // odd position → self
+          // Odd position → self
           const level = getInfinityLevelFromMap(nodeMap, userId, childId);
           await addToInfinityTeam(userId, childId, level, nodeMap);
           await processInfinityLevels(userId, childId, nodeMap);
         } else {
-          // even position → sponsor
+          // Even position → infinity sponsor (owner.infinity)
           const sponsorLevel = getInfinityLevelFromMap(
             nodeMap,
-            owner.referBy,
+            infinitySponsorId,
             childId
           );
-          await addToInfinityTeam(owner.referBy, childId, sponsorLevel, nodeMap);
-          await removeReferralFromOwnerLevels(userId, childId);
+          await addToInfinityTeam(infinitySponsorId, childId, sponsorLevel, nodeMap);
+          // FIX 1: removeReferralFromOwner cleans BOTH infinity_users levels
+          // AND infinity_referred_users flat list (old removeReferralFromOwnerLevels
+          // only cleaned the levelled array, leaving stale flat list entries)
+          await removeReferralFromOwner(userId, childId);
         }
       }
     }
@@ -586,7 +629,7 @@ export async function addActivatedUserToInfinity(activatedUserId: string) {
       await updateInfinityTeam(sponsorId);
     }
 
-    // Propagate one level up (sponsor's sponsor) as background task
+    // Propagate one level up (to the infinity sponsor) as background task
     // Callers should invoke propagateInfinityUpdateToAncestors non-blocking
   } catch (err) {
     console.error("addActivatedUserToInfinity error:", err);
@@ -594,33 +637,39 @@ export async function addActivatedUserToInfinity(activatedUserId: string) {
 }
 
 // ============================================================
-// PROPAGATE TO ANCESTORS (OPTIMIZED — ONE LEVEL UP ONLY)
+// PROPAGATE TO ANCESTORS (OPTIMIZED — TARGETED, NOT FULL REBUILD)
 // ============================================================
 
 /**
- * Propagates infinity update upward — only ONE level up (sponsor's sponsor).
+ * Propagates infinity update to the activated user's infinity sponsor.
  *
- * OPTIMIZED: Previously looped through entire ancestor chain causing
- * N × M DB calls. Now only updates one level up since each sponsor's
- * updateInfinityTeam already handles its own odd/even placement correctly.
+ * FIX 3:
+ * - Previously called updateInfinityTeam(grandSponsor) which triggered a full
+ *   rebuild via processInfinityLevels, causing already-handed-off even-position
+ *   directs to be incorrectly re-added into ancestor infinity teams.
+ * - Now uses owner.infinity (not owner.referBy) to find the correct upline.
+ * - Does a targeted addToInfinityTeam for only the newly activated user
+ *   at the correct level — no full rebuild, no re-processing of old directs.
  *
  * Called as fire-and-forget (non-blocking) from routes.
  */
 export async function propagateInfinityUpdateToAncestors(startUserId: string) {
   try {
-    const current: any = await User.findOne({ user_id: startUserId })
+    const activatedUser: any = await User.findOne({ user_id: startUserId })
       .lean()
       .exec();
-    if (!current?.referBy) return;
+    if (!activatedUser) return;
 
-    // Walk up to sponsor's sponsor (one level above the direct sponsor)
-    const directSponsor: any = await User.findOne({ user_id: current.referBy })
-      .lean()
-      .exec();
-    if (!directSponsor?.referBy) return;
+    // FIX 3: Use .infinity field (the infinity upline) — NOT .referBy
+    const infinitySponsorId = activatedUser.infinity
+      ? idStr(activatedUser.infinity)
+      : null;
+    if (!infinitySponsorId) return;
 
-    // Update only sponsor's sponsor — not the entire chain
-    await updateInfinityTeam(directSponsor.referBy);
+    // Targeted insert at the correct level — no full rebuild
+    const nodeMap = await buildTreeNodeMap();
+    const level = getInfinityLevelFromMap(nodeMap, infinitySponsorId, startUserId);
+    await addToInfinityTeam(infinitySponsorId, startUserId, level, nodeMap);
   } catch (err) {
     console.error("propagateInfinityUpdateToAncestors error:", err);
   }
@@ -639,4 +688,5 @@ export default {
   updateInfinityReferredCount,
   rebuildInfinityReferredFromReferredUsers,
   removeReferralFromOwnerLevels,
+  removeReferralFromOwner,
 };
