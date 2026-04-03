@@ -233,7 +233,7 @@ const BinaryTreeNode: React.FC<Props> = ({
       if (clickCountRef.current < 2) {
         showTooltip();
       }
-    }, 600);
+    }, 1000);
   };
 
   const handleMouseLeave = () => {
