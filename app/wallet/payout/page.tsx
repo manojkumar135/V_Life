@@ -9,6 +9,8 @@ import { FaGift } from "react-icons/fa6";
 import { useVLife } from "@/store/context";
 import AlertBox from "@/components/Alerts/advanceAlert";
 import axios from "axios";
+import { PiHandWithdraw } from "react-icons/pi";
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -132,14 +134,14 @@ const PayoutPage = () => {
             <span className="mt-2 text-lg font-semibold">Fortnightly Payouts</span>
           </div>
 
-          {/* Rewards Card */}
-          {/* <div
-            onClick={() => router.push("/wallet/payout/rewards")}
-            className="bg-gray-500 text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          {/* Withdrawls Card */}
+          <div
+            // onClick={() => router.push("/wallet/payout/rewards")}
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
-            <FaGift size={32} />
-            <span className="mt-2 text-lg font-semibold">Rewards</span>
-          </div> */}
+            <PiHandWithdraw  size={32} />
+            <span className="mt-2 text-lg font-semibold">Withdrawls</span>
+          </div>
 
         </div>
       </div>

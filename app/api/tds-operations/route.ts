@@ -12,6 +12,7 @@ function formatToDDMMYYYY(input: string) {
   return `${day}-${month}-${year}`;
 }
 
+
 export async function GET(req: Request) {
   try {
     await connectDB();
@@ -151,6 +152,10 @@ export async function GET(req: Request) {
         tds_type: rec.pan_verified ? "PAN" : "NONPAN",
         total_amount: rec.total_amount,
         tds_amount: rec.total_tds,
+
+         tds_percent: rec.pan_verified ? 2 : 20,
+  tds_label: rec.pan_verified ? "2%" : "20%",
+
         count: rec.count,
 
         // Wallet fields if exist

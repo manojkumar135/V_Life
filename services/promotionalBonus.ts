@@ -5,11 +5,15 @@ import { History } from "@/models/history";
 import { Alert } from "@/models/alert";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { getDirectPV } from "@/services/directPV";
-import { evaluateAndUpdateHoldStatus, currentMonth } from "@/services/monthlyHoldService";
+import {
+  evaluateAndUpdateHoldStatus,
+  currentMonth,
+} from "@/services/monthlyHoldService";
 import { determineHoldReasons } from "@/services/payoutHoldService";
+import { addRewardScore } from "@/services/updateRewardScore";
 
 const PROMO_AMOUNT = 5000;
-const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; 
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 /* -----------------------------------------------------------
    Helper: Parse DD-MM-YYYY safely
@@ -115,22 +119,20 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       tds = 0,
       admin = 0;
 
-     const isPanVerified =
-  wallet?.pan_verified === true ||
-  ["yes", "true"].includes(
-    String(wallet?.pan_verified).toLowerCase()
-  );
+    const isPanVerified =
+      wallet?.pan_verified === true ||
+      ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
 
-  if (isPanVerified) {
-      withdraw = Math.round(PROMO_AMOUNT * 0.8);  // 80%
-      reward   = Math.round(PROMO_AMOUNT * 0.08); // 8%
-      tds      = Math.round(PROMO_AMOUNT * 0.02); // 2%
-      admin    = Math.round(PROMO_AMOUNT * 0.1);  // 10%
+    if (isPanVerified) {
+      withdraw = Math.round(PROMO_AMOUNT * 0.8); // 80%
+      reward = Math.round(PROMO_AMOUNT * 0.08); // 8%
+      tds = Math.round(PROMO_AMOUNT * 0.02); // 2%
+      admin = Math.round(PROMO_AMOUNT * 0.1); // 10%
     } else {
       withdraw = Math.round(PROMO_AMOUNT * 0.62); // 62%
-      reward   = Math.round(PROMO_AMOUNT * 0.08); // 8%
-      tds      = Math.round(PROMO_AMOUNT * 0.2);  // 20%
-      admin    = Math.round(PROMO_AMOUNT * 0.1);  // 10%
+      reward = Math.round(PROMO_AMOUNT * 0.08); // 8%
+      tds = Math.round(PROMO_AMOUNT * 0.2); // 20%
+      admin = Math.round(PROMO_AMOUNT * 0.1); // 10%
     }
 
     /* -------------------------------------------------------
@@ -162,13 +164,13 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
 
     const istNow = new Date(
-  new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
-);
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+    );
 
-const formattedDate = formatDate(istNow);
+    const formattedDate = formatDate(istNow);
 
     // ✅ IST time instead of server local time
-   const istTime = istNow.toTimeString().slice(0, 5);
+    const istTime = istNow.toTimeString().slice(0, 5);
 
     /* -------------------------------------------------------
        5️⃣ Create Daily Payout
@@ -195,7 +197,7 @@ const formattedDate = formatDate(istNow);
       ifsc_code: wallet?.ifsc_code || "",
 
       date: formattedDate,
-      time: istTime,                // ✅ IST time
+      time: istTime, // ✅ IST time
       available_balance: wallet?.balance || 0,
 
       amount: PROMO_AMOUNT,
@@ -208,11 +210,11 @@ const formattedDate = formatDate(istNow);
       to: user.user_id,
       from: "",
       transaction_type: "Credit",
-      status: payoutStatus,         // ✅ dynamic status
+      status: payoutStatus, // ✅ dynamic status
 
       // ✅ ADDED: hold metadata — so admin knows WHY payout is OnHold
-      hold_reasons:        hold.reasons,
-      hold_reason_labels:  hold.labels,
+      hold_reasons: hold.reasons,
+      hold_reason_labels: hold.labels,
       hold_release_reason: hold.summary,
 
       details:
@@ -247,7 +249,7 @@ const formattedDate = formatDate(istNow);
         ifsc_code: payout.ifsc_code,
 
         date: payout.date,
-        time: payout.time,              // ✅ copies IST time from payout
+        time: payout.time, // ✅ copies IST time from payout
         available_balance: payout.available_balance,
 
         amount: payout.amount,
@@ -260,7 +262,7 @@ const formattedDate = formatDate(istNow);
         to: payout.to,
         from: payout.from,
         transaction_type: payout.transaction_type,
-        status: payout.status,          // ✅ copies dynamic status from payout
+        status: payout.status, // ✅ copies dynamic status from payout
         details: payout.details,
 
         first_payment: false,
@@ -272,6 +274,15 @@ const formattedDate = formatDate(istNow);
         last_modified_at: istNow,
       });
     }
+
+    await addRewardScore({
+      user_id: user.user_id,
+      points: reward,
+      source: "quick_star_bonus",
+      reference_id: payout.transaction_id,
+      remarks: "Quick Star Bonus (reward portion)",
+      type: "reward",
+    });
 
     /* -------------------------------------------------------
        7️⃣ Create User Alert

@@ -311,81 +311,175 @@ export async function GET(request: Request) {
               ],
             },
           },
+
+          holdPayable: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(onhold|on hold|hold|failed)$/i,
+                  },
+                },
+                "$withdraw_amount",
+                0,
+              ],
+            },
+          },
+          pendingPayable: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(pending)$/i,
+                  },
+                },
+                "$withdraw_amount",
+                0,
+              ],
+            },
+          },
+          releasedPayable: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(completed)$/i,
+                  },
+                },
+                "$withdraw_amount",
+                0,
+              ],
+            },
+          },
+          totalWithdraw: { $sum: "$withdraw_amount" },
+          totalAdminCharge: { $sum: "$admin_charge" },
+          totalTds: { $sum: "$tds_amount" },
+          totalPayable: { $sum: "$amount" },
         },
       },
     ]);
 
     const weeklyAgg = await WeeklyPayout.aggregate([
-  { $match: payoutDateMatch },
-  {
-    $group: {
-      _id: null,
-      totalPayout: { $sum: "$amount" }, // ✅ FIXED
+      { $match: payoutDateMatch },
+      {
+        $group: {
+          _id: null,
+          totalPayout: { $sum: "$amount" }, // ✅ FIXED
 
-      releasedPayout: {
-        $sum: {
-          $cond: [
-            {
-              $regexMatch: {
-                input: { $ifNull: ["$status", ""] },
-                regex: /^(completed|pending)$/i,
-              },
+          releasedPayout: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(completed|pending)$/i,
+                  },
+                },
+                "$amount", // ✅ FIXED
+                0,
+              ],
             },
-            "$amount", // ✅ FIXED
-            0,
-          ],
+          },
+
+          holdPayout: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(onhold|on hold|hold|failed)$/i,
+                  },
+                },
+                "$amount", // ✅ FIXED
+                0,
+              ],
+            },
+          },
+
+          rewardPoints: { $sum: "$reward_amount" },
+
+          releasedRewardPoints: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(completed|pending)$/i,
+                  },
+                },
+                "$reward_amount",
+                0,
+              ],
+            },
+          },
+
+          holdRewardPoints: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(onhold|on hold|hold|failed)$/i,
+                  },
+                },
+                "$reward_amount",
+                0,
+              ],
+            },
+          },
+
+          holdPayable: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(onhold|on hold|hold|failed)$/i,
+                  },
+                },
+                "$withdraw_amount",
+                0,
+              ],
+            },
+          },
+          pendingPayable: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(pending)$/i,
+                  },
+                },
+                "$withdraw_amount",
+                0,
+              ],
+            },
+          },
+          releasedPayable: {
+            $sum: {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: { $ifNull: ["$status", ""] },
+                    regex: /^(completed)$/i,
+                  },
+                },
+                "$withdraw_amount",
+                0,
+              ],
+            },
+          },
+          totalWithdraw: { $sum: "$withdraw_amount" },
+          totalAdminCharge: { $sum: "$admin_charge" },
+          totalTds: { $sum: "$tds_amount" },
+          totalPayable: { $sum: "$amount" },
         },
       },
-
-      holdPayout: {
-        $sum: {
-          $cond: [
-            {
-              $regexMatch: {
-                input: { $ifNull: ["$status", ""] },
-                regex: /^(onhold|on hold|hold|failed)$/i,
-              },
-            },
-            "$amount", // ✅ FIXED
-            0,
-          ],
-        },
-      },
-
-      rewardPoints: { $sum: "$reward_amount" },
-
-      releasedRewardPoints: {
-        $sum: {
-          $cond: [
-            {
-              $regexMatch: {
-                input: { $ifNull: ["$status", ""] },
-                regex: /^(completed|pending)$/i,
-              },
-            },
-            "$reward_amount",
-            0,
-          ],
-        },
-      },
-
-      holdRewardPoints: {
-        $sum: {
-          $cond: [
-            {
-              $regexMatch: {
-                input: { $ifNull: ["$status", ""] },
-                regex: /^(onhold|on hold|hold|failed)$/i,
-              },
-            },
-            "$reward_amount",
-            0,
-          ],
-        },
-      },
-    },
-  },
-]);
+    ]);
 
     // console.log(dailyAgg,weeklyAgg)
 
@@ -404,6 +498,24 @@ export async function GET(request: Request) {
     const holdRewardPoints =
       (dailyAgg[0]?.holdRewardPoints || 0) +
       (weeklyAgg[0]?.holdRewardPoints || 0);
+    const totalWithdraw =
+      (dailyAgg[0]?.totalWithdraw || 0) + (weeklyAgg[0]?.totalWithdraw || 0);
+    const totalAdminCharge =
+      (dailyAgg[0]?.totalAdminCharge || 0) +
+      (weeklyAgg[0]?.totalAdminCharge || 0);
+    const totalTds =
+      (dailyAgg[0]?.totalTds || 0) + (weeklyAgg[0]?.totalTds || 0);
+    const totalPayable =
+      (dailyAgg[0]?.totalPayable || 0) + (weeklyAgg[0]?.totalPayable || 0);
+
+    // 🆕 status-wise withdraw (payable) breakdown
+    const holdPayable =
+      (dailyAgg[0]?.holdPayable || 0) + (weeklyAgg[0]?.holdPayable || 0);
+    const pendingPayable =
+      (dailyAgg[0]?.pendingPayable || 0) + (weeklyAgg[0]?.pendingPayable || 0);
+    const releasedPayable =
+      (dailyAgg[0]?.releasedPayable || 0) +
+      (weeklyAgg[0]?.releasedPayable || 0);
 
     const round2 = (num: any) => Number(Math.round(num).toFixed(2));
     /* =====================================================
@@ -439,6 +551,13 @@ export async function GET(request: Request) {
             generatedRewardPoints,
             releasedRewardPoints,
             holdRewardPoints,
+            totalWithdraw: round2(totalWithdraw),
+            totalAdminCharge: round2(totalAdminCharge),
+            totalTds: round2(totalTds),
+            totalPayable: round2(totalPayable),
+            holdPayable: round2(holdPayable),
+            pendingPayable: round2(pendingPayable),
+            releasedPayable: round2(releasedPayable),
           },
         },
       },

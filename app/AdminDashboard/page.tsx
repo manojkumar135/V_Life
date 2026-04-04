@@ -14,11 +14,26 @@ import TimeRemainingCard from "@/app/dashboards/TimeRemainingCard";
 import NewsTicker from "@/components/NewsTicker";
 import LoginWelcomePopup from "@/components/LoginWelcomePopup";
 
-import { FiFilter, FiShoppingCart, FiUsers, FiMessageSquare, FiTrendingUp } from "react-icons/fi";
+import {
+  FiFilter,
+  FiShoppingCart,
+  FiUsers,
+  FiMessageSquare,
+  FiTrendingUp,
+} from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import Loader from "@/components/common/loader";
 
-import { FaRupeeSign, FaWallet, FaGift, FaBoxOpen, FaTruck, FaCheckCircle, FaTimesCircle, FaClipboardList } from "react-icons/fa";
+import {
+  FaRupeeSign,
+  FaWallet,
+  FaGift,
+  FaBoxOpen,
+  FaTruck,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaClipboardList,
+} from "react-icons/fa";
 import { MdOutlineCheckCircle, MdPendingActions } from "react-icons/md";
 import { HiOutlineUserGroup, HiOutlineUserAdd } from "react-icons/hi";
 
@@ -52,6 +67,13 @@ interface AdminDashboardData {
     generatedRewardPoints: number;
     releasedRewardPoints: number;
     holdRewardPoints: number;
+    totalWithdraw: number;
+    totalAdminCharge: number;
+    totalTds: number;
+    totalPayable: number;
+    holdPayable: number;
+    pendingPayable: number;
+    releasedPayable: number;
   };
 }
 
@@ -189,7 +211,9 @@ export default function AdminDashboard() {
       <AlertBox
         visible={user?.role !== "user" && showWalletAlert}
         title="Wallet Change Request Pending!"
-        message={<>You have pending wallet change requests. Please review them.</>}
+        message={
+          <>You have pending wallet change requests. Please review them.</>
+        }
         buttonLabel="VIEW REQUESTS"
         buttonAction={() => router.push("/wallet/change-requests")}
         onClose={() => setShowWalletAlert(false)}
@@ -219,7 +243,6 @@ export default function AdminDashboard() {
 
         {/* ================= TOP SECTION ================= */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-
           {/* MY SALES */}
           <AdminCard
             title="My Sales"
@@ -322,6 +345,42 @@ export default function AdminDashboard() {
             />
           </AdminCard>
 
+          {/* MY PAYABLES */}
+          <AdminCard
+            title="My Payables"
+            icon={<FaRupeeSign size={16} />}
+            footerLabel="View Report"
+            footerLink="/wallet/payout"
+          >
+            <StatRow
+              icon={<FaRupeeSign className="text-blue-600" />}
+              label="Total Payable"
+              value={fmt(dashboard?.wallet.totalWithdraw ?? 0)}
+              highlight
+            />
+
+            <StatRow
+              icon={<FaRupeeSign className="text-yellow-500" />}
+              label="OnHold Payable"
+              value={fmt(dashboard?.wallet.holdPayable ?? 0)}
+              badgeColor="yellow"
+            />
+
+            <StatRow
+              icon={<FaRupeeSign className="text-orange-500" />}
+              label="Pending Payable"
+              value={fmt(dashboard?.wallet.pendingPayable ?? 0)}
+              badgeColor="orange"
+            />
+
+            <StatRow
+              icon={<FaRupeeSign className="text-green-500" />}
+              label="Released Payable"
+              value={fmt(dashboard?.wallet.releasedPayable ?? 0)}
+              badgeColor="green"
+            />
+          </AdminCard>
+
           {/* MY TICKETS */}
           <AdminCard
             title="My Tickets"
@@ -382,6 +441,36 @@ export default function AdminDashboard() {
               title="Pending Reward Points"
               value={(dashboard?.wallet.holdRewardPoints ?? 0).toFixed(2)}
             />
+            {/* <DashBox
+              icon={<FaRupeeSign />}
+              title="Total Payable"
+              value={fmt(dashboard?.wallet.totalWithdraw)}
+            />
+            <DashBox
+              icon={<FaRupeeSign />}
+              title="OnHold Payable"
+              value={fmt(dashboard?.wallet.holdPayable)}
+            />
+            <DashBox
+              icon={<FaRupeeSign />}
+              title="Pending Payable"
+              value={fmt(dashboard?.wallet.pendingPayable)}
+            />
+            <DashBox
+              icon={<FaRupeeSign />}
+              title="Released Payable"
+              value={fmt(dashboard?.wallet.releasedPayable)}
+            /> */}
+            <DashBox
+              icon={<FaRupeeSign />}
+              title="Total TDS"
+              value={fmt(dashboard?.wallet.totalTds)}
+            />
+            <DashBox
+              icon={<FaRupeeSign />}
+              title="Admin Charges"
+              value={fmt(dashboard?.wallet.totalAdminCharge)}
+            />
           </div>
         </div>
 
@@ -389,10 +478,27 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TimeRemainingCard />
           <AdminCard title="Cycle Closings" icon={<FiTrendingUp size={16} />}>
-            <StatRow icon={<FaRupeeSign className="text-blue-500" />} label="Current PV (Left Team)" value="0" />
-            <StatRow icon={<FaRupeeSign className="text-blue-500" />} label="Current PV (Right Team)" value="0" />
-            <StatRow icon={<FaRupeeSign className="text-gray-400" />} label="Previous PV" value="0" />
-            <StatRow icon={<FaRupeeSign className="text-green-500" />} label="Total PV" value="0" highlight />
+            <StatRow
+              icon={<FaRupeeSign className="text-blue-500" />}
+              label="Current PV (Left Team)"
+              value="0"
+            />
+            <StatRow
+              icon={<FaRupeeSign className="text-blue-500" />}
+              label="Current PV (Right Team)"
+              value="0"
+            />
+            <StatRow
+              icon={<FaRupeeSign className="text-gray-400" />}
+              label="Previous PV"
+              value="0"
+            />
+            <StatRow
+              icon={<FaRupeeSign className="text-green-500" />}
+              label="Total PV"
+              value="0"
+              highlight
+            />
           </AdminCard>
         </div>
       </div>
@@ -441,7 +547,9 @@ const AdminCard = ({
             {icon}
           </div>
         )}
-        <span className="text-white font-semibold text-sm tracking-wide">{title}</span>
+        <span className="text-white font-semibold text-sm tracking-wide">
+          {title}
+        </span>
       </div>
 
       {/* Card Body */}
@@ -475,9 +583,9 @@ const SectionHeader = ({ title }: { title: string }) => (
 
 const badgeColorMap: Record<string, string> = {
   yellow: "bg-yellow-100 text-yellow-700",
-  green:  "bg-green-100 text-green-700",
-  blue:   "bg-blue-100 text-blue-700",
-  red:    "bg-red-100 text-red-700",
+  green: "bg-green-100 text-green-700",
+  blue: "bg-blue-100 text-blue-700",
+  red: "bg-red-100 text-red-700",
   purple: "bg-purple-100 text-purple-700",
 };
 
@@ -501,7 +609,9 @@ const StatRow = ({
   >
     <div className="flex items-center gap-2">
       {icon && <span className="text-base shrink-0">{icon}</span>}
-      <span className={`text-sm ${highlight ? "font-semibold text-gray-800" : "text-gray-600"}`}>
+      <span
+        className={`text-sm ${highlight ? "font-semibold text-gray-800" : "text-gray-600"}`}
+      >
         {label}
       </span>
     </div>
@@ -512,14 +622,22 @@ const StatRow = ({
         {value}
       </span>
     ) : (
-      <span className={`text-sm font-bold ${highlight ? "text-blue-700" : "text-gray-800"}`}>
+      <span
+        className={`text-sm font-bold ${highlight ? "text-blue-700" : "text-gray-800"}`}
+      >
         {value}
       </span>
     )}
   </div>
 );
 
-const MiniCard = ({ title, value }: { title: string; value: string | number }) => (
+const MiniCard = ({
+  title,
+  value,
+}: {
+  title: string;
+  value: string | number;
+}) => (
   <div className="bg-white border border-gray-300 rounded-lg p-4 text-center shadow-sm">
     <p className="text-xs text-gray-500">{title}</p>
     <p className="text-lg font-bold mt-1">{value}</p>
@@ -541,9 +659,7 @@ const DashBox = ({
   value: string;
   index?: number;
 }) => (
-  <div
-    className="rounded-xl p-4 text-center flex flex-col items-center justify-center relative overflow-hidden hover:scale-[1.01] transition-transform duration-150 bg-white border border-gray-200 shadow-sm"
-  >
+  <div className="rounded-xl p-4 text-center flex flex-col items-center justify-center relative overflow-hidden hover:scale-[1.01] transition-transform duration-150 bg-white border border-gray-200 shadow-sm">
     {/* Decorative corner circle */}
     <div
       className="absolute -top-4 -right-4 w-16 h-16 rounded-full pointer-events-none opacity-10"

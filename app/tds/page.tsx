@@ -166,11 +166,18 @@ useEffect(() => {
       headerName: "TDS (₹)",
       flex: 1,
       align: "right",
-      renderCell: (params) => (
-        <span className="pr-4 text-red-600 font-semibold">
-          ₹ {Number(params.value || 0).toFixed(2)}
-        </span>
-      ),
+     renderCell: (params) => {
+  const percent = params.row.tds_type === "PAN" ? "2%" : "20%";
+
+  return (
+    <span className="pr-4 text-red-600 font-semibold">
+      ₹ {Number(params.value || 0).toFixed(2)}
+      <span className="text-xs text-gray-500 ml-1">
+        ({percent})
+      </span>
+    </span>
+  );
+},
     },
 
     {

@@ -100,7 +100,6 @@ const ScoreSchema = new mongoose.Schema(
     gender: { type: String },
     mail: { type: String },
     contact: { type: String },
-
     score: { type: Number, default: 0 },
 
     /* DAILY */
@@ -142,6 +141,8 @@ const ScoreSchema = new mongoose.Schema(
       balance: { type: Number, default: 0 },
       history: { type: RewardTxnSchema, default: () => ({}) },
     },
+
+    
     updated_at: {
       type: Date,
       default: Date.now,

@@ -1,9 +1,7 @@
-// import { infinity } from '@/services/infinity';
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import TreeNode from "@/models/tree";
-import { History } from "@/models/history";
 
 // ----------------- Types -----------------
 export interface InfinityLevel {
@@ -24,9 +22,11 @@ export interface UserType {
   locality?: string;
   rank?: string;
   user_status?: string;
+  infinity?: string;
   infinity_users?: InfinityLevel[];
   infinity_left_users?: string[];
   infinity_right_users?: string[];
+  self_bv?: number;
 }
 
 export interface TreeNodeType {
@@ -53,140 +53,187 @@ export async function GET(req: Request) {
       );
     }
 
-    // 1️⃣ Fetch root user with infinity_users
-    const rootUser = await User.findOne({
-      user_id: rootId,
-    }).lean<UserType | null>();
+    // 1) Fetch root user — only need infinity_users for level lookup
+    const rootUser = await User.findOne({ user_id: rootId })
+      .lean<UserType | null>();
 
-    if (!rootUser?.infinity_users || rootUser.infinity_users.length === 0) {
+    if (!rootUser) {
       return NextResponse.json({ data: [], total: 0 });
     }
 
-    // 2️⃣ Fetch tree nodes for team mapping
-    const allNodes = await TreeNode.find({}).lean<TreeNodeType[]>();
+    // 2) Build level lookup map from rootUser.infinity_users
+    //    This is used as a reference only — NOT as the source of who's in the team.
+    //    Key: user_id → level number
+    const levelMap = new Map<string, number>();
+    if (Array.isArray(rootUser.infinity_users)) {
+      for (const lvlObj of rootUser.infinity_users) {
+        if (!Array.isArray(lvlObj.users)) continue;
+        for (const uid of lvlObj.users) {
+          if (uid && !levelMap.has(uid)) {
+            levelMap.set(uid, lvlObj.level);
+          }
+        }
+      }
+    }
+
+    // 3) SOURCE OF TRUTH: fetch all users whose infinity field === rootId
+    //    This prevents duplicates and stale infinity_users data from
+    //    affecting what's shown — each user can only have one infinity value.
+    const teamMembers = await User.find(
+      { infinity: rootId },
+      {
+        user_id: 1,
+        user_name: 1,
+        mail: 1,
+        contact: 1,
+        address: 1,
+        pincode: 1,
+        country: 1,
+        state: 1,
+        district: 1,
+        locality: 1,
+        rank: 1,
+        user_status: 1,
+        infinity: 1,
+        infinity_left_users: 1,
+        infinity_right_users: 1,
+        self_bv: 1,
+      }
+    )
+      .lean<UserType[]>();
+
+    if (teamMembers.length === 0) {
+      return NextResponse.json({ data: [], total: 0 });
+    }
+
+    // 4) Load all TreeNodes into maps for side + level detection
+    const allNodes = await TreeNode.find(
+      {},
+      { user_id: 1, parent: 1, left: 1, right: 1 }
+    ).lean<TreeNodeType[]>();
+
     const nodeMapByUser = new Map<string, TreeNodeType>();
     const nodeMapById = new Map<string, TreeNodeType>();
-    allNodes.forEach((node) => {
+    for (const node of allNodes) {
       if (node.user_id) nodeMapByUser.set(node.user_id, node);
       if (node._id) nodeMapById.set(String(node._id), node);
-    });
+    }
 
-    function resolveUserIdFromRef(ref: any): string | undefined {
+    // Resolve a ref (user_id string or ObjectId string) to user_id
+    function resolveUserId(ref: any): string | undefined {
       if (!ref) return undefined;
       const s = String(ref);
       if (nodeMapByUser.has(s)) return s;
       const byId = nodeMapById.get(s);
-      if (byId && byId.user_id) return byId.user_id;
-      for (const n of nodeMapByUser.values()) {
-        if (String(n._id) === s) return n.user_id;
-      }
+      if (byId?.user_id) return byId.user_id;
       return undefined;
     }
 
-    function getNodeFromRef(ref: any): TreeNodeType | undefined {
-      if (!ref) return undefined;
-      const s = String(ref);
-      if (nodeMapByUser.has(s)) return nodeMapByUser.get(s);
-      if (nodeMapById.has(s)) return nodeMapById.get(s);
-      return undefined;
+    function getNodeForUser(uid: string): TreeNodeType | undefined {
+      return nodeMapByUser.get(uid);
     }
 
-    function determineTeamUnderRoot(
+    // Walk up the tree from targetNode until we hit rootNode,
+    // then check whether the direct child under root is left or right.
+    function determineTeam(
       rootNode: TreeNodeType | undefined,
       targetNode: TreeNodeType | undefined
     ): "left" | "right" | "unknown" {
       if (!rootNode || !targetNode) return "unknown";
       let current: TreeNodeType | undefined = targetNode;
-      while (current && current.parent) {
-        const parentUserId = resolveUserIdFromRef(current.parent);
+      while (current?.parent) {
+        const parentUserId = resolveUserId(current.parent);
         if (!parentUserId) break;
         if (parentUserId === rootNode.user_id) {
-          const directChildUserId = current.user_id;
-          const leftUserId = resolveUserIdFromRef(rootNode.left);
-          const rightUserId = resolveUserIdFromRef(rootNode.right);
-          if (leftUserId && leftUserId === directChildUserId) return "left";
-          if (rightUserId && rightUserId === directChildUserId) return "right";
+          const leftUserId = resolveUserId(rootNode.left);
+          const rightUserId = resolveUserId(rootNode.right);
+          if (leftUserId && leftUserId === current.user_id) return "left";
+          if (rightUserId && rightUserId === current.user_id) return "right";
           return "unknown";
         }
-        current = getNodeFromRef(parentUserId);
+        current = getNodeForUser(parentUserId);
       }
       return "unknown";
     }
 
-    const rootNode =
-      nodeMapByUser.get(rootId) ||
-      (() => {
-        for (const n of nodeMapByUser.values()) {
-          if (String(n._id) === rootId) return n;
-        }
-        return undefined;
-      })();
-
-    // 3️⃣ Process infinity levels
-    const results: (UserType & {
-      level: number;
-      team: string;
-      leftBV: number;
-      rightBV: number;
-      cumulativeBV: number;
-    })[] = [];
-
-    const seenUserIds = new Set<string>();
-
-    for (const levelObj of rootUser.infinity_users) {
-      const { level, users } = levelObj;
-
-      for (const uid of users) {
-        if (!uid) continue;
-        if (seenUserIds.has(uid)) continue;
-        seenUserIds.add(uid);
-
-        const userData = await User.findOne({ user_id: uid })
-          .sort({ createdAt: -1 })
-          .lean<UserType>();
-        if (!userData) continue;
-
-        const targetNode = nodeMapByUser.get(uid) || getNodeFromRef(uid);
-        const team = determineTeamUnderRoot(rootNode, targetNode);
-
-        // 🔥 Cumulative BV calculation added
-        const leftUsers = userData.infinity_left_users || [];
-        const rightUsers = userData.infinity_right_users || [];
-
-        const leftUserDocs = await User.find(
-          { user_id: { $in: leftUsers } },
-          { self_bv: 1 }
-        ).lean();
-
-        const rightUserDocs = await User.find(
-          { user_id: { $in: rightUsers } },
-          { self_bv: 1 }
-        ).lean();
-
-        const leftBV = leftUserDocs.reduce(
-          (sum, u) => sum + (u.self_bv || 0),
-          0
-        );
-        const rightBV = rightUserDocs.reduce(
-          (sum, u) => sum + (u.self_bv || 0),
-          0
-        );
-
-        const cumulativeBV =
-          leftBV > 0 && rightBV > 0 ? Math.min(leftBV, rightBV) : 0;
-
-        results.push({
-          ...userData,
-          level,
-          team,
-          leftBV,
-          rightBV,
-          cumulativeBV,
-        });
+    // Walk up the tree from childId to rootId, counting hops.
+    // Returns the level (1 = direct child of root) or 0 if not found.
+    function getLevelFromTree(rootUserId: string, childUserId: string): number {
+      let level = 1;
+      let current = getNodeForUser(childUserId);
+      if (!current) return 0;
+      while (current?.parent) {
+        const parentUserId = resolveUserId(current.parent);
+        if (!parentUserId) break;
+        if (parentUserId === rootUserId) return level;
+        level++;
+        current = getNodeForUser(parentUserId);
+        if (level > 50) break; // safety cap
       }
+      return 0;
     }
 
-    // 🔍 4️⃣ Apply Search (unchanged)
+    const rootNode = getNodeForUser(rootId);
+
+    // 5) Collect all self_bv values in one batch query for BV calculations
+    //    (team members' side users are already embedded in the docs above)
+    //    We need self_bv of users inside each member's left/right teams.
+    //    Gather all referenced IDs first.
+    const allSideUserIds = new Set<string>();
+    for (const member of teamMembers) {
+      for (const id of member.infinity_left_users ?? []) allSideUserIds.add(id);
+      for (const id of member.infinity_right_users ?? []) allSideUserIds.add(id);
+    }
+
+    // Batch fetch self_bv for all side users in one query
+    const sideUserBvDocs = await User.find(
+      { user_id: { $in: [...allSideUserIds] } },
+      { user_id: 1, self_bv: 1 }
+    ).lean<{ user_id: string; self_bv?: number }[]>();
+
+    const bvByUserId = new Map<string, number>();
+    for (const doc of sideUserBvDocs) {
+      bvByUserId.set(doc.user_id, doc.self_bv ?? 0);
+    }
+
+    // 6) Build final results
+    const results = teamMembers.map((member) => {
+      const targetNode = getNodeForUser(member.user_id);
+      const team = determineTeam(rootNode, targetNode);
+
+      // Level: prefer levelMap (from infinity_users) for speed,
+      // fall back to tree traversal if not present (handles stale/missing entries)
+      const level =
+        levelMap.get(member.user_id) ??
+        getLevelFromTree(rootId, member.user_id) ??
+        0;
+
+      // BV calculations using batched data
+      const leftBV = (member.infinity_left_users ?? []).reduce(
+        (sum, uid) => sum + (bvByUserId.get(uid) ?? 0),
+        0
+      );
+      const rightBV = (member.infinity_right_users ?? []).reduce(
+        (sum, uid) => sum + (bvByUserId.get(uid) ?? 0),
+        0
+      );
+      const cumulativeBV =
+        leftBV > 0 && rightBV > 0 ? Math.min(leftBV, rightBV) : 0;
+
+      return {
+        ...member,
+        level,
+        team,
+        leftBV,
+        rightBV,
+        cumulativeBV,
+      };
+    });
+
+    // Sort by level ascending so UI shows the closest members first
+    results.sort((a, b) => a.level - b.level);
+
+    // 7) Apply search filter
     let finalResults = results;
 
     if (search) {
