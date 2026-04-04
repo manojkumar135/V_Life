@@ -13,12 +13,11 @@ export async function GET() {
 
   try {
     await connectDB();
-
     // await runMatchingBonus();
     // await runDirectSalesBonus();
     // await runInfinityBonus();
     // await updateInfinityTeam("");
-    
+
     console.log("✅ All cron jobs executed manually!");
     console.log("============================================");
 
