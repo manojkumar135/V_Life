@@ -973,12 +973,12 @@ useEffect(() => {
         </div>
 
         {/* Category Tabs */}
-        <div className="rounded-xl px-6 max-lg:px-3 py-1 bg-white mb-2 xl:mt-2">
+        <div className="rounded-xl px-3 max-lg:px-1 py-1 bg-white mb-2 xl:mt-1">
           <div className="flex space-x-4 overflow-x-auto scrollbar-hide border-b">
             {visibleCategories.map((category) => (
               <button
                 key={category.name}
-                className={`px-4 py-2 font-medium whitespace-nowrap text-md max-lg:text-sm ${
+                className={`px-4 py-2 font-medium whitespace-nowrap text-sm max-lg:text-sm ${
                   activeCategory === category.name
                     ? "border-b-2 border-blue-600 text-blue-600"
                     : "cursor-pointer"

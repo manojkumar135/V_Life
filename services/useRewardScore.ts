@@ -6,7 +6,7 @@ export type RewardType =
   | "fortnight"
   | "cashback"
   | "reward"
-  | "referral";
+  | "referral"| "quickstar";
 
 interface RewardBlock {
   earned: number;

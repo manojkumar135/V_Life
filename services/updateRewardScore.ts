@@ -6,7 +6,7 @@ export type RewardType =
   | "fortnight"
   | "cashback"
   | "reward"
-  | "referral";
+  | "referral"| "quickstar";
 
 interface RewardScorePayload {
   user_id: string;

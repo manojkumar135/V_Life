@@ -106,6 +106,7 @@ const ScoreSchema = new mongoose.Schema(
     daily: {
       earned: { type: Number, default: 0 },
       used: { type: Number, default: 0 },
+      withdraw: { type: Number, default: 0 },
       balance: { type: Number, default: 0 },
       history: { type: RewardTxnSchema, default: () => ({}) },
     },
@@ -114,6 +115,7 @@ const ScoreSchema = new mongoose.Schema(
     fortnight: {
       earned: { type: Number, default: 0 },
       used: { type: Number, default: 0 },
+      withdraw: { type: Number, default: 0 },
       balance: { type: Number, default: 0 },
       history: { type: RewardTxnSchema, default: () => ({}) },
     },
@@ -142,7 +144,15 @@ const ScoreSchema = new mongoose.Schema(
       history: { type: RewardTxnSchema, default: () => ({}) },
     },
 
-    
+    //Quickstar
+    quickstar: {
+      earned: { type: Number, default: 0 },
+      used: { type: Number, default: 0 },
+      balance: { type: Number, default: 0 },
+      history: { type: RewardTxnSchema, default: () => ({}) },
+    },
+
+
     updated_at: {
       type: Date,
       default: Date.now,

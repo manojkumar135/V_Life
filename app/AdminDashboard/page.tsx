@@ -26,13 +26,18 @@ import Loader from "@/components/common/loader";
 
 import {
   FaRupeeSign,
-  FaWallet,
-  FaGift,
   FaBoxOpen,
   FaTruck,
   FaCheckCircle,
   FaTimesCircle,
   FaClipboardList,
+  FaWallet,
+  FaGift,
+  FaMoneyBillWave,
+  FaUserShield,
+  FaPercent,
+  FaChartLine,
+  FaReceipt,
 } from "react-icons/fa";
 import { MdOutlineCheckCircle, MdPendingActions } from "react-icons/md";
 import { HiOutlineUserGroup, HiOutlineUserAdd } from "react-icons/hi";
@@ -74,6 +79,7 @@ interface AdminDashboardData {
     holdPayable: number;
     pendingPayable: number;
     releasedPayable: number;
+    totalGst: number;
   };
 }
 
@@ -271,6 +277,12 @@ export default function AdminDashboard() {
               label="Advance"
               value={fmt(dashboard?.sales.advanceSales)}
             />
+             <StatRow
+              icon={<FaPercent className="text-red-500" />}
+              label="GST Collected"
+              value={fmt(dashboard?.wallet.totalGst ?? 0)}
+              badgeColor="red"
+            />
           </AdminCard>
 
           {/* MY ORDERS */}
@@ -312,40 +324,50 @@ export default function AdminDashboard() {
             />
           </AdminCard>
 
-          {/* MY TEAM */}
-          <AdminCard
-            title="My Team"
-            icon={<FiUsers size={16} />}
-            footerLabel="View Report"
-            footerLink="/administration/users"
-          >
+          {/* TOTAL SUMMARY */}
+          <AdminCard title="Total Summary" icon={<FaWallet size={16} />}>
+            {/* GRAND TOTAL (USE EXISTING FIELD) */}
             <StatRow
-              icon={<HiOutlineUserGroup className="text-blue-600" />}
-              label="Total Registered"
-              value={dashboard?.team.totalRegistered ?? 0}
+              icon={<FaChartLine className="text-blue-600" />}
+              label="Total Generated"
+              value={fmt(dashboard?.wallet.totalGeneratedPayout ?? 0)}
               highlight
             />
+
+            {/* WITHDRAW */}
             <StatRow
-              icon={<HiOutlineUserAdd className="text-green-500" />}
-              label="Activations"
-              value={dashboard?.team.normalActivations ?? 0}
+              icon={<FaMoneyBillWave className="text-green-500" />}
+              label="Withdraw"
+              value={fmt(dashboard?.wallet.totalWithdraw ?? 0)}
               badgeColor="green"
             />
+
+            {/* REWARD */}
             <StatRow
-              icon={<HiOutlineUserAdd className="text-purple-500" />}
-              label="Admin Activations"
-              value={dashboard?.team.adminActivations ?? 0}
+              icon={<FaGift className="text-purple-500" />}
+              label="Reward"
+              value={fmt(dashboard?.wallet.generatedRewardPoints ?? 0)}
               badgeColor="purple"
             />
+
+            {/* ADMIN CHARGES */}
             <StatRow
-              icon={<FaTimesCircle className="text-red-500" />}
-              label="Deactivated IDs"
-              value={dashboard?.team.deactivatedIds ?? 0}
+              icon={<FaUserShield className="text-yellow-500" />}
+              label="Admin Charges"
+              value={fmt(dashboard?.wallet.totalAdminCharge ?? 0)}
+              badgeColor="yellow"
+            />
+
+            {/* TDS */}
+            <StatRow
+              icon={<FaPercent className="text-red-500" />}
+              label="TDS"
+              value={fmt(dashboard?.wallet.totalTds ?? 0)}
               badgeColor="red"
             />
           </AdminCard>
 
-          {/* MY PAYABLES */}
+           {/* MY PAYABLES */}
           <AdminCard
             title="My Payables"
             icon={<FaRupeeSign size={16} />}
@@ -380,6 +402,41 @@ export default function AdminDashboard() {
               badgeColor="green"
             />
           </AdminCard>
+
+          {/* MY TEAM */}
+          <AdminCard
+            title="My Team"
+            icon={<FiUsers size={16} />}
+            footerLabel="View Report"
+            footerLink="/administration/users"
+          >
+            <StatRow
+              icon={<HiOutlineUserGroup className="text-blue-600" />}
+              label="Total Registered"
+              value={dashboard?.team.totalRegistered ?? 0}
+              highlight
+            />
+            <StatRow
+              icon={<HiOutlineUserAdd className="text-green-500" />}
+              label="Activations"
+              value={dashboard?.team.normalActivations ?? 0}
+              badgeColor="green"
+            />
+            <StatRow
+              icon={<HiOutlineUserAdd className="text-purple-500" />}
+              label="Admin Activations"
+              value={dashboard?.team.adminActivations ?? 0}
+              badgeColor="purple"
+            />
+            <StatRow
+              icon={<FaTimesCircle className="text-red-500" />}
+              label="Deactivated IDs"
+              value={dashboard?.team.deactivatedIds ?? 0}
+              badgeColor="red"
+            />
+          </AdminCard>
+
+         
 
           {/* MY TICKETS */}
           <AdminCard
@@ -441,36 +498,13 @@ export default function AdminDashboard() {
               title="Pending Reward Points"
               value={(dashboard?.wallet.holdRewardPoints ?? 0).toFixed(2)}
             />
-            {/* <DashBox
-              icon={<FaRupeeSign />}
-              title="Total Payable"
-              value={fmt(dashboard?.wallet.totalWithdraw)}
-            />
+          
             <DashBox
-              icon={<FaRupeeSign />}
-              title="OnHold Payable"
-              value={fmt(dashboard?.wallet.holdPayable)}
+              icon={<FaReceipt />}
+              title="GST Amount"
+              value={fmt(dashboard?.wallet.totalGst)}
             />
-            <DashBox
-              icon={<FaRupeeSign />}
-              title="Pending Payable"
-              value={fmt(dashboard?.wallet.pendingPayable)}
-            />
-            <DashBox
-              icon={<FaRupeeSign />}
-              title="Released Payable"
-              value={fmt(dashboard?.wallet.releasedPayable)}
-            /> */}
-            <DashBox
-              icon={<FaRupeeSign />}
-              title="Total TDS"
-              value={fmt(dashboard?.wallet.totalTds)}
-            />
-            <DashBox
-              icon={<FaRupeeSign />}
-              title="Admin Charges"
-              value={fmt(dashboard?.wallet.totalAdminCharge)}
-            />
+            
           </div>
         </div>
 

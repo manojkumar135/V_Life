@@ -103,6 +103,16 @@ export async function GET(request: Request) {
       { $group: { _id: null, total: { $sum: "$final_amount" } } },
     ]);
 
+    const gstAgg = await Order.aggregate([
+      ...orderBasePipeline,
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$total_gst" },
+        },
+      },
+    ]);
+
     const firstOrderAgg = await Order.aggregate([
       ...orderBasePipeline,
       { $match: { is_first_order: true } },
@@ -517,6 +527,8 @@ export async function GET(request: Request) {
       (dailyAgg[0]?.releasedPayable || 0) +
       (weeklyAgg[0]?.releasedPayable || 0);
 
+      const totalGst = gstAgg[0]?.total || 0;
+
     const round2 = (num: any) => Number(Math.round(num).toFixed(2));
     /* =====================================================
        📤 RESPONSE
@@ -558,6 +570,7 @@ export async function GET(request: Request) {
             holdPayable: round2(holdPayable),
             pendingPayable: round2(pendingPayable),
             releasedPayable: round2(releasedPayable),
+            totalGst: round2(totalGst),
           },
         },
       },

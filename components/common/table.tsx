@@ -158,22 +158,23 @@ export default function Table<T extends Row>({
           const value = params.value;
 
           if (isIdCol) {
+            const isPlainText =
+              params.field === "transaction_id" ||
+              params.field === "reference_id";
             return (
               <button
                 type="button"
                 onClick={(e) => {
+                  if (isPlainText) return;
                   e.stopPropagation();
                   onIdClick?.(id, params.row);
                 }}
                 style={{
                   background: "transparent",
                   border: "none",
-                  color:
-                    params.field === "transaction_id" ? "black" : "#0000EE",
-                  textDecoration:
-                    params.field === "transaction_id" ? "none" : "underline",
-                  cursor:
-                    params.field === "transaction_id" ? "default" : "pointer",
+                  color: isPlainText ? "black" : "#0000EE",
+                  textDecoration: isPlainText ? "none" : "underline",
+                  cursor: isPlainText ? "default" : "pointer",
                 }}
               >
                 {value === null || value === undefined || value === ""

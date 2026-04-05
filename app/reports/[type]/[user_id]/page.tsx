@@ -1,4 +1,7 @@
 "use client";
+
+
+//reports/[type]/[user_id]/page.tsx
 import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
 import Table from "@/components/common/table";
@@ -281,8 +284,8 @@ export default function AdminUserRewardDetailPage() {
         <Table
           columns={columns}
           rows={rows.slice((currentPage - 1) * 12, currentPage * 12)}
-          rowIdField="_id"
-          pageSize={12}
+  rowIdField="reference_id"
+            pageSize={12}
           checkboxSelection
           setSelectedRows={setSelectedRows}
         />
@@ -291,9 +294,9 @@ export default function AdminUserRewardDetailPage() {
         <div title="Filter by Date" className="fixed bottom-5 right-6 z-10">
           <button
             onClick={() => setShowModal(true)}
-            className="relative w-12 h-12 rounded-full bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
+            className="relative w-12 h-12 rounded-full bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
               shadow-[0_4px_6px_rgba(0,0,0,0.3),0_8px_20px_rgba(0,0,0,0.25)] border border-gray-400
-              hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-[2px]
+              hover:shadow-[0_6px_10px_rgba(0,0,0,0.35),0_10px_25px_rgba(0,0,0,0.3)] active:translate-y-0.5
               active:shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-all duration-200 cursor-pointer"
           >
             <FiFilter size={20} />

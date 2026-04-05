@@ -786,7 +786,7 @@ export default function OrderFormCartSection({
                         </div>
 
                         {/* Cashback Reward */}
-                        {/* {!isOtherOrder && cashbackPoints > 0 && (
+                        {!isOtherOrder && cashbackPoints > 0 && (
                           <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
                             <label className="flex items-start gap-2 cursor-pointer">
                               <input
@@ -812,7 +812,6 @@ export default function OrderFormCartSection({
                                       {cashbackPoints} points.{" "}
                                     </>
                                   )}
-                                 
                                 </div>
                               </div>
                             </label>
@@ -823,11 +822,10 @@ export default function OrderFormCartSection({
                               </span>
                             )}
                           </div>
-                        )} */}
+                        )}
 
-                        {/* Fortnight Reward */}
                         {/* Daily + Fortnight Reward */}
-                        {/* {(fortnightPoints > 0 || dailyPoints > 0) && (
+                        {(fortnightPoints > 0 || dailyPoints > 0) && (
                           <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
                             <label className="flex items-start gap-2 cursor-pointer">
                               <input
@@ -860,8 +858,12 @@ export default function OrderFormCartSection({
                                     </>
                                   ) : (
                                     <>
-                                      You can use {remainingAfterCashback} out
-                                      of {fortnightPoints + dailyPoints} points
+                                      You can use{" "}
+                                      {remainingAfterCashback.toFixed(2)} out of{" "}
+                                      {(fortnightPoints + dailyPoints).toFixed(
+                                        2,
+                                      )}{" "}
+                                      points.
                                     </>
                                   )}
                                 </div>
@@ -874,12 +876,12 @@ export default function OrderFormCartSection({
                               </span>
                             )}
                           </div>
-                        )} */}
+                        )}
 
                         {/* Divider */}
-                        {/* {(cashbackPoints > 0 || fortnightPoints > 0) && (
+                        {(cashbackPoints > 0 || fortnightPoints > 0) && (
                           <div className="border-t border-gray-300 my-1 mx-2"></div>
-                        )} */}
+                        )}
                       </>
                     )}
 

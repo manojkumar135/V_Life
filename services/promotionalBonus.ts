@@ -275,6 +275,16 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       });
     }
 
+
+    await addRewardScore({
+  user_id: user.user_id,
+  points: withdraw, 
+  source: "quick_star_bonus",
+  reference_id: payout.transaction_id,
+  remarks: "Quick Star Bonus (withdraw portion)",
+  type: "quickstar", 
+});
+
     await addRewardScore({
       user_id: user.user_id,
       points: reward,
