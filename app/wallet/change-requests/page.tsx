@@ -20,8 +20,8 @@ import { FiFilter } from "react-icons/fi";
 /* ------------------------------------------------------------------ */
 
 const STATUS_OPTIONS = [
-  { label: "All",      value: ""         },
-  { label: "Pending",  value: "pending"  },
+  { label: "All", value: "" },
+  { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
   { label: "Rejected", value: "rejected" },
 ];
@@ -32,11 +32,11 @@ export default function ChangeRequestsPage() {
   const { user } = useVLife();
 
   const [requestsData, setRequestsData] = useState<any[]>([]);
-  const [totalItems,   setTotalItems]   = useState(0);
-  const [loading,      setLoading]      = useState(false);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
 
-  const [dateFilter,   setDateFilter]   = useState<any>(null);
-  const [showModal,    setShowModal]    = useState(false);
+  const [dateFilter, setDateFilter] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const isAdmin = user?.role === "admin";
@@ -60,11 +60,11 @@ export default function ChangeRequestsPage() {
           params.date = dateFilter.date;
         } else if (dateFilter?.type === "range") {
           params.from = dateFilter.from;
-          params.to   = dateFilter.to;
+          params.to = dateFilter.to;
         }
 
         const { data } = await axios.get(API_URL, { params });
-        const requests  = data.data || [];
+        const requests = data.data || [];
 
         setRequestsData(requests);
         setTotalItems(requests.length);
@@ -75,7 +75,7 @@ export default function ChangeRequestsPage() {
         setLoading(false);
       }
     },
-    [user, isAdmin, dateFilter, statusFilter]
+    [user, isAdmin, dateFilter, statusFilter],
   );
 
   useEffect(() => {
@@ -120,40 +120,34 @@ export default function ChangeRequestsPage() {
   /* ── Table columns ──────────────────────────────────────────────── */
   const columns = [
     {
-      field:      "request_id",
+      field: "request_id",
       headerName: "Request ID",
-      flex:       1,
+      flex: 1,
     },
     {
-      field:      "wallet_id",
+      field: "wallet_id",
       headerName: "Wallet ID",
-      flex:       1,
+      flex: 1,
       renderCell: (params: any) => params.value || "—",
     },
     /* User ID column — admin only */
-    ...(isAdmin
-      ? [{ field: "user_id", headerName: "User ID", flex: 1 }]
-      : []),
+    ...(isAdmin ? [{ field: "user_id", headerName: "User ID", flex: 1 }] : []),
     {
-      field:      "request_type",
-      headerName: "Type",
-      flex:       1,
-      renderCell: (params: any) => {
-        if (params.value === "new_wallet")    return "New Wallet";
-        if (params.value === "update_wallet") return "Update Wallet";
-        return params.value || "—";
-      },
+      field: "user_name",
+      headerName: "Name",
+      flex: 1,
+      renderCell: (params: any) => params.row?.old_values?.user_name || "—",
     },
     {
-      field:      "status",
+      field: "status",
       headerName: "Status",
-      flex:       1,
+      flex: 1,
       renderCell: (params: any) => renderStatus(params.value),
     },
     {
-      field:      "created_at",
+      field: "created_at",
       headerName: "Requested At",
-      flex:       1.5,
+      flex: 1.5,
       renderCell: (params: any) =>
         params.value ? new Date(params.value).toLocaleString() : "—",
     },
@@ -162,28 +156,21 @@ export default function ChangeRequestsPage() {
   /* ── Pagination ─────────────────────────────────────────────────── */
   const handlePageChange = useCallback(
     (_page: number, _offset: number, _limit: number) => {},
-    []
+    [],
   );
 
-  const {
-    currentPage,
-    totalPages,
-    nextPage,
-    prevPage,
-    startItem,
-    endItem,
-  } = usePagination({
-    totalItems,
-    itemsPerPage:  12,
-    onPageChange:  handlePageChange,
-  });
+  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem } =
+    usePagination({
+      totalItems,
+      itemsPerPage: 12,
+      onPageChange: handlePageChange,
+    });
 
   const onBack = () => router.push("/wallet/walletpage");
 
   return (
     <Layout>
       <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
-
         {loading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
@@ -210,7 +197,9 @@ export default function ChangeRequestsPage() {
         {/* Status filter pills — admin only */}
         {isAdmin && (
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className="text-sm font-medium text-gray-600">Filter by status:</span>
+            <span className="text-sm font-medium text-gray-600">
+              Filter by status:
+            </span>
             {STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -251,7 +240,7 @@ export default function ChangeRequestsPage() {
 
         {/* Active date filter badge */}
         {dateFilter && (
-          <div className="fixed bottom-[72px] right-4 z-10">
+          <div className="fixed bottom-18 right-4 z-10">
             <span className="bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full shadow flex items-center gap-1">
               {dateFilter.type === "on"
                 ? `📅 ${dateFilter.date}`
@@ -270,7 +259,10 @@ export default function ChangeRequestsPage() {
         <DateFilterModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          onSubmit={(filter) => { setDateFilter(filter); setShowModal(false); }}
+          onSubmit={(filter) => {
+            setDateFilter(filter);
+            setShowModal(false);
+          }}
         />
       </div>
     </Layout>

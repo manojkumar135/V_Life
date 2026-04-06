@@ -360,7 +360,8 @@ function EditWalletInner() {
       panNumber: source?.pan_number || "",
       panName: source?.pan_name || "",
       panDob: source?.pan_dob || "",
-      panVerify: source?.pan_verified || false,
+      panVerify:
+        source?.pan_verified === true || source?.pan_verified === "Yes",
       panCategory: source?.pan_category || "",
       aadharSeeding: source?.aadhar_seeding || false,
       aadharFile: source?.aadhar_file || null,
@@ -384,7 +385,9 @@ function EditWalletInner() {
       const pending = await fetchPendingRequest(wallet.user_id);
       const source = isAdmin ? wallet : pending?.new_values || wallet;
       applySource(wallet, source);
-      setPanVerified(source.pan_verified || false);
+      setPanVerified(
+        source?.pan_verified === true || source?.pan_verified === "Yes",
+      );
     } catch (err) {
       console.error(err);
       ShowToast.error("Failed to fetch wallet");
@@ -415,7 +418,10 @@ function EditWalletInner() {
       if (req.request_type === "new_wallet") {
         setSavedWalletValues(null);
         applySource(null, newVals);
-        setPanVerified(newVals.pan_verified || false);
+       setPanVerified(
+  newVals?.pan_verified === true ||
+  newVals?.pan_verified === "Yes"
+);
         return;
       }
 
@@ -432,8 +438,18 @@ function EditWalletInner() {
       }
 
       setSavedWalletValues(currentWallet);
-      applySource(currentWallet, newVals);
-      setPanVerified(newVals.pan_verified || false);
+      const mergedSource = {
+        ...newVals,
+        pan_verified:
+          newVals?.pan_verified === true || newVals?.pan_verified === "Yes"
+            ? newVals.pan_verified
+            : currentWallet?.pan_verified,
+      };
+      applySource(currentWallet, mergedSource);
+      setPanVerified(
+        mergedSource?.pan_verified === true ||
+          mergedSource?.pan_verified === "Yes",
+      );
     } catch (err) {
       console.error(err);
       ShowToast.error("Failed to fetch change request");
@@ -497,7 +513,7 @@ function EditWalletInner() {
         pan_dob: panDob,
       });
 
-      console.log(res,"pan")
+      console.log(res, "pan");
       const panData = res.data?.data?.data;
       if (res.data.success && panData) {
         if (panData.status === "valid") {
@@ -1132,63 +1148,6 @@ function EditWalletInner() {
                 title="Identity Documents"
                 subtitle="Upload your Aadhaar and PAN documents"
               >
-                {/* Aadhaar — 3 per row */}
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-                  Aadhaar Details
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                  <InputField
-                    label="Aadhar Number"
-                    name="aadharNumber"
-                    required
-                    value={values.aadharNumber}
-                    disabled={formReadOnly}
-                    onChange={(e) =>
-                      setFieldValue("aadharNumber", e.target.value)
-                    }
-                    onBlur={handleBlur}
-                    error={
-                      touched.aadharNumber ? (errors as any).aadharNumber : ""
-                    }
-                  />
-
-                  <FileInput
-                    label="Aadhar Front"
-                    name="aadharFront"
-                    required
-                    value={values.aadharFront || null}
-                    disabled={formReadOnly}
-                    onChange={(e) =>
-                      setFieldValue(
-                        "aadharFront",
-                        e.currentTarget.files?.[0] || values.aadharFront,
-                      )
-                    }
-                    onBlur={handleBlur}
-                    error={
-                      touched.aadharFront ? (errors as any).aadharFront : ""
-                    }
-                  />
-
-                  <FileInput
-                    label="Aadhar Back"
-                    name="aadharBack"
-                    required
-                    value={values.aadharBack || null}
-                    disabled={formReadOnly}
-                    onChange={(e) =>
-                      setFieldValue(
-                        "aadharBack",
-                        e.currentTarget.files?.[0] || values.aadharBack,
-                      )
-                    }
-                    onBlur={handleBlur}
-                    error={touched.aadharBack ? (errors as any).aadharBack : ""}
-                  />
-                </div>
-
-                <div className="border-t border-gray-100 mb-5" />
-
                 {/* PAN — FIXED: 3 per row max */}
                 <div className="flex items-center gap-2 mb-3">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -1281,6 +1240,63 @@ function EditWalletInner() {
                     </button>
                   </div>
                 )}
+
+                {/* Aadhaar — 3 per row */}
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                  Aadhaar Details
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  <InputField
+                    label="Aadhar Number"
+                    name="aadharNumber"
+                    required
+                    value={values.aadharNumber}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue("aadharNumber", e.target.value)
+                    }
+                    onBlur={handleBlur}
+                    error={
+                      touched.aadharNumber ? (errors as any).aadharNumber : ""
+                    }
+                  />
+
+                  <FileInput
+                    label="Aadhar Front"
+                    name="aadharFront"
+                    required
+                    value={values.aadharFront || null}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "aadharFront",
+                        e.currentTarget.files?.[0] || values.aadharFront,
+                      )
+                    }
+                    onBlur={handleBlur}
+                    error={
+                      touched.aadharFront ? (errors as any).aadharFront : ""
+                    }
+                  />
+
+                  <FileInput
+                    label="Aadhar Back"
+                    name="aadharBack"
+                    required
+                    value={values.aadharBack || null}
+                    disabled={formReadOnly}
+                    onChange={(e) =>
+                      setFieldValue(
+                        "aadharBack",
+                        e.currentTarget.files?.[0] || values.aadharBack,
+                      )
+                    }
+                    onBlur={handleBlur}
+                    error={touched.aadharBack ? (errors as any).aadharBack : ""}
+                  />
+                </div>
+
+                {/* <div className="border-t border-gray-100 mb-5" /> */}
               </SectionCard>
 
               {/* ── Action buttons — hidden when resolved ────────────────── */}

@@ -107,11 +107,9 @@ export default function ChangeRequestDetailPage() {
     const fetchRequest = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(
-          `/api/wallet-change-requests?request_id=${requestId}`
-        );
-        if (res.data.success && res.data.data.length > 0) {
-          setRequest(res.data.data[0]);
+        const res = await axios.get(`/api/wallet-change-requests/${requestId}`);
+        if (res.data.success && res.data.data) {
+          setRequest(res.data.data);
         } else {
           ShowToast.error("Change request not found");
         }
@@ -132,7 +130,7 @@ export default function ChangeRequestDetailPage() {
       setLoading(true);
       const res = await axios.patch(
         `/api/wallet-change-requests/${request.request_id}`,
-        { action: "rejected", admin_id: user?.user_id }
+        { action: "rejected", admin_id: user?.user_id },
       );
       if (res.data.success) {
         ShowToast.success("Request rejected.");
@@ -214,11 +212,11 @@ export default function ChangeRequestDetailPage() {
       ([, key]) =>
         String(oldVals[key] ?? "") !== String(newVals[key] ?? "") ||
         oldVals[key] ||
-        newVals[key]
+        newVals[key],
     );
 
     const fileChangedRows = FILE_FIELDS.filter(
-      ([, key]) => oldVals[key] || newVals[key]
+      ([, key]) => oldVals[key] || newVals[key],
     );
 
     const hasChanges = changedRows.length > 0 || fileChangedRows.length > 0;
@@ -242,7 +240,10 @@ export default function ChangeRequestDetailPage() {
           <tbody>
             {!hasChanges ? (
               <tr>
-                <td colSpan={3} className="px-4 py-4 text-center text-gray-400 border border-gray-200">
+                <td
+                  colSpan={3}
+                  className="px-4 py-4 text-center text-gray-400 border border-gray-200"
+                >
                   No changes detected.
                 </td>
               </tr>
@@ -251,16 +252,21 @@ export default function ChangeRequestDetailPage() {
                 {changedRows.map(([label, key]) => {
                   const oldVal = oldVals[key];
                   const newVal = newVals[key];
-                  const isChanged = String(oldVal ?? "") !== String(newVal ?? "");
+                  const isChanged =
+                    String(oldVal ?? "") !== String(newVal ?? "");
                   return (
                     <tr key={key} className="even:bg-gray-50">
                       <td className="px-4 py-2.5 border border-gray-200 font-medium text-gray-700">
                         {label}
                       </td>
                       <td className="px-4 py-2.5 border border-gray-200 text-red-500">
-                        <span className={isChanged ? "line-through" : ""}>{oldVal || "—"}</span>
+                        <span className={isChanged ? "line-through" : ""}>
+                          {oldVal || "—"}
+                        </span>
                       </td>
-                      <td className={`px-4 py-2.5 border border-gray-200 font-semibold ${isChanged ? "text-green-600" : "text-gray-700"}`}>
+                      <td
+                        className={`px-4 py-2.5 border border-gray-200 font-semibold ${isChanged ? "text-green-600" : "text-gray-700"}`}
+                      >
                         {newVal || "—"}
                       </td>
                     </tr>
@@ -276,19 +282,31 @@ export default function ChangeRequestDetailPage() {
                       </td>
                       <td className="px-4 py-2.5 border border-gray-200">
                         {oldFile ? (
-                          <a href={oldFile} target="_blank" rel="noopener noreferrer"
-                            className="text-red-400 underline line-through text-xs break-all">
+                          <a
+                            href={oldFile}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-red-400 underline line-through text-xs break-all"
+                          >
                             {oldFile.split("/").pop()}
                           </a>
-                        ) : <span className="text-gray-400">—</span>}
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-2.5 border border-gray-200">
                         {newFile ? (
-                          <a href={newFile} target="_blank" rel="noopener noreferrer"
-                            className="text-green-600 underline font-semibold text-xs break-all">
+                          <a
+                            href={newFile}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-600 underline font-semibold text-xs break-all"
+                          >
                             {newFile.split("/").pop()}
                           </a>
-                        ) : <span className="text-gray-400">—</span>}
+                        ) : (
+                          <span className="text-gray-400">—</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -301,11 +319,18 @@ export default function ChangeRequestDetailPage() {
     );
   };
 
-  const display = request?.new_values || {};
+  const display = {
+    ...(request?.new_values || {}),
+    pan_verified:
+      request?.new_values?.pan_verified === true ||
+      request?.new_values?.pan_verified === "Yes"
+        ? request.new_values.pan_verified
+        : request?.old_values?.pan_verified,
+  };
   const walletId = request?.wallet_id || "—";
   const userId = request?.user_id || "—";
-  const userName = display.user_name || "—";
-  const contact = display.contact || "—";
+  const userName = request?.old_values?.user_name || "—";
+  const contact = request?.old_values?.contact || "—";
 
   return (
     <Layout>
@@ -316,7 +341,6 @@ export default function ChangeRequestDetailPage() {
       )}
 
       <div className="p-4 max-md:p-2">
-
         {/* ── Header ── */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div className="flex items-center gap-3">
@@ -326,25 +350,30 @@ export default function ChangeRequestDetailPage() {
               onClick={() => router.push("/wallet/change-requests")}
             />
             <h2 className="text-xl max-sm:text-base font-semibold">
-              Change Request — <span className="text-[#106187]">{requestId}</span>
+              Change Request —{" "}
+              <span className="text-[#106187]">{requestId}</span>
             </h2>
             {request && renderStatusBadge(request.status)}
           </div>
 
           {isAdmin && request?.status === "pending" && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-md:mx-auto">
+              <button
+                onClick={() =>
+                  router.push(
+                    `/wallet/wallets/editwallet/${request.wallet_id}?mode=request&request_id=${request.request_id}`,
+                  )
+                }
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#106187] hover:bg-[#0d4f6e] text-white cursor-pointer transition-colors"
+              >
+                Approve Wallet
+              </button>
               <button
                 onClick={handleReject}
                 disabled={loading}
                 className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-500 hover:bg-red-600 text-white cursor-pointer disabled:opacity-50 transition-colors"
               >
                 Reject Request
-              </button>
-              <button
-                onClick={() => router.push(`/wallet/wallets/editwallet/${request.wallet_id}`)}
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#106187] hover:bg-[#0d4f6e] text-white cursor-pointer transition-colors"
-              >
-                Update Wallet
               </button>
             </div>
           )}
@@ -388,12 +417,18 @@ export default function ChangeRequestDetailPage() {
 
         {/* ── Wallet Detail Sections ── */}
         <div className="space-y-5">
-
           {/* Account Overview */}
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <SectionHeader
               icon={
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <rect x="2" y="5" width="20" height="14" rx="2" />
                   <path d="M2 10h20" />
                 </svg>
@@ -413,7 +448,14 @@ export default function ChangeRequestDetailPage() {
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <SectionHeader
               icon={
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3" />
                 </svg>
               }
@@ -421,13 +463,30 @@ export default function ChangeRequestDetailPage() {
               subtitle="Bank account information"
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <ReadField label="Account Holder Name" value={display.account_holder_name} />
+              <ReadField
+                label="Account Holder Name"
+                value={display.account_holder_name}
+              />
               <ReadField label="Bank Name" value={display.bank_name} />
-              <ReadField label="Account Number" value={display.account_number} />
+              <ReadField
+                label="Account Number"
+                value={display.account_number}
+              />
               <ReadField label="IFSC Code" value={display.ifsc_code} />
-              <ReadField label="Cancelled Cheque *" value={display.cheque} isFile />
-              <ReadField label="Bank Book Front" value={display.bank_book} isFile />
-              <ReadField label="GST Number (optional)" value={display.gst_number} />
+              <ReadField
+                label="Cancelled Cheque *"
+                value={display.cheque}
+                isFile
+              />
+              <ReadField
+                label="Bank Book Front"
+                value={display.bank_book}
+                isFile
+              />
+              <ReadField
+                label="GST Number (optional)"
+                value={display.gst_number}
+              />
             </div>
           </div>
 
@@ -435,7 +494,14 @@ export default function ChangeRequestDetailPage() {
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <SectionHeader
               icon={
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <rect x="3" y="4" width="18" height="16" rx="2" />
                   <path d="M7 8h5M7 12h8M7 16h4" />
                 </svg>
@@ -444,26 +510,43 @@ export default function ChangeRequestDetailPage() {
               subtitle="Upload your Aadhaar and PAN documents"
             />
 
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
-              Aadhaar Details
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              <ReadField label="Aadhar Number *" value={display.aadhar_number} />
-              <ReadField label="Aadhar Front *" value={display.aadhar_front} isFile />
-              <ReadField label="Aadhar Back *" value={display.aadhar_back} isFile />
-            </div>
-
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
               PAN Details
-              {display.pan_verified && (
-                <span className="text-green-600"><GrStatusGood size={15} /></span>
+              {(display?.pan_verified === true ||
+                display?.pan_verified === "Yes") && (
+                <span className="text-green-600">
+                  <GrStatusGood size={15} />
+                </span>
               )}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <ReadField label="PAN Number" value={display.pan_number} />
               <ReadField label="Name as in PAN" value={display.pan_name} />
-              <ReadField label="Date of Birth as in PAN" value={display.pan_dob} />
+              <ReadField
+                label="Date of Birth as in PAN"
+                value={display.pan_dob}
+              />
               <ReadField label="Upload PAN" value={display.pan_file} isFile />
+            </div>
+
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 mt-10">
+              Aadhaar Details
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <ReadField
+                label="Aadhar Number *"
+                value={display.aadhar_number}
+              />
+              <ReadField
+                label="Aadhar Front *"
+                value={display.aadhar_front}
+                isFile
+              />
+              <ReadField
+                label="Aadhar Back *"
+                value={display.aadhar_back}
+                isFile
+              />
             </div>
           </div>
 
@@ -471,7 +554,14 @@ export default function ChangeRequestDetailPage() {
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <SectionHeader
               icon={
-                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <circle cx="12" cy="12" r="10" />
                   <path d="M12 6v6l4 2" />
                 </svg>
@@ -484,17 +574,24 @@ export default function ChangeRequestDetailPage() {
               <ReadField label="Requested By" value={request?.requested_by} />
               <ReadField
                 label="Requested At"
-                value={request?.created_at ? new Date(request.created_at).toLocaleString() : "—"}
+                value={
+                  request?.created_at
+                    ? new Date(request.created_at).toLocaleString()
+                    : "—"
+                }
               />
               <ReadField label="Reviewed By" value={request?.reviewed_by} />
               <ReadField
                 label="Reviewed At"
-                value={request?.reviewed_at ? new Date(request.reviewed_at).toLocaleString() : "—"}
+                value={
+                  request?.reviewed_at
+                    ? new Date(request.reviewed_at).toLocaleString()
+                    : "—"
+                }
               />
               <ReadField label="Request Type" value={request?.request_type} />
             </div>
           </div>
-
         </div>
       </div>
     </Layout>

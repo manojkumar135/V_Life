@@ -778,15 +778,15 @@ export default function OrderFormCartSection({
                       fortnightPoints + dailyPoints > 0) && (
                       <>
                         {/* Subtotal */}
-                        <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
+                        {/* <div className="flex justify-between items-center text-sm text-gray-700 font-medium">
                           <span className="font-semibold">Subtotal</span>
                           <span className="font-semibold">
                             ₹ {totalAmount.toFixed(2)}
                           </span>
-                        </div>
+                        </div> */}
 
                         {/* Cashback Reward */}
-                        {!isOtherOrder && cashbackPoints > 0 && (
+                        {/* {!isOtherOrder && cashbackPoints > 0 && (
                           <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
                             <label className="flex items-start gap-2 cursor-pointer">
                               <input
@@ -822,10 +822,10 @@ export default function OrderFormCartSection({
                               </span>
                             )}
                           </div>
-                        )}
+                        )} */}
 
                         {/* Daily + Fortnight Reward */}
-                        {(fortnightPoints > 0 || dailyPoints > 0) && (
+                        {/* {(fortnightPoints > 0 || dailyPoints > 0) && (
                           <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
                             <label className="flex items-start gap-2 cursor-pointer">
                               <input
@@ -876,12 +876,12 @@ export default function OrderFormCartSection({
                               </span>
                             )}
                           </div>
-                        )}
+                        )} */}
 
                         {/* Divider */}
-                        {(cashbackPoints > 0 || fortnightPoints > 0) && (
+                        {/* {(cashbackPoints > 0 || fortnightPoints > 0) && (
                           <div className="border-t border-gray-300 my-1 mx-2"></div>
-                        )}
+                        )} */}
                       </>
                     )}
 
