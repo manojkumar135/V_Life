@@ -9,8 +9,8 @@ export async function GET(request: Request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
-    const from   = searchParams.get("from")   || null;
-    const to     = searchParams.get("to")     || null;
+    const from = searchParams.get("from") || null;
+    const to = searchParams.get("to") || null;
     const search = searchParams.get("search") || "";
 
     /* ─────────────────────────────────────────────
@@ -60,7 +60,10 @@ export async function GET(request: Request) {
     ];
 
     if (allUserIds.length === 0) {
-      return NextResponse.json({ success: true, data: [], total: 0 }, { status: 200 });
+      return NextResponse.json(
+        { success: true, data: [], total: 0 },
+        { status: 200 },
+      );
     }
 
     /* ─────────────────────────────────────────────
@@ -89,14 +92,14 @@ export async function GET(request: Request) {
       Score.find(
         { user_id: { $in: allUserIds } },
         {
-          user_id:             1,
-          "daily.balance":     1,
-          "daily.earned":      1,
-          "daily.used":        1,
+          user_id: 1,
+          "daily.balance": 1,
+          "daily.earned": 1,
+          "daily.used": 1,
           "fortnight.balance": 1,
-          "fortnight.earned":  1,
-          "fortnight.used":    1,
-        }
+          "fortnight.earned": 1,
+          "fortnight.used": 1,
+        },
       ).lean(),
     ]);
 
@@ -123,23 +126,23 @@ export async function GET(request: Request) {
        7. Score map — keyed by user_id
     ───────────────────────────────────────────── */
     type ScoreEntry = {
-      daily_balance:     number;
-      daily_earned:      number;
-      daily_used:        number;
+      daily_balance: number;
+      daily_earned: number;
+      daily_used: number;
       fortnight_balance: number;
-      fortnight_earned:  number;
-      fortnight_used:    number;
+      fortnight_earned: number;
+      fortnight_used: number;
     };
 
     const scoreMap = new Map<string, ScoreEntry>();
     for (const s of scores as any[]) {
       scoreMap.set(s.user_id, {
-        daily_balance:     s.daily?.balance      ?? 0,
-        daily_earned:      s.daily?.earned       ?? 0,
-        daily_used:        s.daily?.used         ?? 0,
-        fortnight_balance: s.fortnight?.balance  ?? 0,
-        fortnight_earned:  s.fortnight?.earned   ?? 0,
-        fortnight_used:    s.fortnight?.used     ?? 0,
+        daily_balance: s.daily?.balance ?? 0,
+        daily_earned: s.daily?.earned ?? 0,
+        daily_used: s.daily?.used ?? 0,
+        fortnight_balance: s.fortnight?.balance ?? 0,
+        fortnight_earned: s.fortnight?.earned ?? 0,
+        fortnight_used: s.fortnight?.used ?? 0,
       });
     }
 
@@ -162,27 +165,27 @@ export async function GET(request: Request) {
     ───────────────────────────────────────────── */
     type PayoutGroup = {
       original_total: number;
-      payable:        number;
-      payout_count:   number;
-      payout_ids:     string[];
-      latest_date:    string;
+      payable: number;
+      payout_count: number;
+      payout_ids: string[];
+      latest_date: string;
     };
 
     type UserGroup = {
-      user_id:              string;
-      user_name:            string;
-      account_holder_name:  string; // ← from wallet — actual bank-registered name
-      contact:              string; // ← preferred from wallet (more up-to-date)
-      mail:                 string; // ← from wallet
-      rank:                 string;
-      wallet_id:            string;
-      pan_number:           string;
-      bank_name:            string;
-      account_number:       string;
-      ifsc_code:            string;
-      daily:                PayoutGroup | null;
-      fortnight:            PayoutGroup | null;
-      total_release:        number; // ← single amount: daily.payable + fortnight.payable
+      user_id: string;
+      user_name: string;
+      account_holder_name: string; // ← from wallet — actual bank-registered name
+      contact: string; // ← preferred from wallet (more up-to-date)
+      mail: string; // ← from wallet
+      rank: string;
+      wallet_id: string;
+      pan_number: string;
+      bank_name: string;
+      account_number: string;
+      ifsc_code: string;
+      daily: PayoutGroup | null;
+      fortnight: PayoutGroup | null;
+      total_release: number; // ← single amount: daily.payable + fortnight.payable
     };
 
     const userMap = new Map<string, UserGroup>();
@@ -190,22 +193,26 @@ export async function GET(request: Request) {
     const getOrCreate = (payout: any, wallet: any): UserGroup => {
       if (!userMap.has(payout.user_id)) {
         userMap.set(payout.user_id, {
-          user_id:             payout.user_id,
-          user_name:           payout.user_name  || wallet?.user_name  || "",
+          user_id: payout.user_id,
+          user_name: payout.user_name || wallet?.user_name || "",
           // account_holder_name is the bank-registered name — always prefer wallet
-          account_holder_name: wallet?.account_holder_name || payout.account_holder_name || payout.user_name || "",
+          account_holder_name:
+            wallet?.account_holder_name ||
+            payout.account_holder_name ||
+            payout.user_name ||
+            "",
           // contact — wallet is more up-to-date than the payout snapshot
-          contact:             wallet?.contact   || payout.contact     || "",
-          mail:                wallet?.mail      || payout.mail        || "",
-          rank:                payout.rank       || wallet?.rank       || "",
-          wallet_id:           wallet?.wallet_id      || "",
-          pan_number:          wallet?.pan_number     || "",
-          bank_name:           wallet?.bank_name      || "",
-          account_number:      wallet?.account_number || "",
-          ifsc_code:           wallet?.ifsc_code      || "",
-          daily:               null,
-          fortnight:           null,
-          total_release:       0,
+          contact: wallet?.contact || payout.contact || "",
+          mail: wallet?.mail || payout.mail || "",
+          rank: payout.rank || wallet?.rank || "",
+          wallet_id: wallet?.wallet_id || "",
+          pan_number: wallet?.pan_number || "",
+          bank_name: wallet?.bank_name || "",
+          account_number: wallet?.account_number || "",
+          ifsc_code: wallet?.ifsc_code || "",
+          daily: null,
+          fortnight: null,
+          total_release: 0,
         });
       }
       return userMap.get(payout.user_id)!;
@@ -215,21 +222,24 @@ export async function GET(request: Request) {
     for (const payout of dailyPayouts as any[]) {
       if (!eligibleWalletMap.has(payout.user_id)) continue;
       const wallet = eligibleWalletMap.get(payout.user_id);
-      const group  = getOrCreate(payout, wallet);
+      const group = getOrCreate(payout, wallet);
 
       if (!group.daily) {
         group.daily = {
           original_total: 0,
-          payable:        0,
-          payout_count:   0,
-          payout_ids:     [],
-          latest_date:    "",
+          payable: 0,
+          payout_count: 0,
+          payout_ids: [],
+          latest_date: "",
         };
       }
-      group.daily.original_total += payout.amount || 0;
-      group.daily.payout_count   += 1;
+      group.daily.original_total += payout.withdraw_amount || 0;
+      group.daily.payout_count += 1;
       group.daily.payout_ids.push(payout.payout_id);
-      if (!group.daily.latest_date || payout.created_at > group.daily.latest_date) {
+      if (
+        !group.daily.latest_date ||
+        payout.created_at > group.daily.latest_date
+      ) {
         group.daily.latest_date = payout.created_at;
       }
     }
@@ -238,21 +248,24 @@ export async function GET(request: Request) {
     for (const payout of fortnightPayouts as any[]) {
       if (!eligibleWalletMap.has(payout.user_id)) continue;
       const wallet = eligibleWalletMap.get(payout.user_id);
-      const group  = getOrCreate(payout, wallet);
+      const group = getOrCreate(payout, wallet);
 
       if (!group.fortnight) {
         group.fortnight = {
           original_total: 0,
-          payable:        0,
-          payout_count:   0,
-          payout_ids:     [],
-          latest_date:    "",
+          payable: 0,
+          payout_count: 0,
+          payout_ids: [],
+          latest_date: "",
         };
       }
-      group.fortnight.original_total += payout.amount || 0;
-      group.fortnight.payout_count   += 1;
+      group.fortnight.original_total += payout.withdraw_amount || 0;
+      group.fortnight.payout_count += 1;
       group.fortnight.payout_ids.push(payout.payout_id);
-      if (!group.fortnight.latest_date || payout.created_at > group.fortnight.latest_date) {
+      if (
+        !group.fortnight.latest_date ||
+        payout.created_at > group.fortnight.latest_date
+      ) {
         group.fortnight.latest_date = payout.created_at;
       }
     }
@@ -261,21 +274,19 @@ export async function GET(request: Request) {
        9. Set payable from Score.balance
           and compute total_release (daily + fortnight)
     ───────────────────────────────────────────── */
-    for (const group of userMap.values()) {
-      const sc = scoreMap.get(group.user_id);
+for (const group of userMap.values()) {
 
-      if (group.daily) {
-        group.daily.payable = sc?.daily_balance ?? 0;
-      }
+  if (group.daily) {
+    group.daily.payable = group.daily.original_total || 0;
+  }
 
-      if (group.fortnight) {
-        group.fortnight.payable = sc?.fortnight_balance ?? 0;
-      }
+  if (group.fortnight) {
+    group.fortnight.payable = group.fortnight.original_total || 0;
+  }
 
       // total_release is the single amount shown in UI and used in IDFC download
       group.total_release =
-        (group.daily?.payable     || 0) +
-        (group.fortnight?.payable || 0);
+        (group.daily?.payable || 0) + (group.fortnight?.payable || 0);
     }
 
     /* ─────────────────────────────────────────────
@@ -292,11 +303,11 @@ export async function GET(request: Request) {
       result = result.filter((row) =>
         terms.some(
           (t) =>
-            row.user_id.toLowerCase().includes(t)                  ||
-            row.user_name.toLowerCase().includes(t)                ||
-            row.account_holder_name.toLowerCase().includes(t)      ||
-            row.contact.toLowerCase().includes(t)
-        )
+            row.user_id.toLowerCase().includes(t) ||
+            row.user_name.toLowerCase().includes(t) ||
+            row.account_holder_name.toLowerCase().includes(t) ||
+            row.contact.toLowerCase().includes(t),
+        ),
       );
     }
 
@@ -307,13 +318,13 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { success: true, data: result, total: result.length },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: any) {
     console.error("Eligible payout report error:", error);
     return NextResponse.json(
       { success: false, message: error.message || "Server error", data: [] },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -54,6 +54,17 @@ interface WalletFormData {
   aadharSeeding: boolean;
 }
 
+const isPanVerified = (value: any): boolean => {
+  if (value === true) return true;
+
+  if (typeof value === "string") {
+    const v = value.toLowerCase().trim();
+    return v === "true" || v === "yes";
+  }
+
+  return false;
+};
+
 /* ------------------------------------------------------------------ */
 /* Validation Schema                                                   */
 /* ------------------------------------------------------------------ */
@@ -361,7 +372,8 @@ function EditWalletInner() {
       panName: source?.pan_name || "",
       panDob: source?.pan_dob || "",
       panVerify:
-        source?.pan_verified === true || source?.pan_verified === "Yes",
+        isPanVerified(source?.pan_verified) ||
+        isPanVerified(walletMeta?.pan_verified),
       panCategory: source?.pan_category || "",
       aadharSeeding: source?.aadhar_seeding || false,
       aadharFile: source?.aadhar_file || null,
@@ -385,9 +397,7 @@ function EditWalletInner() {
       const pending = await fetchPendingRequest(wallet.user_id);
       const source = isAdmin ? wallet : pending?.new_values || wallet;
       applySource(wallet, source);
-      setPanVerified(
-        source?.pan_verified === true || source?.pan_verified === "Yes",
-      );
+      setPanVerified(isPanVerified(source?.pan_verified));
     } catch (err) {
       console.error(err);
       ShowToast.error("Failed to fetch wallet");
@@ -418,10 +428,9 @@ function EditWalletInner() {
       if (req.request_type === "new_wallet") {
         setSavedWalletValues(null);
         applySource(null, newVals);
-       setPanVerified(
-  newVals?.pan_verified === true ||
-  newVals?.pan_verified === "Yes"
-);
+        setPanVerified(
+          newVals?.pan_verified === true || newVals?.pan_verified === "Yes",
+        );
         return;
       }
 
@@ -440,16 +449,13 @@ function EditWalletInner() {
       setSavedWalletValues(currentWallet);
       const mergedSource = {
         ...newVals,
+        // ✅ FIX: handle true / "true" / "yes"
         pan_verified:
-          newVals?.pan_verified === true || newVals?.pan_verified === "Yes"
-            ? newVals.pan_verified
-            : currentWallet?.pan_verified,
+          isPanVerified(newVals?.pan_verified) ||
+          isPanVerified(currentWallet?.pan_verified),
       };
       applySource(currentWallet, mergedSource);
-      setPanVerified(
-        mergedSource?.pan_verified === true ||
-          mergedSource?.pan_verified === "Yes",
-      );
+      setPanVerified(isPanVerified(mergedSource?.pan_verified));
     } catch (err) {
       console.error(err);
       ShowToast.error("Failed to fetch change request");
@@ -646,7 +652,8 @@ function EditWalletInner() {
         pan_number: values.panNumber,
         pan_name: values.panName,
         pan_dob: values.panDob,
-        pan_verified: values.panVerify,
+        pan_verified:
+          values.panVerify === true || isPanVerified(initialValues.panVerify),
         pan_category: values.panCategory,
         aadhar_seeding: values.aadharSeeding,
         pan_file: panFileUrl,
@@ -844,12 +851,12 @@ function EditWalletInner() {
             {compareOpen ? (
               <IoChevronUpOutline
                 size={18}
-                className="text-yellow-700 flex-shrink-0"
+                className="text-yellow-700 shrink-0"
               />
             ) : (
               <IoChevronDownOutline
                 size={18}
-                className="text-yellow-700 flex-shrink-0"
+                className="text-yellow-700 shrink-0"
               />
             )}
           </button>
@@ -950,7 +957,7 @@ function EditWalletInner() {
         <div className="flex items-center gap-3 mb-5 flex-wrap">
           <IoIosArrowBack
             size={25}
-            className="cursor-pointer flex-shrink-0"
+            className="cursor-pointer shrink-0"
             onClick={handleBack}
           />
           <h2 className="text-xl max-sm:text-[1rem] font-semibold">

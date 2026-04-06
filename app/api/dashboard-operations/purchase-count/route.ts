@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     if (!user_id) {
       return NextResponse.json(
         { success: false, message: "User ID required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -87,7 +87,29 @@ export async function GET(request: Request) {
       { $match: { user_id, name: "Direct Sales Bonus" } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]);
-    const directTeamSales = directTeamSalesSum[0]?.total || 0;
+    const directTeamSalesBonus = directTeamSalesSum[0]?.total || 0;
+
+    const quickStarSum = await DailyPayout.aggregate([
+      { $match: { user_id, name: "Quick Star Bonus" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    const quickStarBonus = quickStarSum[0]?.total || 0;
+
+    const referralSum = await DailyPayout.aggregate([
+      { $match: { user_id, name: "Referral Bonus" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]);
+
+    const referralBonus = referralSum[0]?.total || 0;
+    const directTeamSales = directTeamSalesBonus + quickStarBonus + referralBonus;
+
+    // console.log(
+    //   "Direct Team Sales:",
+    //   directTeamSales,
+    //   quickStarBonus,
+    //   referralBonus,
+    // );
 
     // 🌐 7️⃣ Infinity Sales Bonus
     const infinitySalesBonusSum = await WeeklyPayout.aggregate([
@@ -106,16 +128,13 @@ export async function GET(request: Request) {
     // 🎯 9️⃣ Cashback Points
     const scoreDoc = (await Score.findOne(
       { user_id },
-      { "cashback.balance": 1 }
+      { "cashback.balance": 1 },
     ).lean()) as any;
     const cashbackPoints = scoreDoc?.cashback?.balance || 0;
 
     // ✅ 🔟 Payout Released — status: completed or pending (case-insensitive)
     const releasedStatuses = ["completed", "pending"];
-    const releasedRegex = new RegExp(
-      `^(${releasedStatuses.join("|")})$`,
-      "i"
-    );
+    const releasedRegex = new RegExp(`^(${releasedStatuses.join("|")})$`, "i");
 
     const [dailyReleased, weeklyReleased] = await Promise.all([
       DailyPayout.aggregate([
@@ -133,10 +152,7 @@ export async function GET(request: Request) {
 
     // 🔴 1️⃣1️⃣ Payout On Hold — status: onhold or failed (case-insensitive)
     const holdStatuses = ["onhold", "on hold", "hold", "failed"];
-    const holdRegex = new RegExp(
-      `^(${holdStatuses.join("|")})$`,
-      "i"
-    );
+    const holdRegex = new RegExp(`^(${holdStatuses.join("|")})$`, "i");
 
     const [dailyHold, weeklyHold] = await Promise.all([
       DailyPayout.aggregate([
@@ -172,13 +188,13 @@ export async function GET(request: Request) {
           payoutOnHold,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: any) {
     console.error("Error fetching dashboard summary:", error);
     return NextResponse.json(
       { success: false, message: error.message || "Server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

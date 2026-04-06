@@ -3,7 +3,8 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken } from "@/utils/auth/token";
 import { connectDB } from "@/lib/mongodb";
 import { Login } from "@/models/login";
-import { User } from "@/models/user"; // ⭐ get User model
+import { User } from "@/models/user";
+import { Wallet } from "@/models/wallet"; // ✅ added
 import { Score } from "@/models/score";
 
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
     // 🔍 Find user in Login collection
     const loginUser = await Login.findOne({
       $or: [{ _id: decoded.id }, { user_id: decoded.user_id }],
-    }).select("-password");
+    }).select("-password -passkey -login_key");
 
     if (!loginUser) {
       return NextResponse.json(
@@ -58,24 +59,37 @@ export async function POST(req: Request) {
       );
     }
 
-    // ⭐ Fetch only important attributes (score, rank, club)
-    const userData = await User.findOne(
-      { user_id: loginUser.user_id },
-      { score: 1, reward: 1, rank: 1, club: 1,profile: 1, _id: 0 }
-    ).lean<{ score: number; rank: string; club: string; reward: number ,profile: string; }>();
-
-    // Convert login doc to plain object
+    // ✅ Convert login doc
     const loginObj = loginUser.toObject();
 
-    // ⭐ Overwrite / add values directly from User model
-    loginObj.score = userData?.score ?? 0;
-    loginObj.reward = userData?.reward ?? 0;
+    // ✅ Get FULL user data
+    const userData = await User.findOne(
+      { user_id: loginUser.user_id },
+      { _id: 0 }
+    ).lean();
 
-    loginObj.rank = userData?.rank ?? loginObj.rank ?? "none";
-    loginObj.club = userData?.club ?? loginObj.club ?? "none";
+    // ✅ Get PAN from Wallet (only required fields)
+    const walletData = (await Wallet.findOne(
+      { user_id: loginUser.user_id },
+      { pan_number: 1, pan_verified: 1, _id: 0 }
+    ).lean() as any);
 
-    loginObj.profile = userData?.profile ?? null;
+    // ✅ Merge + PAN override
+    const finalUser: any = {
+      ...loginObj,
+      ...userData,
 
+      // 🔥 PAN logic (Wallet > Login)
+      pan: walletData?.pan_number || loginObj.pan || "",
+
+      pan_verified:
+        walletData?.pan_verified === true ||
+        walletData?.pan_verified === "true" || walletData?.pan_verified === "Yes" ,
+              role: loginObj.role || "user",
+
+    };
+
+    // ⭐ Score logic (UNCHANGED)
     const scoreData = await Score.findOne(
       { user_id: loginUser.user_id },
       {
@@ -83,7 +97,6 @@ export async function POST(req: Request) {
         "fortnight.balance": 1,
         "cashback.balance": 1,
         "reward.balance": 1,
-
         _id: 0,
       }
     ).lean<{
@@ -93,14 +106,12 @@ export async function POST(req: Request) {
       reward?: { balance: number };
     }>();
 
-    loginObj.dailyReward = scoreData?.daily?.balance ?? 0;
-    loginObj.fortnightReward = scoreData?.fortnight?.balance ?? 0;
-    loginObj.cashbackReward = scoreData?.cashback?.balance ?? 0;
-    loginObj.rewardPoints = scoreData?.reward?.balance ?? 0;
+    finalUser.dailyReward = scoreData?.daily?.balance ?? 0;
+    finalUser.fortnightReward = scoreData?.fortnight?.balance ?? 0;
+    finalUser.cashbackReward = scoreData?.cashback?.balance ?? 0;
+    finalUser.rewardPoints = scoreData?.reward?.balance ?? 0;
 
-    // console.log("Refreshed user data:", loginObj);
-
-    // 🎟 Generate new short-lived access token
+    // 🎟 Generate new access token
     const accessToken = generateAccessToken({
       _id: loginUser._id.toString(),
       user_id: loginUser.user_id || "",
@@ -112,7 +123,7 @@ export async function POST(req: Request) {
       {
         success: true,
         accessToken,
-        user: loginObj,
+        user: finalUser,
       },
       { status: 200 }
     );
