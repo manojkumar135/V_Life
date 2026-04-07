@@ -662,21 +662,43 @@ function EditWalletInner() {
       };
 
       /* Request-mode + admin + pending → approve */
-      if (isRequestMode && isAdmin && pendingRequest?.status === "pending") {
-        const res = await axios.patch(
-          `/api/wallet-change-requests/${pendingRequest.request_id}`,
-          { action: "approved", admin_id: user?.user_id },
-        );
-        if (res.data.success) {
-          ShowToast.success(
-            "Request approved and wallet updated successfully!",
-          );
-          handleBack();
-        } else {
-          ShowToast.error(res.data.message || "Failed to approve request.");
-        }
-        return;
-      }
+     /* Request-mode + admin + pending → approve */
+if (isRequestMode && isAdmin && pendingRequest?.status === "pending") {
+  // ✅ STEP 1: Patch the wallet directly as admin
+  // This triggers releaseOnHoldPayouts AND auto-approves the change request
+  // inside the wallets-operations PATCH route (admin branch)
+  const walletRes = await axios.patch(
+    `/api/wallets-operations?wallet_id=${pendingRequest.wallet_id}`,
+    {
+      ...payload,
+      requested_role: "admin", // force admin branch → direct update + release holds
+      last_modified_by: user?.user_id || "admin",
+    },
+  );
+
+  if (!walletRes.data.success) {
+    ShowToast.error(walletRes.data.message || "Failed to update wallet.");
+    return;
+  }
+
+  // ✅ STEP 2: Also explicitly mark the change request as approved
+  // (belt-and-suspenders — the wallet PATCH already does this,
+  //  but we call it again to ensure reviewed_by is stamped correctly)
+  const res = await axios.patch(
+    `/api/wallet-change-requests/${pendingRequest.request_id}`,
+    { action: "approved", admin_id: user?.user_id },
+  );
+
+  if (res.data.success) {
+    ShowToast.success("Request approved and wallet updated successfully!");
+    handleBack();
+  } else {
+    // Wallet was updated successfully, change request stamp failed — still navigate
+    ShowToast.success("Wallet updated. Request approval stamp failed.");
+    handleBack();
+  }
+  return;
+}
 
       const res = await axios.patch(
         `/api/wallets-operations?wallet_id=${walletId}`,
