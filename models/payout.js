@@ -11,6 +11,7 @@ const payoutSchema = new mongoose.Schema({
   mail:           { type: String },
   rank:           { type: String },
   user_status:    { type: String },
+  pan:              { type: String },
   pan_verified:   { type: Boolean, default: false },
 
   name:  { type: String, default: "Matching Bonus" },
