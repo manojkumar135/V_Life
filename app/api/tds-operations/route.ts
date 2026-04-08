@@ -12,6 +12,13 @@ function formatToDDMMYYYY(input: string) {
   return `${day}-${month}-${year}`;
 }
 
+function isPanVerified(val: any) {
+  if (val === true) return true;
+  if (typeof val === "string") {
+    return ["yes", "true"].includes(val.toLowerCase());
+  }
+  return false;
+}
 
 export async function GET(req: Request) {
   try {
@@ -27,35 +34,35 @@ export async function GET(req: Request) {
 
     // GROUP DAILY + WEEKLY
     const pipeline: PipelineStage[] = [
-     {
-  $match: {
-    ...(user_id && { user_id }),
+      {
+        $match: {
+          ...(user_id && { user_id }),
 
-    ...(search && {
-      $or: [
-        { user_id: { $regex: search, $options: "i" } },
-        { user_name: { $regex: search, $options: "i" } },
-        { contact: { $regex: search, $options: "i" } },
-        { wallet_id: { $regex: search, $options: "i" } },
-        { pan_number: { $regex: search, $options: "i" } },
-      ],
-    }),
+          ...(search && {
+            $or: [
+              { user_id: { $regex: search, $options: "i" } },
+              { user_name: { $regex: search, $options: "i" } },
+              { contact: { $regex: search, $options: "i" } },
+              { wallet_id: { $regex: search, $options: "i" } },
+              { pan_number: { $regex: search, $options: "i" } },
+            ],
+          }),
 
-    // ✅ FIXED DATE FILTER
-    ...(date && {
-      date: formatToDDMMYYYY(date),
-    }),
+          // ✅ FIXED DATE FILTER
+          ...(date && {
+            date: formatToDDMMYYYY(date),
+          }),
 
-    // ✅ FIXED RANGE FILTER
-    ...(from &&
-      to && {
-        date: {
-          $gte: formatToDDMMYYYY(from),
-          $lte: formatToDDMMYYYY(to),
+          // ✅ FIXED RANGE FILTER
+          ...(from &&
+            to && {
+              date: {
+                $gte: formatToDDMMYYYY(from),
+                $lte: formatToDDMMYYYY(to),
+              },
+            }),
         },
-      }),
-  },
-},
+      },
       {
         $group: {
           _id: {
@@ -64,7 +71,18 @@ export async function GET(req: Request) {
             contact: "$contact",
             year: { $year: "$created_at" },
             month: { $month: "$created_at" },
-            pan_verified: "$pan_verified",
+            pan_verified: {
+              $cond: [
+                {
+                  $in: [
+                    { $toLower: { $toString: "$pan_verified" } },
+                    ["true", "yes"],
+                  ],
+                },
+                true,
+                false,
+              ],
+            },
           },
           total_tds: { $sum: "$tds_amount" },
           total_amount: { $sum: "$amount" },
@@ -82,15 +100,16 @@ export async function GET(req: Request) {
 
     // ----------------------------------------------------
     // MERGE MULTIPLE ENTRIES (DAILY + WEEKLY)
-    // KEY = user-year-month-PAN
+    // KEY = user-year-month (removed PAN from key so both
+    // daily+weekly for same user-month always merge into one)
     // ----------------------------------------------------
     const map = new Map();
 
     for (const row of merged) {
       const { user_id, user_name, contact, year, month, pan_verified } =
         row._id;
-      const key = `${user_id}-${year}-${month}-${pan_verified}`;
-
+      // Key without pan_verified — wallet is the source of truth for PAN status
+      const key = `${user_id}-${year}-${month}`;
       if (!map.has(key)) {
         map.set(key, {
           user_id,
@@ -98,7 +117,7 @@ export async function GET(req: Request) {
           contact,
           year,
           month,
-          pan_verified,
+          pan_verified, // kept as fallback if wallet has no pan_verified
           total_tds: 0,
           total_amount: 0,
           count: 0,
@@ -137,24 +156,30 @@ export async function GET(req: Request) {
       const wallet = (await Wallet.findOne({
         user_id: rec.user_id,
       }).lean()) as any;
-      // console.log(rec);
+
+      // ✅ FIX: Use wallet's pan_verified as source of truth,
+      //         fallback to payout's pan_verified if wallet not found
+      const isPan = isPanVerified(wallet?.pan_verified ?? rec.pan_verified);
+
+      // ✅ FIX: Recalculate TDS based on correct PAN status
+      //         (avoids wrong amounts if payout was stored with wrong pan_verified)
+      const tdsPercent = isPan ? 0.02 : 0.20;
+      const correctedTds = rec.total_amount * tdsPercent;
 
       result.push({
-        _id: `${rec.user_id}-${rec.year}-${rec.month}-${
-          rec.pan_verified ? "PAN" : "NONPAN"
-        }`,
+        _id: `${rec.user_id}-${rec.year}-${rec.month}-${isPan ? "PAN" : "NONPAN"}`,
         user_id: rec.user_id,
         user_name: rec.user_name,
         contact: rec.contact,
         year: rec.year,
         month: rec.month,
         month_name: monthNames[rec.month - 1],
-        tds_type: rec.pan_verified ? "PAN" : "NONPAN",
+        tds_type: isPan ? "PAN" : "NONPAN",
         total_amount: rec.total_amount,
-        tds_amount: rec.total_tds,
+        tds_amount: correctedTds,
 
-         tds_percent: rec.pan_verified ? 2 : 20,
-  tds_label: rec.pan_verified ? "2%" : "20%",
+        tds_percent: isPan ? 2 : 20,
+        tds_label: isPan ? "2%" : "20%",
 
         count: rec.count,
 
@@ -175,7 +200,7 @@ export async function GET(req: Request) {
     console.error("TDS ERROR:", err);
     return NextResponse.json(
       { status: false, message: err.message || "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
