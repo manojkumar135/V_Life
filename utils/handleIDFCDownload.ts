@@ -41,7 +41,7 @@ export async function handleIDFCDownload({
   onStart?.();
 
   try {
-    const workbook  = new ExcelJS.Workbook();
+    const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Sheet1");
 
     /* ── Row 1: Exact IDFC column headers ─────────────────────── */
@@ -66,13 +66,19 @@ export async function handleIDFCDownload({
     const headerRow = worksheet.addRow(headers);
     headerRow.eachCell((cell) => {
       cell.fill = {
-        type:    "pattern",
+        type: "pattern",
         pattern: "solid",
         fgColor: { argb: "FF1F497D" }, // dark navy — matches IDFC template
       };
-      cell.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
-      cell.alignment = { horizontal: "center", vertical: "middle", wrapText: false };
-      cell.border    = { bottom: { style: "thin", color: { argb: "FFAAAAAA" } } };
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
+      cell.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: false,
+      };
+      cell.border = {
+        bottom: { style: "thin", color: { argb: "FFAAAAAA" } },
+      };
     });
     headerRow.height = 20;
 
@@ -97,10 +103,10 @@ export async function handleIDFCDownload({
 
     const instrRow = worksheet.addRow(instructions);
     instrRow.eachCell((cell) => {
-      cell.font      = { size: 9, color: { argb: "FF595959" }, italic: true };
+      cell.font = { size: 9, color: { argb: "FF595959" }, italic: true };
       cell.alignment = { vertical: "top", wrapText: true };
-      cell.fill      = {
-        type:    "pattern",
+      cell.fill = {
+        type: "pattern",
         pattern: "solid",
         fgColor: { argb: "FFFFF2CC" }, // light yellow — matches IDFC template
       };
@@ -108,10 +114,10 @@ export async function handleIDFCDownload({
     instrRow.height = 72;
 
     /* ── Rows 3+: Payment data ─────────────────────────────────── */
-    const today  = new Date();
-    const dd     = String(today.getDate()).padStart(2, "0");
-    const mm     = String(today.getMonth() + 1).padStart(2, "0");
-    const yyyy   = today.getFullYear();
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, "0");
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const yyyy = today.getFullYear();
     const todayFormatted = `${dd}/${mm}/${yyyy}`; // DD/MM/YYYY as required by IDFC
 
     for (const row of rows) {
@@ -120,45 +126,49 @@ export async function handleIDFCDownload({
 
       const dataRow = worksheet.addRow([
         row.account_holder_name || row.user_name || "", // Beneficiary Name          — bank-registered name, MANDATORY
-        row.account_number || "",                       // Beneficiary Account Number — MANDATORY
-        row.ifsc_code      || "",                       // IFSC                       — MANDATORY for NEFT/RTGS
-        "NEFT",                                         // Transaction Type           — MANDATORY
-        debitAccountNumber,                             // Debit Account Number       — fill via env or setting
-        todayFormatted,                                 // Transaction Date           — DD/MM/YYYY MANDATORY
-        amount,                                         // Amount                     — MANDATORY
-        "INR",                                          // Currency                   — MANDATORY
-        row.mail    || "",                              // Beneficiary Email ID       — OPTIONAL
-        `Payout - ${row.user_id}`,                      // Remarks                    — OPTIONAL
-        row.user_id || "",                              // Custom Header – 1 (User ID)
-        row.contact || "",                              // Custom Header – 2 (Contact — from wallet)
-        "",                                             // Custom Header – 3 (PAN)
-        "",                                             // Custom Header – 4
-        "",                                             // Custom Header – 5
+        row.account_number || "", // Beneficiary Account Number — MANDATORY
+        row.ifsc_code || "", // IFSC                       — MANDATORY for NEFT/RTGS
+        "NEFT", // Transaction Type           — MANDATORY
+        debitAccountNumber, // Debit Account Number       — fill via env or setting
+        todayFormatted, // Transaction Date           — DD/MM/YYYY MANDATORY
+        amount, // Amount                     — MANDATORY
+        "INR", // Currency                   — MANDATORY
+        row.mail || "", // Beneficiary Email ID       — OPTIONAL
+        `Payout - ${row.user_id}`, // Remarks                    — OPTIONAL
+        row.user_id || "", // Custom Header – 1 (User ID)
+        row.contact || "", // Custom Header – 2 (Contact — from wallet)
+        "", // Custom Header – 3 (PAN)
+        "", // Custom Header – 4
+        "", // Custom Header – 5
       ]);
 
       // Style amount cell as number
       const amountCell = dataRow.getCell(7); // column G = Amount
-      amountCell.numFmt    = "#,##0.00";
+      amountCell.numFmt = "#,##0.00";
       amountCell.alignment = { horizontal: "right" };
 
       // Alternate row shading for readability
       const isEven = (dataRow.number - 2) % 2 === 0;
-      dataRow.eachCell((cell) => {
+      dataRow.eachCell((cell, colNumber) => {
         cell.fill = {
-          type:    "pattern",
+          type: "pattern",
           pattern: "solid",
           fgColor: { argb: isEven ? "FFFAFAFA" : "FFFFFFFF" },
         };
-        cell.font      = { size: 10 };
+        cell.font = { size: 10 };
         cell.alignment = cell.alignment || { vertical: "middle" };
-        cell.border    = { bottom: { style: "hair", color: { argb: "FFE0E0E0" } } };
+        cell.border = {
+          bottom: { style: "hair", color: { argb: "FFE0E0E0" } },
+        };
       });
 
       dataRow.height = 18;
     }
 
     /* ── Column widths (tuned to IDFC template proportions) ────── */
-    const colWidths = [22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14];
+    const colWidths = [
+      22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14,
+    ];
     worksheet.columns.forEach((col, i) => {
       if (col) col.width = colWidths[i] ?? 15;
     });
@@ -168,7 +178,7 @@ export async function handleIDFCDownload({
 
     /* ── Write and save ────────────────────────────────────────── */
     const buffer = await workbook.xlsx.writeBuffer();
-    const blob   = new Blob([buffer], {
+    const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
     saveAs(blob, `${fileName}.xlsx`);

@@ -67,7 +67,7 @@ export default function EligiblePayoutsPage() {
         setLoading(false);
       }
     },
-    [dateFilter],
+    [dateFilter]
   );
 
   useEffect(() => {
@@ -97,24 +97,23 @@ export default function EligiblePayoutsPage() {
 
   /* ── Columns ───────────────────────────────────────────────────── */
   const columns: GridColDef[] = [
-    { field: "user_id",             headerName: "User ID",      flex: 1   },
-    { field: "user_name",           headerName: "Username",     flex: 1   },
-    { field: "account_holder_name", headerName: "Account Name", flex: 1.2 },
-    { field: "contact",             headerName: "Contact",      flex: 1   },
+    { field: "user_id",             headerName: "User ID",        flex: 1   },
+    { field: "user_name",           headerName: "Username",       flex: 1   },
+    { field: "account_holder_name", headerName: "Account Name",   flex: 1.2 },
+    { field: "contact",             headerName: "Contact",        flex: 1   },
     {
-      field:      "rank",
+      field: "rank",
       headerName: "Rank",
-      flex:       0.8,
+      flex: 0.8,
       renderCell: (params: any) => {
         const value = params.value;
         if (
-          value === null      ||
+          value === null ||
           value === undefined ||
-          value === ""        ||
-          value === "none"    ||
+          value === "" ||
+          value === "none" ||
           String(value).toLowerCase() === "null"
-        )
-          return "-";
+        ) return "-";
 
         const num = Number(value);
         if (!isNaN(num) && num >= 1 && num <= 5) {
@@ -126,14 +125,14 @@ export default function EligiblePayoutsPage() {
         );
       },
     },
-    { field: "bank_name",      headerName: "Bank",        flex: 1   },
-    { field: "account_number", headerName: "Account No.", flex: 1.2 },
-    { field: "ifsc_code",      headerName: "IFSC",        flex: 1   },
+    { field: "bank_name",      headerName: "Bank",           flex: 1   },
+    { field: "account_number", headerName: "Account No.",    flex: 1.2 },
+    { field: "ifsc_code",      headerName: "IFSC",           flex: 1   },
     {
-      field:      "total_release",
+      field: "total_release",
       headerName: "Amount to Release (₹)",
-      flex:       1.2,
-      align:      "right",
+      flex: 1.2,
+      align: "right",
       renderCell: (p: GridRenderCellParams<any, number>) => (
         <span className="pr-4 font-bold text-green-700">
           ₹ {Number(p.value ?? 0).toFixed(2)}
@@ -143,37 +142,34 @@ export default function EligiblePayoutsPage() {
   ];
 
   /* ── Summary totals ────────────────────────────────────────────── */
-  const grandRelease  = reportData.reduce((s, r) => s + (r.total_release || 0), 0);
-  const totalOriginal = reportData.reduce(
-    (s, r) =>
-      s + (r.daily?.original_total || 0) + (r.fortnight?.original_total || 0),
-    0,
-  );
-  const totalDeducted = totalOriginal - grandRelease;
+  const grandRelease       = reportData.reduce((s, r) => s + (r.total_release        || 0), 0);
+  const totalOriginal      = reportData.reduce((s, r) =>
+    s + (r.daily?.original_total || 0) + (r.fortnight?.original_total || 0), 0);
+  const totalDeducted      = totalOriginal - grandRelease;
 
   const summaryCards = [
     {
       label: "Eligible Users",
       value: reportData.length.toString(),
-      sub:   null,
+      sub: null,
       color: "from-[#0C3978] to-[#106187]",
     },
     {
       label: "Total Original Amount",
       value: `₹ ${totalOriginal.toFixed(2)}`,
-      sub:   "Before order deductions",
+      sub: "Before order deductions",
       color: "from-[#106187] to-[#16B8E4]",
     },
     {
       label: "Total Deducted (Orders)",
       value: `₹ ${totalDeducted.toFixed(2)}`,
-      sub:   "Points used on orders",
+      sub: "Points used on orders",
       color: "from-orange-500 to-orange-400",
     },
     {
       label: "Grand Release Amount",
       value: `₹ ${grandRelease.toFixed(2)}`,
-      sub:   "Actual amount to release",
+      sub: "Actual amount to release",
       color: "from-green-600 to-green-500",
     },
   ];
