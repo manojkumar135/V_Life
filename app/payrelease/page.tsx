@@ -46,6 +46,14 @@ export default function EligiblePayoutsPage() {
   const [showModal, setShowModal]           = useState(false);
   const [selectedRows, setSelectedRows]     = useState<any[]>([]);
 
+  // ── Summary from backend (admin only) ──────────────────────────────
+  const [summary, setSummary] = useState({
+    eligible_users: 0,
+    total_original: 0,
+    total_deducted: 0,
+    grand_release:  0,
+  });
+
   /* ── Fetch ─────────────────────────────────────────────────────── */
   const fetchReport = useCallback(
     async (search: string) => {
@@ -60,6 +68,16 @@ export default function EligiblePayoutsPage() {
         const rows = data.data || [];
         setReportData(rows);
         setTotalItems(rows.length);
+
+        // Use backend-computed summary directly — no frontend recalculation
+        setSummary(
+          data.summary || {
+            eligible_users: rows.length,
+            total_original: 0,
+            total_deducted: 0,
+            grand_release:  0,
+          },
+        );
       } catch (error) {
         console.error("Error fetching eligible payouts:", error);
         ShowToast.error("Failed to load eligible payouts");
@@ -67,7 +85,7 @@ export default function EligiblePayoutsPage() {
         setLoading(false);
       }
     },
-    [dateFilter]
+    [dateFilter],
   );
 
   useEffect(() => {
@@ -129,6 +147,20 @@ export default function EligiblePayoutsPage() {
     { field: "account_number", headerName: "Account No.",    flex: 1.2 },
     { field: "ifsc_code",      headerName: "IFSC",           flex: 1   },
     {
+      field: "total_deducted",
+      headerName: "Deducted (₹)",
+      flex: 1,
+      align: "right",
+      renderCell: (p: GridRenderCellParams<any, number>) => (
+        <span className="pr-4 font-medium text-orange-600">
+          {(p.value ?? 0) > 0
+            ? `₹ ${Number(p.value).toFixed(2)}`
+            : <span className="text-gray-400">—</span>
+          }
+        </span>
+      ),
+    },
+    {
       field: "total_release",
       headerName: "Amount to Release (₹)",
       flex: 1.2,
@@ -141,35 +173,30 @@ export default function EligiblePayoutsPage() {
     },
   ];
 
-  /* ── Summary totals ────────────────────────────────────────────── */
-  const grandRelease       = reportData.reduce((s, r) => s + (r.total_release        || 0), 0);
-  const totalOriginal      = reportData.reduce((s, r) =>
-    s + (r.daily?.original_total || 0) + (r.fortnight?.original_total || 0), 0);
-  const totalDeducted      = totalOriginal - grandRelease;
-
+  /* ── Summary cards — from backend ─────────────────────────────── */
   const summaryCards = [
     {
       label: "Eligible Users",
-      value: reportData.length.toString(),
-      sub: null,
+      value: summary.eligible_users.toString(),
+      sub:   null,
       color: "from-[#0C3978] to-[#106187]",
     },
     {
       label: "Total Original Amount",
-      value: `₹ ${totalOriginal.toFixed(2)}`,
-      sub: "Before order deductions",
+      value: `₹ ${Number(summary.total_original).toFixed(2)}`,
+      sub:   "Net after TDS/admin",
       color: "from-[#106187] to-[#16B8E4]",
     },
     {
       label: "Total Deducted (Orders)",
-      value: `₹ ${totalDeducted.toFixed(2)}`,
-      sub: "Points used on orders",
+      value: `₹ ${Number(summary.total_deducted).toFixed(2)}`,
+      sub:   "Points used on orders",
       color: "from-orange-500 to-orange-400",
     },
     {
       label: "Grand Release Amount",
-      value: `₹ ${grandRelease.toFixed(2)}`,
-      sub: "Actual amount to release",
+      value: `₹ ${Number(summary.grand_release).toFixed(2)}`,
+      sub:   "Actual amount to release",
       color: "from-green-600 to-green-500",
     },
   ];
@@ -242,6 +269,10 @@ export default function EligiblePayoutsPage() {
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-[#0C3978]" />
             Amount to Release = Score balance (original − points used on orders)
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-3 rounded-full bg-orange-500" />
+            Deducted = Daily/Fortnight points spent on orders
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-green-600" />

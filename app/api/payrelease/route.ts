@@ -55,7 +55,7 @@ function getBonusType(
 
 type PayoutGroup = {
   original_total: number; // sum of payout.amount (gross, for reference)
-  withdraw_total: number; // sum of payout.withdraw_amount (net after TDS/admin)
+  withdraw_total: number; // sum of payout.withdraw_amount (net after TDS/admin) — real baseline
   payable:        number; // final amount to release (may differ from withdraw_total for daily/fortnight)
   payout_count:   number;
   payout_ids:     string[];
@@ -81,6 +81,10 @@ type UserGroup = {
   // score snapshot for transparency
   score_daily_balance:     number;
   score_fortnight_balance: number;
+  // per-user deducted (only daily + fortnight are spendable)
+  deducted_daily:          number;
+  deducted_fortnight:      number;
+  total_deducted:          number;
   // totals
   total_release: number;
 };
@@ -131,7 +135,17 @@ export async function GET(request: Request) {
 
     if (allUserIds.length === 0) {
       return NextResponse.json(
-        { success: true, data: [], total: 0 },
+        {
+          success: true,
+          data:    [],
+          total:   0,
+          summary: {
+            eligible_users: 0,
+            total_original: 0,
+            total_deducted: 0,
+            grand_release:  0,
+          },
+        },
         { status: 200 },
       );
     }
@@ -199,6 +213,9 @@ export async function GET(request: Request) {
           quickstar:      null,
           score_daily_balance:     0,
           score_fortnight_balance: 0,
+          deducted_daily:          0,
+          deducted_fortnight:      0,
+          total_deducted:          0,
           total_release:           0,
         });
       }
@@ -234,21 +251,23 @@ export async function GET(request: Request) {
     for (const payout of allPayouts as any[]) {
       if (!eligibleWalletMap.has(payout.user_id)) continue;
       const bonusType = getBonusType(payout.name);
-      if (!bonusType) continue; // unknown payout type — skip
+      if (!bonusType) continue;
 
       const group = getOrCreate(payout, eligibleWalletMap.get(payout.user_id));
       addToGroup(group, bonusType, payout);
     }
 
-    /* ── 10. Set payable amounts ──────────────────────────────────────────
+    /* ── 10. Set payable amounts + per-user deductions ───────────────────
        daily + fortnight:
-         Pay Score.[bucket].balance — this already reflects order deductions.
-         (balance = earned − used. If user spent points on orders, balance is less.)
-         We do NOT use payout.withdraw_amount for these types.
+         Baseline  = withdraw_total (net after TDS/admin — the real original)
+         Payable   = score_balance  (already reflects order deductions)
+         Deducted  = withdraw_total - score_balance (points spent on orders)
+                     Math.max(0, ...) guards against any edge-case negative
 
        referral + quickstar:
-         Pay sum of payout.withdraw_amount — these are NOT spendable,
-         so original net amount is always the payable amount.
+         NOT spendable — balance never reduced by orders.
+         Payable  = withdraw_total (always the full net amount)
+         Deducted = 0
     ─────────────────────────────────────────────────────────────────────── */
     for (const group of userMap.values()) {
       const sc = scoreMap.get(group.user_id);
@@ -256,25 +275,32 @@ export async function GET(request: Request) {
       group.score_daily_balance     = sc?.daily?.balance     ?? 0;
       group.score_fortnight_balance = sc?.fortnight?.balance ?? 0;
 
-      // daily → use live score balance (not payout.withdraw_amount)
       if (group.daily) {
-        group.daily.payable = group.score_daily_balance;
+        group.daily.payable      = group.score_daily_balance;
+        group.deducted_daily     = Math.max(
+          0,
+          group.daily.withdraw_total - group.score_daily_balance,
+        );
       }
 
-      // fortnight → use live score balance (not payout.withdraw_amount)
       if (group.fortnight) {
-        group.fortnight.payable = group.score_fortnight_balance;
+        group.fortnight.payable  = group.score_fortnight_balance;
+        group.deducted_fortnight = Math.max(
+          0,
+          group.fortnight.withdraw_total - group.score_fortnight_balance,
+        );
       }
 
-      // referral → sum of withdraw_amount (fixed, not score-based)
       if (group.referral) {
         group.referral.payable = group.referral.withdraw_total;
       }
 
-      // quickstar → sum of withdraw_amount (fixed, not score-based)
       if (group.quickstar) {
         group.quickstar.payable = group.quickstar.withdraw_total;
       }
+
+      group.total_deducted =
+        (group.deducted_daily || 0) + (group.deducted_fortnight || 0);
 
       group.total_release =
         (group.daily?.payable     || 0) +
@@ -309,8 +335,43 @@ export async function GET(request: Request) {
     /* ── 13. Sort by total_release descending ── */
     result.sort((a, b) => b.total_release - a.total_release);
 
+    /* ── 14. Compute summary totals (backend — for admin cards) ─────────
+       total_original = sum of all withdraw_totals (net after TDS/admin)
+       total_deducted = only daily + fortnight (spendable buckets only)
+       grand_release  = sum of all total_release (actual bank transfer)
+    ─────────────────────────────────────────────────────────────────────── */
+    const summaryTotalOriginal = result.reduce(
+      (s, r) =>
+        s +
+        (r.daily?.withdraw_total     || 0) +
+        (r.fortnight?.withdraw_total || 0) +
+        (r.referral?.withdraw_total  || 0) +
+        (r.quickstar?.withdraw_total || 0),
+      0,
+    );
+
+    const summaryTotalDeducted = result.reduce(
+      (s, r) => s + (r.total_deducted || 0),
+      0,
+    );
+
+    const summaryGrandRelease = result.reduce(
+      (s, r) => s + (r.total_release || 0),
+      0,
+    );
+
     return NextResponse.json(
-      { success: true, data: result, total: result.length },
+      {
+        success: true,
+        data:    result,
+        total:   result.length,
+        summary: {
+          eligible_users: result.length,
+          total_original: summaryTotalOriginal,
+          total_deducted: summaryTotalDeducted,
+          grand_release:  summaryGrandRelease,
+        },
+      },
       { status: 200 },
     );
   } catch (error: any) {

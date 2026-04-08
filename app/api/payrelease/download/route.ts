@@ -29,7 +29,7 @@
 
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { DailyPayout } from "@/models/payout";
+import { DailyPayout, WeeklyPayout } from "@/models/payout"; // ← WeeklyPayout added (was missing)
 import { Wallet } from "@/models/wallet";
 import { Score } from "@/models/score";
 import { Withdraw } from "@/models/withdraw";
@@ -108,6 +108,10 @@ type UserGroup = {
   score_fortnight_balance:  number;
   score_referral_balance:   number;
   score_quickstar_balance:  number;
+  // per-user deductions — consistent with GET route
+  deducted_daily:           number;
+  deducted_fortnight:       number;
+  total_deducted:           number;
   total_release:            number;
 };
 
@@ -137,6 +141,7 @@ async function buildExcel(
     { header: "Fortnight Bonus (₹)", key: "fortnight",      width: 18 },
     { header: "Referral Bonus (₹)",  key: "referral",       width: 16 },
     { header: "Quickstar Bonus (₹)", key: "quickstar",      width: 16 },
+    { header: "Deducted (₹)",        key: "deducted",       width: 16 },
     { header: "Total Release (₹)",   key: "total",          width: 18 },
   ];
 
@@ -164,6 +169,7 @@ async function buildExcel(
       fortnight:      r.fortnight?.payable || 0,
       referral:       r.referral?.payable  || 0,
       quickstar:      r.quickstar?.payable || 0,
+      deducted:       r.total_deducted     || 0,
       total:          r.total_release,
     });
 
@@ -175,10 +181,12 @@ async function buildExcel(
     }
 
     // Bold + blue for total column
-    row.getCell("total").font = { bold: true, color: { argb: "FF1F4E79" }, name: "Arial" };
+    row.getCell("total").font    = { bold: true, color: { argb: "FF1F4E79" }, name: "Arial" };
+    // Orange for deducted column
+    row.getCell("deducted").font = { bold: false, color: { argb: "FFE65100" }, name: "Arial" };
 
     // Number format for amount cells
-    ["daily", "fortnight", "referral", "quickstar", "total"].forEach((k) => {
+    ["daily", "fortnight", "referral", "quickstar", "deducted", "total"].forEach((k) => {
       row.getCell(k).numFmt = `"₹"#,##0.00`;
     });
 
@@ -190,8 +198,8 @@ async function buildExcel(
   const totalsRow = ws.getRow(lastData + 2);
   totalsRow.getCell("bank_name").value = `Total — ${rows.length} users | ${releaseDate}`;
   totalsRow.getCell("bank_name").font  = { bold: true, italic: true, name: "Arial" };
-  (["daily", "fortnight", "referral", "quickstar", "total"] as const).forEach((k, idx) => {
-    const colLetter = ["K", "L", "M", "N", "O"][idx];
+  (["daily", "fortnight", "referral", "quickstar", "deducted", "total"] as const).forEach((k, idx) => {
+    const colLetter = ["K", "L", "M", "N", "O", "P"][idx];
     totalsRow.getCell(k).value  = { formula: `SUM(${colLetter}2:${colLetter}${lastData})` };
     totalsRow.getCell(k).numFmt = `"₹"#,##0.00`;
     totalsRow.getCell(k).font   = { bold: true, name: "Arial" };
@@ -220,7 +228,7 @@ export async function POST(_request: Request) {
       hour12: false,
     });
 
-    /* ── 1. Fetch all pending payouts ── */
+    /* ── 1. Fetch all pending payouts from BOTH collections ── */
     const baseQuery: any = {
       status: { $regex: /^pending$/i },
       $or: [
@@ -229,7 +237,13 @@ export async function POST(_request: Request) {
       ],
     };
 
-    const allPayouts = await DailyPayout.find(baseQuery).lean();
+    // ← Fixed: was only fetching DailyPayout; WeeklyPayout added to match GET route
+    const [dailyPayouts, weeklyPayouts] = await Promise.all([
+      DailyPayout.find(baseQuery).lean(),
+      WeeklyPayout.find(baseQuery).lean(),
+    ]);
+
+    const allPayouts = [...dailyPayouts, ...weeklyPayouts];
 
     const allUserIds = [...new Set(allPayouts.map((p: any) => p.user_id))];
     if (allUserIds.length === 0) {
@@ -301,6 +315,9 @@ export async function POST(_request: Request) {
           score_fortnight_balance: 0,
           score_referral_balance:  0,
           score_quickstar_balance: 0,
+          deducted_daily:          0,
+          deducted_fortnight:      0,
+          total_deducted:          0,
           total_release:           0,
         });
       }
@@ -366,7 +383,15 @@ export async function POST(_request: Request) {
       addToGroup(group, bonusType, payout, wallet);
     }
 
-    /* ── 5. Set payable from score balances ── */
+    /* ── 5. Set payable from score balances + compute per-user deductions ──
+       daily + fortnight:
+         Baseline  = withdraw_total (net after TDS/admin — real original)
+         Payable   = score_balance  (already reflects order deductions)
+         Deducted  = withdraw_total - score_balance (points spent on orders)
+
+       referral + quickstar:
+         NOT spendable — payable = withdraw_total, deducted = 0
+    ─────────────────────────────────────────────────────────────────────── */
     for (const group of userMap.values()) {
       const sc = scoreMap.get(group.user_id);
 
@@ -375,10 +400,32 @@ export async function POST(_request: Request) {
       group.score_referral_balance  = sc?.referral?.balance  ?? 0;
       group.score_quickstar_balance = sc?.quickstar?.balance ?? 0;
 
-      if (group.daily)     group.daily.payable     = group.score_daily_balance;
-      if (group.fortnight) group.fortnight.payable = group.score_fortnight_balance;
-      if (group.referral)  group.referral.payable  = group.referral.withdraw_total;
-      if (group.quickstar) group.quickstar.payable = group.quickstar.withdraw_total;
+      if (group.daily) {
+        group.daily.payable      = group.score_daily_balance;
+        group.deducted_daily     = Math.max(
+          0,
+          group.daily.withdraw_total - group.score_daily_balance,
+        );
+      }
+
+      if (group.fortnight) {
+        group.fortnight.payable  = group.score_fortnight_balance;
+        group.deducted_fortnight = Math.max(
+          0,
+          group.fortnight.withdraw_total - group.score_fortnight_balance,
+        );
+      }
+
+      if (group.referral) {
+        group.referral.payable = group.referral.withdraw_total;
+      }
+
+      if (group.quickstar) {
+        group.quickstar.payable = group.quickstar.withdraw_total;
+      }
+
+      group.total_deducted =
+        (group.deducted_daily || 0) + (group.deducted_fortnight || 0);
 
       group.total_release =
         (group.daily?.payable     || 0) +
@@ -415,25 +462,22 @@ export async function POST(_request: Request) {
          B) Payout update:
             - Set status → "completed"
             - Snapshot bank/account details from wallet onto the payout record
-              (so the payout is self-contained for audit even if wallet changes)
             - Record batch_id, release date/time
 
          C) Withdraw records: one document per payout_id
             - For daily/fortnight: released_amount = proportional share of balance
             - For referral/quickstar: released_amount = payout.withdraw_amount
-            - NEFT fields (neft_utr etc.) are null — filled in later via batch update API
+            - NEFT fields null — filled in later via batch update API
 
-         D) PayoutBatch document: one per download event (tracks the whole release)
+         D) PayoutBatch document: one per download event
 
        Proportional share for daily/fortnight:
-         If user has 3 daily payouts each worth ₹1000 original (₹3000 total)
-         but score.daily.balance = ₹2500 (used ₹500 on orders),
-         each payout gets: (its_withdraw_amount / total_withdraw_total) * balance
+         Each payout gets: (its_withdraw_amount / total_withdraw_total) * balance
          This distributes the balance fairly across individual payout records.
     ─────────────────────────────────────────────────────────────────────── */
 
-    const scoreOps:    any[] = [];
-    const payoutOps:   any[] = [];
+    const scoreOps:     any[] = [];
+    const payoutOps:    any[] = [];
     const withdrawDocs: any[] = [];
     let   totalPayoutCount = 0;
     let   grandTotal       = 0;
@@ -456,29 +500,29 @@ export async function POST(_request: Request) {
       const referralBal  = sc?.referral?.balance  ?? 0;
       const quickstarBal = sc?.quickstar?.balance ?? 0;
 
-      const $incFields: any  = {};
-      const $setFields: any  = { updated_at: now };
+      const $incFields:  any = {};
+      const $setFields:  any = { updated_at: now };
       const $pushFields: any = {};
 
       if (row.daily && dailyBal > 0) {
-        $incFields["daily.withdraw"]      = dailyBal;
-        $setFields["daily.balance"]       = 0;
-        $pushFields["daily.history.out"]  = outHistoryEntry(dailyBal, batchId);
+        $incFields["daily.withdraw"]     = dailyBal;
+        $setFields["daily.balance"]      = 0;
+        $pushFields["daily.history.out"] = outHistoryEntry(dailyBal, batchId);
       }
       if (row.fortnight && fortnightBal > 0) {
-        $incFields["fortnight.withdraw"]      = fortnightBal;
-        $setFields["fortnight.balance"]       = 0;
-        $pushFields["fortnight.history.out"]  = outHistoryEntry(fortnightBal, batchId);
+        $incFields["fortnight.withdraw"]     = fortnightBal;
+        $setFields["fortnight.balance"]      = 0;
+        $pushFields["fortnight.history.out"] = outHistoryEntry(fortnightBal, batchId);
       }
       if (row.referral && referralBal > 0) {
-        $incFields["referral.withdraw"]      = referralBal;
-        $setFields["referral.balance"]       = 0;
-        $pushFields["referral.history.out"]  = outHistoryEntry(referralBal, batchId);
+        $incFields["referral.withdraw"]     = referralBal;
+        $setFields["referral.balance"]      = 0;
+        $pushFields["referral.history.out"] = outHistoryEntry(referralBal, batchId);
       }
       if (row.quickstar && quickstarBal > 0) {
-        $incFields["quickstar.withdraw"]      = quickstarBal;
-        $setFields["quickstar.balance"]       = 0;
-        $pushFields["quickstar.history.out"]  = outHistoryEntry(quickstarBal, batchId);
+        $incFields["quickstar.withdraw"]     = quickstarBal;
+        $setFields["quickstar.balance"]      = 0;
+        $pushFields["quickstar.history.out"] = outHistoryEntry(quickstarBal, batchId);
       }
 
       const updateDoc: any = {};
@@ -513,29 +557,26 @@ export async function POST(_request: Request) {
         totalPayoutCount += group.payout_records.length;
 
         for (const rec of group.payout_records) {
-          /* ── B: Update payout record with status + account snapshot + batch info ── */
+          /* ── B: Update payout status + account snapshot + batch info ── */
           payoutOps.push({
             updateOne: {
               filter: { payout_id: rec.payout_id },
               update: {
                 $set: {
-                  status:              "completed",
-                  last_modified_at:    now,
-                  last_modified_by:    "system_weekly_release",
-                  remarks:             `Released via batch ${batchId} on ${releaseDate} at ${releaseTime}`,
-                  // Snapshot of bank/account details at time of release
-                  // (wallet may change later — this preserves the exact details used)
-                  released_batch_id:      batchId,
-                  released_date:          releaseDate,
-                  released_time:          releaseTime,
-                  released_at:            now,
-                  // Account details snapshot from wallet
-                  account_holder_name:    rec.account_holder_name,
-                  bank_name:              rec.bank_name,
-                  account_number:         rec.account_number,
-                  ifsc_code:              rec.ifsc_code,
-                  pan_number:             rec.pan_number,
-                  wallet_id:              rec.wallet_id,
+                  status:           "completed",
+                  last_modified_at: now,
+                  last_modified_by: "system_weekly_release",
+                  remarks:          `Released via batch ${batchId} on ${releaseDate} at ${releaseTime}`,
+                  released_batch_id:   batchId,
+                  released_date:       releaseDate,
+                  released_time:       releaseTime,
+                  released_at:         now,
+                  account_holder_name: rec.account_holder_name,
+                  bank_name:           rec.bank_name,
+                  account_number:      rec.account_number,
+                  ifsc_code:           rec.ifsc_code,
+                  pan_number:          rec.pan_number,
+                  wallet_id:           rec.wallet_id,
                 },
               },
             },
@@ -577,15 +618,15 @@ export async function POST(_request: Request) {
             score_balance_before: bal,
             score_balance_after:  0,
             // NEFT details — null at creation, filled later via batch update API
-            neft_utr:              null,
-            neft_transaction_date: null,
-            neft_transaction_time: null,
-            neft_bank_ref:         null,
-            neft_remarks:          null,
+            neft_utr:               null,
+            neft_transaction_date:  null,
+            neft_transaction_time:  null,
+            neft_bank_ref:          null,
+            neft_remarks:           null,
             transaction_updated_at: null,
             transaction_updated_by: null,
-            status:  "completed",
-            remarks: `NEFT release via batch ${batchId}`,
+            status:     "completed",
+            remarks:    `NEFT release via batch ${batchId}`,
             created_at: now,
           });
         }
@@ -600,8 +641,12 @@ export async function POST(_request: Request) {
         : Promise.resolve(),
 
       // B: Mark payout records completed + snapshot account details
+      // ← bulkWrite covers both DailyPayout and WeeklyPayout payout_ids
       payoutOps.length > 0
-        ? DailyPayout.bulkWrite(payoutOps)
+        ? Promise.all([
+            DailyPayout.bulkWrite(payoutOps),
+            WeeklyPayout.bulkWrite(payoutOps),
+          ])
         : Promise.resolve(),
 
       // C: Insert Withdraw records (upsert to avoid duplicates if re-run)
