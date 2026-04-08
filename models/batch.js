@@ -66,7 +66,8 @@ const BatchSchema = new mongoose.Schema(
   }
 );
 
-BatchSchema.index({ batch_id: 1 });
+// ── Indexes ───────────────────────────────────────────────────────────────────
+// Note: batch_id index is auto-created by unique: true above — not repeated here
 BatchSchema.index({ status: 1, released_at: -1 });
 BatchSchema.index({ released_at: -1 });
 

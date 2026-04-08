@@ -57,11 +57,11 @@ import { Withdraw } from "@/models/withdraw";
 
 export async function GET(
   _req: Request,
-  { params }: { params: { batchId: string } },
+  { params }: { params: Promise<{ batchId: string }> },  // 👈 Promise<>
 ) {
   try {
     await connectDB();
-    const { batchId } = params;
+    const { batchId } = await params;
 
     const [batch, withdraws] = await Promise.all([
       PayoutBatch.findOne({ batch_id: batchId }).lean(),
@@ -108,11 +108,11 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { batchId: string } },
+  { params }: { params: Promise<{ batchId: string }> },  // 👈 Promise<>
 ) {
   try {
     await connectDB();
-    const { batchId } = params;
+    const { batchId } = await params;  
     const body = await request.json();
     const { mode, updated_by = "admin" } = body;
     const now = new Date();

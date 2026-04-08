@@ -89,9 +89,10 @@ const WithdrawSchema = new mongoose.Schema(
   }
 );
 
+// ── Indexes ───────────────────────────────────────────────────────────────────
+// Note: payout_id index is auto-created by unique: true above — not repeated here
 WithdrawSchema.index({ user_id: 1, released_at: -1 });
 WithdrawSchema.index({ batch_id: 1 });
-WithdrawSchema.index({ payout_id: 1 });
 WithdrawSchema.index({ neft_utr: 1 });
 WithdrawSchema.index({ batch_id: 1, neft_utr: 1 });
 
