@@ -35,23 +35,23 @@ const AmtCell = ({
 
 export default function EligiblePayoutsPage() {
   const { user } = useVLife();
-  const router   = useRouter();
+  const router = useRouter();
 
   const { query, setQuery, debouncedQuery } = useSearch();
-  const [reportData, setReportData]         = useState<any[]>([]);
-  const [totalItems, setTotalItems]         = useState(0);
-  const [loading, setLoading]               = useState(false);
-  const [downloading, setDownloading]       = useState(false);
-  const [dateFilter, setDateFilter]         = useState<any>(null);
-  const [showModal, setShowModal]           = useState(false);
-  const [selectedRows, setSelectedRows]     = useState<any[]>([]);
+  const [reportData, setReportData] = useState<any[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [dateFilter, setDateFilter] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<any[]>([]);
 
   // ── Summary from backend (admin only) ──────────────────────────────
   const [summary, setSummary] = useState({
     eligible_users: 0,
     total_original: 0,
     total_deducted: 0,
-    grand_release:  0,
+    grand_release: 0,
   });
 
   /* ── Fetch ─────────────────────────────────────────────────────── */
@@ -61,8 +61,11 @@ export default function EligiblePayoutsPage() {
         setLoading(true);
         const params: any = {
           search: search || "",
-          ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
-          ...(dateFilter?.type === "range" && { from: dateFilter.from, to: dateFilter.to }),
+          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
+          ...(dateFilter?.type === "range" && {
+            from: dateFilter.from,
+            to: dateFilter.to,
+          }),
         };
         const { data } = await axios.get(API_URL, { params });
         const rows = data.data || [];
@@ -75,7 +78,7 @@ export default function EligiblePayoutsPage() {
             eligible_users: rows.length,
             total_original: 0,
             total_deducted: 0,
-            grand_release:  0,
+            grand_release: 0,
           },
         );
       } catch (error) {
@@ -104,21 +107,28 @@ export default function EligiblePayoutsPage() {
     handleIDFCDownload({
       rows,
       fileName: "idfc_payout_upload",
-      onStart:  () => setDownloading(true),
+      onStart: () => setDownloading(true),
       onFinish: () => setDownloading(false),
     });
   };
 
   /* ── Pagination ────────────────────────────────────────────────── */
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem, goToPage } =
-    usePagination({ totalItems, itemsPerPage: 12, onPageChange: () => {} });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({ totalItems, itemsPerPage: 12, onPageChange: () => {} });
 
   /* ── Columns ───────────────────────────────────────────────────── */
   const columns: GridColDef[] = [
-    { field: "user_id",             headerName: "User ID",        flex: 1   },
-    { field: "user_name",           headerName: "Username",       flex: 1   },
-    { field: "account_holder_name", headerName: "Account Name",   flex: 1.2 },
-    { field: "contact",             headerName: "Contact",        flex: 1   },
+    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_name", headerName: "Username", flex: 1 },
+    { field: "account_holder_name", headerName: "Account Name", flex: 1.2 },
+    { field: "contact", headerName: "Contact", flex: 1 },
     {
       field: "rank",
       headerName: "Rank",
@@ -131,7 +141,8 @@ export default function EligiblePayoutsPage() {
           value === "" ||
           value === "none" ||
           String(value).toLowerCase() === "null"
-        ) return "-";
+        )
+          return "-";
 
         const num = Number(value);
         if (!isNaN(num) && num >= 1 && num <= 5) {
@@ -143,9 +154,9 @@ export default function EligiblePayoutsPage() {
         );
       },
     },
-    { field: "bank_name",      headerName: "Bank",           flex: 1   },
-    { field: "account_number", headerName: "Account No.",    flex: 1.2 },
-    { field: "ifsc_code",      headerName: "IFSC",           flex: 1   },
+    { field: "bank_name", headerName: "Bank", flex: 1 },
+    { field: "account_number", headerName: "Account No.", flex: 1.2 },
+    { field: "ifsc_code", headerName: "IFSC", flex: 1 },
     {
       field: "total_deducted",
       headerName: "Deducted (₹)",
@@ -153,10 +164,11 @@ export default function EligiblePayoutsPage() {
       align: "right",
       renderCell: (p: GridRenderCellParams<any, number>) => (
         <span className="pr-4 font-medium text-orange-600">
-          {(p.value ?? 0) > 0
-            ? `₹ ${Number(p.value).toFixed(2)}`
-            : <span className="text-gray-400">—</span>
-          }
+          {(p.value ?? 0) > 0 ? (
+            `₹ ${Number(p.value).toFixed(2)}`
+          ) : (
+            <span className="text-gray-400">—</span>
+          )}
         </span>
       ),
     },
@@ -178,25 +190,25 @@ export default function EligiblePayoutsPage() {
     {
       label: "Eligible Users",
       value: summary.eligible_users.toString(),
-      sub:   null,
+      sub: null,
       color: "from-[#0C3978] to-[#106187]",
     },
     {
       label: "Total Original Amount",
       value: `₹ ${Number(summary.total_original).toFixed(2)}`,
-      sub:   "Net after TDS/admin",
+      sub: "Net after TDS/admin",
       color: "from-[#106187] to-[#16B8E4]",
     },
     {
       label: "Total Deducted (Orders)",
       value: `₹ ${Number(summary.total_deducted).toFixed(2)}`,
-      sub:   "Points used on orders",
+      sub: "Points used on orders",
       color: "from-orange-500 to-orange-400",
     },
     {
       label: "Grand Release Amount",
       value: `₹ ${Number(summary.grand_release).toFixed(2)}`,
-      sub:   "Actual amount to release",
+      sub: "Actual amount to release",
       color: "from-green-600 to-green-500",
     },
   ];
@@ -207,7 +219,6 @@ export default function EligiblePayoutsPage() {
   return (
     <Layout>
       <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
-
         {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <Loader />
@@ -253,7 +264,7 @@ export default function EligiblePayoutsPage() {
           {summaryCards.map((card) => (
             <div
               key={card.label}
-              className={`bg-gradient-to-br ${card.color} text-white rounded-xl p-4 shadow`}
+              className={`bg-linear-to-br ${card.color} text-white rounded-xl px-4 py-3 shadow`}
             >
               <p className="text-xs opacity-80 mb-1">{card.label}</p>
               <p className="text-base font-bold truncate">{card.value}</p>

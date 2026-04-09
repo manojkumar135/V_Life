@@ -69,9 +69,16 @@ export async function GET(request: Request) {
       );
     }
 
-    const wallet = await Wallet.findOne({ user_id: user.user_id }).lean();
+    // GET handler — clean fix
+const wallet = await Wallet.findOne({ user_id: user.user_id })
+  .select(
+    "wallet_id account_holder_name bank_name account_number ifsc_code gst " +
+    "pan_number pan_name pan_dob pan_file pan_verified " +
+    "aadhar_number aadhar_front aadhar_back cheque bank_book"
+  )
+  .lean();
 
-    const combinedData = { ...user, ...(wallet || {}) };
+const combinedData = { ...user, ...(wallet || {}) };
 
     return NextResponse.json(
       { success: true, data: combinedData },

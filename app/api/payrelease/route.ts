@@ -38,15 +38,15 @@ const DAILY_NAMES = ["Matching Bonus", "Direct Sales Bonus"];
 const FORTNIGHT_NAMES = ["Infinity Matching Bonus", "Infinity Sales Bonus"];
 
 // Names that are NOT spendable — pay withdraw_amount directly
-const REFERRAL_NAMES  = ["Referral Bonus"];
+const REFERRAL_NAMES = ["Referral Bonus"];
 const QUICKSTAR_NAMES = ["Quick Star Bonus"];
 
 function getBonusType(
   name: string,
 ): "daily" | "fortnight" | "referral" | "quickstar" | null {
-  if (DAILY_NAMES.includes(name))     return "daily";
+  if (DAILY_NAMES.includes(name)) return "daily";
   if (FORTNIGHT_NAMES.includes(name)) return "fortnight";
-  if (REFERRAL_NAMES.includes(name))  return "referral";
+  if (REFERRAL_NAMES.includes(name)) return "referral";
   if (QUICKSTAR_NAMES.includes(name)) return "quickstar";
   return null;
 }
@@ -56,35 +56,35 @@ function getBonusType(
 type PayoutGroup = {
   original_total: number; // sum of payout.amount (gross, for reference)
   withdraw_total: number; // sum of payout.withdraw_amount (net after TDS/admin) — real baseline
-  payable:        number; // final amount to release (may differ from withdraw_total for daily/fortnight)
-  payout_count:   number;
-  payout_ids:     string[];
-  latest_date:    string;
+  payable: number; // final amount to release (may differ from withdraw_total for daily/fortnight)
+  payout_count: number;
+  payout_ids: string[];
+  latest_date: string;
 };
 
 type UserGroup = {
-  user_id:             string;
-  user_name:           string;
+  user_id: string;
+  user_name: string;
   account_holder_name: string;
-  contact:             string;
-  mail:                string;
-  rank:                string;
-  wallet_id:           string;
-  pan_number:          string;
-  bank_name:           string;
-  account_number:      string;
-  ifsc_code:           string;
-  daily:               PayoutGroup | null;
-  fortnight:           PayoutGroup | null;
-  referral:            PayoutGroup | null;
-  quickstar:           PayoutGroup | null;
+  contact: string;
+  mail: string;
+  rank: string;
+  wallet_id: string;
+  pan_number: string;
+  bank_name: string;
+  account_number: string;
+  ifsc_code: string;
+  daily: PayoutGroup | null;
+  fortnight: PayoutGroup | null;
+  referral: PayoutGroup | null;
+  quickstar: PayoutGroup | null;
   // score snapshot for transparency
-  score_daily_balance:     number;
+  score_daily_balance: number;
   score_fortnight_balance: number;
   // per-user deducted (only daily + fortnight are spendable)
-  deducted_daily:          number;
-  deducted_fortnight:      number;
-  total_deducted:          number;
+  deducted_daily: number;
+  deducted_fortnight: number;
+  total_deducted: number;
   // totals
   total_release: number;
 };
@@ -96,8 +96,8 @@ export async function GET(request: Request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
-    const from   = searchParams.get("from")   || null;
-    const to     = searchParams.get("to")     || null;
+    const from = searchParams.get("from") || null;
+    const to = searchParams.get("to") || null;
     const search = searchParams.get("search") || "";
 
     /* ── 1. Date range (applied to payout records only) ── */
@@ -137,13 +137,13 @@ export async function GET(request: Request) {
       return NextResponse.json(
         {
           success: true,
-          data:    [],
-          total:   0,
+          data: [],
+          total: 0,
           summary: {
             eligible_users: 0,
             total_original: 0,
             total_deducted: 0,
-            grand_release:  0,
+            grand_release: 0,
           },
         },
         { status: 200 },
@@ -156,15 +156,15 @@ export async function GET(request: Request) {
       Score.find(
         { user_id: { $in: allUserIds } },
         {
-          user_id:              1,
-          "daily.balance":      1,
-          "daily.earned":       1,
-          "daily.used":         1,
-          "fortnight.balance":  1,
-          "fortnight.earned":   1,
-          "fortnight.used":     1,
-          "referral.balance":   1,
-          "quickstar.balance":  1,
+          user_id: 1,
+          "daily.balance": 1,
+          "daily.earned": 1,
+          "daily.used": 1,
+          "fortnight.balance": 1,
+          "fortnight.earned": 1,
+          "fortnight.used": 1,
+          "referral.balance": 1,
+          "quickstar.balance": 1,
         },
       ).lean(),
     ]);
@@ -192,31 +192,31 @@ export async function GET(request: Request) {
     const getOrCreate = (payout: any, wallet: any): UserGroup => {
       if (!userMap.has(payout.user_id)) {
         userMap.set(payout.user_id, {
-          user_id:             payout.user_id,
-          user_name:           payout.user_name || wallet?.user_name || "",
+          user_id: payout.user_id,
+          user_name: payout.user_name || wallet?.user_name || "",
           account_holder_name:
             wallet?.account_holder_name ||
-            payout.account_holder_name  ||
-            payout.user_name            ||
+            payout.account_holder_name ||
+            payout.user_name ||
             "",
-          contact:        wallet?.contact  || payout.contact || "",
-          mail:           wallet?.mail     || payout.mail    || "",
-          rank:           payout.rank      || wallet?.rank   || "",
-          wallet_id:      wallet?.wallet_id      || "",
-          pan_number:     wallet?.pan_number     || "",
-          bank_name:      wallet?.bank_name      || "",
+          contact: wallet?.contact || payout.contact || "",
+          mail: wallet?.mail || payout.mail || "",
+          rank: wallet?.rank || "",
+          wallet_id: wallet?.wallet_id || "",
+          pan_number: wallet?.pan_number || "",
+          bank_name: wallet?.bank_name || "",
           account_number: wallet?.account_number || "",
-          ifsc_code:      wallet?.ifsc_code      || "",
-          daily:          null,
-          fortnight:      null,
-          referral:       null,
-          quickstar:      null,
-          score_daily_balance:     0,
+          ifsc_code: wallet?.ifsc_code || "",
+          daily: null,
+          fortnight: null,
+          referral: null,
+          quickstar: null,
+          score_daily_balance: 0,
           score_fortnight_balance: 0,
-          deducted_daily:          0,
-          deducted_fortnight:      0,
-          total_deducted:          0,
-          total_release:           0,
+          deducted_daily: 0,
+          deducted_fortnight: 0,
+          total_deducted: 0,
+          total_release: 0,
         });
       }
       return userMap.get(payout.user_id)!;
@@ -231,16 +231,16 @@ export async function GET(request: Request) {
         group[key] = {
           original_total: 0,
           withdraw_total: 0,
-          payable:        0,
-          payout_count:   0,
-          payout_ids:     [],
-          latest_date:    "",
+          payable: 0,
+          payout_count: 0,
+          payout_ids: [],
+          latest_date: "",
         };
       }
       const g = group[key]!;
-      g.original_total += payout.amount          || 0;
+      g.original_total += payout.amount || 0;
       g.withdraw_total += payout.withdraw_amount || 0;
-      g.payout_count   += 1;
+      g.payout_count += 1;
       g.payout_ids.push(payout.payout_id);
       if (!g.latest_date || payout.created_at > g.latest_date) {
         g.latest_date = payout.created_at;
@@ -272,19 +272,19 @@ export async function GET(request: Request) {
     for (const group of userMap.values()) {
       const sc = scoreMap.get(group.user_id);
 
-      group.score_daily_balance     = sc?.daily?.balance     ?? 0;
+      group.score_daily_balance = sc?.daily?.balance ?? 0;
       group.score_fortnight_balance = sc?.fortnight?.balance ?? 0;
 
       if (group.daily) {
-        group.daily.payable      = group.score_daily_balance;
-        group.deducted_daily     = Math.max(
+        group.daily.payable = group.score_daily_balance;
+        group.deducted_daily = Math.max(
           0,
           group.daily.withdraw_total - group.score_daily_balance,
         );
       }
 
       if (group.fortnight) {
-        group.fortnight.payable  = group.score_fortnight_balance;
+        group.fortnight.payable = group.score_fortnight_balance;
         group.deducted_fortnight = Math.max(
           0,
           group.fortnight.withdraw_total - group.score_fortnight_balance,
@@ -303,9 +303,9 @@ export async function GET(request: Request) {
         (group.deducted_daily || 0) + (group.deducted_fortnight || 0);
 
       group.total_release =
-        (group.daily?.payable     || 0) +
+        (group.daily?.payable || 0) +
         (group.fortnight?.payable || 0) +
-        (group.referral?.payable  || 0) +
+        (group.referral?.payable || 0) +
         (group.quickstar?.payable || 0);
     }
 
@@ -324,9 +324,9 @@ export async function GET(request: Request) {
       result = result.filter((row) =>
         terms.some(
           (t) =>
-            row.user_id.toLowerCase().includes(t)              ||
-            row.user_name.toLowerCase().includes(t)            ||
-            row.account_holder_name.toLowerCase().includes(t)  ||
+            row.user_id.toLowerCase().includes(t) ||
+            row.user_name.toLowerCase().includes(t) ||
+            row.account_holder_name.toLowerCase().includes(t) ||
             row.contact.toLowerCase().includes(t),
         ),
       );
@@ -343,9 +343,9 @@ export async function GET(request: Request) {
     const summaryTotalOriginal = result.reduce(
       (s, r) =>
         s +
-        (r.daily?.withdraw_total     || 0) +
+        (r.daily?.withdraw_total || 0) +
         (r.fortnight?.withdraw_total || 0) +
-        (r.referral?.withdraw_total  || 0) +
+        (r.referral?.withdraw_total || 0) +
         (r.quickstar?.withdraw_total || 0),
       0,
     );
@@ -363,13 +363,13 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        data:    result,
-        total:   result.length,
+        data: result,
+        total: result.length,
         summary: {
           eligible_users: result.length,
           total_original: summaryTotalOriginal,
           total_deducted: summaryTotalDeducted,
-          grand_release:  summaryGrandRelease,
+          grand_release: summaryGrandRelease,
         },
       },
       { status: 200 },

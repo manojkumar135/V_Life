@@ -104,17 +104,17 @@ const HeaderWithActions: React.FC<HeaderWithActionsProps> = ({
               onClick={handleBack}
             />
           )}
-          <p className="text-[1.5rem] max-sm:text-[0.9rem] md:text-[1rem] lg:text-[1.2rem] xl:text-[1.5rem] font-medium text-green-900 m-0">
+          <p className="text-[1.5rem] max-sm:text-[0.95rem] md:text-[1rem] lg:text-[1.1rem] xl:text-[1.3rem] font-medium text-green-900 m-0">
             {title}
           </p>
         </div>
 
         {/* Right: Pagination */}
         {showPagination && (
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold whitespace-nowrap">
+          <div className="flex items-center gap-2 ">
+            <p className="text-sm max-sm:text-[0.9rem]  font-semibold whitespace-nowrap">
               {`${startItem} - ${endItem} of ${totalItems}`}
-            </h3>
+            </p>
             <button
               type="button"
               className={`p-1 rounded-full hover:bg-blue-300 ${
