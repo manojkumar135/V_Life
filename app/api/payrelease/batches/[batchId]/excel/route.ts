@@ -4,12 +4,10 @@
  * Re-generates the NEFT Excel file for an already-released batch.
  * Reads from Withdraw collection — NO DB writes whatsoever.
  *
- * This is the safe re-download endpoint. The original POST /api/payrelease/download
- * only runs once (it creates records + zeros balances). This endpoint can be called
- * any number of times to get the same Excel back.
- *
- * Excel columns match the original download exactly so the bank upload file
- * is identical to what was first generated.
+ * Excel layout now matches handleIDFCDownload.ts exactly:
+ *   Row 1  — Column headers  (15 IDFC columns, dark-navy fill)
+ *   Row 2  — Field instructions  (light-yellow fill, wrapped text)
+ *   Row 3+ — Actual payment data rows  (alternating shading)
  */
 
 import { NextResponse } from "next/server";
@@ -17,7 +15,17 @@ import { connectDB } from "@/lib/mongodb";
 import { Withdraw } from "@/models/withdraw";
 import { PayoutBatch } from "@/models/batch";
 
-// ─── Excel builder (same layout as original download) ────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function todayDDMMYYYY(): string {
+  const d = new Date();
+  const dd   = String(d.getDate()).padStart(2, "0");
+  const mm   = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+// ─── Excel builder — IDFC format ──────────────────────────────────────────────
 
 async function buildExcel(
   withdraws: any[],
@@ -26,38 +34,72 @@ async function buildExcel(
 ): Promise<ArrayBuffer> {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("NEFT Payout");
+  const ws = wb.addWorksheet("Sheet1");
 
-  ws.columns = [
-    { header: "S.No",                key: "sno",            width: 6  },
-    { header: "Batch ID",            key: "batch_id",       width: 22 },
-    { header: "User ID",             key: "user_id",        width: 16 },
-    { header: "User Name",           key: "user_name",      width: 22 },
-    { header: "Account Holder",      key: "account_holder", width: 22 },
-    { header: "Contact",             key: "contact",        width: 14 },
-    { header: "PAN",                 key: "pan",            width: 14 },
-    { header: "Bank Name",           key: "bank_name",      width: 22 },
-    { header: "Account Number",      key: "account_number", width: 22 },
-    { header: "IFSC Code",           key: "ifsc",           width: 14 },
-    { header: "Payout Name",         key: "payout_name",    width: 20 },
-    { header: "Bonus Type",          key: "bonus_type",     width: 14 },
-    { header: "Original Amount (₹)", key: "original",       width: 18 },
-    { header: "TDS (₹)",             key: "tds",            width: 12 },
-    { header: "Admin Charge (₹)",    key: "admin",          width: 14 },
-    { header: "Released Amount (₹)", key: "released",       width: 18 },
-    { header: "NEFT UTR",            key: "neft_utr",       width: 20 },
-    { header: "NEFT Date",           key: "neft_date",      width: 14 },
+  // ── Row 1: Exact IDFC column headers ──────────────────────────────────────
+  const HEADERS = [
+    "Beneficiary Name",
+    "Beneficiary Account Number",
+    "IFSC",
+    "Transaction Type",
+    "Debit Account Number",
+    "Transaction Date",
+    "Amount",
+    "Currency",
+    "Beneficiary Email ID",
+    "Remarks",
+    "Custom Header – 1",
+    "Custom Header – 2",
+    "Custom Header – 3",
+    "Custom Header – 4",
+    "Custom Header – 5",
   ];
 
-  // Header row styling
-  const headerRow = ws.getRow(1);
-  headerRow.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 10, name: "Arial" };
-  headerRow.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E79" } };
-  headerRow.alignment = { horizontal: "center", vertical: "middle" };
-  headerRow.height    = 22;
+  const headerRow = ws.addRow(HEADERS);
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1F497D" }, // dark navy — matches IDFC template
+    };
+    cell.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 10, name: "Arial" };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: false };
+    cell.border    = { bottom: { style: "thin", color: { argb: "FFAAAAAA" } } };
+  });
+  headerRow.height = 20;
 
-  // Group by user_id so each user is one row (sum their released amounts)
-  // Withdraw has one record per payout_id — we collapse to per-user for the Excel
+  // ── Row 2: IDFC field instructions ────────────────────────────────────────
+  const INSTRUCTIONS = [
+    "Enter beneficiary name.\nMANDATORY",
+    "Enter beneficiary account number. \nThis can be IDFC FIRST Bank account or other Bank account.\nMANDATORY",
+    "Enter beneficiary bank IFSC code. Required only for Inter bank (NEFT/RTGS) payment.",
+    "Enter payment type:\nIFT - Within Bank payment\nNEFT - Inter-Bank(NEFT) payment\nRTGS - Inter-Bank(RTGS) payment\nMANDATORY",
+    "Enter debit account number. This should be IDFC FIRST Bank account only. User should have access to do transaction on this account",
+    "Enter transaction value date. Should be today's date or future date.\nMANDATORY\nDD/MM/YYYY format",
+    "Enter payment amount.\nMANDATORY",
+    "Enter transaction currency. Should be INR only.\nMANDATORY",
+    "Enter beneficiary email id\nOPTIONAL",
+    "Enter remarks\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -1\nNote: Header label is editable in Row 1\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -2\nNote: Header label is editable in Row 1\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -3\nNote: Header label is editable in Row 1\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -4\nNote: Header label is editable in Row 1\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -5\nNote: Header label is editable in Row 1\nOPTIONAL",
+  ];
+
+  const instrRow = ws.addRow(INSTRUCTIONS);
+  instrRow.eachCell((cell) => {
+    cell.font      = { size: 9, color: { argb: "FF595959" }, italic: true, name: "Arial" };
+    cell.alignment = { vertical: "top", wrapText: true };
+    cell.fill      = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFFFF2CC" }, // light yellow — matches IDFC template
+    };
+  });
+  instrRow.height = 72;
+
+  // ── Collapse withdraw records to one row per user ─────────────────────────
   const userMap = new Map<string, any>();
 
   for (const w of withdraws) {
@@ -71,6 +113,7 @@ async function buildExcel(
         bank_name:           w.bank_name,
         account_number:      w.account_number,
         ifsc_code:           w.ifsc_code,
+        mail:                w.mail || "",
         payout_names:        new Set<string>(),
         bonus_types:         new Set<string>(),
         original_total:      0,
@@ -84,78 +127,70 @@ async function buildExcel(
     const u = userMap.get(w.user_id)!;
     u.payout_names.add(w.payout_name || "");
     u.bonus_types.add(w.bonus_type   || "");
-    u.original_total += w.original_amount  || 0;
-    u.tds_total      += w.tds_amount       || 0;
-    u.admin_total    += w.admin_charge     || 0;
-    u.released_total += w.released_amount  || 0;
-    // Use the UTR if any record in this batch has it (batch mode sets same UTR for all)
-    if (w.neft_utr && !u.neft_utr) u.neft_utr  = w.neft_utr;
+    u.original_total += w.original_amount || 0;
+    u.tds_total      += w.tds_amount      || 0;
+    u.admin_total    += w.admin_charge    || 0;
+    u.released_total += w.released_amount || 0;
+    if (w.neft_utr              && !u.neft_utr)  u.neft_utr  = w.neft_utr;
     if (w.neft_transaction_date && !u.neft_date) u.neft_date = w.neft_transaction_date;
   }
 
-  const rows = Array.from(userMap.values()).sort((a, b) =>
-    b.released_total - a.released_total,
-  );
+  const rows = Array.from(userMap.values())
+    .filter((r) => r.released_total > 0) // skip zero-amount rows (matches IDFC handler)
+    .sort((a, b) => b.released_total - a.released_total);
+
+  // ── Rows 3+: Payment data ─────────────────────────────────────────────────
+  const debitAccountNumber = process.env.IDFC_DEBIT_ACCOUNT_NUMBER ?? "";
+  const txDate             = releaseDate || todayDDMMYYYY();
 
   rows.forEach((r, i) => {
-    const row = ws.addRow({
-      sno:            i + 1,
-      batch_id:       batchId,
-      user_id:        r.user_id,
-      user_name:      r.user_name,
-      account_holder: r.account_holder_name,
-      contact:        r.contact,
-      pan:            r.pan_number,
-      bank_name:      r.bank_name,
-      account_number: r.account_number,
-      ifsc:           r.ifsc_code,
-      payout_name:    [...r.payout_names].filter(Boolean).join(", "),
-      bonus_type:     [...r.bonus_types].filter(Boolean).join(", "),
-      original:       r.original_total,
-      tds:            r.tds_total,
-      admin:          r.admin_total,
-      released:       r.released_total,
-      neft_utr:       r.neft_utr  || "—",
-      neft_date:      r.neft_date || "—",
+    const dataRow = ws.addRow([
+      r.account_holder_name || r.user_name || "",  // Beneficiary Name          — MANDATORY
+      r.account_number      || "",                  // Beneficiary Account Number — MANDATORY
+      r.ifsc_code           || "",                  // IFSC                       — MANDATORY for NEFT
+      "NEFT",                                       // Transaction Type           — MANDATORY
+      debitAccountNumber,                           // Debit Account Number
+      txDate,                                       // Transaction Date           — DD/MM/YYYY MANDATORY
+      r.released_total,                             // Amount                     — MANDATORY
+      "INR",                                        // Currency                   — MANDATORY
+      r.mail                || "",                  // Beneficiary Email ID       — OPTIONAL
+      `Payout - ${r.user_id}`,                      // Remarks                    — OPTIONAL
+      r.user_id             || "",                  // Custom Header – 1 (User ID)
+      r.contact             || "",                  // Custom Header – 2 (Contact)
+      r.pan_number          || "",                  // Custom Header – 3 (PAN)
+      [...r.payout_names].filter(Boolean).join(", ") || "",  // Custom Header – 4 (Payout names)
+      [...r.bonus_types].filter(Boolean).join(", ") || "",   // Custom Header – 5 (Bonus types)
+    ]);
+
+    // Amount cell — number format, right-aligned (column G = index 7)
+    const amountCell = dataRow.getCell(7);
+    amountCell.numFmt    = `"₹"#,##0.00`;
+    amountCell.alignment = { horizontal: "right" };
+
+    // Alternate row shading — same logic as IDFC handler
+    const isEven = (dataRow.number - 2) % 2 === 0;
+    dataRow.eachCell((cell) => {
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: isEven ? "FFFAFAFA" : "FFFFFFFF" },
+      };
+      cell.font      = { size: 10, name: "Arial" };
+      cell.alignment = cell.alignment || { vertical: "middle" };
+      cell.border    = { bottom: { style: "hair", color: { argb: "FFE0E0E0" } } };
     });
 
-    // Alternate row shading
-    if (i % 2 === 1) {
-      row.eachCell((cell) => {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } };
-      });
-    }
-
-    // Released column — bold blue
-    row.getCell("released").font = { bold: true, color: { argb: "FF1F4E79" }, name: "Arial" };
-    // UTR column — green if filled, orange if missing
-    row.getCell("neft_utr").font = {
-      color: { argb: r.neft_utr ? "FF2E7D32" : "FFE65100" },
-      name: "Arial",
-    };
-
-    // Number format for amount cells
-    ["original", "tds", "admin", "released"].forEach((k) => {
-      row.getCell(k).numFmt = `"₹"#,##0.00`;
-    });
-
-    row.font = { name: "Arial", size: 10 };
+    dataRow.height = 18;
   });
 
-  // Totals row
-  const lastData  = rows.length + 1;
-  const totalsRow = ws.getRow(lastData + 2);
-  totalsRow.getCell("bank_name").value = `Total — ${rows.length} users | ${releaseDate}`;
-  totalsRow.getCell("bank_name").font  = { bold: true, italic: true, name: "Arial" };
-
-  (["original", "tds", "admin", "released"] as const).forEach((k, idx) => {
-    const colLetter = ["M", "N", "O", "P"][idx];
-    totalsRow.getCell(k).value  = { formula: `SUM(${colLetter}2:${colLetter}${lastData})` };
-    totalsRow.getCell(k).numFmt = `"₹"#,##0.00`;
-    totalsRow.getCell(k).font   = { bold: true, name: "Arial" };
+  // ── Column widths — tuned to IDFC template proportions ───────────────────
+  const COL_WIDTHS = [22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14];
+  ws.columns.forEach((col, i) => {
+    if (col) col.width = COL_WIDTHS[i] ?? 15;
   });
 
-  ws.views = [{ state: "frozen", ySplit: 1 }];
+  // ── Freeze top 2 rows so header + instructions stay visible ──────────────
+  ws.views = [{ state: "frozen", ySplit: 2 }];
 
   return (await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer;
 }
