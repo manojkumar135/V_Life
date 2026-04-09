@@ -12,7 +12,6 @@ import { useVLife } from "@/store/context";
 import ShowToast from "@/components/common/Toast/toast";
 import { FiFilter } from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
-import { handleIDFCDownload } from "@/utils/handleIDFCDownload";
 import { useRouter } from "next/navigation";
 
 const API_URL = "/api/payrelease";
@@ -72,7 +71,6 @@ export default function EligiblePayoutsPage() {
         setReportData(rows);
         setTotalItems(rows.length);
 
-        // Use backend-computed summary directly — no frontend recalculation
         setSummary(
           data.summary || {
             eligible_users: rows.length,
@@ -96,20 +94,70 @@ export default function EligiblePayoutsPage() {
     goToPage(1);
   }, [debouncedQuery, dateFilter]);
 
-  /* ── Download — IDFC Excel format ─────────────────────────────── */
-  const handleDownloadClick = () => {
-    const rows = selectedRows.length > 0 ? selectedRows : reportData;
-    if (!rows.length) {
+  /* ── Download ──────────────────────────────────────────────────────
+     FIX: This now calls POST /api/payrelease/download which:
+       1. Runs the full eligibility calculation
+       2. Creates Withdraw records (one per payout_id)
+       3. Marks all payout statuses → "completed"
+       4. Zeros out score balances + pushes OUT history
+       5. Creates a PayoutBatch document
+       6. Returns the Excel file as a binary stream
+
+     The browser download is triggered from the blob response.
+     handleIDFCDownload (client-side only) is NOT used here — that
+     util is only for generating IDFC format without DB operations.
+  ─────────────────────────────────────────────────────────────────── */
+  const handleDownloadClick = async () => {
+    if (!reportData.length) {
       ShowToast.error("No data to download.");
       return;
     }
 
-    handleIDFCDownload({
-      rows,
-      fileName: "idfc_payout_upload",
-      onStart: () => setDownloading(true),
-      onFinish: () => setDownloading(false),
-    });
+    try {
+      setDownloading(true);
+
+      const response = await fetch("/api/payrelease/download", {
+        method: "POST",
+      });
+
+      // Handle non-OK responses (e.g. no eligible users > ₹500)
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        ShowToast.error(err.message || "Download failed. Please try again.");
+        return;
+      }
+
+      // Read the Excel blob from the response stream
+      const blob = await response.blob();
+
+      // Extract batch ID from response header for the filename
+      const batchId = response.headers.get("X-Batch-Id") || "payout";
+      const filename = `payout_${batchId}.xlsx`;
+
+      // Trigger browser file download
+      const url    = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href     = url;
+      anchor.download  = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+
+      const userCount = response.headers.get("X-User-Count") || "—";
+      ShowToast.success(
+        `Released! ${userCount} users · Batch: ${batchId}`,
+      );
+
+      // Refresh the table — released payouts are now "completed" so
+      // they will no longer appear in the eligible list
+      fetchReport(debouncedQuery);
+    } catch (error) {
+      console.error("Download error:", error);
+      ShowToast.error("Failed to download. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   /* ── Pagination ────────────────────────────────────────────────── */
@@ -287,7 +335,7 @@ export default function EligiblePayoutsPage() {
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-green-600" />
-            Download exports IDFC bank upload format directly
+            Download releases payouts + creates withdraw records + zeros balances
           </span>
         </div>
 
