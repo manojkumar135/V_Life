@@ -173,10 +173,10 @@ export default function EligiblePayoutsPage() {
 
   /* ── Columns ───────────────────────────────────────────────────── */
   const columns: GridColDef[] = [
-    { field: "user_id", headerName: "User ID", flex: 1 },
+    { field: "user_id", headerName: "User ID", flex: 0.8 },
     { field: "user_name", headerName: "Username", flex: 1 },
-    { field: "account_holder_name", headerName: "Account Name", flex: 1.2 },
-    { field: "contact", headerName: "Contact", flex: 1 },
+    { field: "account_holder_name", headerName: "Account Name", flex: 1 },
+    // { field: "contact", headerName: "Contact", flex: 1 },
     {
       field: "rank",
       headerName: "Rank",
@@ -204,7 +204,7 @@ export default function EligiblePayoutsPage() {
     },
     { field: "bank_name", headerName: "Bank", flex: 1 },
     { field: "account_number", headerName: "Account No.", flex: 1.2 },
-    { field: "ifsc_code", headerName: "IFSC", flex: 1 },
+    { field: "ifsc_code", headerName: "IFSC", flex: 0.8 },
     {
       field: "total_deducted",
       headerName: "Deducted (₹)",

@@ -12,7 +12,7 @@ export async function GET() {
   console.log("============================================");
 
   try {
-    await connectDB();
+    // await connectDB();
     // await runMatchingBonus();
     // await runDirectSalesBonus();
     // await runInfinityBonus();

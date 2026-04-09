@@ -2,7 +2,9 @@
  * POST /api/payrelease/download/route.ts
  *
  * 1. Runs same calculation as GET (eligible users, correct payable amounts)
- * 2. Generates NEFT-ready Excel file
+ * 2. Generates IDFC FIRST Bank bulk payment upload Excel file
+ *    (exact same format as handleIDFCDownload utility — Row 1 headers,
+ *     Row 2 instructions, Row 3+ payment data, 15 columns, freeze top 2 rows)
  * 3. For each payout_id:
  *      - Creates a Withdraw record (audit trail with date, time, batch_id, amounts)
  *      - Marks payout status → "completed"
@@ -13,8 +15,8 @@
  *      - Zeros out Score.fortnight.balance (withdraw += balance, balance = 0)
  *      - Zeros out Score.referral.balance (withdraw += balance, balance = 0)
  *      - Zeros out Score.quickstar.balance (withdraw += balance, balance = 0)
- *      - Adds OUT record to each score bucket's history  ← uses $each to handle
- *        multiple nested array paths in a single bulkWrite op correctly
+ *      - Adds OUT record to each score bucket's history (uses $each for multiple
+ *        nested array paths in a single bulkWrite op)
  *      - cashback and reward are NOT touched
  * 5. Creates a PayoutBatch document (tracks the full release event; NEFT/UTR
  *    details are filled in later via PATCH /api/payrelease/batches/[batchId])
@@ -75,7 +77,6 @@ type PayoutRecord = {
   admin_charge:        number;
   reward_amount:       number;
   created_at:          any;
-  // ── FIX: tag which Mongoose model this payout came from ──────────────────
   _source:             "daily" | "weekly";
 };
 
@@ -114,7 +115,18 @@ type UserGroup = {
   total_release:            number;
 };
 
-// ─── Excel builder ────────────────────────────────────────────────────────────
+// ─── Excel builder — exact IDFC FIRST Bank bulk payment upload format ─────────
+//
+// Matches handleIDFCDownload exactly:
+//   Row 1  — Column headers (15 columns), dark navy background
+//   Row 2  — Field instructions, light yellow background, frozen
+//   Row 3+ — One payment row per user
+//            Amount = total_release (daily + fortnight + referral + quickstar)
+//            This is the file the bank accepts for bulk NEFT upload.
+//
+// debitAccountNumber is intentionally left blank here — admin fills it in the
+// bank portal before uploading, same as the client-side handleIDFCDownload.
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function buildExcel(
   rows: UserGroup[],
@@ -122,87 +134,141 @@ async function buildExcel(
   releaseDate: string,
 ): Promise<ArrayBuffer> {
   const ExcelJS = (await import("exceljs")).default;
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("NEFT Payout");
+  const workbook  = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Sheet1");
 
-  ws.columns = [
-    { header: "S.No",                key: "sno",            width: 6  },
-    { header: "Batch ID",            key: "batch_id",       width: 22 },
-    { header: "User ID",             key: "user_id",        width: 16 },
-    { header: "User Name",           key: "user_name",      width: 22 },
-    { header: "Account Holder",      key: "account_holder", width: 22 },
-    { header: "Contact",             key: "contact",        width: 14 },
-    { header: "PAN",                 key: "pan",            width: 14 },
-    { header: "Bank Name",           key: "bank_name",      width: 22 },
-    { header: "Account Number",      key: "account_number", width: 22 },
-    { header: "IFSC Code",           key: "ifsc",           width: 14 },
-    { header: "Daily Bonus (₹)",     key: "daily",          width: 16 },
-    { header: "Fortnight Bonus (₹)", key: "fortnight",      width: 18 },
-    { header: "Referral Bonus (₹)",  key: "referral",       width: 16 },
-    { header: "Quickstar Bonus (₹)", key: "quickstar",      width: 16 },
-    { header: "Deducted (₹)",        key: "deducted",       width: 16 },
-    { header: "Total Release (₹)",   key: "total",          width: 18 },
+  /* ── Row 1: Exact IDFC column headers (15 columns) ── */
+  const headers = [
+    "Beneficiary Name",
+    "Beneficiary Account Number",
+    "IFSC",
+    "Transaction Type",
+    "Debit Account Number",
+    "Transaction Date",
+    "Amount",
+    "Currency",
+    "Beneficiary Email ID",
+    "Remarks",
+    "Custom Header \u2013 1",
+    "Custom Header \u2013 2",
+    "Custom Header \u2013 3",
+    "Custom Header \u2013 4",
+    "Custom Header \u2013 5",
   ];
 
-  // Header styling
-  const headerRow = ws.getRow(1);
-  headerRow.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 10, name: "Arial" };
-  headerRow.fill      = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E79" } };
-  headerRow.alignment = { horizontal: "center", vertical: "middle" };
-  headerRow.height    = 22;
+  const headerRow = worksheet.addRow(headers);
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type:    "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1F497D" }, // dark navy — matches IDFC template
+    };
+    cell.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: false };
+    cell.border    = { bottom: { style: "thin", color: { argb: "FFAAAAAA" } } };
+  });
+  headerRow.height = 20;
 
-  // Data rows
-  rows.forEach((r, i) => {
-    const row = ws.addRow({
-      sno:            i + 1,
-      batch_id:       batchId,
-      user_id:        r.user_id,
-      user_name:      r.user_name,
-      account_holder: r.account_holder_name,
-      contact:        r.contact,
-      pan:            r.pan_number,
-      bank_name:      r.bank_name,
-      account_number: r.account_number,
-      ifsc:           r.ifsc_code,
-      daily:          r.daily?.payable     || 0,
-      fortnight:      r.fortnight?.payable || 0,
-      referral:       r.referral?.payable  || 0,
-      quickstar:      r.quickstar?.payable || 0,
-      deducted:       r.total_deducted     || 0,
-      total:          r.total_release,
+  /* ── Row 2: IDFC field instructions — matches template exactly ── */
+  const instructions = [
+    "Enter beneficiary name.\nMANDATORY",
+    "Enter beneficiary account number. \nThis can be IDFC FIRST Bank account or other Bank account.\nMANDATORY",
+    "Enter beneficiary bank IFSC code. Required only for Inter bank (NEFT/RTGS) payment.",
+    "Enter payment type:\nIFT - Within Bank payment\nNEFT - Inter-Bank(NEFT) payment\nRTGS - Inter-Bank(RTGS) payment\nMANDATORY",
+    "Enter debit account number. This should be IDFC FIRST Bank account only. User should have access to do transaction on this account",
+    "Enter transaction value date. Should be today's date or future date.\nMANDATORY\nDD/MM/YYYY format",
+    "Enter payment amount.\nMANDATORY",
+    "Enter transaction currency. Should be INR only.\nMANDATORY",
+    "Enter beneficiary email id\nOPTIONAL",
+    "Enter remarks\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -1\nNote: Header label is editable in Row 1\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -2\nNote: Header label is editable in Row 1\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -3\nNote: Header label is editable in Row 1\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -4\nNote: Header label is editable in Row 1\nOPTIONAL",
+    "Credit Advice:\nEnter Custom Info -5\nNote: Header label is editable in Row 1\nOPTIONAL",
+  ];
+
+  const instrRow = worksheet.addRow(instructions);
+  instrRow.eachCell((cell) => {
+    cell.font      = { size: 9, color: { argb: "FF595959" }, italic: true };
+    cell.alignment = { vertical: "top", wrapText: true };
+    cell.fill      = {
+      type:    "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFFFF2CC" }, // light yellow — matches IDFC template
+    };
+  });
+  instrRow.height = 72;
+
+  /* ── Rows 3+: One payment row per user ───────────────────────────────────
+     Amount = total_release which is already the correct sum of:
+       daily.payable     (score balance — reflects order deductions)
+       fortnight.payable (score balance — reflects order deductions)
+       referral.payable  (withdraw_total — not spendable, never reduced)
+       quickstar.payable (withdraw_total — not spendable, never reduced)
+
+     This matches the GET /api/payrelease calculation exactly.
+     Zero-amount rows are skipped (same as handleIDFCDownload).
+  ─────────────────────────────────────────────────────────────────────────── */
+  const today = new Date();
+  const dd    = String(today.getDate()).padStart(2, "0");
+  const mm    = String(today.getMonth() + 1).padStart(2, "0");
+  const yyyy  = today.getFullYear();
+  const todayFormatted = `${dd}/${mm}/${yyyy}`; // DD/MM/YYYY as required by IDFC
+
+  for (const row of rows) {
+    const amount = Number(row.total_release ?? 0);
+    if (amount <= 0) continue; // skip zero-amount rows
+
+    const dataRow = worksheet.addRow([
+      row.account_holder_name || row.user_name || "", // Beneficiary Name          — MANDATORY
+      row.account_number      || "",                  // Beneficiary Account Number — MANDATORY
+      row.ifsc_code           || "",                  // IFSC                       — MANDATORY
+      "NEFT",                                         // Transaction Type           — MANDATORY
+      "",                                             // Debit Account Number       — admin fills before upload
+      todayFormatted,                                 // Transaction Date           — DD/MM/YYYY MANDATORY
+      amount,                                         // Amount (total_release)     — MANDATORY
+      "INR",                                          // Currency                   — MANDATORY
+      row.mail                || "",                  // Beneficiary Email ID       — OPTIONAL
+      `Payout - ${row.user_id}`,                      // Remarks                    — OPTIONAL
+      row.user_id             || "",                  // Custom Header 1 — User ID
+      row.contact             || "",                  // Custom Header 2 — Contact
+      "",                                             // Custom Header 3
+      "",                                             // Custom Header 4
+      "",                                             // Custom Header 5
+    ]);
+
+    // Amount cell — number format, right-aligned
+    const amountCell = dataRow.getCell(7); // column G
+    amountCell.numFmt    = "#,##0.00";
+    amountCell.alignment = { horizontal: "right" };
+
+    // Alternate row shading for readability
+    const isEven = (dataRow.number - 2) % 2 === 0;
+    dataRow.eachCell((cell) => {
+      cell.fill = {
+        type:    "pattern",
+        pattern: "solid",
+        fgColor: { argb: isEven ? "FFFAFAFA" : "FFFFFFFF" },
+      };
+      cell.font      = { size: 10 };
+      cell.alignment = cell.alignment || { vertical: "middle" };
+      cell.border    = { bottom: { style: "hair", color: { argb: "FFE0E0E0" } } };
     });
 
-    if (i % 2 === 1) {
-      row.eachCell((cell) => {
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } };
-      });
-    }
+    dataRow.height = 18;
+  }
 
-    row.getCell("total").font    = { bold: true, color: { argb: "FF1F4E79" }, name: "Arial" };
-    row.getCell("deducted").font = { bold: false, color: { argb: "FFE65100" }, name: "Arial" };
-
-    ["daily", "fortnight", "referral", "quickstar", "deducted", "total"].forEach((k) => {
-      row.getCell(k).numFmt = `"₹"#,##0.00`;
-    });
-
-    row.font = { name: "Arial", size: 10 };
+  /* ── Column widths — tuned to IDFC template proportions ── */
+  const colWidths = [22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14];
+  worksheet.columns.forEach((col, i) => {
+    if (col) col.width = colWidths[i] ?? 15;
   });
 
-  // Totals row
-  const lastData  = rows.length + 1;
-  const totalsRow = ws.getRow(lastData + 2);
-  totalsRow.getCell("bank_name").value = `Total — ${rows.length} users | ${releaseDate}`;
-  totalsRow.getCell("bank_name").font  = { bold: true, italic: true, name: "Arial" };
-  (["daily", "fortnight", "referral", "quickstar", "deducted", "total"] as const).forEach((k, idx) => {
-    const colLetter = ["K", "L", "M", "N", "O", "P"][idx];
-    totalsRow.getCell(k).value  = { formula: `SUM(${colLetter}2:${colLetter}${lastData})` };
-    totalsRow.getCell(k).numFmt = `"₹"#,##0.00`;
-    totalsRow.getCell(k).font   = { bold: true, name: "Arial" };
-  });
+  /* ── Freeze top 2 rows so header + instructions stay visible ── */
+  worksheet.views = [{ state: "frozen", ySplit: 2 }];
 
-  ws.views = [{ state: "frozen", ySplit: 1 }];
-
-  return (await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer;
+  return (await workbook.xlsx.writeBuffer()) as unknown as ArrayBuffer;
 }
 
 // ─── POST Handler ─────────────────────────────────────────────────────────────
@@ -222,10 +288,7 @@ export async function POST(_request: Request) {
       hour12: false,
     });
 
-    /* ── 1. Fetch all pending payouts from BOTH collections ──────────────────
-       FIX: Tag each payout with _source so we can split ops by collection later.
-       This prevents running DailyPayout ops against WeeklyPayout and vice versa.
-    ─────────────────────────────────────────────────────────────────────────── */
+    /* ── 1. Fetch all pending payouts from BOTH collections ── */
     const baseQuery: any = {
       status: { $regex: /^pending$/i },
       $or: [
@@ -239,10 +302,9 @@ export async function POST(_request: Request) {
       WeeklyPayout.find(baseQuery).lean(),
     ]);
 
-    // Tag each record with its source collection
-    const taggedDaily   = (dailyPayouts  as any[]).map((p) => ({ ...p, _source: "daily"  as const }));
-    const taggedWeekly  = (weeklyPayouts as any[]).map((p) => ({ ...p, _source: "weekly" as const }));
-    const allPayouts    = [...taggedDaily, ...taggedWeekly];
+    const taggedDaily  = (dailyPayouts  as any[]).map((p) => ({ ...p, _source: "daily"  as const }));
+    const taggedWeekly = (weeklyPayouts as any[]).map((p) => ({ ...p, _source: "weekly" as const }));
+    const allPayouts   = [...taggedDaily, ...taggedWeekly];
 
     const allUserIds = [...new Set(allPayouts.map((p) => p.user_id))];
     if (allUserIds.length === 0) {
@@ -366,7 +428,7 @@ export async function POST(_request: Request) {
         admin_charge:        payout.admin_charge    || 0,
         reward_amount:       payout.reward_amount   || 0,
         created_at:          payout.created_at,
-        _source:             payout._source,        // ← carry the source tag through
+        _source:             payout._source,
       });
       if (!g.latest_date || payout.created_at > g.latest_date) {
         g.latest_date = payout.created_at;
@@ -382,7 +444,14 @@ export async function POST(_request: Request) {
       addToGroup(group, bonusType, payout, wallet);
     }
 
-    /* ── 5. Set payable from score balances + compute per-user deductions ── */
+    /* ── 5. Set payable from score balances — mirrors GET /api/payrelease ──
+       daily + fortnight → payable = score.balance (already reduced by order spends)
+       referral          → payable = withdraw_total (not spendable, never reduced)
+       quickstar         → payable = withdraw_total (not spendable, never reduced)
+
+       total_release = sum of all four payable amounts.
+       This is the single Amount written into the IDFC Excel per user.
+    ─────────────────────────────────────────────────────────────────────────── */
     for (const group of userMap.values()) {
       const sc = scoreMap.get(group.user_id);
 
@@ -407,10 +476,12 @@ export async function POST(_request: Request) {
         );
       }
 
+      // referral — not spendable, pay full withdraw_total
       if (group.referral) {
         group.referral.payable = group.referral.withdraw_total;
       }
 
+      // quickstar — not spendable, pay full withdraw_total
       if (group.quickstar) {
         group.quickstar.payable = group.quickstar.withdraw_total;
       }
@@ -418,11 +489,12 @@ export async function POST(_request: Request) {
       group.total_deducted =
         (group.deducted_daily || 0) + (group.deducted_fortnight || 0);
 
+      // total_release includes ALL four bonus types
       group.total_release =
         (group.daily?.payable     || 0) +
         (group.fortnight?.payable || 0) +
-        (group.referral?.payable  || 0) +
-        (group.quickstar?.payable || 0);
+        (group.referral?.payable  || 0) +  // ← referral included
+        (group.quickstar?.payable || 0);    // ← quickstar included
     }
 
     /* ── 6. Filter > ₹500 ── */
@@ -437,36 +509,13 @@ export async function POST(_request: Request) {
       );
     }
 
-    /* ── 7. Build Excel FIRST (before touching DB) ── */
+    /* ── 7. Build IDFC Excel FIRST (before touching DB) ── */
     const excelBuffer = await buildExcel(eligibleRows, batchId, releaseDate);
 
-    /* ─────────────────────────────────────────────────────────────────────────
-       8. Build all DB operations
-
-       Score ops — per user:
-         • $inc  : withdraw += current_balance  (accounting: total withdrawn so far)
-         • $set  : balance = 0                  (zero out — this user is paid)
-         • $push : history.out entry per bucket (using $each so ALL buckets get
-                   pushed correctly in one bulkWrite op — without $each, MongoDB
-                   only processes one nested array push per operator)
-         cashback and reward are deliberately NOT included here.
-
-       Payout ops — split by _source:
-         • dailyPayoutOps  → only run against DailyPayout  collection
-         • weeklyPayoutOps → only run against WeeklyPayout collection
-         This avoids running every op against both collections, which would be
-         wasteful and could cause issues if a payout_id ever existed in both.
-
-       Withdraw docs — one per payout_id, upserted ($setOnInsert) so a re-run
-         never creates duplicates.
-
-       PayoutBatch — one document for this release event. Admin fills in UTR
-         later via PATCH /api/payrelease/batches/[batchId].
-    ─────────────────────────────────────────────────────────────────────────── */
-
+    /* ── 8. Build all DB operations ── */
     const scoreOps:        any[] = [];
-    const dailyPayoutOps:  any[] = [];   // ← FIX: separate lists per collection
-    const weeklyPayoutOps: any[] = [];   // ← FIX: separate lists per collection
+    const dailyPayoutOps:  any[] = [];
+    const weeklyPayoutOps: any[] = [];
     const withdrawDocs:    any[] = [];
     let   totalPayoutCount = 0;
     let   grandTotal       = 0;
@@ -479,13 +528,7 @@ export async function POST(_request: Request) {
       const referralBal  = sc?.referral?.balance  ?? 0;
       const quickstarBal = sc?.quickstar?.balance ?? 0;
 
-      /* ── A: Score zero-out — $inc, $set, and $push (with $each) ─────────
-         Using $each on every $push target so that when multiple buckets
-         (e.g. daily + fortnight + referral) all need an OUT history entry,
-         every one of them gets written in the single bulkWrite operation.
-         Without $each, MongoDB only honours the last $push key at the same
-         nested path level in one update document.
-      ─────────────────────────────────────────────────────────────────────── */
+      /* ── A: Score zero-out ($each required for multiple nested array paths) ── */
       const $incFields:  any = {};
       const $setFields:  any = { updated_at: now };
       const $pushFields: any = {};
@@ -493,7 +536,6 @@ export async function POST(_request: Request) {
       if (row.daily && dailyBal > 0) {
         $incFields["daily.withdraw"]     = dailyBal;
         $setFields["daily.balance"]      = 0;
-        // $each wrapper — required when pushing to multiple nested array paths
         $pushFields["daily.history.out"] = {
           $each: [{
             module:        "withdrawal",
@@ -551,29 +593,22 @@ export async function POST(_request: Request) {
         };
       }
 
-      // Only push a score op if there is at least one bucket to zero out
       const hasScoreWork =
         Object.keys($incFields).length > 0 ||
         Object.keys($pushFields).length > 0;
 
       if (hasScoreWork) {
-        const updateDoc: any = {
-          $set: $setFields,
-        };
+        const updateDoc: any = { $set: $setFields };
         if (Object.keys($incFields).length)  updateDoc.$inc  = $incFields;
         if (Object.keys($pushFields).length) updateDoc.$push = $pushFields;
-
         scoreOps.push({
-          updateOne: {
-            filter: { user_id: row.user_id },
-            update:  updateDoc,
-          },
+          updateOne: { filter: { user_id: row.user_id }, update: updateDoc },
         });
       }
 
       grandTotal += row.total_release;
 
-      /* ── B + C: Per payout_id — payout status update + Withdraw docs ───── */
+      /* ── B + C: Per payout_id — status update + Withdraw docs ── */
       const groups = [
         { group: row.daily,     bal: dailyBal,     scoreBased: true  },
         { group: row.fortnight, bal: fortnightBal, scoreBased: true  },
@@ -589,22 +624,15 @@ export async function POST(_request: Request) {
         totalPayoutCount += group.payout_records.length;
 
         for (const rec of group.payout_records) {
-
-          /* ── B: Payout status update ─────────────────────────────────────
-             FIX: Push into the correct collection's op list based on _source.
-             This means DailyPayout.bulkWrite only gets ops for daily_payouts
-             records, and WeeklyPayout.bulkWrite only gets ops for weekly_payouts
-             records — no cross-collection noise.
-          ─────────────────────────────────────────────────────────────────── */
           const payoutOp = {
             updateOne: {
               filter: { payout_id: rec.payout_id },
               update: {
                 $set: {
-                  status:           "completed",
-                  last_modified_at: now,
-                  last_modified_by: "system_weekly_release",
-                  remarks:          `Released via batch ${batchId} on ${releaseDate} at ${releaseTime}`,
+                  status:              "completed",
+                  last_modified_at:    now,
+                  last_modified_by:    "system_weekly_release",
+                  remarks:             `Released via batch ${batchId} on ${releaseDate} at ${releaseTime}`,
                   released_batch_id:   batchId,
                   released_date:       releaseDate,
                   released_time:       releaseTime,
@@ -626,7 +654,6 @@ export async function POST(_request: Request) {
             weeklyPayoutOps.push(payoutOp);
           }
 
-          /* ── C: Withdraw document ── */
           const releasedAmount = scoreBased
             ? group.withdraw_total > 0
               ? Math.round((rec.withdraw_amount / group.withdraw_total) * bal * 100) / 100
@@ -634,34 +661,33 @@ export async function POST(_request: Request) {
             : rec.withdraw_amount;
 
           withdrawDocs.push({
-            payout_id:           rec.payout_id,
-            transaction_id:      rec.transaction_id,
-            batch_id:            batchId,
-            released_at:         now,
-            released_date:       releaseDate,
-            released_time:       releaseTime,
-            user_id:             rec.user_id,
-            user_name:           rec.user_name,
-            account_holder_name: rec.account_holder_name,
-            contact:             rec.contact,
-            mail:                rec.mail,
-            rank:                rec.rank,
-            wallet_id:           rec.wallet_id,
-            pan_number:          rec.pan_number,
-            bank_name:           rec.bank_name,
-            account_number:      rec.account_number,
-            ifsc_code:           rec.ifsc_code,
-            payout_name:         rec.payout_name,
-            payout_title:        rec.payout_title,
-            bonus_type:          rec.bonus_type,
-            original_amount:     rec.original_amount,
-            tds_amount:          rec.tds_amount,
-            admin_charge:        rec.admin_charge,
-            reward_amount:       rec.reward_amount,
-            released_amount:     releasedAmount,
+            payout_id:            rec.payout_id,
+            transaction_id:       rec.transaction_id,
+            batch_id:             batchId,
+            released_at:          now,
+            released_date:        releaseDate,
+            released_time:        releaseTime,
+            user_id:              rec.user_id,
+            user_name:            rec.user_name,
+            account_holder_name:  rec.account_holder_name,
+            contact:              rec.contact,
+            mail:                 rec.mail,
+            rank:                 rec.rank,
+            wallet_id:            rec.wallet_id,
+            pan_number:           rec.pan_number,
+            bank_name:            rec.bank_name,
+            account_number:       rec.account_number,
+            ifsc_code:            rec.ifsc_code,
+            payout_name:          rec.payout_name,
+            payout_title:         rec.payout_title,
+            bonus_type:           rec.bonus_type,
+            original_amount:      rec.original_amount,
+            tds_amount:           rec.tds_amount,
+            admin_charge:         rec.admin_charge,
+            reward_amount:        rec.reward_amount,
+            released_amount:      releasedAmount,
             score_balance_before: bal,
             score_balance_after:  0,
-            // NEFT details — null at creation, filled later via PATCH /api/payrelease/batches/[batchId]
             neft_utr:               null,
             neft_transaction_date:  null,
             neft_transaction_time:  null,
@@ -677,30 +703,20 @@ export async function POST(_request: Request) {
       }
     }
 
-    /* ── 9. Execute all DB writes in parallel ────────────────────────────────
-       Score    : zero out daily/fortnight/referral/quickstar — cashback & reward untouched
-       Payouts  : dailyPayoutOps → DailyPayout only
-                  weeklyPayoutOps → WeeklyPayout only   (FIX: no cross-collection ops)
-       Withdraws: upsert with $setOnInsert — safe to re-run, no duplicates
-       Batch    : one PayoutBatch document — admin adds UTR later via PATCH
-    ─────────────────────────────────────────────────────────────────────────── */
+    /* ── 9. Execute all DB writes in parallel ── */
     await Promise.all([
-      // A: Zero out score balances + push OUT history (cashback & reward NOT touched)
       scoreOps.length > 0
         ? Score.bulkWrite(scoreOps)
         : Promise.resolve(),
 
-      // B: Mark DailyPayout records as completed (only daily_payouts collection)
       dailyPayoutOps.length > 0
         ? DailyPayout.bulkWrite(dailyPayoutOps)
         : Promise.resolve(),
 
-      // B: Mark WeeklyPayout records as completed (only weekly_payouts collection)
       weeklyPayoutOps.length > 0
         ? WeeklyPayout.bulkWrite(weeklyPayoutOps)
         : Promise.resolve(),
 
-      // C: Insert Withdraw records — $setOnInsert prevents duplicates on re-run
       withdrawDocs.length > 0
         ? Withdraw.bulkWrite(
             withdrawDocs.map((doc) => ({
@@ -713,7 +729,6 @@ export async function POST(_request: Request) {
           )
         : Promise.resolve(),
 
-      // D: Create PayoutBatch — admin fills NEFT/UTR details later via PATCH
       PayoutBatch.create({
         batch_id:      batchId,
         released_at:   now,
@@ -727,8 +742,8 @@ export async function POST(_request: Request) {
       }),
     ]);
 
-    /* ── 10. Return Excel file ── */
-    const filename = `payout_${batchId}.xlsx`;
+    /* ── 10. Return IDFC Excel file ── */
+    const filename = `idfc_payout_${batchId}.xlsx`;
 
     return new NextResponse(excelBuffer, {
       status: 200,
