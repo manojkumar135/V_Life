@@ -540,7 +540,7 @@ export default function AddWalletForm() {
                       error={touched.ifscCode ? (errors as any).ifscCode : ""}
                     />
                     <FileInput
-                      label="Bank Book (optional)"
+                      label="Bank Book"
                       className="p-0"
                       required
                       name="bankBookFile"
