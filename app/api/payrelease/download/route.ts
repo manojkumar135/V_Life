@@ -13,7 +13,8 @@
  *      - Zeros out Score.fortnight.balance (withdraw += balance, balance = 0)
  *      - Zeros out Score.referral.balance (withdraw += balance, balance = 0)
  *      - Zeros out Score.quickstar.balance (withdraw += balance, balance = 0)
- *      - Adds OUT record to each score bucket's history
+ *      - Adds OUT record to each score bucket's history  ← uses $each to handle
+ *        multiple nested array paths in a single bulkWrite op correctly
  *      - cashback and reward are NOT touched
  * 5. Creates a PayoutBatch document (tracks the full release event; NEFT/UTR
  *    details are filled in later via PATCH /api/payrelease/batches/[batchId])
@@ -21,15 +22,12 @@
  *
  * ── Safety: Excel is built BEFORE any DB writes. If Excel fails, DB is untouched. ──
  * ── All DB writes run in parallel after Excel succeeds. ──────────────────────────
- *
- * ── TypeScript note ───────────────────────────────────────────────────────────────
- *   exceljs writeBuffer() returns Buffer which conflicts with Node 18+ Buffer generic.
- *   Cast via `unknown` to ArrayBuffer — NextResponse accepts ArrayBuffer natively.
+ * ── Payout ops are split by source collection to avoid cross-collection noise. ───
  */
 
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { DailyPayout, WeeklyPayout } from "@/models/payout"; // ← WeeklyPayout added (was missing)
+import { DailyPayout, WeeklyPayout } from "@/models/payout";
 import { Wallet } from "@/models/wallet";
 import { Score } from "@/models/score";
 import { Withdraw } from "@/models/withdraw";
@@ -77,6 +75,8 @@ type PayoutRecord = {
   admin_charge:        number;
   reward_amount:       number;
   created_at:          any;
+  // ── FIX: tag which Mongoose model this payout came from ──────────────────
+  _source:             "daily" | "weekly";
 };
 
 type PayoutGroup = {
@@ -108,7 +108,6 @@ type UserGroup = {
   score_fortnight_balance:  number;
   score_referral_balance:   number;
   score_quickstar_balance:  number;
-  // per-user deductions — consistent with GET route
   deducted_daily:           number;
   deducted_fortnight:       number;
   total_deducted:           number;
@@ -173,19 +172,15 @@ async function buildExcel(
       total:          r.total_release,
     });
 
-    // Alternate row shading
     if (i % 2 === 1) {
       row.eachCell((cell) => {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F2F2" } };
       });
     }
 
-    // Bold + blue for total column
     row.getCell("total").font    = { bold: true, color: { argb: "FF1F4E79" }, name: "Arial" };
-    // Orange for deducted column
     row.getCell("deducted").font = { bold: false, color: { argb: "FFE65100" }, name: "Arial" };
 
-    // Number format for amount cells
     ["daily", "fortnight", "referral", "quickstar", "deducted", "total"].forEach((k) => {
       row.getCell(k).numFmt = `"₹"#,##0.00`;
     });
@@ -207,7 +202,6 @@ async function buildExcel(
 
   ws.views = [{ state: "frozen", ySplit: 1 }];
 
-  // Fix: cast via unknown to avoid Buffer generic conflict in TypeScript
   return (await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer;
 }
 
@@ -228,7 +222,10 @@ export async function POST(_request: Request) {
       hour12: false,
     });
 
-    /* ── 1. Fetch all pending payouts from BOTH collections ── */
+    /* ── 1. Fetch all pending payouts from BOTH collections ──────────────────
+       FIX: Tag each payout with _source so we can split ops by collection later.
+       This prevents running DailyPayout ops against WeeklyPayout and vice versa.
+    ─────────────────────────────────────────────────────────────────────────── */
     const baseQuery: any = {
       status: { $regex: /^pending$/i },
       $or: [
@@ -237,15 +234,17 @@ export async function POST(_request: Request) {
       ],
     };
 
-    // ← Fixed: was only fetching DailyPayout; WeeklyPayout added to match GET route
     const [dailyPayouts, weeklyPayouts] = await Promise.all([
       DailyPayout.find(baseQuery).lean(),
       WeeklyPayout.find(baseQuery).lean(),
     ]);
 
-    const allPayouts = [...dailyPayouts, ...weeklyPayouts];
+    // Tag each record with its source collection
+    const taggedDaily   = (dailyPayouts  as any[]).map((p) => ({ ...p, _source: "daily"  as const }));
+    const taggedWeekly  = (weeklyPayouts as any[]).map((p) => ({ ...p, _source: "weekly" as const }));
+    const allPayouts    = [...taggedDaily, ...taggedWeekly];
 
-    const allUserIds = [...new Set(allPayouts.map((p: any) => p.user_id))];
+    const allUserIds = [...new Set(allPayouts.map((p) => p.user_id))];
     if (allUserIds.length === 0) {
       return NextResponse.json(
         { success: false, message: "No pending payouts found" },
@@ -349,7 +348,6 @@ export async function POST(_request: Request) {
         transaction_id:      payout.transaction_id || payout.payout_id,
         user_id:             payout.user_id,
         user_name:           payout.user_name  || "",
-        // Always prefer wallet snapshot for bank details
         account_holder_name: wallet?.account_holder_name || payout.account_holder_name || "",
         contact:             wallet?.contact   || payout.contact || "",
         mail:                wallet?.mail      || payout.mail    || "",
@@ -368,13 +366,14 @@ export async function POST(_request: Request) {
         admin_charge:        payout.admin_charge    || 0,
         reward_amount:       payout.reward_amount   || 0,
         created_at:          payout.created_at,
+        _source:             payout._source,        // ← carry the source tag through
       });
       if (!g.latest_date || payout.created_at > g.latest_date) {
         g.latest_date = payout.created_at;
       }
     };
 
-    for (const payout of allPayouts as any[]) {
+    for (const payout of allPayouts) {
       if (!eligibleWalletMap.has(payout.user_id)) continue;
       const bonusType = getBonusType(payout.name);
       if (!bonusType) continue;
@@ -383,15 +382,7 @@ export async function POST(_request: Request) {
       addToGroup(group, bonusType, payout, wallet);
     }
 
-    /* ── 5. Set payable from score balances + compute per-user deductions ──
-       daily + fortnight:
-         Baseline  = withdraw_total (net after TDS/admin — real original)
-         Payable   = score_balance  (already reflects order deductions)
-         Deducted  = withdraw_total - score_balance (points spent on orders)
-
-       referral + quickstar:
-         NOT spendable — payable = withdraw_total, deducted = 0
-    ─────────────────────────────────────────────────────────────────────── */
+    /* ── 5. Set payable from score balances + compute per-user deductions ── */
     for (const group of userMap.values()) {
       const sc = scoreMap.get(group.user_id);
 
@@ -449,57 +440,52 @@ export async function POST(_request: Request) {
     /* ── 7. Build Excel FIRST (before touching DB) ── */
     const excelBuffer = await buildExcel(eligibleRows, batchId, releaseDate);
 
-    /* ─────────────────────────────────────────────────────────────────────
+    /* ─────────────────────────────────────────────────────────────────────────
        8. Build all DB operations
 
-       For each eligible user:
-         A) Score update: zero out daily/fortnight/referral/quickstar balance
-            - withdraw += current_balance
-            - balance   = 0
-            - append OUT record to history
-            (cashback and reward are NOT touched)
+       Score ops — per user:
+         • $inc  : withdraw += current_balance  (accounting: total withdrawn so far)
+         • $set  : balance = 0                  (zero out — this user is paid)
+         • $push : history.out entry per bucket (using $each so ALL buckets get
+                   pushed correctly in one bulkWrite op — without $each, MongoDB
+                   only processes one nested array push per operator)
+         cashback and reward are deliberately NOT included here.
 
-         B) Payout update:
-            - Set status → "completed"
-            - Snapshot bank/account details from wallet onto the payout record
-            - Record batch_id, release date/time
+       Payout ops — split by _source:
+         • dailyPayoutOps  → only run against DailyPayout  collection
+         • weeklyPayoutOps → only run against WeeklyPayout collection
+         This avoids running every op against both collections, which would be
+         wasteful and could cause issues if a payout_id ever existed in both.
 
-         C) Withdraw records: one document per payout_id
-            - For daily/fortnight: released_amount = proportional share of balance
-            - For referral/quickstar: released_amount = payout.withdraw_amount
-            - NEFT fields null — filled in later via batch update API
+       Withdraw docs — one per payout_id, upserted ($setOnInsert) so a re-run
+         never creates duplicates.
 
-         D) PayoutBatch document: one per download event
+       PayoutBatch — one document for this release event. Admin fills in UTR
+         later via PATCH /api/payrelease/batches/[batchId].
+    ─────────────────────────────────────────────────────────────────────────── */
 
-       Proportional share for daily/fortnight:
-         Each payout gets: (its_withdraw_amount / total_withdraw_total) * balance
-         This distributes the balance fairly across individual payout records.
-    ─────────────────────────────────────────────────────────────────────── */
-
-    const scoreOps:     any[] = [];
-    const payoutOps:    any[] = [];
-    const withdrawDocs: any[] = [];
+    const scoreOps:        any[] = [];
+    const dailyPayoutOps:  any[] = [];   // ← FIX: separate lists per collection
+    const weeklyPayoutOps: any[] = [];   // ← FIX: separate lists per collection
+    const withdrawDocs:    any[] = [];
     let   totalPayoutCount = 0;
     let   grandTotal       = 0;
-
-    const outHistoryEntry = (amount: number, ref: string) => ({
-      module:        "withdrawal",
-      reference_id:  ref,
-      points:        amount,
-      balance_after: 0,
-      remarks:       `Weekly NEFT release — Batch ${ref}`,
-      created_at:    now,
-    });
 
     for (const row of eligibleRows) {
       const sc = scoreMap.get(row.user_id);
 
-      /* ── A: Score zero-out operations ── */
       const dailyBal     = sc?.daily?.balance     ?? 0;
       const fortnightBal = sc?.fortnight?.balance ?? 0;
       const referralBal  = sc?.referral?.balance  ?? 0;
       const quickstarBal = sc?.quickstar?.balance ?? 0;
 
+      /* ── A: Score zero-out — $inc, $set, and $push (with $each) ─────────
+         Using $each on every $push target so that when multiple buckets
+         (e.g. daily + fortnight + referral) all need an OUT history entry,
+         every one of them gets written in the single bulkWrite operation.
+         Without $each, MongoDB only honours the last $push key at the same
+         nested path level in one update document.
+      ─────────────────────────────────────────────────────────────────────── */
       const $incFields:  any = {};
       const $setFields:  any = { updated_at: now };
       const $pushFields: any = {};
@@ -507,30 +493,76 @@ export async function POST(_request: Request) {
       if (row.daily && dailyBal > 0) {
         $incFields["daily.withdraw"]     = dailyBal;
         $setFields["daily.balance"]      = 0;
-        $pushFields["daily.history.out"] = outHistoryEntry(dailyBal, batchId);
+        // $each wrapper — required when pushing to multiple nested array paths
+        $pushFields["daily.history.out"] = {
+          $each: [{
+            module:        "withdrawal",
+            reference_id:  batchId,
+            points:        dailyBal,
+            balance_after: 0,
+            remarks:       `Weekly NEFT release — Batch ${batchId}`,
+            created_at:    now,
+          }],
+        };
       }
+
       if (row.fortnight && fortnightBal > 0) {
         $incFields["fortnight.withdraw"]     = fortnightBal;
         $setFields["fortnight.balance"]      = 0;
-        $pushFields["fortnight.history.out"] = outHistoryEntry(fortnightBal, batchId);
+        $pushFields["fortnight.history.out"] = {
+          $each: [{
+            module:        "withdrawal",
+            reference_id:  batchId,
+            points:        fortnightBal,
+            balance_after: 0,
+            remarks:       `Weekly NEFT release — Batch ${batchId}`,
+            created_at:    now,
+          }],
+        };
       }
+
       if (row.referral && referralBal > 0) {
         $incFields["referral.withdraw"]     = referralBal;
         $setFields["referral.balance"]      = 0;
-        $pushFields["referral.history.out"] = outHistoryEntry(referralBal, batchId);
+        $pushFields["referral.history.out"] = {
+          $each: [{
+            module:        "withdrawal",
+            reference_id:  batchId,
+            points:        referralBal,
+            balance_after: 0,
+            remarks:       `Weekly NEFT release — Batch ${batchId}`,
+            created_at:    now,
+          }],
+        };
       }
+
       if (row.quickstar && quickstarBal > 0) {
         $incFields["quickstar.withdraw"]     = quickstarBal;
         $setFields["quickstar.balance"]      = 0;
-        $pushFields["quickstar.history.out"] = outHistoryEntry(quickstarBal, batchId);
+        $pushFields["quickstar.history.out"] = {
+          $each: [{
+            module:        "withdrawal",
+            reference_id:  batchId,
+            points:        quickstarBal,
+            balance_after: 0,
+            remarks:       `Weekly NEFT release — Batch ${batchId}`,
+            created_at:    now,
+          }],
+        };
       }
 
-      const updateDoc: any = {};
-      if (Object.keys($incFields).length)  updateDoc.$inc  = $incFields;
-      if (Object.keys($setFields).length)  updateDoc.$set  = $setFields;
-      if (Object.keys($pushFields).length) updateDoc.$push = $pushFields;
+      // Only push a score op if there is at least one bucket to zero out
+      const hasScoreWork =
+        Object.keys($incFields).length > 0 ||
+        Object.keys($pushFields).length > 0;
 
-      if (Object.keys(updateDoc).length > 1 || updateDoc.$set) {
+      if (hasScoreWork) {
+        const updateDoc: any = {
+          $set: $setFields,
+        };
+        if (Object.keys($incFields).length)  updateDoc.$inc  = $incFields;
+        if (Object.keys($pushFields).length) updateDoc.$push = $pushFields;
+
         scoreOps.push({
           updateOne: {
             filter: { user_id: row.user_id },
@@ -541,7 +573,7 @@ export async function POST(_request: Request) {
 
       grandTotal += row.total_release;
 
-      /* ── B + C: Per payout_id operations ── */
+      /* ── B + C: Per payout_id — payout status update + Withdraw docs ───── */
       const groups = [
         { group: row.daily,     bal: dailyBal,     scoreBased: true  },
         { group: row.fortnight, bal: fortnightBal, scoreBased: true  },
@@ -557,8 +589,14 @@ export async function POST(_request: Request) {
         totalPayoutCount += group.payout_records.length;
 
         for (const rec of group.payout_records) {
-          /* ── B: Update payout status + account snapshot + batch info ── */
-          payoutOps.push({
+
+          /* ── B: Payout status update ─────────────────────────────────────
+             FIX: Push into the correct collection's op list based on _source.
+             This means DailyPayout.bulkWrite only gets ops for daily_payouts
+             records, and WeeklyPayout.bulkWrite only gets ops for weekly_payouts
+             records — no cross-collection noise.
+          ─────────────────────────────────────────────────────────────────── */
+          const payoutOp = {
             updateOne: {
               filter: { payout_id: rec.payout_id },
               update: {
@@ -580,7 +618,13 @@ export async function POST(_request: Request) {
                 },
               },
             },
-          });
+          };
+
+          if (rec._source === "daily") {
+            dailyPayoutOps.push(payoutOp);
+          } else {
+            weeklyPayoutOps.push(payoutOp);
+          }
 
           /* ── C: Withdraw document ── */
           const releasedAmount = scoreBased
@@ -617,7 +661,7 @@ export async function POST(_request: Request) {
             released_amount:     releasedAmount,
             score_balance_before: bal,
             score_balance_after:  0,
-            // NEFT details — null at creation, filled later via batch update API
+            // NEFT details — null at creation, filled later via PATCH /api/payrelease/batches/[batchId]
             neft_utr:               null,
             neft_transaction_date:  null,
             neft_transaction_time:  null,
@@ -633,23 +677,30 @@ export async function POST(_request: Request) {
       }
     }
 
-    /* ── 9. Execute all DB writes in parallel ── */
+    /* ── 9. Execute all DB writes in parallel ────────────────────────────────
+       Score    : zero out daily/fortnight/referral/quickstar — cashback & reward untouched
+       Payouts  : dailyPayoutOps → DailyPayout only
+                  weeklyPayoutOps → WeeklyPayout only   (FIX: no cross-collection ops)
+       Withdraws: upsert with $setOnInsert — safe to re-run, no duplicates
+       Batch    : one PayoutBatch document — admin adds UTR later via PATCH
+    ─────────────────────────────────────────────────────────────────────────── */
     await Promise.all([
-      // A: Zero out score balances + add OUT history
+      // A: Zero out score balances + push OUT history (cashback & reward NOT touched)
       scoreOps.length > 0
         ? Score.bulkWrite(scoreOps)
         : Promise.resolve(),
 
-      // B: Mark payout records completed + snapshot account details
-      // ← bulkWrite covers both DailyPayout and WeeklyPayout payout_ids
-      payoutOps.length > 0
-        ? Promise.all([
-            DailyPayout.bulkWrite(payoutOps),
-            WeeklyPayout.bulkWrite(payoutOps),
-          ])
+      // B: Mark DailyPayout records as completed (only daily_payouts collection)
+      dailyPayoutOps.length > 0
+        ? DailyPayout.bulkWrite(dailyPayoutOps)
         : Promise.resolve(),
 
-      // C: Insert Withdraw records (upsert to avoid duplicates if re-run)
+      // B: Mark WeeklyPayout records as completed (only weekly_payouts collection)
+      weeklyPayoutOps.length > 0
+        ? WeeklyPayout.bulkWrite(weeklyPayoutOps)
+        : Promise.resolve(),
+
+      // C: Insert Withdraw records — $setOnInsert prevents duplicates on re-run
       withdrawDocs.length > 0
         ? Withdraw.bulkWrite(
             withdrawDocs.map((doc) => ({
@@ -662,7 +713,7 @@ export async function POST(_request: Request) {
           )
         : Promise.resolve(),
 
-      // D: Create PayoutBatch document for this release event
+      // D: Create PayoutBatch — admin fills NEFT/UTR details later via PATCH
       PayoutBatch.create({
         batch_id:      batchId,
         released_at:   now,

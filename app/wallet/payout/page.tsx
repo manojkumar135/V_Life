@@ -136,7 +136,7 @@ const PayoutPage = () => {
 
           {/* Withdrawls Card */}
           <div
-            // onClick={() => router.push("/wallet/payout/rewards")}
+            onClick={() => router.push("/withdrawal")}
             className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <PiHandWithdraw  size={32} />
