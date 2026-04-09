@@ -204,7 +204,7 @@ export default function WithdrawDetailView() {
               Amount was released via batch{" "}
               <span
                 className="font-mono font-semibold cursor-pointer underline"
-                onClick={() => router.push(`/reports/batches/${record.batch_id}`)}
+                onClick={() => router.push(`/batches/${record.batch_id}`)}
               >
                 {record.batch_id}
               </span>
@@ -337,7 +337,7 @@ export default function WithdrawDetailView() {
           {record.batch_id && (
             <div className="flex justify-end pb-6">
               <button
-                onClick={() => router.push(`/reports/batches/${record.batch_id}`)}
+                onClick={() => router.push(`/batches/${record.batch_id}`)}
                 className="px-5 py-2 rounded-lg bg-[#0C3978] text-white text-sm font-semibold
                   hover:bg-[#106187] transition-colors cursor-pointer"
               >

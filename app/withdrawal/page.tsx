@@ -16,10 +16,10 @@ import { useRouter } from "next/navigation";
 const API_URL = "/api/withdraw";
 
 const BONUS_TYPE_OPTIONS = [
-  { label: "All Types", value: "" },
-  { label: "Daily",     value: "daily" },
+  { label: "All Types", value: ""          },
+  { label: "Daily",     value: "daily"     },
   { label: "Fortnight", value: "fortnight" },
-  { label: "Referral",  value: "referral" },
+  { label: "Referral",  value: "referral"  },
   { label: "Quickstar", value: "quickstar" },
 ];
 
@@ -34,22 +34,22 @@ export default function WithdrawPage() {
   const router = useRouter();
 
   const { query, setQuery, debouncedQuery } = useSearch();
-  const [reportData, setReportData]   = useState<any[]>([]);
-  const [totalItems, setTotalItems]   = useState(0);
-  const [loading, setLoading]         = useState(false);
-  const [dateFilter, setDateFilter]   = useState<any>(null);
-  const [showModal, setShowModal]     = useState(false);
+  const [reportData, setReportData]     = useState<any[]>([]);
+  const [totalItems, setTotalItems]     = useState(0);
+  const [loading, setLoading]           = useState(false);
+  const [dateFilter, setDateFilter]     = useState<any>(null);
+  const [showModal, setShowModal]       = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
-  const [bonusType, setBonusType]     = useState("");
+  const [bonusType, setBonusType]       = useState("");
 
+  // ── Summary — matches payrelease card style ──────────────────────────
   const [summary, setSummary] = useState({
     total_records:  0,
     unique_users:   0,
     unique_batches: 0,
-    total_released: 0,
     total_original: 0,
-    total_tds:      0,
-    total_admin:    0,
+    total_deducted: 0,
+    grand_release:  0,
   });
 
   /* ── Pagination ── */
@@ -87,10 +87,9 @@ export default function WithdrawPage() {
             total_records:  0,
             unique_users:   0,
             unique_batches: 0,
-            total_released: 0,
             total_original: 0,
-            total_tds:      0,
-            total_admin:    0,
+            total_deducted: 0,
+            grand_release:  0,
           },
         );
       } catch (error) {
@@ -116,7 +115,7 @@ export default function WithdrawPage() {
     {
       field: "released_date",
       headerName: "Date",
-      flex: 0.9,
+      flex: 0.8,
       renderCell: (p: any) => (
         <span className="text-gray-600 text-xs">{p.value || "—"}</span>
       ),
@@ -124,46 +123,23 @@ export default function WithdrawPage() {
     {
       field: "batch_id",
       headerName: "Batch ID",
-      flex: 1.4,
+      flex: 1.2,
       renderCell: (p: any) => (
         <span
           className="text-[#0C3978] font-mono text-xs cursor-pointer hover:underline"
-          onClick={() => router.push(`/reports/batches/${p.value}`)}
+          onClick={() => router.push(`/batches/${p.value}`)}
         >
           {p.value || "—"}
         </span>
       ),
     },
-    { field: "user_id",   headerName: "User ID",   flex: 0.9 },
-    { field: "user_name", headerName: "User Name",  flex: 1 },
+    { field: "user_id", headerName: "User ID", flex: 0.9 },
     {
       field: "account_holder_name",
       headerName: "Account Name",
       flex: 1.2,
     },
     { field: "bank_name", headerName: "Bank", flex: 1 },
-    {
-      field: "bonus_type",
-      headerName: "Type",
-      flex: 0.8,
-      renderCell: (p: any) => {
-        const val = p.value || "";
-        const cls = BONUS_COLORS[val] || "bg-gray-100 text-gray-600";
-        return (
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>
-            {val.charAt(0).toUpperCase() + val.slice(1)}
-          </span>
-        );
-      },
-    },
-    {
-      field: "payout_name",
-      headerName: "Payout Name",
-      flex: 1.2,
-      renderCell: (p: any) => (
-        <span className="text-gray-600 text-xs">{p.value || "—"}</span>
-      ),
-    },
     {
       field: "original_amount",
       headerName: "Original (₹)",
@@ -189,7 +165,7 @@ export default function WithdrawPage() {
     {
       field: "neft_utr",
       headerName: "NEFT UTR",
-      flex: 1.2,
+      flex: 0.8,
       renderCell: (p: any) =>
         p.value ? (
           <span className="font-mono text-xs text-[#0C3978]">{p.value}</span>
@@ -205,7 +181,7 @@ export default function WithdrawPage() {
       renderCell: (p: any) => (
         <button
           className="text-xs text-[#0C3978] hover:underline cursor-pointer"
-          onClick={() => router.push(`/reports/withdraw/${p.value}`)}
+          onClick={() => router.push(`/withdrawal/detailview/${p.value}`)}
         >
           View
         </button>
@@ -213,7 +189,7 @@ export default function WithdrawPage() {
     },
   ];
 
-  /* ── Summary cards ── */
+  /* ── Summary cards — exact same style as payrelease page ── */
   const summaryCards = [
     {
       label: "Total Records",
@@ -222,20 +198,20 @@ export default function WithdrawPage() {
       color: "from-[#0C3978] to-[#106187]",
     },
     {
-      label: "Total Original (₹)",
+      label: "Total Original Amount",
       value: `₹ ${Number(summary.total_original).toFixed(2)}`,
-      sub:   "Gross before deductions",
+      sub:   "Net after TDS/admin",
       color: "from-[#106187] to-[#16B8E4]",
     },
     {
-      label: "TDS + Admin (₹)",
-      value: `₹ ${(Number(summary.total_tds) + Number(summary.total_admin)).toFixed(2)}`,
-      sub:   "Deducted before release",
+      label: "Total Deducted (Orders)",
+      value: `₹ ${Number(summary.total_deducted).toFixed(2)}`,
+      sub:   "Points used on orders",
       color: "from-orange-500 to-orange-400",
     },
     {
-      label: "Total Released (₹)",
-      value: `₹ ${Number(summary.total_released).toFixed(2)}`,
+      label: "Grand Release Amount",
+      value: `₹ ${Number(summary.grand_release).toFixed(2)}`,
       sub:   "Actual amount paid out",
       color: "from-green-600 to-green-500",
     },
@@ -303,7 +279,7 @@ export default function WithdrawPage() {
           ))}
         </div>
 
-        {/* Summary cards */}
+        {/* Summary cards — same layout and colors as payrelease page */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {summaryCards.map((card) => (
             <div
@@ -322,12 +298,16 @@ export default function WithdrawPage() {
         {/* Legend */}
         <div className="flex gap-4 mb-3 text-xs text-gray-500 flex-wrap">
           <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-3 rounded-full bg-orange-400" />
-            NEFT UTR "Pending" = released but bank UTR not yet recorded
+            <span className="inline-block w-3 h-3 rounded-full bg-[#0C3978]" />
+            Amount to Release = Score balance (original − points used on orders)
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-3 rounded-full bg-[#0C3978]" />
-            Click Batch ID to view full batch detail
+            <span className="inline-block w-3 h-3 rounded-full bg-orange-500" />
+            Deducted = Daily/Fortnight points spent on orders
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-3 h-3 rounded-full bg-orange-400" />
+            NEFT UTR "Pending" = released but bank UTR not yet recorded
           </span>
         </div>
 
