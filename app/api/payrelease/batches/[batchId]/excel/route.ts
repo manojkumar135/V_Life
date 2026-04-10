@@ -149,7 +149,7 @@ async function buildExcel(
       r.account_number      || "",                  // Beneficiary Account Number — MANDATORY
       r.ifsc_code           || "",                  // IFSC                       — MANDATORY for NEFT
       "NEFT",                                       // Transaction Type           — MANDATORY
-      debitAccountNumber,                           // Debit Account Number
+      "10269542603",                           // Debit Account Number
       txDate,                                       // Transaction Date           — DD/MM/YYYY MANDATORY
       r.released_total,                             // Amount                     — MANDATORY
       "INR",                                        // Currency                   — MANDATORY
@@ -157,9 +157,9 @@ async function buildExcel(
       `Payout - ${r.user_id}`,                      // Remarks                    — OPTIONAL
       r.user_id             || "",                  // Custom Header – 1 (User ID)
       r.contact             || "",                  // Custom Header – 2 (Contact)
-      r.pan_number          || "",                  // Custom Header – 3 (PAN)
-      [...r.payout_names].filter(Boolean).join(", ") || "",  // Custom Header – 4 (Payout names)
-      [...r.bonus_types].filter(Boolean).join(", ") || "",   // Custom Header – 5 (Bonus types)
+       "",                  // Custom Header – 3 (PAN)
+      "",  // Custom Header – 4 (Payout names)
+       "",   // Custom Header – 5 (Bonus types)
     ]);
 
     // Amount cell — number format, right-aligned (column G = index 7)

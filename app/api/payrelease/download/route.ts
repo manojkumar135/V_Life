@@ -181,7 +181,7 @@ async function buildExcel(
       row.account_number      || "",
       row.ifsc_code           || "",
       "NEFT",
-      "",
+      "10269542603",
       todayFormatted,
       amount,
       "INR",

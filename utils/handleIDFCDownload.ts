@@ -31,7 +31,7 @@ export interface IDFCDownloadOptions {
 export async function handleIDFCDownload({
   rows,
   fileName = "idfc_payout_upload",
-  debitAccountNumber = "",
+  debitAccountNumber = "10269542603",
   onStart,
   onFinish,
 }: IDFCDownloadOptions) {

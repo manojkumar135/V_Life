@@ -1,15 +1,18 @@
 /**
  * GET /api/withdraw/route.ts
  *
- * Returns all withdraw records with search, date filter, and pagination.
- * Each record represents one released payout_id with full audit trail.
+ * Role-based access:
+ *   role=admin  → returns all withdraw records
+ *   role=user   → returns only records for that user_id
  *
  * Summary card mapping (matches payrelease page exactly):
- *   Total Original Amount  = sum of withdraw_amount  (net after TDS/admin — real baseline)
- *   Total Deducted (Orders)= withdraw_amount - released_amount (points spent on orders)
- *   Grand Release Amount   = sum of released_amount  (actual amount paid out)
+ *   Total Original Amount   = sum of withdraw_amount  (net after TDS/admin)
+ *   Total Deducted (Orders) = withdraw_amount - released_amount
+ *   Grand Release Amount    = sum of released_amount
  *
  * Query params:
+ *   role       — "admin" | "user" (required)
+ *   user_id    — required when role=user
  *   search     — partial match on user_id, user_name, contact, batch_id, payout_id, neft_utr
  *   from       — date range start (ISO string)
  *   to         — date range end   (ISO string)
@@ -29,6 +32,8 @@ export async function GET(request: Request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
+    const role      = searchParams.get("role")       || "";
+    const userId    = searchParams.get("user_id")    || "";
     const search    = searchParams.get("search")     || "";
     const from      = searchParams.get("from")       || null;
     const to        = searchParams.get("to")         || null;
@@ -38,26 +43,44 @@ export async function GET(request: Request) {
     const page      = Math.max(1, parseInt(searchParams.get("page")  || "1"));
     const limit     = Math.min(100, parseInt(searchParams.get("limit") || "20"));
 
-    /* ── 1. Build query ── */
-    const query: any = {};
+    /* ── 1. Role-based base query — exact same pattern as order-operations ── */
+    let baseQuery: Record<string, any> = {};
 
+    if (role === "user") {
+      if (!userId) {
+        return NextResponse.json(
+          { success: false, message: "user_id is required for role=user", data: [] },
+          { status: 400 },
+        );
+      }
+      baseQuery.user_id = userId;
+    } else if (role === "admin") {
+      baseQuery = {}; // all records
+    }
+    // if role is not passed at all, default to showing all (admin fallback)
+
+    /* ── 2. Build additional filters ── */
+    const conditions: any[] = [];
+
+    // Date filter
     if (date) {
       const start = new Date(date);
       const end   = new Date(date);
       end.setHours(23, 59, 59, 999);
-      query.released_at = { $gte: start, $lte: end };
+      conditions.push({ released_at: { $gte: start, $lte: end } });
     } else if (from || to) {
-      query.released_at = {};
-      if (from) query.released_at.$gte = new Date(from);
+      const dateRange: any = {};
+      if (from) dateRange.$gte = new Date(from);
       if (to) {
         const end = new Date(to);
         end.setHours(23, 59, 59, 999);
-        query.released_at.$lte = end;
+        dateRange.$lte = end;
       }
+      conditions.push({ released_at: dateRange });
     }
 
-    if (batchId.trim())   query.batch_id  = batchId.trim();
-    if (bonusType.trim()) query.bonus_type = bonusType.trim();
+    if (batchId.trim())   conditions.push({ batch_id:   batchId.trim() });
+    if (bonusType.trim()) conditions.push({ bonus_type: bonusType.trim() });
 
     if (search.trim()) {
       const terms = search
@@ -65,50 +88,46 @@ export async function GET(request: Request) {
         .map((s) => s.trim())
         .filter(Boolean);
 
-      query.$or = terms.flatMap((t) => [
-        { user_id:             { $regex: t, $options: "i" } },
-        { user_name:           { $regex: t, $options: "i" } },
-        { contact:             { $regex: t, $options: "i" } },
-        { batch_id:            { $regex: t, $options: "i" } },
-        { payout_id:           { $regex: t, $options: "i" } },
-        { neft_utr:            { $regex: t, $options: "i" } },
-        { account_holder_name: { $regex: t, $options: "i" } },
-      ]);
+      conditions.push({
+        $or: terms.flatMap((t) => [
+          { user_id:             { $regex: t, $options: "i" } },
+          { user_name:           { $regex: t, $options: "i" } },
+          { contact:             { $regex: t, $options: "i" } },
+          { batch_id:            { $regex: t, $options: "i" } },
+          { payout_id:           { $regex: t, $options: "i" } },
+          { neft_utr:            { $regex: t, $options: "i" } },
+          { account_holder_name: { $regex: t, $options: "i" } },
+        ]),
+      });
     }
 
-    /* ── 2. Fetch with pagination ── */
+    // Combine baseQuery with conditions — same pattern as order-operations
+    const finalQuery =
+      conditions.length > 0
+        ? { $and: [baseQuery, ...conditions] }
+        : baseQuery;
+
+    /* ── 3. Fetch with pagination ── */
     const [records, total] = await Promise.all([
-      Withdraw.find(query)
+      Withdraw.find(finalQuery)
         .sort({ released_at: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      Withdraw.countDocuments(query),
+      Withdraw.countDocuments(finalQuery),
     ]);
 
-    /* ── 3. Summary aggregation ──────────────────────────────────────────────
-       withdraw_amount = net after TDS/admin deductions — this is the real
-                         baseline (same field GET /api/payrelease uses as
-                         "original" before order deductions are applied)
-
-       released_amount = score_balance at release time
-                       = withdraw_amount minus points the user spent on orders
-                       = actual bank transfer amount
-
-       total_deducted  = total_withdraw - total_released
-                       = points spent on orders across all records
-                         (mirrors payrelease "Total Deducted (Orders)" card)
-    ─────────────────────────────────────────────────────────────────────────── */
+    /* ── 4. Summary aggregation ── */
     const summaryAgg = await Withdraw.aggregate([
-      { $match: query },
+      { $match: finalQuery },
       {
         $group: {
-          _id:              null,
-          total_withdraw:   { $sum: "$withdraw_amount"  }, // net after TDS/admin — baseline
-          total_released:   { $sum: "$released_amount"  }, // actual paid out
-          count:            { $sum: 1                   },
-          unique_users:     { $addToSet: "$user_id"     },
-          unique_batches:   { $addToSet: "$batch_id"    },
+          _id:            null,
+          total_withdraw: { $sum: "$withdraw_amount" },
+          total_released: { $sum: "$released_amount" },
+          count:          { $sum: 1 },
+          unique_users:   { $addToSet: "$user_id"  },
+          unique_batches: { $addToSet: "$batch_id" },
         },
       },
     ]);
@@ -119,12 +138,12 @@ export async function GET(request: Request) {
     const totalReleased = agg.total_released ?? 0;
 
     const summary = {
-      total_records:  agg.count                ?? 0,
-      unique_users:   agg.unique_users?.length  ?? 0,
+      total_records:  agg.count                 ?? 0,
+      unique_users:   agg.unique_users?.length   ?? 0,
       unique_batches: agg.unique_batches?.length ?? 0,
-      total_original: totalWithdraw,                        // withdraw_amount = net baseline
-      total_deducted: Math.max(0, totalWithdraw - totalReleased), // points used on orders
-      grand_release:  totalReleased,                        // actual bank transfer
+      total_original: totalWithdraw,
+      total_deducted: Math.max(0, totalWithdraw - totalReleased),
+      grand_release:  totalReleased,
     };
 
     return NextResponse.json(

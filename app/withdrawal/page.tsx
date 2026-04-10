@@ -12,6 +12,7 @@ import ShowToast from "@/components/common/Toast/toast";
 import { FiFilter } from "react-icons/fi";
 import DateFilterModal from "@/components/common/DateRangeModal/daterangemodal";
 import { useRouter } from "next/navigation";
+import { useVLife } from "@/store/context";
 
 const API_URL = "/api/withdraw";
 
@@ -23,15 +24,9 @@ const BONUS_TYPE_OPTIONS = [
   { label: "Quickstar", value: "quickstar" },
 ];
 
-const BONUS_COLORS: Record<string, string> = {
-  daily:     "bg-blue-100 text-blue-700",
-  fortnight: "bg-purple-100 text-purple-700",
-  referral:  "bg-green-100 text-green-700",
-  quickstar: "bg-amber-100 text-amber-700",
-};
-
 export default function WithdrawPage() {
-  const router = useRouter();
+  const router      = useRouter();
+  const { user }    = useVLife();
 
   const { query, setQuery, debouncedQuery } = useSearch();
   const [reportData, setReportData]     = useState<any[]>([]);
@@ -42,7 +37,6 @@ export default function WithdrawPage() {
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [bonusType, setBonusType]       = useState("");
 
-  // ── Summary — matches payrelease card style ──────────────────────────
   const [summary, setSummary] = useState({
     total_records:  0,
     unique_users:   0,
@@ -63,15 +57,18 @@ export default function WithdrawPage() {
     goToPage,
   } = usePagination({ totalItems, itemsPerPage: 12, onPageChange: () => {} });
 
-  /* ── Fetch ── */
+  /* ── Fetch — passes role + user_id exactly like order-operations ── */
   const fetchRecords = useCallback(
     async (search: string, page: number) => {
+      if (!user?.user_id) return;
       try {
         setLoading(true);
         const params: any = {
-          search: search || "",
+          role:    user.role,
+          user_id: user.user_id,
+          search:  search || "",
           page,
-          limit: 12,
+          limit:   12,
           ...(bonusType && { bonus_type: bonusType }),
           ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
@@ -99,16 +96,19 @@ export default function WithdrawPage() {
         setLoading(false);
       }
     },
-    [dateFilter, bonusType],
+    [dateFilter, bonusType, user?.role, user?.user_id],
   );
 
   useEffect(() => {
+    if (!user?.user_id) return;
     fetchRecords(debouncedQuery, currentPage);
-  }, [debouncedQuery, dateFilter, bonusType, currentPage]);
+  }, [debouncedQuery, dateFilter, bonusType, currentPage, user?.user_id]);
 
   useEffect(() => {
     goToPage(1);
   }, [debouncedQuery, dateFilter, bonusType]);
+
+  const isAdmin = user?.role === "admin";
 
   /* ── Columns ── */
   const columns: GridColDef[] = [
@@ -120,26 +120,43 @@ export default function WithdrawPage() {
         <span className="text-gray-600 text-xs">{p.value || "—"}</span>
       ),
     },
-    {
-      field: "batch_id",
-      headerName: "Batch ID",
-      flex: 1.2,
-      renderCell: (p: any) => (
-        <span
-          className="text-[#0C3978] font-mono text-xs cursor-pointer hover:underline"
-          onClick={() => router.push(`/batches/${p.value}`)}
-        >
-          {p.value || "—"}
-        </span>
-      ),
-    },
-    { field: "user_id", headerName: "User ID", flex: 0.9 },
+
+    // Batch ID — admin only (users don't need to see/navigate batches)
+    ...(isAdmin
+      ? [{
+          field: "batch_id",
+          headerName: "Batch ID",
+          flex: 1.2,
+          renderCell: (p: any) => (
+            <span
+              className="text-[#0C3978] font-mono text-xs cursor-pointer hover:underline"
+              onClick={() => router.push(`/batches/${p.value}`)}
+            >
+              {p.value || "—"}
+            </span>
+          ),
+        } as GridColDef]
+      : []),
+
+    // User ID — admin only (users know who they are)
+    ...(isAdmin
+      ? [{ field: "user_id", headerName: "User ID", flex: 0.9 } as GridColDef]
+      : []),
+
     {
       field: "account_holder_name",
       headerName: "Account Name",
       flex: 1.2,
     },
     { field: "bank_name", headerName: "Bank", flex: 1 },
+    {
+      field: "payout_name",
+      headerName: "Payout",
+      flex: 1,
+      renderCell: (p: any) => (
+        <span className="text-gray-600 text-xs">{p.value || "—"}</span>
+      ),
+    },
     {
       field: "original_amount",
       headerName: "Original (₹)",
@@ -189,12 +206,14 @@ export default function WithdrawPage() {
     },
   ];
 
-  /* ── Summary cards — exact same style as payrelease page ── */
+  /* ── Summary cards ── */
   const summaryCards = [
     {
       label: "Total Records",
       value: summary.total_records.toString(),
-      sub:   `${summary.unique_users} users · ${summary.unique_batches} batches`,
+      sub:   isAdmin
+        ? `${summary.unique_users} users · ${summary.unique_batches} batches`
+        : `${summary.unique_batches} batches`,
       color: "from-[#0C3978] to-[#106187]",
     },
     {
@@ -279,7 +298,7 @@ export default function WithdrawPage() {
           ))}
         </div>
 
-        {/* Summary cards — same layout and colors as payrelease page */}
+        {/* Summary cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {summaryCards.map((card) => (
             <div
