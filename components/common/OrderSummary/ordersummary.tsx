@@ -825,7 +825,7 @@ export default function OrderFormCartSection({
                         )}
 
                         {/* Daily + Fortnight Reward */}
-                        {(fortnightPoints > 0 || dailyPoints > 0) && (
+                        {/* {(fortnightPoints > 0 || dailyPoints > 0) && (
                           <div className="flex justify-between items-start text-sm text-gray-700 py-1.5">
                             <label className="flex items-start gap-2 cursor-pointer">
                               <input
@@ -876,7 +876,7 @@ export default function OrderFormCartSection({
                               </span>
                             )}
                           </div>
-                        )}
+                        )} */}
 
                         {/* Divider */}
                         {(cashbackPoints > 0 || fortnightPoints > 0) && (
