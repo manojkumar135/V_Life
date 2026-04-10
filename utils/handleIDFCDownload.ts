@@ -136,7 +136,7 @@ export async function handleIDFCDownload({
         amount, // Amount                     — MANDATORY
         "INR", // Currency                   — MANDATORY
         row.mail || "", // Beneficiary Email ID       — OPTIONAL
-        `Payout - ${row.user_id}`, // Remarks                    — OPTIONAL
+        "", // Remarks                    — OPTIONAL
         row.user_id || "", // Custom Header – 1 (User ID)
         row.contact || "", // Custom Header – 2 (Contact — from wallet)
         "", // Custom Header – 3 (PAN)

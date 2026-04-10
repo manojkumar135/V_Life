@@ -186,7 +186,7 @@ async function buildExcel(
       amount,
       "INR",
       row.mail                || "",
-      `Payout - ${row.user_id}`,
+      "",
       row.user_id             || "",
       row.contact             || "",
       "",

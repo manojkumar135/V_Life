@@ -19,8 +19,8 @@ import { PayoutBatch } from "@/models/batch";
 
 function todayDDMMYYYY(): string {
   const d = new Date();
-  const dd   = String(d.getDate()).padStart(2, "0");
-  const mm   = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
 }
@@ -62,9 +62,18 @@ async function buildExcel(
       pattern: "solid",
       fgColor: { argb: "FF1F497D" }, // dark navy — matches IDFC template
     };
-    cell.font      = { bold: true, color: { argb: "FFFFFFFF" }, size: 10, name: "Arial" };
-    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: false };
-    cell.border    = { bottom: { style: "thin", color: { argb: "FFAAAAAA" } } };
+    cell.font = {
+      bold: true,
+      color: { argb: "FFFFFFFF" },
+      size: 10,
+      name: "Arial",
+    };
+    cell.alignment = {
+      horizontal: "center",
+      vertical: "middle",
+      wrapText: false,
+    };
+    cell.border = { bottom: { style: "thin", color: { argb: "FFAAAAAA" } } };
   });
   headerRow.height = 20;
 
@@ -89,9 +98,14 @@ async function buildExcel(
 
   const instrRow = ws.addRow(INSTRUCTIONS);
   instrRow.eachCell((cell) => {
-    cell.font      = { size: 9, color: { argb: "FF595959" }, italic: true, name: "Arial" };
+    cell.font = {
+      size: 9,
+      color: { argb: "FF595959" },
+      italic: true,
+      name: "Arial",
+    };
     cell.alignment = { vertical: "top", wrapText: true };
-    cell.fill      = {
+    cell.fill = {
       type: "pattern",
       pattern: "solid",
       fgColor: { argb: "FFFFF2CC" }, // light yellow — matches IDFC template
@@ -105,34 +119,35 @@ async function buildExcel(
   for (const w of withdraws) {
     if (!userMap.has(w.user_id)) {
       userMap.set(w.user_id, {
-        user_id:             w.user_id,
-        user_name:           w.user_name,
+        user_id: w.user_id,
+        user_name: w.user_name,
         account_holder_name: w.account_holder_name,
-        contact:             w.contact,
-        pan_number:          w.pan_number,
-        bank_name:           w.bank_name,
-        account_number:      w.account_number,
-        ifsc_code:           w.ifsc_code,
-        mail:                w.mail || "",
-        payout_names:        new Set<string>(),
-        bonus_types:         new Set<string>(),
-        original_total:      0,
-        tds_total:           0,
-        admin_total:         0,
-        released_total:      0,
-        neft_utr:            w.neft_utr || "",
-        neft_date:           w.neft_transaction_date || "",
+        contact: w.contact,
+        pan_number: w.pan_number,
+        bank_name: w.bank_name,
+        account_number: w.account_number,
+        ifsc_code: w.ifsc_code,
+        mail: w.mail || "",
+        payout_names: new Set<string>(),
+        bonus_types: new Set<string>(),
+        original_total: 0,
+        tds_total: 0,
+        admin_total: 0,
+        released_total: 0,
+        neft_utr: w.neft_utr || "",
+        neft_date: w.neft_transaction_date || "",
       });
     }
     const u = userMap.get(w.user_id)!;
     u.payout_names.add(w.payout_name || "");
-    u.bonus_types.add(w.bonus_type   || "");
+    u.bonus_types.add(w.bonus_type || "");
     u.original_total += w.original_amount || 0;
-    u.tds_total      += w.tds_amount      || 0;
-    u.admin_total    += w.admin_charge    || 0;
+    u.tds_total += w.tds_amount || 0;
+    u.admin_total += w.admin_charge || 0;
     u.released_total += w.released_amount || 0;
-    if (w.neft_utr              && !u.neft_utr)  u.neft_utr  = w.neft_utr;
-    if (w.neft_transaction_date && !u.neft_date) u.neft_date = w.neft_transaction_date;
+    if (w.neft_utr && !u.neft_utr) u.neft_utr = w.neft_utr;
+    if (w.neft_transaction_date && !u.neft_date)
+      u.neft_date = w.neft_transaction_date;
   }
 
   const rows = Array.from(userMap.values())
@@ -141,30 +156,30 @@ async function buildExcel(
 
   // ── Rows 3+: Payment data ─────────────────────────────────────────────────
   const debitAccountNumber = process.env.IDFC_DEBIT_ACCOUNT_NUMBER ?? "";
-  const txDate             = releaseDate || todayDDMMYYYY();
+  const txDate = releaseDate || todayDDMMYYYY();
 
   rows.forEach((r, i) => {
     const dataRow = ws.addRow([
-      r.account_holder_name || r.user_name || "",  // Beneficiary Name          — MANDATORY
-      r.account_number      || "",                  // Beneficiary Account Number — MANDATORY
-      r.ifsc_code           || "",                  // IFSC                       — MANDATORY for NEFT
-      "NEFT",                                       // Transaction Type           — MANDATORY
-      "10269542603",                           // Debit Account Number
-      txDate,                                       // Transaction Date           — DD/MM/YYYY MANDATORY
-      r.released_total,                             // Amount                     — MANDATORY
-      "INR",                                        // Currency                   — MANDATORY
-      r.mail                || "",                  // Beneficiary Email ID       — OPTIONAL
-      `Payout - ${r.user_id}`,                      // Remarks                    — OPTIONAL
-      r.user_id             || "",                  // Custom Header – 1 (User ID)
-      r.contact             || "",                  // Custom Header – 2 (Contact)
-       "",                  // Custom Header – 3 (PAN)
-      "",  // Custom Header – 4 (Payout names)
-       "",   // Custom Header – 5 (Bonus types)
+      r.account_holder_name || r.user_name || "", // Beneficiary Name          — MANDATORY
+      r.account_number || "", // Beneficiary Account Number — MANDATORY
+      r.ifsc_code || "", // IFSC                       — MANDATORY for NEFT
+      "NEFT", // Transaction Type           — MANDATORY
+      "10269542603", // Debit Account Number
+      txDate, // Transaction Date           — DD/MM/YYYY MANDATORY
+      r.released_total, // Amount                     — MANDATORY
+      "INR", // Currency                   — MANDATORY
+      r.mail || "", // Beneficiary Email ID       — OPTIONAL
+      "", // Remarks                    — OPTIONAL
+      r.user_id || "", // Custom Header – 1 (User ID)
+      r.contact || "", // Custom Header – 2 (Contact)
+      "", // Custom Header – 3 (PAN)
+      "", // Custom Header – 4 (Payout names)
+      "", // Custom Header – 5 (Bonus types)
     ]);
 
     // Amount cell — number format, right-aligned (column G = index 7)
     const amountCell = dataRow.getCell(7);
-    amountCell.numFmt    = `"₹"#,##0.00`;
+    amountCell.numFmt = `"₹"#,##0.00`;
     amountCell.alignment = { horizontal: "right" };
 
     // Alternate row shading — same logic as IDFC handler
@@ -175,16 +190,18 @@ async function buildExcel(
         pattern: "solid",
         fgColor: { argb: isEven ? "FFFAFAFA" : "FFFFFFFF" },
       };
-      cell.font      = { size: 10, name: "Arial" };
+      cell.font = { size: 10, name: "Arial" };
       cell.alignment = cell.alignment || { vertical: "middle" };
-      cell.border    = { bottom: { style: "hair", color: { argb: "FFE0E0E0" } } };
+      cell.border = { bottom: { style: "hair", color: { argb: "FFE0E0E0" } } };
     });
 
     dataRow.height = 18;
   });
 
   // ── Column widths — tuned to IDFC template proportions ───────────────────
-  const COL_WIDTHS = [22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14];
+  const COL_WIDTHS = [
+    22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14,
+  ];
   ws.columns.forEach((col, i) => {
     if (col) col.width = COL_WIDTHS[i] ?? 15;
   });
@@ -206,7 +223,9 @@ export async function GET(
     const { batchId } = await params;
 
     // Verify batch exists
-    const batch = await PayoutBatch.findOne({ batch_id: batchId }).lean() as any;
+    const batch = (await PayoutBatch.findOne({
+      batch_id: batchId,
+    }).lean()) as any;
     if (!batch) {
       return NextResponse.json(
         { success: false, message: "Batch not found" },
@@ -237,12 +256,15 @@ export async function GET(
     return new NextResponse(excelBuffer, {
       status: 200,
       headers: {
-        "Content-Type":        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "Content-Length":      excelBuffer.byteLength.toString(),
-        "X-Batch-Id":          batchId,
-        "X-User-Count":        String(new Set(withdraws.map((w: any) => w.user_id)).size),
-        "X-Is-Redownload":     "true",
+        "Content-Length": excelBuffer.byteLength.toString(),
+        "X-Batch-Id": batchId,
+        "X-User-Count": String(
+          new Set(withdraws.map((w: any) => w.user_id)).size,
+        ),
+        "X-Is-Redownload": "true",
       },
     });
   } catch (error: any) {
