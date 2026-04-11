@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { boolean } from "yup";
 
 const payoutSchema = new mongoose.Schema({
   transaction_id: { type: String },
@@ -14,8 +13,8 @@ const payoutSchema = new mongoose.Schema({
   pan:              { type: String },
   pan_verified:   { type: Boolean, default: false },
 
-  name:  { type: String, default: "Matching Bonus" },
-  title: { type: String, default: "Matching Bonus" },
+  name:  { type: String,  },
+  title: { type: String, },
 
   account_holder_name: { type: String },
   bank_name:           { type: String },

@@ -25,8 +25,8 @@ const BONUS_TYPE_OPTIONS = [
 ];
 
 export default function WithdrawPage() {
-  const router      = useRouter();
-  const { user }    = useVLife();
+  const router   = useRouter();
+  const { user } = useVLife();
 
   const { query, setQuery, debouncedQuery } = useSearch();
   const [reportData, setReportData]     = useState<any[]>([]);
@@ -46,7 +46,7 @@ export default function WithdrawPage() {
     grand_release:  0,
   });
 
-  /* ── Pagination ── */
+  /* ── Pagination — client-side, same as orders page ── */
   const {
     currentPage,
     totalPages,
@@ -57,9 +57,9 @@ export default function WithdrawPage() {
     goToPage,
   } = usePagination({ totalItems, itemsPerPage: 12, onPageChange: () => {} });
 
-  /* ── Fetch — passes role + user_id exactly like order-operations ── */
+  /* ── Fetch — no page/limit params, fetch all then let Table slice ── */
   const fetchRecords = useCallback(
-    async (search: string, page: number) => {
+    async (search: string) => {
       if (!user?.user_id) return;
       try {
         setLoading(true);
@@ -67,8 +67,7 @@ export default function WithdrawPage() {
           role:    user.role,
           user_id: user.user_id,
           search:  search || "",
-          page,
-          limit:   12,
+          limit:   1000, // fetch enough — Table + usePagination handles display slicing
           ...(bonusType && { bonus_type: bonusType }),
           ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
@@ -77,8 +76,9 @@ export default function WithdrawPage() {
           }),
         };
         const { data } = await axios.get(API_URL, { params });
-        setReportData(data.data || []);
-        setTotalItems(data.total || 0);
+        const rows = data.data || [];
+        setReportData(rows);
+        setTotalItems(rows.length);
         setSummary(
           data.summary || {
             total_records:  0,
@@ -101,12 +101,9 @@ export default function WithdrawPage() {
 
   useEffect(() => {
     if (!user?.user_id) return;
-    fetchRecords(debouncedQuery, currentPage);
-  }, [debouncedQuery, dateFilter, bonusType, currentPage, user?.user_id]);
-
-  useEffect(() => {
+    fetchRecords(debouncedQuery);
     goToPage(1);
-  }, [debouncedQuery, dateFilter, bonusType]);
+  }, [debouncedQuery, dateFilter, bonusType, user?.user_id]);
 
   const isAdmin = user?.role === "admin";
 
@@ -121,7 +118,7 @@ export default function WithdrawPage() {
       ),
     },
 
-    // Batch ID — admin only (users don't need to see/navigate batches)
+    // Batch ID — admin only
     ...(isAdmin
       ? [{
           field: "batch_id",
@@ -138,7 +135,7 @@ export default function WithdrawPage() {
         } as GridColDef]
       : []),
 
-    // User ID — admin only (users know who they are)
+    // User ID — admin only
     ...(isAdmin
       ? [{ field: "user_id", headerName: "User ID", flex: 0.9 } as GridColDef]
       : []),

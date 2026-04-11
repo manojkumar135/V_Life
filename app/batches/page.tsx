@@ -256,7 +256,7 @@ export default function BatchesPage() {
                         <button
                           title="View batch detail"
                           onClick={() =>
-                            router.push(`/reports/batches/${batch.batch_id}`)
+                            router.push(`/batches/${batch.batch_id}`)
                           }
                           className="p-1.5 rounded-lg text-[#0C3978] hover:bg-blue-50 transition-colors cursor-pointer"
                         >

@@ -17,8 +17,8 @@
  *     "neft_utr": "HDFC0012345678",
  *     "neft_transaction_date": "07-04-2026",
  *     "neft_transaction_time": "14:30",
- *     "neft_bank_ref": "REF123",          // optional
- *     "neft_remarks": "April week 1",     // optional
+ *     "neft_bank_ref": "REF123",
+ *     "neft_remarks": "April week 1",
  *     "updated_by": "admin_user_id"
  *   }
  *
@@ -26,38 +26,37 @@
  *   {
  *     "mode": "selective",
  *     "updates": [
- *       {
- *         "payout_id": "P001",
- *         "neft_utr": "UTR001",
- *         "neft_transaction_date": "07-04-2026",
- *         "neft_transaction_time": "14:30",
- *         "neft_bank_ref": "REF001"
- *       },
- *       {
- *         "payout_id": "P002",
- *         "neft_utr": "UTR002",
- *         "neft_transaction_date": "08-04-2026",
- *         "neft_transaction_time": "09:15"
- *       }
+ *       { "payout_id": "P001", "neft_utr": "UTR001", "neft_transaction_date": "07-04-2026", ... },
+ *       { "payout_id": "P002", "neft_utr": "UTR002", ... }
  *     ],
  *     "updated_by": "admin_user_id"
  *   }
  *
- *   After update, batch status auto-advances:
+ *   For BOTH modes, on each UTR update:
+ *     → Withdraw.neft_utr is set (audit trail)
+ *     → DailyPayout.transaction_id + WeeklyPayout.transaction_id are updated with neft_utr
+ *       so the payout record is self-contained with the final bank transaction reference
+ *
+ *   After selective update, batch status auto-advances:
  *     all records have UTR → "transaction_updated"
  *     some records have UTR → "partially_updated"
+ *
+ *   For selective mode, batch.neft_utr is set to the FIRST UTR in the update
+ *   (or "multiple" if different UTRs are used) so the batches list never shows "Pending"
+ *   incorrectly when all records are actually updated.
  */
 
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { PayoutBatch } from "@/models/batch";
 import { Withdraw } from "@/models/withdraw";
+import { DailyPayout, WeeklyPayout } from "@/models/payout";
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ batchId: string }> },  // 👈 Promise<>
+  { params }: { params: Promise<{ batchId: string }> },
 ) {
   try {
     await connectDB();
@@ -77,7 +76,6 @@ export async function GET(
       );
     }
 
-    // Summary of NEFT completion
     const totalWithdraws   = withdraws.length;
     const updatedWithdraws = withdraws.filter((w: any) => w.neft_utr).length;
     const pendingWithdraws = totalWithdraws - updatedWithdraws;
@@ -108,16 +106,15 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ batchId: string }> },  // 👈 Promise<>
+  { params }: { params: Promise<{ batchId: string }> },
 ) {
   try {
     await connectDB();
-    const { batchId } = await params;  
+    const { batchId } = await params;
     const body = await request.json();
     const { mode, updated_by = "admin" } = body;
     const now = new Date();
 
-    // Validate batch exists
     const batch = await PayoutBatch.findOne({ batch_id: batchId });
     if (!batch) {
       return NextResponse.json(
@@ -126,14 +123,14 @@ export async function PATCH(
       );
     }
 
-    // ── Mode: batch — same UTR for all withdraws in this batch ───────────────
+    // ── Mode: batch — same UTR for ALL records ────────────────────────────────
     if (mode === "batch") {
       const {
         neft_utr,
         neft_transaction_date,
         neft_transaction_time,
-        neft_bank_ref  = null,
-        neft_remarks   = null,
+        neft_bank_ref = null,
+        neft_remarks  = null,
       } = body;
 
       if (!neft_utr) {
@@ -143,15 +140,22 @@ export async function PATCH(
         );
       }
 
+      // Get all payout_ids in this batch to update transaction_id on payout records
+      const withdrawsInBatch = await Withdraw.find(
+        { batch_id: batchId },
+        { payout_id: 1 },
+      ).lean();
+      const payoutIds = withdrawsInBatch.map((w: any) => w.payout_id);
+
       await Promise.all([
-        // Update all withdraw records in this batch with the same NEFT details
+        // 1. Update all Withdraw records with NEFT details
         Withdraw.updateMany(
           { batch_id: batchId },
           {
             $set: {
               neft_utr,
-              neft_transaction_date:  neft_transaction_date  || null,
-              neft_transaction_time:  neft_transaction_time  || null,
+              neft_transaction_date:  neft_transaction_date || null,
+              neft_transaction_time:  neft_transaction_time || null,
               neft_bank_ref,
               neft_remarks,
               transaction_updated_at: now,
@@ -160,7 +164,32 @@ export async function PATCH(
           },
         ),
 
-        // Update batch record with same details + advance status
+        // 2. Update transaction_id on DailyPayout records — neft_utr is the bank's
+        //    final transaction reference for this payout
+        DailyPayout.updateMany(
+          { payout_id: { $in: payoutIds } },
+          {
+            $set: {
+              transaction_id:   neft_utr,
+              last_modified_at: now,
+              last_modified_by: updated_by,
+            },
+          },
+        ),
+
+        // 3. Same for WeeklyPayout records
+        WeeklyPayout.updateMany(
+          { payout_id: { $in: payoutIds } },
+          {
+            $set: {
+              transaction_id:   neft_utr,
+              last_modified_at: now,
+              last_modified_by: updated_by,
+            },
+          },
+        ),
+
+        // 4. Update PayoutBatch — set neft_utr so list page shows it correctly
         PayoutBatch.updateOne(
           { batch_id: batchId },
           {
@@ -176,14 +205,8 @@ export async function PATCH(
               update_history: {
                 updated_at: now,
                 updated_by,
-                fields: {
-                  neft_utr,
-                  neft_transaction_date,
-                  neft_transaction_time,
-                  neft_bank_ref,
-                  neft_remarks,
-                },
-                note: `Batch-level NEFT update applied to all withdraw records`,
+                fields: { neft_utr, neft_transaction_date, neft_transaction_time, neft_bank_ref, neft_remarks },
+                note: `Batch-level NEFT update applied to all ${payoutIds.length} withdraw records`,
               },
             },
           },
@@ -192,8 +215,8 @@ export async function PATCH(
 
       return NextResponse.json(
         {
-          success: true,
-          message: `NEFT details applied to all withdraw records in batch ${batchId}`,
+          success:  true,
+          message:  `NEFT details applied to all withdraw records in batch ${batchId}`,
           batch_id: batchId,
           mode:     "batch",
         },
@@ -201,16 +224,16 @@ export async function PATCH(
       );
     }
 
-    // ── Mode: selective — different UTRs per payout_id ───────────────────────
+    // ── Mode: selective — different UTRs per payout_id ────────────────────────
     if (mode === "selective") {
       const { updates } = body as {
         updates: Array<{
-          payout_id:             string;
-          neft_utr?:             string;
+          payout_id:              string;
+          neft_utr?:              string;
           neft_transaction_date?: string;
           neft_transaction_time?: string;
-          neft_bank_ref?:        string;
-          neft_remarks?:         string;
+          neft_bank_ref?:         string;
+          neft_remarks?:          string;
         }>;
       };
 
@@ -221,8 +244,8 @@ export async function PATCH(
         );
       }
 
-      // Build bulkWrite ops — one per payout_id
-      const bulkOps = updates.map((u) => ({
+      // Build bulkWrite ops for Withdraw records
+      const withdrawBulkOps = updates.map((u) => ({
         updateOne: {
           filter: { payout_id: u.payout_id, batch_id: batchId },
           update: {
@@ -239,21 +262,70 @@ export async function PATCH(
         },
       }));
 
-      const result = await Withdraw.bulkWrite(bulkOps);
+      // Build bulkWrite ops to update transaction_id on payout records
+      // Same op runs against both DailyPayout and WeeklyPayout —
+      // each payout_id only exists in one collection, so the other gets 0 matches (safe)
+      const payoutBulkOps = updates
+        .filter((u) => u.neft_utr) // only update where UTR is provided
+        .map((u) => ({
+          updateOne: {
+            filter: { payout_id: u.payout_id },
+            update: {
+              $set: {
+                transaction_id:   u.neft_utr,  // bank UTR = final transaction reference
+                last_modified_at: now,
+                last_modified_by: updated_by,
+              },
+            },
+          },
+        }));
 
-      // Check how many records still have no UTR to set batch status correctly
+      await Promise.all([
+        // 1. Update Withdraw records
+        Withdraw.bulkWrite(withdrawBulkOps),
+
+        // 2. Update transaction_id on payout records (both collections)
+        payoutBulkOps.length > 0
+          ? Promise.all([
+              DailyPayout.bulkWrite(payoutBulkOps),
+              WeeklyPayout.bulkWrite(payoutBulkOps),
+            ])
+          : Promise.resolve(),
+      ]);
+
+      // Check how many Withdraw records still have no UTR
       const pendingCount = await Withdraw.countDocuments({
         batch_id: batchId,
         $or: [{ neft_utr: null }, { neft_utr: { $exists: false } }],
       });
 
-      const newStatus =
-        pendingCount === 0 ? "transaction_updated" : "partially_updated";
+      const newStatus = pendingCount === 0 ? "transaction_updated" : "partially_updated";
+
+      /* ── Fix: set neft_utr on the PayoutBatch document for selective mode ──
+         The batches list page reads batch.neft_utr to show in the NEFT UTR column.
+         For selective mode (different UTRs per user), we use the first UTR provided
+         as a representative value, or "multiple" if more than one distinct UTR.
+         This ensures the list page never shows "Pending" when all records are done.
+      ─────────────────────────────────────────────────────────────────────────── */
+      const distinctUtrs = [...new Set(updates.map((u) => u.neft_utr).filter(Boolean))];
+      const batchNeftUtr =
+        distinctUtrs.length === 0 ? null :
+        distinctUtrs.length === 1 ? distinctUtrs[0] :
+        "multiple";
 
       await PayoutBatch.updateOne(
         { batch_id: batchId },
         {
-          $set: { status: newStatus },
+          $set: {
+            status: newStatus,
+            // Only update neft_utr on batch if it's not already set (first selective update)
+            // or if all records are now done (set representative value)
+            ...(pendingCount === 0 && batchNeftUtr
+              ? { neft_utr: batchNeftUtr }
+              : !batch.neft_utr && batchNeftUtr
+              ? { neft_utr: batchNeftUtr }
+              : {}),
+          },
           $push: {
             update_history: {
               updated_at: now,
@@ -270,11 +342,11 @@ export async function PATCH(
 
       return NextResponse.json(
         {
-          success: true,
-          message:        `Updated ${result.modifiedCount} withdraw record(s)`,
+          success:        true,
+          message:        `Updated ${updates.length} withdraw record(s)`,
           batch_id:       batchId,
           mode:           "selective",
-          modified_count: result.modifiedCount,
+          modified_count: updates.length,
           pending_count:  pendingCount,
           batch_status:   newStatus,
         },
@@ -282,7 +354,6 @@ export async function PATCH(
       );
     }
 
-    // ── Unknown mode ─────────────────────────────────────────────────────────
     return NextResponse.json(
       { success: false, message: `Invalid mode "${mode}". Use "batch" or "selective"` },
       { status: 400 },
