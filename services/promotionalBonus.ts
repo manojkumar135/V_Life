@@ -158,8 +158,8 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     const hold = await determineHoldReasons(userId, currentMonth());
 
     // Note: Quick Star uses "Completed" (not "Pending") when all clear
-    const payoutStatus: "Pending" | "OnHold" | "Completed" =
-      hold.status === "OnHold" ? "OnHold" : "Completed";
+    const payoutStatus: "pending" | "OnHold" | "Completed" =
+      hold.status === "OnHold" ? "OnHold" : "pending";
 
     const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
 
@@ -275,15 +275,14 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
       });
     }
 
-
     await addRewardScore({
-  user_id: user.user_id,
-  points: withdraw, 
-  source: "quick_star_bonus",
-  reference_id: payout.transaction_id,
-  remarks: "Quick Star Bonus (withdraw portion)",
-  type: "quickstar", 
-});
+      user_id: user.user_id,
+      points: withdraw,
+      source: "quick_star_bonus",
+      reference_id: payout.transaction_id,
+      remarks: "Quick Star Bonus (withdraw portion)",
+      type: "quickstar",
+    });
 
     await addRewardScore({
       user_id: user.user_id,
