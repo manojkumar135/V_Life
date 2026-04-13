@@ -158,8 +158,7 @@ export async function checkAndReleasePromotionalBonus(userId: string) {
     const hold = await determineHoldReasons(userId, currentMonth());
 
     // Note: Quick Star uses "Completed" (not "Pending") when all clear
-    const payoutStatus: "pending" | "OnHold" | "Completed" =
-      hold.status === "OnHold" ? "OnHold" : "pending";
+    const payoutStatus: "Pending" | "OnHold" | "Completed" =hold.status
 
     const payout_id = await generateUniqueCustomId("PY", DailyPayout, 8, 8);
 
