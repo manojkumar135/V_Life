@@ -46,7 +46,7 @@ export default function WithdrawPage() {
     grand_release:  0,
   });
 
-  /* ── Pagination — client-side, same as orders page ── */
+  /* ── Pagination — client-side ── */
   const {
     currentPage,
     totalPages,
@@ -57,7 +57,7 @@ export default function WithdrawPage() {
     goToPage,
   } = usePagination({ totalItems, itemsPerPage: 12, onPageChange: () => {} });
 
-  /* ── Fetch — no page/limit params, fetch all then let Table slice ── */
+  /* ── Fetch ── */
   const fetchRecords = useCallback(
     async (search: string) => {
       if (!user?.user_id) return;
@@ -67,7 +67,7 @@ export default function WithdrawPage() {
           role:    user.role,
           user_id: user.user_id,
           search:  search || "",
-          limit:   1000, // fetch enough — Table + usePagination handles display slicing
+          limit:   1000,
           ...(bonusType && { bonus_type: bonusType }),
           ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
@@ -118,7 +118,6 @@ export default function WithdrawPage() {
       ),
     },
 
-    // Batch ID — admin only
     ...(isAdmin
       ? [{
           field: "batch_id",
@@ -135,25 +134,32 @@ export default function WithdrawPage() {
         } as GridColDef]
       : []),
 
-    // User ID — admin only
     ...(isAdmin
       ? [{ field: "user_id", headerName: "User ID", flex: 0.9 } as GridColDef]
       : []),
 
+    { field: "account_holder_name", headerName: "Account Name", flex: 1.2 },
+    { field: "bank_name",           headerName: "Bank",         flex: 1   },
+
     {
-      field: "account_holder_name",
-      headerName: "Account Name",
-      flex: 1.2,
-    },
-    { field: "bank_name", headerName: "Bank", flex: 1 },
-    {
-      field: "payout_name",
-      headerName: "Payout",
+      field: "bonus_types",
+      headerName: "Types",
       flex: 1,
       renderCell: (p: any) => (
         <span className="text-gray-600 text-xs">{p.value || "—"}</span>
       ),
     },
+
+    {
+      field: "payout_count",
+      headerName: "Payouts",
+      flex: 0.7,
+      align: "center",
+      renderCell: (p: any) => (
+        <span className="text-gray-500 text-xs">{p.value ?? "—"}</span>
+      ),
+    },
+
     {
       field: "original_amount",
       headerName: "Original (₹)",
@@ -165,6 +171,19 @@ export default function WithdrawPage() {
         </span>
       ),
     },
+
+    {
+      field: "deducted_amount",
+      headerName: "Deducted (₹)",
+      flex: 1,
+      align: "right",
+      renderCell: (p: GridRenderCellParams<any, number>) => (
+        <span className={`pr-4 font-medium ${(p.value ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
+          {(p.value ?? 0) > 0 ? `₹ ${Number(p.value).toFixed(2)}` : "—"}
+        </span>
+      ),
+    },
+
     {
       field: "released_amount",
       headerName: "Released (₹)",
@@ -176,30 +195,17 @@ export default function WithdrawPage() {
         </span>
       ),
     },
+
     {
       field: "neft_utr",
       headerName: "NEFT UTR",
-      flex: 0.8,
+      flex: 1,
       renderCell: (p: any) =>
         p.value ? (
           <span className="font-mono text-xs text-[#0C3978]">{p.value}</span>
         ) : (
           <span className="text-xs text-orange-500 italic">Pending</span>
         ),
-    },
-    {
-      field: "payout_id",
-      headerName: "Action",
-      flex: 0.7,
-      sortable: false,
-      renderCell: (p: any) => (
-        <button
-          className="text-xs text-[#0C3978] hover:underline cursor-pointer"
-          onClick={() => router.push(`/withdrawal/detailview/${p.value}`)}
-        >
-          View
-        </button>
-      ),
     },
   ];
 
@@ -235,7 +241,6 @@ export default function WithdrawPage() {
 
   const onBack = () => router.push("/reports");
 
-  /* ── Render ── */
   return (
     <Layout>
       <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
@@ -245,7 +250,6 @@ export default function WithdrawPage() {
           </div>
         )}
 
-        {/* Floating Filter */}
         <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
             className="relative w-12 h-12 rounded-full bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
@@ -278,7 +282,6 @@ export default function WithdrawPage() {
           onPrev={prevPage}
         />
 
-        {/* Bonus type filter pills */}
         <div className="flex gap-2 mb-3 flex-wrap">
           {BONUS_TYPE_OPTIONS.map((opt) => (
             <button
@@ -295,7 +298,6 @@ export default function WithdrawPage() {
           ))}
         </div>
 
-        {/* Summary cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           {summaryCards.map((card) => (
             <div
@@ -311,19 +313,19 @@ export default function WithdrawPage() {
           ))}
         </div>
 
-        {/* Legend */}
+        {/* Legend — three clearly distinct colors */}
         <div className="flex gap-4 mb-3 text-xs text-gray-500 flex-wrap">
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-[#0C3978]" />
-            Amount to Release = Score balance (original − points used on orders)
+            Original = net after TDS/admin · one row per user per batch
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-orange-500" />
             Deducted = Daily/Fortnight points spent on orders
           </span>
           <span className="flex items-center gap-1">
-            <span className="inline-block w-3 h-3 rounded-full bg-orange-400" />
-            NEFT UTR "Pending" = released but bank UTR not yet recorded
+            <span className="inline-block w-3 h-3 rounded-full bg-green-600" />
+            Release Amount = Actual amount paid after deductions
           </span>
         </div>
 
@@ -332,7 +334,7 @@ export default function WithdrawPage() {
           rows={reportData}
           currentPage={currentPage}
           setCurrentPage={goToPage}
-          rowIdField="payout_id"
+          rowIdField="id"
           pageSize={12}
           checkboxSelection
           setSelectedRows={setSelectedRows}
