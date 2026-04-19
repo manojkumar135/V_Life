@@ -17,33 +17,33 @@ import { useVLife } from "@/store/context";
 const API_URL = "/api/withdraw";
 
 const BONUS_TYPE_OPTIONS = [
-  { label: "All Types", value: ""          },
-  { label: "Daily",     value: "daily"     },
+  { label: "All Types", value: "" },
+  { label: "Daily", value: "daily" },
   { label: "Fortnight", value: "fortnight" },
-  { label: "Referral",  value: "referral"  },
+  { label: "Referral", value: "referral" },
   { label: "Quickstar", value: "quickstar" },
 ];
 
 export default function WithdrawPage() {
-  const router   = useRouter();
+  const router = useRouter();
   const { user } = useVLife();
 
   const { query, setQuery, debouncedQuery } = useSearch();
-  const [reportData, setReportData]     = useState<any[]>([]);
-  const [totalItems, setTotalItems]     = useState(0);
-  const [loading, setLoading]           = useState(false);
-  const [dateFilter, setDateFilter]     = useState<any>(null);
-  const [showModal, setShowModal]       = useState(false);
+  const [reportData, setReportData] = useState<any[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [dateFilter, setDateFilter] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
-  const [bonusType, setBonusType]       = useState("");
+  const [bonusType, setBonusType] = useState("");
 
   const [summary, setSummary] = useState({
-    total_records:  0,
-    unique_users:   0,
+    total_records: 0,
+    unique_users: 0,
     unique_batches: 0,
     total_original: 0,
     total_deducted: 0,
-    grand_release:  0,
+    grand_release: 0,
   });
 
   /* ── Pagination — client-side ── */
@@ -64,15 +64,15 @@ export default function WithdrawPage() {
       try {
         setLoading(true);
         const params: any = {
-          role:    user.role,
+          role: user.role,
           user_id: user.user_id,
-          search:  search || "",
-          limit:   1000,
+          search: search || "",
+          limit: 1000,
           ...(bonusType && { bonus_type: bonusType }),
-          ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
+          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
             from: dateFilter.from,
-            to:   dateFilter.to,
+            to: dateFilter.to,
           }),
         };
         const { data } = await axios.get(API_URL, { params });
@@ -81,12 +81,12 @@ export default function WithdrawPage() {
         setTotalItems(rows.length);
         setSummary(
           data.summary || {
-            total_records:  0,
-            unique_users:   0,
+            total_records: 0,
+            unique_users: 0,
             unique_batches: 0,
             total_original: 0,
             total_deducted: 0,
-            grand_release:  0,
+            grand_release: 0,
           },
         );
       } catch (error) {
@@ -107,8 +107,16 @@ export default function WithdrawPage() {
 
   const isAdmin = user?.role === "admin";
 
-  /* ── Columns ── */
+  /* ── Columns — exact same structure as provided code ── */
   const columns: GridColDef[] = [
+    {
+      field: "batch_id",
+      headerName: "Batch ID",
+      flex: 1.5,
+      renderCell: (p: any) => (
+        <span className="text-gray-600 text-xs!">{p.value || "—"}</span>
+      ),
+    },
     {
       field: "released_date",
       headerName: "Date",
@@ -119,27 +127,19 @@ export default function WithdrawPage() {
     },
 
     ...(isAdmin
-      ? [{
-          field: "batch_id",
-          headerName: "Batch ID",
-          flex: 1.2,
-          renderCell: (p: any) => (
-            <span
-              className="text-[#0C3978] font-mono text-xs cursor-pointer hover:underline"
-              onClick={() => router.push(`/batches/${p.value}`)}
-            >
-              {p.value || "—"}
-            </span>
-          ),
-        } as GridColDef]
-      : []),
-
-    ...(isAdmin
       ? [{ field: "user_id", headerName: "User ID", flex: 0.9 } as GridColDef]
       : []),
+    ...(isAdmin
+      ? [
+          {
+            field: "account_holder_name",
+            headerName: "Account Name",
+            flex: 1.2,
+          } as GridColDef,
+        ]
+      : []),
 
-    { field: "account_holder_name", headerName: "Account Name", flex: 1.2 },
-    { field: "bank_name",           headerName: "Bank",         flex: 1   },
+    { field: "bank_name", headerName: "Bank", flex: 1 },
 
     {
       field: "bonus_types",
@@ -160,37 +160,45 @@ export default function WithdrawPage() {
       ),
     },
 
+    // original_amount
     {
       field: "original_amount",
       headerName: "Original (₹)",
       flex: 1,
-      align: "right",
+      align: "right", // ← MUI handles the alignment natively
+      headerAlign: "right", // ← also align the header
       renderCell: (p: GridRenderCellParams<any, number>) => (
-        <span className="pr-4 text-gray-700">
+        <span className="text-gray-700 text-xs truncate">
           ₹ {Number(p.value ?? 0).toFixed(2)}
         </span>
       ),
     },
 
+    // deducted_amount
     {
       field: "deducted_amount",
       headerName: "Deducted (₹)",
       flex: 1,
       align: "right",
+      headerAlign: "right",
       renderCell: (p: GridRenderCellParams<any, number>) => (
-        <span className={`pr-4 font-medium ${(p.value ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
+        <span
+          className={`text-xs font-medium truncate ${(p.value ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}
+        >
           {(p.value ?? 0) > 0 ? `₹ ${Number(p.value).toFixed(2)}` : "—"}
         </span>
       ),
     },
 
+    // released_amount
     {
       field: "released_amount",
       headerName: "Released (₹)",
       flex: 1,
       align: "right",
+      headerAlign: "right",
       renderCell: (p: GridRenderCellParams<any, number>) => (
-        <span className="pr-4 font-bold text-green-700">
+        <span className="text-green-700 text-xs font-bold truncate">
           ₹ {Number(p.value ?? 0).toFixed(2)}
         </span>
       ),
@@ -214,7 +222,7 @@ export default function WithdrawPage() {
     {
       label: "Total Records",
       value: summary.total_records.toString(),
-      sub:   isAdmin
+      sub: isAdmin
         ? `${summary.unique_users} users · ${summary.unique_batches} batches`
         : `${summary.unique_batches} batches`,
       color: "from-[#0C3978] to-[#106187]",
@@ -222,24 +230,27 @@ export default function WithdrawPage() {
     {
       label: "Total Original Amount",
       value: `₹ ${Number(summary.total_original).toFixed(2)}`,
-      sub:   "Net after TDS/admin",
+      sub: "Net after TDS/admin",
       color: "from-[#106187] to-[#16B8E4]",
     },
     {
       label: "Total Deducted (Orders)",
       value: `₹ ${Number(summary.total_deducted).toFixed(2)}`,
-      sub:   "Points used on orders",
+      sub: "Points used on orders",
       color: "from-orange-500 to-orange-400",
     },
     {
       label: "Grand Release Amount",
       value: `₹ ${Number(summary.grand_release).toFixed(2)}`,
-      sub:   "Actual amount paid out",
+      sub: "Actual amount paid out",
       color: "from-green-600 to-green-500",
     },
   ];
 
-  const onBack = () => router.push("/reports");
+  const onBack = () => router.push("/wallet/payout");
+  const handleEdit = (id: string) => {
+    router.push(`/batches/${id}`);
+  };
 
   return (
     <Layout>
@@ -288,9 +299,10 @@ export default function WithdrawPage() {
               key={opt.value}
               onClick={() => setBonusType(opt.value)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer
-                ${bonusType === opt.value
-                  ? "bg-[#0C3978] text-white border-[#0C3978]"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978]"
+                ${
+                  bonusType === opt.value
+                    ? "bg-[#0C3978] text-white border-[#0C3978]"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978]"
                 }`}
             >
               {opt.label}
@@ -313,7 +325,6 @@ export default function WithdrawPage() {
           ))}
         </div>
 
-        {/* Legend — three clearly distinct colors */}
         <div className="flex gap-4 mb-3 text-xs text-gray-500 flex-wrap">
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-[#0C3978]" />
@@ -338,6 +349,7 @@ export default function WithdrawPage() {
           pageSize={12}
           checkboxSelection
           setSelectedRows={setSelectedRows}
+          onIdClick={(id, row) => handleEdit(row.batch_id)}
         />
 
         <DateFilterModal

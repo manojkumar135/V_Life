@@ -42,7 +42,7 @@ export async function POST(request) {
 
         // PAN details
         pan_number: body.pan,
-        pan_verified: "Yes",
+        pan_verified: true,
 
         // Wallet defaults
         balance: 0,

@@ -7,6 +7,7 @@ import { Wallet } from "@/models/wallet";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
+import { releaseOnHoldPayouts } from "../wallets-operations/walletHelpers";
 
 /* =====================================================
    HELPER — strips "", null, undefined, and plain {}
@@ -70,15 +71,15 @@ export async function GET(request: Request) {
     }
 
     // GET handler — clean fix
-const wallet = await Wallet.findOne({ user_id: user.user_id })
-  .select(
-    "wallet_id account_holder_name bank_name account_number ifsc_code gst " +
-    "pan_number pan_name pan_dob pan_file pan_verified " +
-    "aadhar_number aadhar_front aadhar_back cheque bank_book"
-  )
-  .lean();
+    const wallet = await Wallet.findOne({ user_id: user.user_id })
+      .select(
+        "wallet_id account_holder_name bank_name account_number ifsc_code gst " +
+          "pan_number pan_name pan_dob pan_file pan_verified " +
+          "aadhar_number aadhar_front aadhar_back cheque bank_book",
+      )
+      .lean();
 
-const combinedData = { ...user, ...(wallet || {}) };
+    const combinedData = { ...user, ...(wallet || {}) };
 
     return NextResponse.json(
       { success: true, data: combinedData },
@@ -183,17 +184,20 @@ export async function PATCH(request: Request) {
     }
 
     // Strip empty / null / undefined — only real values reach Mongoose
-    const cleanUserUpdates   = cleanObject(userUpdates);
+    const cleanUserUpdates = cleanObject(userUpdates);
     const cleanWalletUpdates = cleanObject(walletUpdates);
 
     // Normalise pan_verified to boolean when present
     if ("pan_verified" in cleanWalletUpdates) {
+      const value = String(cleanWalletUpdates.pan_verified).toLowerCase();
+
       cleanWalletUpdates.pan_verified =
         cleanWalletUpdates.pan_verified === true ||
-        cleanWalletUpdates.pan_verified === "true";
+        value === "true" ||
+        value === "yes";
     }
 
-    let updatedUser   = null;
+    let updatedUser = null;
     let updatedWallet = null;
 
     /* ── Update User only when there are fields to write ── */
@@ -255,10 +259,7 @@ export async function PATCH(request: Request) {
     // Sync mail → Login.mail, TreeNode.mail
     if (cleanUserUpdates.mail) {
       await Promise.all([
-        Login.updateOne(
-          { user_id },
-          { $set: { mail: cleanUserUpdates.mail } },
-        ),
+        Login.updateOne({ user_id }, { $set: { mail: cleanUserUpdates.mail } }),
         TreeNode.updateOne(
           { user_id },
           { $set: { mail: cleanUserUpdates.mail } },
@@ -286,7 +287,9 @@ export async function PATCH(request: Request) {
           { $set: cleanWalletUpdates },
           { returnDocument: "after" },
         );
-      } else if (cleanWalletUpdates.pan_number) {
+        // ✅ ADD THIS — release any OnHold payouts after wallet update
+        await releaseOnHoldPayouts(user_id, "wallet_activated");
+      } else {
         // ── No wallet yet → only create when pan_number is supplied ──────
         // Fetch the user record to seed name / contact / mail / gender
         // into the new wallet (mirrors the registration pattern).
@@ -299,27 +302,41 @@ export async function PATCH(request: Request) {
           user_id,
 
           // Seed from user record, fall back to walletUpdates values
-          user_name:       userRecord?.user_name ?? cleanWalletUpdates.user_name ?? "",
-          contact:         userRecord?.contact   ?? cleanWalletUpdates.contact   ?? "",
-          mail:            userRecord?.mail      ?? cleanWalletUpdates.mail      ?? "",
-          gender:          userRecord?.gender    ?? cleanWalletUpdates.gender    ?? "",
-          rank:            userRecord?.rank      ?? "",
-          user_status:     "Active",
-          wallet_status:   "Active",
-          balance:         0,
-          total_earnings:  0,
+          user_name:
+            userRecord?.user_name ?? cleanWalletUpdates.user_name ?? "",
+          contact: userRecord?.contact ?? cleanWalletUpdates.contact ?? "",
+          mail: userRecord?.mail ?? cleanWalletUpdates.mail ?? "",
+          gender: userRecord?.gender ?? cleanWalletUpdates.gender ?? "",
+          rank: userRecord?.rank ?? "",
+          user_status: "Active",
+          wallet_status: "Active",
+          balance: 0,
+          total_earnings: 0,
           total_withdrawn: 0,
-          activated_date:  new Date(),
-          created_by:      user_id,
+          activated_date: (() => {
+            const d = new Date();
+            const dd = String(d.getDate()).padStart(2, "0");
+            const mm = String(d.getMonth() + 1).padStart(2, "0");
+            const yyyy = d.getFullYear();
+            return `${dd}-${mm}-${yyyy}`;
+          })(),
+          created_by: user_id,
 
           // Spread all the KYC / banking fields the admin is saving
           ...cleanWalletUpdates,
         });
+        // ✅ ADD THIS — release any OnHold payouts now that wallet exists
+        await releaseOnHoldPayouts(user_id, "wallet_created");
       }
-      // else: no wallet + no pan_number → skip wallet creation silently
+      // else: no wallet→ skip wallet creation silently
     }
 
-    if (!updatedUser && !updatedWallet && !Object.keys(cleanUserUpdates).length && !Object.keys(cleanWalletUpdates).length) {
+    if (
+      !updatedUser &&
+      !updatedWallet &&
+      !Object.keys(cleanUserUpdates).length &&
+      !Object.keys(cleanWalletUpdates).length
+    ) {
       return NextResponse.json(
         { success: false, message: "Nothing to update" },
         { status: 400 },

@@ -102,7 +102,8 @@ export async function GET(request: Request) {
     ]);
 
     const referralBonus = referralSum[0]?.total || 0;
-    const directTeamSales = directTeamSalesBonus + quickStarBonus + referralBonus;
+    const directTeamSales =
+      directTeamSalesBonus + quickStarBonus + referralBonus;
 
     // console.log(
     //   "Direct Team Sales:",
@@ -168,6 +169,43 @@ export async function GET(request: Request) {
     const payoutOnHold =
       (dailyHold[0]?.total || 0) + (weeklyHold[0]?.total || 0);
 
+    // 🧾 TOTAL GST (from Orders)
+    const gstSum = await Order.aggregate([
+      { $match: { user_id } },
+      { $group: { _id: null, total: { $sum: "$total_gst" } } },
+    ]);
+
+    const totalGST = gstSum[0]?.total || 0;
+
+    // 💸 TOTAL TDS
+    const [dailyTds, weeklyTds] = await Promise.all([
+      DailyPayout.aggregate([
+        { $match: { user_id } },
+        { $group: { _id: null, total: { $sum: "$tds_amount" } } },
+      ]),
+      WeeklyPayout.aggregate([
+        { $match: { user_id } },
+        { $group: { _id: null, total: { $sum: "$tds_amount" } } },
+      ]),
+    ]);
+
+    const totalTDS = (dailyTds[0]?.total || 0) + (weeklyTds[0]?.total || 0);
+
+    // ⚙️ TOTAL ADMIN CHARGE
+    const [dailyAdmin, weeklyAdmin] = await Promise.all([
+      DailyPayout.aggregate([
+        { $match: { user_id } },
+        { $group: { _id: null, total: { $sum: "$admin_charge" } } },
+      ]),
+      WeeklyPayout.aggregate([
+        { $match: { user_id } },
+        { $group: { _id: null, total: { $sum: "$admin_charge" } } },
+      ]),
+    ]);
+
+    const totalAdminCharge =
+      (dailyAdmin[0]?.total || 0) + (weeklyAdmin[0]?.total || 0);
+
     return NextResponse.json(
       {
         success: true,
@@ -183,9 +221,11 @@ export async function GET(request: Request) {
           infinityTeamSales,
           daysAfterActivation,
           cashbackPoints,
-          // 🆕 New fields
           payoutReleased,
           payoutOnHold,
+          totalGST,
+          totalTDS,
+          totalAdminCharge,
         },
       },
       { status: 200 },

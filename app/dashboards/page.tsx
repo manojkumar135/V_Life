@@ -23,12 +23,12 @@ import {
   FaRupeeSign,
   FaUser,
   FaShoppingBag,
-  FaWallet,
+  FaWallet,FaReceipt,FaPercent 
 } from "react-icons/fa";
+
 import { MdOutlineCheckCircle } from "react-icons/md";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { MdOutlineAttachMoney } from "react-icons/md";
-import { FaPercent } from "react-icons/fa";
 import { CiEdit } from "react-icons/ci";
 import { BsFillPeopleFill } from "react-icons/bs";
 import { FaGift } from "react-icons/fa6";
@@ -47,6 +47,9 @@ interface DashboardSummary {
   cashbackPoints: number;
   payoutReleased: number;
   payoutOnHold: number;
+  totalGST: number;
+  totalTDS: number;
+  totalAdminCharge: number;
 }
 
 interface CycleStats {
@@ -616,7 +619,6 @@ const DashboardPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
-
                 {/* Hidden on mobile — already shown above */}
                 {/* ✅ UPDATED: onClick navigates to rewards with tab=matching */}
                 <div className="hidden md:block">
@@ -712,6 +714,18 @@ const DashboardPage: React.FC = () => {
                     index={7}
                   />
                 </div>
+                <DashBox
+                  icon={<FaReceipt />}
+                  title="Total GST"
+                  value={`${summary?.totalGST?.toFixed(2) || "0.00"}`}
+                  index={3}
+                />
+                <DashBox
+                  icon={<FaPercent  />}
+                  title="Total TDS"
+                  value={`${summary?.totalTDS?.toFixed(2) || "0.00"}`}
+                  index={3}
+                />
               </div>
             </div>
           </div>

@@ -169,6 +169,7 @@ export default function Table<T extends Row>({
                   e.stopPropagation();
                   onIdClick?.(id, params.row);
                 }}
+                className="text-[0.7rem]"
                 style={{
                   background: "transparent",
                   border: "none",
@@ -370,7 +371,7 @@ export default function Table<T extends Row>({
 
             "& .MuiDataGrid-overlay": {
               padding: "20px !important",
-              fontSize: "1rem",
+              fontSize: "0.9rem",
               color: "gray",
               marginBottom: "1.5rem",
             },
@@ -401,76 +402,82 @@ export default function Table<T extends Row>({
 
               "& .MuiDataGrid-overlay": {
                 padding: "20px !important",
-                fontSize: "1rem",
+                fontSize: "0.9rem",
                 color: "gray",
                 marginBottom: "1.5rem",
               },
 
+              // ✅ KEY FIX: let the grid body scroll freely, don't force 100% width
               "& .MuiDataGrid-main": {
                 width: "100% !important",
                 maxWidth: "100% !important",
+                overflowX: "auto !important",
               },
 
               "& .MuiDataGrid-row": {
                 maxHeight: "36px !important",
                 minHeight: "36px !important",
+                width: "max-content !important", // ✅ rows expand to content width
               },
+
               "& .MuiDataGrid-cell": {
                 maxHeight: "35px !important",
                 minHeight: "35px !important",
-                padding: "4px 4px !important",
-                fontSize: "0.8rem !important",
-                overflow: "visible !important",
+                padding: "2px 8px !important",
+                fontSize: "0.75rem !important",
+                overflow: "hidden !important",
+                whiteSpace: "nowrap !important",
+                textOverflow: "ellipsis !important",
+                boxSizing: "border-box !important",
               },
 
               "& .MuiDataGrid-columnHeaders": {
-                minHeight: "30px !important",
-                maxHeight: "30px !important",
-                fontSize: "0.9rem !important",
-              },
-              "& .MuiDataGrid-columnHeaderTitle": {
-                fontSize: "0.9rem !important",
+                minHeight: "35px !important",
+                maxHeight: "35px !important",
+                fontSize: "0.8rem !important",
+                width: "max-content !important", // ✅ header tracks content width
               },
 
+              "& .MuiDataGrid-columnHeaderTitle": {
+                fontSize: "0.8rem !important",
+              },
+
+              // ✅ THE CORE FIX: let virtualScroller scroll, not squeeze
               "& .MuiDataGrid-virtualScroller": {
-                width: "max-content !important",
                 overflowX: "auto !important",
+                width: "100% !important",
               },
               "& .MuiDataGrid-virtualScrollerContent": {
-                width: "max-content !important",
+                width: "max-content !important", // ✅ content as wide as it needs
               },
-              // "& .MuiDataGrid-main": {
-              //   width: "max-content !important",
-              // },
+              "& .MuiDataGrid-virtualScrollerRenderZone": {
+                width: "max-content !important", // ✅ render zone matches
+              },
+
+              // ✅ Fixed widths per column — not minWidth fighting with flex
               '& .MuiDataGrid-columnHeader:not([data-field="__check__"]), & .MuiDataGrid-cell:not([data-field="__check__"])':
                 {
-                  minWidth: "180px !important",
-                  maxWidth: "280px !important",
+                  minWidth: "140px !important",
+                  maxWidth: "200px !important",
                 },
+
               '& [data-field="__check__"]': {
-                minWidth: "50px !important",
-                maxWidth: "50px !important",
+                minWidth: "46px !important",
+                maxWidth: "46px !important",
+                width: "46px !important",
                 padding: "0 !important",
-                left: "0 !important",
                 justifyContent: "center !important",
               },
+
               "& .MuiDataGrid-checkboxInput": {
                 padding: "0 !important",
                 margin: "0 auto !important",
               },
-              // ✅ Make last column take more width
-              "& .MuiDataGrid-columnHeader:last-of-type, & .MuiDataGrid-cell:last-of-type":
-                {
-                  minWidth: "160px !important", // adjust as needed
-                  maxWidth: "auto !important",
-                  // flexGrow: 1,
-                },
 
               "& .MuiDataGrid-scrollbarFiller--header": {
-                backgroundColor: "gray !important", // ✅ header filler gray
+                backgroundColor: "gray !important",
               },
 
-              // ✅ Hide the empty "ghost" cells
               "& .MuiDataGrid-cellEmpty": {
                 display: "none !important",
                 width: 0,
@@ -481,9 +488,10 @@ export default function Table<T extends Row>({
                 display: "none !important",
               },
               "& .MuiDataGrid-cellContent": {
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+                whiteSpace: "nowrap !important",
+                overflow: "hidden !important",
+                textOverflow: "ellipsis !important",
+                fontSize: "0.75rem !important",
               },
             },
 
@@ -507,7 +515,7 @@ export default function Table<T extends Row>({
             },
 
             "& .MuiDataGrid-row": {
-              fontSize: "0.8rem",
+              fontSize: "0.75rem",
               maxHeight: "35px !important",
               minHeight: "35px !important",
               // "&:hover": {
@@ -590,18 +598,19 @@ export default function Table<T extends Row>({
             "& .MuiDataGrid-cell": {
               maxHeight: "35px !important",
               minHeight: "35px !important",
-              padding: "1px 8px !important",
-              outline: "none",
-              whiteSpace: "nowrap !important", // ✅ single line
-              overflow: "hidden !important", // ✅ cut off extra
-              textOverflow: "ellipsis !important", // ✅ ellipsis
+              padding: "1px 6px !important",
+              boxSizing: "border-box",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             },
             "& .MuiDataGrid-cellContent": {
               fontSize: "0.8rem !important",
-              whiteSpace: "nowrap !important", // ✅ same inside content span
-              overflow: "hidden !important",
-              textOverflow: "ellipsis !important",
-              outline: "none",
+              width: "100%",
+              display: "block",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
             },
             "& .MuiDataGrid-columnHeader:focus-within": {
               outline: "none",

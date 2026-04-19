@@ -72,8 +72,7 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
         const birthDate = new Date(value);
         let age = today.getFullYear() - birthDate.getFullYear();
         const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate()))
-          age--;
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
         return age >= 18;
       }),
 
@@ -96,8 +95,10 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
     nomineeRelation: Yup.string().nullable(),
     nomineeContact: Yup.string()
       .nullable()
-      .test("nomineeContact-format", "* Alternate contact must be 10 digits", (v) =>
-        !v ? true : /^[0-9]{10}$/.test(v),
+      .test(
+        "nomineeContact-format",
+        "* Alternate contact must be 10 digits",
+        (v) => (!v ? true : /^[0-9]{10}$/.test(v)),
       ),
 
     /* ── KYC scalars — optional, but validated when present ── */
@@ -107,8 +108,10 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
 
     accountNumber: Yup.string()
       .nullable()
-      .test("accountNumber-format", "* Account number must be 9–18 digits", (v) =>
-        !v ? true : /^\d{9,18}$/.test(v),
+      .test(
+        "accountNumber-format",
+        "* Account number must be 9–18 digits",
+        (v) => (!v ? true : /^\d{9,18}$/.test(v)),
       ),
 
     ifscCode: Yup.string()
@@ -141,11 +144,14 @@ export const ProfileEditSchema = (isAdmin: boolean, panVerified: boolean) =>
 
     aadharFront: Yup.mixed<string | File>()
       .nullable()
-      .test("aadharFront-type", "* Aadhaar front must be an image or PDF", (v) =>
-        !v || isExistingUrl(v)
-          ? true
-          : v instanceof File &&
-            ["image/", "application/pdf"].some((t) => v.type.startsWith(t)),
+      .test(
+        "aadharFront-type",
+        "* Aadhaar front must be an image or PDF",
+        (v) =>
+          !v || isExistingUrl(v)
+            ? true
+            : v instanceof File &&
+              ["image/", "application/pdf"].some((t) => v.type.startsWith(t)),
       ),
 
     aadharBack: Yup.mixed<string | File>()
@@ -263,7 +269,7 @@ export default function ProfileEditPage() {
       const { data } = await axios.get(
         `/api/getuser-operations?search=${userMeta.user_id}&passkey=true`,
       );
-console.log(data)
+      console.log(data);
       if (data?.success) {
         const key = data.login_key || null;
         setPasskey(key);
@@ -509,7 +515,11 @@ console.log(data)
       setDbValues(mappedValues);
       setInitialValues(mappedValues);
       setOriginalPan(u.pan_number || "");
-      setPanVerified(Boolean(u.pan_verified));
+      setPanVerified(
+        u.pan_verified === true ||
+          String(u.pan_verified).toLowerCase() === "true" ||
+          String(u.pan_verified).toLowerCase() === "yes",
+      );
     } catch (error) {
       ShowToast.error("User not found");
       setUserMeta(null);
@@ -533,11 +543,11 @@ console.log(data)
 
       // ── Step 1: Upload new File picks to S3, resolve existing URLs ──────
       const fileFields = [
-        { formikKey: "bankBook",        dbKey: "bank_book"    },
-        { formikKey: "aadharFront",     dbKey: "aadhar_front" },
-        { formikKey: "aadharBack",      dbKey: "aadhar_back"  },
-        { formikKey: "cancelledCheque", dbKey: "cheque"       },
-        { formikKey: "panFile",         dbKey: "pan_file"     },
+        { formikKey: "bankBook", dbKey: "bank_book" },
+        { formikKey: "aadharFront", dbKey: "aadhar_front" },
+        { formikKey: "aadharBack", dbKey: "aadhar_back" },
+        { formikKey: "cancelledCheque", dbKey: "cheque" },
+        { formikKey: "panFile", dbKey: "pan_file" },
       ] as const;
 
       const resolvedUrls: Record<string, string> = {};
@@ -561,21 +571,21 @@ console.log(data)
 
       // ── Step 2: Build userUpdates — only non-empty scalar fields ────────
       const userScalars: Record<string, any> = {
-        user_name:         values.fullName,
-        mail:              values.email,
-        contact:           values.contact,
-        dob:               values.dob,
-        gender:            values.gender,
-        blood:             values.bloodGroup,
-        address:           values.address,
-        landmark:          values.landmark,
-        pincode:           values.pincode,
-        country:           values.country,
-        state:             values.state,
-        district:          values.city,
-        locality:          values.locality,
-        nominee_name:      values.nomineeName,
-        nominee_relation:  values.nomineeRelation,
+        user_name: values.fullName,
+        mail: values.email,
+        contact: values.contact,
+        dob: values.dob,
+        gender: values.gender,
+        blood: values.bloodGroup,
+        address: values.address,
+        landmark: values.landmark,
+        pincode: values.pincode,
+        country: values.country,
+        state: values.state,
+        district: values.city,
+        locality: values.locality,
+        nominee_name: values.nomineeName,
+        nominee_relation: values.nomineeRelation,
         alternate_contact: values.nomineeContact,
       };
 
@@ -587,16 +597,16 @@ console.log(data)
       // ── Step 3: Build walletUpdates — only non-empty scalars + resolved URLs
       //   Omit any field that is empty so the DB never gets blanked.
       const walletScalars: Record<string, any> = {
-        user_name:           values.fullName,
-        contact:             values.contact,
+        user_name: values.fullName,
+        contact: values.contact,
         account_holder_name: values.accountHolderName,
-        bank_name:           values.bankName,
-        account_number:      values.accountNumber,
-        ifsc_code:           values.ifscCode,
-        aadhar_number:       values.aadharNumber,
-        pan_number:          values.panNumber,
-        pan_name:            values.panName,
-        pan_dob:             values.panDob,
+        bank_name: values.bankName,
+        account_number: values.accountNumber,
+        ifsc_code: values.ifscCode,
+        aadhar_number: values.aadharNumber,
+        pan_number: values.panNumber,
+        pan_name: values.panName,
+        pan_dob: values.panDob,
       };
 
       const walletUpdates: Record<string, any> = {};
@@ -617,7 +627,7 @@ console.log(data)
 
       // ── Step 4: Send as plain JSON ───────────────────────────────────────
       const res = await axios.patch("/api/getuser-operations", {
-        user_id:      values.userId,
+        user_id: values.userId,
         userUpdates,
         walletUpdates,
       });

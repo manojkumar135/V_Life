@@ -222,7 +222,7 @@ export default function EligiblePayoutsPage() {
     },
     {
       field: "total_release",
-      headerName: "Amount to Release (₹)",
+      headerName: "Release Amount (₹)",
       flex: 1.2,
       align: "right",
       renderCell: (p: GridRenderCellParams<any, number>) => (
