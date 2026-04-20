@@ -55,16 +55,25 @@ import { DailyPayout, WeeklyPayout } from "@/models/payout";
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ batchId: string }> },
 ) {
   try {
     await connectDB();
     const { batchId } = await params;
 
+    // ── Role-based filtering ──────────────────────────────────────────────────
+    const { searchParams } = new URL(req.url);
+    const role    = searchParams.get("role")    || "user";
+    const user_id = searchParams.get("user_id") || null;
+
     const [batch, withdraws] = await Promise.all([
       PayoutBatch.findOne({ batch_id: batchId }).lean(),
-      Withdraw.find({ batch_id: batchId })
+      Withdraw.find({
+        batch_id: batchId,
+        // admin sees all; normal user sees only their own records
+        ...(role !== "admin" && user_id ? { user_id } : {}),
+      })
         .sort({ user_id: 1, bonus_type: 1 })
         .lean(),
     ]);
@@ -75,6 +84,7 @@ export async function GET(
         { status: 404 },
       );
     }
+    
 
     const totalWithdraws   = withdraws.length;
     const updatedWithdraws = withdraws.filter((w: any) => w.neft_utr).length;

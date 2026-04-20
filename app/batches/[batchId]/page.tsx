@@ -9,6 +9,8 @@ import axios from "axios";
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
 import InputField from "@/components/InputFields/inputtype1";
+import { useVLife } from "@/store/context";
+
 
 /* ─── Types ─────────────────────────────────────────────────────────────────── */
 
@@ -71,6 +73,8 @@ const BONUS_COLORS: Record<string, string> = {
 /* ─── Page ───────────────────────────────────────────────────────────────────── */
 
 export default function BatchDetailPage() {
+  const { user } = useVLife();
+
   const router  = useRouter();
   const params  = useParams();
   const batchId = params?.batchId as string;
@@ -156,8 +160,12 @@ export default function BatchDetailPage() {
     if (!batchId) return;
     try {
       setLoading(true);
-      const { data } = await axios.get(`/api/payrelease/batches/${batchId}`);
-      if (!data.success) {
+const { data } = await axios.get(`/api/payrelease/batches/${batchId}`, {
+  params: {
+    role:    user?.role,
+    user_id: user?.user_id,
+  },
+});      if (!data.success) {
         ShowToast.error(data.message || "Batch not found");
         return;
       }
@@ -200,7 +208,7 @@ export default function BatchDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [batchId]);
+  }, [batchId, user?.role, user?.user_id]);
 
   useEffect(() => { fetchDetail(); }, [fetchDetail]);
 

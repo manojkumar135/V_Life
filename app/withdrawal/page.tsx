@@ -18,9 +18,9 @@ const API_URL = "/api/withdraw";
 
 const BONUS_TYPE_OPTIONS = [
   { label: "All Types", value: "" },
-  { label: "Daily", value: "daily" },
+  { label: "Daily",     value: "daily" },
   { label: "Fortnight", value: "fortnight" },
-  { label: "Referral", value: "referral" },
+  { label: "Referral",  value: "referral" },
   { label: "Quickstar", value: "quickstar" },
 ];
 
@@ -31,19 +31,19 @@ export default function WithdrawPage() {
   const { query, setQuery, debouncedQuery } = useSearch();
   const [reportData, setReportData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]       = useState(false);
   const [dateFilter, setDateFilter] = useState<any>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal]   = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
-  const [bonusType, setBonusType] = useState("");
+  const [bonusType, setBonusType]   = useState("");
 
   const [summary, setSummary] = useState({
-    total_records: 0,
-    unique_users: 0,
+    total_records:  0,
+    unique_users:   0,
     unique_batches: 0,
     total_original: 0,
     total_deducted: 0,
-    grand_release: 0,
+    grand_release:  0,
   });
 
   /* ── Pagination — client-side ── */
@@ -57,22 +57,22 @@ export default function WithdrawPage() {
     goToPage,
   } = usePagination({ totalItems, itemsPerPage: 12, onPageChange: () => {} });
 
-  /* ── Fetch ── */
+  /* ── Fetch — role + user_id sent so backend filters correctly ── */
   const fetchRecords = useCallback(
     async (search: string) => {
       if (!user?.user_id) return;
       try {
         setLoading(true);
         const params: any = {
-          role: user.role,
-          user_id: user.user_id,
-          search: search || "",
-          limit: 1000,
+          role:    user.role,      // ← "admin" gets all, "user" gets own only
+          user_id: user.user_id,   // ← required for role=user filtering
+          search:  search || "",
+          limit:   1000,
           ...(bonusType && { bonus_type: bonusType }),
-          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
+          ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
             from: dateFilter.from,
-            to: dateFilter.to,
+            to:   dateFilter.to,
           }),
         };
         const { data } = await axios.get(API_URL, { params });
@@ -81,12 +81,12 @@ export default function WithdrawPage() {
         setTotalItems(rows.length);
         setSummary(
           data.summary || {
-            total_records: 0,
-            unique_users: 0,
+            total_records:  0,
+            unique_users:   0,
             unique_batches: 0,
             total_original: 0,
             total_deducted: 0,
-            grand_release: 0,
+            grand_release:  0,
           },
         );
       } catch (error) {
@@ -107,14 +107,14 @@ export default function WithdrawPage() {
 
   const isAdmin = user?.role === "admin";
 
-  /* ── Columns — exact same structure as provided code ── */
+  /* ── Columns ── */
   const columns: GridColDef[] = [
     {
       field: "batch_id",
       headerName: "Batch ID",
       flex: 1.5,
       renderCell: (p: any) => (
-        <span className="text-gray-600 text-xs!">{p.value || "—"}</span>
+        <span className="text-gray-600 text-xs">{p.value || "—"}</span>
       ),
     },
     {
@@ -130,13 +130,11 @@ export default function WithdrawPage() {
       ? [{ field: "user_id", headerName: "User ID", flex: 0.9 } as GridColDef]
       : []),
     ...(isAdmin
-      ? [
-          {
-            field: "account_holder_name",
-            headerName: "Account Name",
-            flex: 1.2,
-          } as GridColDef,
-        ]
+      ? [{
+          field: "account_holder_name",
+          headerName: "Account Name",
+          flex: 1.2,
+        } as GridColDef]
       : []),
 
     { field: "bank_name", headerName: "Bank", flex: 1 },
@@ -160,13 +158,12 @@ export default function WithdrawPage() {
       ),
     },
 
-    // original_amount
     {
       field: "original_amount",
       headerName: "Original (₹)",
       flex: 1,
-      align: "right", // ← MUI handles the alignment natively
-      headerAlign: "right", // ← also align the header
+      align: "right",
+      headerAlign: "right",
       renderCell: (p: GridRenderCellParams<any, number>) => (
         <span className="text-gray-700 text-xs truncate">
           ₹ {Number(p.value ?? 0).toFixed(2)}
@@ -174,7 +171,6 @@ export default function WithdrawPage() {
       ),
     },
 
-    // deducted_amount
     {
       field: "deducted_amount",
       headerName: "Deducted (₹)",
@@ -182,15 +178,12 @@ export default function WithdrawPage() {
       align: "right",
       headerAlign: "right",
       renderCell: (p: GridRenderCellParams<any, number>) => (
-        <span
-          className={`text-xs font-medium truncate ${(p.value ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}
-        >
+        <span className={`text-xs font-medium truncate ${(p.value ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
           {(p.value ?? 0) > 0 ? `₹ ${Number(p.value).toFixed(2)}` : "—"}
         </span>
       ),
     },
 
-    // released_amount
     {
       field: "released_amount",
       headerName: "Released (₹)",
@@ -222,7 +215,7 @@ export default function WithdrawPage() {
     {
       label: "Total Records",
       value: summary.total_records.toString(),
-      sub: isAdmin
+      sub:   isAdmin
         ? `${summary.unique_users} users · ${summary.unique_batches} batches`
         : `${summary.unique_batches} batches`,
       color: "from-[#0C3978] to-[#106187]",
@@ -230,27 +223,25 @@ export default function WithdrawPage() {
     {
       label: "Total Original Amount",
       value: `₹ ${Number(summary.total_original).toFixed(2)}`,
-      sub: "Net after TDS/admin",
+      sub:   "Net after TDS/admin",
       color: "from-[#106187] to-[#16B8E4]",
     },
     {
       label: "Total Deducted (Orders)",
       value: `₹ ${Number(summary.total_deducted).toFixed(2)}`,
-      sub: "Points used on orders",
+      sub:   "Points used on orders",
       color: "from-orange-500 to-orange-400",
     },
     {
       label: "Grand Release Amount",
       value: `₹ ${Number(summary.grand_release).toFixed(2)}`,
-      sub: "Actual amount paid out",
+      sub:   "Actual amount paid out",
       color: "from-green-600 to-green-500",
     },
   ];
 
-  const onBack = () => router.push("/wallet/payout");
-  const handleEdit = (id: string) => {
-    router.push(`/batches/${id}`);
-  };
+  const onBack    = () => router.push("/wallet/payout");
+  const handleEdit = (_id: string, row: any) => router.push(`/batches/${row.batch_id}`);
 
   return (
     <Layout>
@@ -299,10 +290,9 @@ export default function WithdrawPage() {
               key={opt.value}
               onClick={() => setBonusType(opt.value)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer
-                ${
-                  bonusType === opt.value
-                    ? "bg-[#0C3978] text-white border-[#0C3978]"
-                    : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978]"
+                ${bonusType === opt.value
+                  ? "bg-[#0C3978] text-white border-[#0C3978]"
+                  : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978]"
                 }`}
             >
               {opt.label}
@@ -349,7 +339,7 @@ export default function WithdrawPage() {
           pageSize={12}
           checkboxSelection
           setSelectedRows={setSelectedRows}
-          onIdClick={(id, row) => handleEdit(row.batch_id)}
+          onIdClick={(id, row) => handleEdit(id, row)}
         />
 
         <DateFilterModal
