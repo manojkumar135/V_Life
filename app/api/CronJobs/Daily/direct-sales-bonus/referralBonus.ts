@@ -64,7 +64,7 @@ function formatDate(date: Date): string {
   return `${dd}-${mm}-${yyyy}`;
 }
 
-const REFERRAL_AMOUNT = 2500;
+const REFERRAL_AMOUNT = 0;
 
 export async function releaseReferralBonus({
   sponsorId,

@@ -280,31 +280,31 @@ export async function runDirectSalesBonus(): Promise<{
           }
 
           // ✅ GUARD 2 — DB: already paid in History or DailyPayout
-          const alreadyPaid = await isReferralAlreadyPaid(order.order_id);
+          // const alreadyPaid = await isReferralAlreadyPaid(order.order_id);
 
-          if (!alreadyPaid) {
-            // Register in-memory BEFORE releasing to block any re-entry
-            referralProcessedThisRun.add(order.order_id);
+          // if (!alreadyPaid) {
+          //   // Register in-memory BEFORE releasing to block any re-entry
+          //   referralProcessedThisRun.add(order.order_id);
 
-            await releaseReferralBonus({
-              sponsorId: referBy,
-              buyerId: order.user_id,
-              orderId: order.order_id,
-            });
+          //   await releaseReferralBonus({
+          //     sponsorId: referBy,
+          //     buyerId: order.user_id,
+          //     orderId: order.order_id,
+          //   });
 
-            referralBonusCount++;
-          } else {
-            console.log(
-              `⚠️ [DB] Referral bonus already paid for order ${order.order_id}, skipping.`,
-            );
-          }
+          //   referralBonusCount++;
+          // } else {
+          //   console.log(
+          //     `⚠️ [DB] Referral bonus already paid for order ${order.order_id}, skipping.`,
+          //   );
+          // }
 
           await Order.updateOne(
             { order_id: order.order_id },
             { $set: { direct_bonus_checked: true } },
           );
 
-          continue;
+          // continue;
         }
 
         /* ---------------------------------------------------------- */

@@ -48,11 +48,11 @@
 //
 //  Monthly Payout Total   │  PV Required  │  Notes
 //  ───────────────────────┼───────────────┼────────────────────────────────
-//  < ₹1,00,000            │  0 PV         │  No restriction
-//  ₹1,00,000 – ₹2,99,999  │  50 PV        │  Must place 50 PV order
-//  ≥ ₹3,00,000            │  100 PV       │  Must place 100 PV total
+//  < ₹50,000              │  0 PV         │  No restriction
+//  ₹50,000 – ₹1,49,999    │  50 PV        │  Must place 50 PV order
+//  ≥ ₹1,50,000            │  100 PV       │  Must place 100 PV total
 //
-//  • If user already placed 50 PV at ₹1L and later crosses ₹3L,
+//  • If user already placed 50 PV at ₹50K and later crosses ₹1.5L,
 //    pv_required jumps to 100 but only 50 more PV is needed.
 //  • Partial PV does NOT release holds — full pv_required must be met.
 //  • New-month payouts stay OnHold if ANY prior month's PV is uncleared.
@@ -112,13 +112,13 @@ function formatTime(date: Date): string {
 /**
  * Returns the PV a user must order for a given monthly payout total.
  *
- *  < ₹1,00,000  →  0 PV  (no restriction)
- *  ≥ ₹1,00,000  → 50 PV
- *  ≥ ₹3,00,000  → 100 PV  (cumulative — if 50 already placed, only 50 more needed)
+ *  < ₹50,000    →   0 PV  (no restriction)
+ *  ≥ ₹50,000    →  50 PV
+ *  ≥ ₹1,50,000  → 100 PV  (cumulative — if 50 already placed, only 50 more needed)
  */
 export function requiredPvForMonthlyTotal(total: number): 0 | 50 | 100 {
-  if (total >= 300_000) return 100;
-  if (total >= 100_000) return 50;
+  if (total >= 150_000) return 100;
+  if (total >= 50_000) return 50;
   return 0;
 }
 
@@ -258,24 +258,24 @@ export async function hasPreviousUnresolvedHolds(
  *
  * ─── Example scenarios ───────────────────────────────────────────────────
  *
- *  Scenario A: User crosses ₹1L — 50 PV now required
- *    prevTotal = ₹90,000, newTotal = ₹1,10,000
+ *  Scenario A: User crosses ₹50K — 50 PV now required
+ *    prevTotal = ₹40,000, newTotal = ₹55,000
  *    prevPvReq = 0, newPvReq = 50
  *    pv_fulfilled = 0 → hold_released = false → return OnHold ✅
  *
- *  Scenario B: User already placed 50 PV at ₹1L, total now crosses ₹3L
- *    prevTotal = ₹2,80,000, newTotal = ₹3,10,000
+ *  Scenario B: User already placed 50 PV at ₹50K, total now crosses ₹1.5L
+ *    prevTotal = ₹1,40,000, newTotal = ₹1,60,000
  *    prevPvReq = 50, newPvReq = 100
  *    pv_fulfilled = 50 → 50 < 100 → hold_released = false → return OnHold ✅
  *    (User needs 50 more PV to reach 100 total)
  *
- *  Scenario C: User placed 100 PV, total crosses ₹3L
- *    prevTotal = ₹2,80,000, newTotal = ₹3,10,000
+ *  Scenario C: User placed 100 PV, total crosses ₹1.5L
+ *    prevTotal = ₹1,40,000, newTotal = ₹1,60,000
  *    prevPvReq = 50, newPvReq = 100
  *    pv_fulfilled = 100 → 100 >= 100 → keep hold_released = true → return Pending ✅
  *
- *  Scenario D: Total still under ₹1L — no PV needed
- *    prevTotal = ₹50,000, newTotal = ₹80,000
+ *  Scenario D: Total still under ₹50K — no PV needed
+ *    prevTotal = ₹30,000, newTotal = ₹45,000
  *    newPvReq = 0 → return Pending ✅
  */
 export async function evaluateAndUpdateHoldStatus(
@@ -300,16 +300,16 @@ export async function evaluateAndUpdateHoldStatus(
 
   // Record exact moment each threshold was first crossed
   const now = new Date();
-  if (prevTotal < 100_000 && newTotal >= 100_000 && !tracker.crossed_1lakh_at) {
+  if (prevTotal < 50_000 && newTotal >= 50_000 && !tracker.crossed_1lakh_at) {
     tracker.crossed_1lakh_at = now;
   }
-  if (prevTotal < 300_000 && newTotal >= 300_000 && !tracker.crossed_3lakh_at) {
+  if (prevTotal < 150_000 && newTotal >= 150_000 && !tracker.crossed_3lakh_at) {
     tracker.crossed_3lakh_at = now;
   }
 
   // ── FIX: Handle PV requirement increase correctly ─────────────────────
   //
-  // If the PV obligation increased (e.g. ₹1L → ₹3L threshold crossed):
+  // If the PV obligation increased (e.g. ₹50K → ₹1.5L threshold crossed):
   //   - Update pv_required to the new higher value.
   //   - Check if pv_fulfilled ALREADY meets the new requirement.
   //     • If yes → hold remains released (user had proactively placed enough PV).
@@ -343,55 +343,6 @@ export async function evaluateAndUpdateHoldStatus(
   // default and is only set true by recordPvFulfillment).
   const thisMonthOnHold =
     tracker.pv_required > 0 && !tracker.hold_released;
-
-
-
-
-// // ── FIX: Handle PV requirement increase ───────────────────────────────
-// if (newPvReq > prevPvReq) {
-//   tracker.pv_required = newPvReq;
-// }
-
-// // ✅ ALWAYS re-evaluate hold_released based on current fulfilled vs required
-// // Do NOT rely on the stored hold_released flag alone —
-// // it may be stale if pv_required changed after hold_released was set.
-// if (tracker.pv_required > 0 && tracker.pv_fulfilled < tracker.pv_required) {
-//   // User has not met current requirement → must be on hold
-//   tracker.hold_released    = false;
-//   tracker.hold_released_at = undefined;
-// }
-// // If pv_fulfilled >= pv_required → hold stays released (user met threshold)
-
-// await tracker.save();
-
-// // ── 3. Determine final status ─────────────────────────────────────────
-// const thisMonthOnHold =
-//   tracker.pv_required > 0 && !tracker.hold_released;
-// ```
-
-// ---
-
-// ## Why This Fixes It
-// ```
-// Step 1 — 50 PV placed, pv_required = 50
-//   pv_fulfilled (50) >= pv_required (50) → hold_released = true ✅
-
-// Step 2 — Total crosses ₹3L, pv_required jumps to 100
-//   NEW CHECK: pv_fulfilled (50) < pv_required (100)
-//   → hold_released = false ✅
-
-// Step 3 — Direct Sales Bonus ₹250 processed
-//   newPvReq (100) == prevPvReq (100) → pv_required unchanged
-//   NEW CHECK: pv_fulfilled (50) < pv_required (100)
-//   → hold_released = false ✅  ← BUG IS FIXED
-//   → payout status = OnHold ✅
-
-
-
-
-
-
-
 
   const isOnHold = blockedByPreviousMonth || thisMonthOnHold;
 

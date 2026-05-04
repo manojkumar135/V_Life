@@ -12,7 +12,7 @@ import {
 import { determineHoldReasons } from "@/services/payoutHoldService";
 import { addRewardScore } from "@/services/updateRewardScore";
 
-const PROMO_AMOUNT = 5000;
+const PROMO_AMOUNT = 2000;
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 /* -----------------------------------------------------------

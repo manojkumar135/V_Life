@@ -141,7 +141,7 @@ export async function PUT(req) {
         console.error("Error adding activated user to infinity:", err);
       }
 
-      // ✅ Release 15,000 cashback points — only once, only on activation
+      // ✅ Release 20,000 cashback points — only once, only on activation
       try {
         const scoreDoc = await Score.findOne({ user_id: userIdToUpdate });
 
@@ -152,7 +152,7 @@ export async function PUT(req) {
         if (!bonusAlreadyGiven) {
           await addRewardScore({
             user_id: userIdToUpdate,
-            points: 15000,
+            points: 20000,
             source: "activation_bonus",
             reference_id: userIdToUpdate,
             remarks: "One-time cashback bonus on admin activation",

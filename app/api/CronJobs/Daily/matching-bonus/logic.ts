@@ -532,7 +532,7 @@ export async function runMatchingBonus() {
 
       const walletId = wallet ? wallet.wallet_id : null;
 
-      const totalAmount = 5000;
+      const totalAmount = 4000;
 
       // ── Determine payout status ──────────────────────────────────────
       //
