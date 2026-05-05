@@ -132,22 +132,20 @@ export default function EligiblePayoutsPage() {
 
       // Extract batch ID from response header for the filename
       const batchId = response.headers.get("X-Batch-Id") || "payout";
-      const filename = `payout_${batchId}.xlsx`;
-
+      const datePart = batchId.replace("BATCH_", "").slice(0, 8);
+      const filename = `${datePart}.xlsx`;
       // Trigger browser file download
-      const url    = URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
-      anchor.href     = url;
-      anchor.download  = filename;
+      anchor.href = url;
+      anchor.download = filename;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
 
       const userCount = response.headers.get("X-User-Count") || "—";
-      ShowToast.success(
-        `Released! ${userCount} users · Batch: ${batchId}`,
-      );
+      ShowToast.success(`Released! ${userCount} users · Batch: ${batchId}`);
 
       // Refresh the table — released payouts are now "completed" so
       // they will no longer appear in the eligible list
@@ -335,7 +333,8 @@ export default function EligiblePayoutsPage() {
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-green-600" />
-            Download releases payouts + creates withdraw records + zeros balances
+            Download releases payouts + creates withdraw records + zeros
+            balances
           </span>
         </div>
 

@@ -13,21 +13,21 @@ import { FiDownload, FiEye } from "react-icons/fi";
 const API_URL = "/api/payrelease/batches";
 
 const STATUS_OPTIONS = [
-  { label: "All",                 value: ""                    },
-  { label: "Released",            value: "released"            },
-  { label: "Partially Updated",   value: "partially_updated"   },
+  { label: "All", value: "" },
+  { label: "Released", value: "released" },
+  { label: "Partially Updated", value: "partially_updated" },
   { label: "Transaction Updated", value: "transaction_updated" },
 ];
 
 const STATUS_STYLE: Record<string, string> = {
-  released:            "bg-orange-100 text-orange-700",
-  partially_updated:   "bg-yellow-100 text-yellow-700",
+  released: "bg-orange-100 text-orange-700",
+  partially_updated: "bg-yellow-100 text-yellow-700",
   transaction_updated: "bg-green-100  text-green-700",
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  released:            "Released",
-  partially_updated:   "Partial UTR",
+  released: "Released",
+  partially_updated: "Partial UTR",
   transaction_updated: "UTR Done",
 };
 
@@ -35,9 +35,9 @@ export default function BatchesPage() {
   const router = useRouter();
 
   const { query, setQuery, debouncedQuery } = useSearch();
-  const [batches, setBatches]       = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("");
   const [redownloading, setRedownloading] = useState<string | null>(null); // batchId being downloaded
 
@@ -59,11 +59,11 @@ export default function BatchesPage() {
         const params: any = {
           page,
           limit: 15,
-          ...(search.trim()    && { search: search.trim() }),
-          ...(statusFilter     && { status: statusFilter }),
+          ...(search.trim() && { search: search.trim() }),
+          ...(statusFilter && { status: statusFilter }),
         };
         const { data } = await axios.get(API_URL, { params });
-        setBatches(data.data   || []);
+        setBatches(data.data || []);
         setTotalItems(data.total || 0);
       } catch (err) {
         console.error("Error fetching batches:", err);
@@ -87,10 +87,9 @@ export default function BatchesPage() {
   const handleRedownload = async (batchId: string, releaseDate: string) => {
     try {
       setRedownloading(batchId);
-      const response = await fetch(
-        `/api/payrelease/batches/${batchId}/excel`,
-        { method: "GET" },
-      );
+      const response = await fetch(`/api/payrelease/batches/${batchId}/excel`, {
+        method: "GET",
+      });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
@@ -99,11 +98,12 @@ export default function BatchesPage() {
       }
 
       // Stream the blob and trigger browser download
-      const blob     = await response.blob();
-      const url      = URL.createObjectURL(blob);
-      const anchor   = document.createElement("a");
-      anchor.href    = url;
-      anchor.download = `payout_${batchId}_redownload.xlsx`;
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const datePart = batchId.replace("BATCH_", "").slice(0, 8);
+      anchor.href = url;
+      anchor.download = `${datePart}.xlsx`;
       document.body.appendChild(anchor);
       anchor.click();
       document.body.removeChild(anchor);
@@ -155,9 +155,10 @@ export default function BatchesPage() {
               key={opt.value}
               onClick={() => setStatusFilter(opt.value)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer
-                ${statusFilter === opt.value
-                  ? "bg-[#0C3978] text-white border-[#0C3978]"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978]"
+                ${
+                  statusFilter === opt.value
+                    ? "bg-[#0C3978] text-white border-[#0C3978]"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978]"
                 }`}
             >
               {opt.label}
@@ -171,21 +172,38 @@ export default function BatchesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#0C3978] text-white text-xs">
-                  <th className="px-4 py-3 text-left font-semibold">Batch ID</th>
-                  <th className="px-4 py-3 text-left font-semibold">Released Date</th>
+                  <th className="px-4 py-3 text-left font-semibold">
+                    Batch ID
+                  </th>
+                  <th className="px-4 py-3 text-left font-semibold">
+                    Released Date
+                  </th>
                   <th className="px-4 py-3 text-left font-semibold">Time</th>
                   <th className="px-4 py-3 text-right font-semibold">Users</th>
-                  <th className="px-4 py-3 text-right font-semibold">Payouts</th>
-                  <th className="px-4 py-3 text-right font-semibold">Total Amount (₹)</th>
-                  <th className="px-4 py-3 text-center font-semibold">Status</th>
-                  <th className="px-4 py-3 text-center font-semibold">NEFT UTR</th>
-                  <th className="px-4 py-3 text-center font-semibold">Actions</th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Payouts
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Total Amount (₹)
+                  </th>
+                  <th className="px-4 py-3 text-center font-semibold">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-center font-semibold">
+                    NEFT UTR
+                  </th>
+                  <th className="px-4 py-3 text-center font-semibold">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {batches.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={9} className="text-center py-12 text-gray-400 text-sm">
+                    <td
+                      colSpan={9}
+                      className="text-center py-12 text-gray-400 text-sm"
+                    >
                       No batches found
                     </td>
                   </tr>
@@ -245,7 +263,9 @@ export default function BatchesPage() {
                           {batch.neft_utr}
                         </span>
                       ) : (
-                        <span className="text-xs text-orange-500 italic">Pending</span>
+                        <span className="text-xs text-orange-500 italic">
+                          Pending
+                        </span>
                       )}
                     </td>
 
@@ -268,12 +288,16 @@ export default function BatchesPage() {
                           title="Re-download Excel"
                           disabled={redownloading === batch.batch_id}
                           onClick={() =>
-                            handleRedownload(batch.batch_id, batch.released_date)
+                            handleRedownload(
+                              batch.batch_id,
+                              batch.released_date,
+                            )
                           }
                           className={`p-1.5 rounded-lg transition-colors cursor-pointer
-                            ${redownloading === batch.batch_id
-                              ? "text-gray-300"
-                              : "text-green-700 hover:bg-green-50"
+                            ${
+                              redownloading === batch.batch_id
+                                ? "text-gray-300"
+                                : "text-green-700 hover:bg-green-50"
                             }`}
                         >
                           <FiDownload size={16} />

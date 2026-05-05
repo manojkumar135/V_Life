@@ -251,7 +251,8 @@ export async function GET(
       batch.released_date || batchId,
     );
 
-    const filename = `payout_${batchId}_redownload.xlsx`;
+    const datePart = batchId.replace("BATCH_", "").slice(0, 8);
+    const filename = `${datePart}.xlsx`;
 
     return new NextResponse(excelBuffer, {
       status: 200,
