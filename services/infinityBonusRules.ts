@@ -21,14 +21,14 @@ export async function getInfinityBonusPercentage(
   }
 
   // ✅ Highest slab first (cap)
-  if (leftDirectPV >= 200 && rightDirectPV >= 200) {
-    return 0.5;
-  }
+  // if (leftDirectPV >= 200 && rightDirectPV >= 200) {
+  //   return 0.5;
+  // }
 
   // ✅ Base qualification
-  // if (leftDirectPV >= 100 && rightDirectPV >= 100) {
-  //   return 0.25;
-  // }
+  if (leftDirectPV >= 100 && rightDirectPV >= 100) {
+    return 0.50;
+  }
 
   return 0;
 }

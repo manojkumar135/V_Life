@@ -332,7 +332,7 @@ const DashboardPage: React.FC = () => {
           buttonAction={() => router.push("/historys/payAdvance")}
           onClose={() => setShowAlert(false)}
         />
-        <AlertBox
+        {/* <AlertBox
           visible={showQuickStarAlert}
           title="Quick Star Bonus Opportunity!"
           message={
@@ -344,7 +344,7 @@ const DashboardPage: React.FC = () => {
             </>
           }
           onClose={() => setShowQuickStarAlert(false)}
-        />
+        /> */}
 
         {/* ── NewsTicker — mobile only, at the very top ── */}
         <div className="block md:hidden mb-8 -mt-5">

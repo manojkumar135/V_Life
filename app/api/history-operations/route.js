@@ -14,7 +14,7 @@ import { Alert } from "@/models/alert";
 
 import { getTotalPayout } from "@/services/totalpayout";
 import { updateClub } from "@/services/clubrank";
-import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
+// import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
 
 import {
   updateInfinityTeam,
@@ -397,7 +397,7 @@ export async function POST(request) {
 
             await updateClub(referrerId, totalPayout);
 
-            await checkAndReleasePromotionalBonus(referrerId);
+            // await checkAndReleasePromotionalBonus(referrerId);
 
             // non-blocking
             propagateInfinityUpdateToAncestors(referrerId)
