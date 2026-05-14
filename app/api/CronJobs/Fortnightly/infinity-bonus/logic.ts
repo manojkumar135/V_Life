@@ -85,20 +85,53 @@ export async function runInfinityBonus() {
       return;
     }
 
-    // ✅ IN-MEMORY dedup Set
-    // Key: "sourceTransactionId__sponsorId__infinityTitle"
-    // This is the PRIMARY guard. It prevents any duplicate infinity payout
-    // within this single cron run based on the exact source payout that
-    // triggered it. Two different source payouts (different transaction_ids)
-    // for the same user will produce different keys and both will be allowed.
     const processedThisRun = new Set<string>();
 
     let totalCreated = 0;
 
     for (const payout of payouts) {
-      const user = await User.findOne({ user_id: payout.user_id });
-      if (!user) {
-        // Mark checked so it won't be reprocessed
+      // ─────────────────────────────────────────────────────────────
+      // ✅ Determine SOURCE USER based on payout type:
+      //
+      //  Direct Sales Bonus → source is payout.from (the BV maker / buyer)
+      //    e.g. "Direct Sales Bonus from IND2754535" → sourceUserId = IND2754535
+      //    We find IND2754535's infinity sponsor and pay them.
+      //
+      //  Matching Bonus → source is payout.user_id (the earner)
+      //    We find the earner's infinity sponsor and pay them.
+      // ─────────────────────────────────────────────────────────────
+      let sourceUserId: string;
+
+      if (payout.name === "Direct Sales Bonus") {
+        if (!payout.from) {
+          console.log(
+            `⚠️ Direct Sales Bonus ${payout.transaction_id} has no 'from' field, skipping.`,
+          );
+          await DailyPayout.updateOne(
+            { _id: payout._id },
+            { $set: { is_checked: true } },
+          );
+          continue;
+        }
+        // For Direct Sales Bonus: use the BV maker's (buyer's) infinity
+        sourceUserId = payout.from;
+        console.log(
+          `[DSB] payout=${payout.transaction_id} | earner=${payout.user_id} | BV maker (from)=${payout.from} → finding infinity of BV maker`,
+        );
+      } else {
+        // For Matching Bonus: use the earner's infinity
+        sourceUserId = payout.user_id;
+        console.log(
+          `[MB] payout=${payout.transaction_id} | earner=${payout.user_id} → finding infinity of earner`,
+        );
+      }
+
+      // ✅ Fetch the source user
+      const sourceUser = await User.findOne({ user_id: sourceUserId });
+      if (!sourceUser) {
+        console.log(
+          `⚠️ Source user ${sourceUserId} not found, skipping.`,
+        );
         await DailyPayout.updateOne(
           { _id: payout._id },
           { $set: { is_checked: true } },
@@ -106,37 +139,57 @@ export async function runInfinityBonus() {
         continue;
       }
 
+      // ✅ Also fetch the earner user (needed for details/alerts/reward remarks)
+      const earnerUser =
+        payout.name === "Direct Sales Bonus"
+          ? await User.findOne({ user_id: payout.user_id })
+          : sourceUser; // For Matching Bonus, earner = sourceUser
+
       let sponsor: any = null;
 
-      // 1️⃣ Try direct assigned infinity sponsor (user.infinity field)
-      if (user.infinity) {
+      // 1️⃣ Try direct assigned infinity sponsor (sourceUser.infinity field)
+      if (sourceUser.infinity) {
         sponsor = await User.findOne({
-          user_id: user.infinity,
+          user_id: sourceUser.infinity,
           user_status: "active",
         });
+        console.log(
+          `[Infinity Lookup] sourceUser=${sourceUserId} has infinity=${sourceUser.infinity} → sponsor found: ${sponsor ? sponsor.user_id : "null"}`,
+        );
       }
 
       // 2️⃣ If still no sponsor, find via infinity_users array
       if (!sponsor) {
-        sponsor = await findSponsorByInfinityUsers(user.user_id);
+        sponsor = await findSponsorByInfinityUsers(sourceUserId);
+        console.log(
+          `[Infinity Lookup] Fallback search for ${sourceUserId} → sponsor found: ${sponsor ? sponsor.user_id : "null"}`,
+        );
       }
 
       if (!sponsor) {
         console.log(
-          `⚠️ No sponsor found for ${user.user_id}, skipping Infinity Bonus.`,
+          `⚠️ No infinity sponsor found for source user ${sourceUserId}, skipping.`,
+        );
+        await DailyPayout.updateOne(
+          { _id: payout._id },
+          { $set: { is_checked: true } },
         );
         continue;
       }
 
-      console.log(sponsor);
+      console.log(
+        `✅ Sponsor resolved: ${sponsor.user_id} (${sponsor.user_name}) for source=${sourceUserId}`,
+      );
 
-const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout.name);
+      const bonusPercentage = await getInfinityBonusPercentage(
+        sponsor.user_id,
+        payout.name,
+      );
 
       if (bonusPercentage === 0) {
         console.log(
           `⚠️ Sponsor ${sponsor.user_id} not eligible for Infinity Bonus`,
         );
-        // Mark checked so it won't be reprocessed
         await DailyPayout.updateOne(
           { _id: payout._id },
           { $set: { is_checked: true } },
@@ -146,7 +199,6 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
 
       const wallet = await Wallet.findOne({ user_id: sponsor.user_id });
 
-      // ✅ Declare infinityTitle before any guard uses it
       const infinityTitleMap: Record<string, string> = {
         "Direct Sales Bonus": "Infinity Sales Bonus",
         "Matching Bonus": "Infinity Matching Bonus",
@@ -155,19 +207,12 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
 
       // ─────────────────────────────────────────────────────────────
       // ✅ GUARD 1 — In-Memory Set
-      //
-      // Key is based on the SOURCE payout's transaction_id + sponsor + type.
-      // This means:
-      //   - Same source payout processed twice in one run → BLOCKED (duplicate)
-      //   - Different source payout (different payout_id, different cycle)
-      //     for same user → ALLOWED (different key)
       // ─────────────────────────────────────────────────────────────
       const runKey = `${payout.transaction_id}__${sponsor.user_id}__${infinityTitle}`;
       if (processedThisRun.has(runKey)) {
         console.log(
           `⚠️ [In-Memory Guard] Duplicate skipped this run: source=${payout.transaction_id} → sponsor=${sponsor.user_id} (${infinityTitle})`,
         );
-        // Still mark the source payout as checked so it won't appear again
         await DailyPayout.updateOne(
           { _id: payout._id },
           { $set: { is_checked: true } },
@@ -177,18 +222,6 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
 
       // ─────────────────────────────────────────────────────────────
       // ✅ GUARD 2 — DB Check
-      //
-      // OLD behavior: check from + to + name + date
-      //   → Blocked 2nd cycle payout because same from/to/name/date ❌
-      //
-      // NEW behavior: check if an infinity payout already exists for
-      //   this EXACT source payout transaction_id (stored in team_users).
-      //   → Each source payout (different transaction_id = different cycle)
-      //     gets its own infinity payout. Same source payout never gets
-      //     two infinity payouts. ✅
-      //
-      // team_users stores the source payout's transaction_id, so we can
-      // query: "has this exact source payout already been used?"
       // ─────────────────────────────────────────────────────────────
       const alreadyExists = await WeeklyPayout.findOne({
         to: sponsor.user_id,
@@ -207,7 +240,7 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
         continue;
       }
 
-      // ✅ Register in-memory BEFORE creating — so next iteration in this run is blocked
+      // ✅ Register in-memory BEFORE creating
       processedThisRun.add(runKey);
 
       const istNow = new Date(
@@ -215,20 +248,6 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
       );
       const payout_id = await generateUniqueCustomId("FP", WeeklyPayout, 8, 8);
       const bonusAmount = payout.amount * bonusPercentage;
-
-      // ── Determine payout status ──────────────────────────────────────
-      //
-      //  Hold priority (all 4 conditions checked via determineHoldReasons):
-      //   1. No wallet / no account_number             → OnHold (NO_WALLET)
-      //   2. Wallet exists but inactive                → OnHold (WALLET_INACTIVE)
-      //   3. Wallet change request pending             → OnHold (WALLET_UNDER_REVIEW)
-      //   4. Prior month PV uncleared / this month
-      //      crossed threshold with PV unmet           → OnHold (PV_NOT_FULFILLED)
-      //   5. All clear                                 → Pending
-      //
-      //  evaluateAndUpdateHoldStatus MUST be called first so that
-      //  MonthlyPayoutTracker.total_payout is updated BEFORE
-      //  determineHoldReasons reads it for the PV check.
 
       // Step 1: Update monthly tracker total (WRITE)
       await evaluateAndUpdateHoldStatus(sponsor.user_id, bonusAmount);
@@ -248,13 +267,11 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
         ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
 
       if (wallet && isPanVerified) {
-        // PAN Verified
         withdrawAmount = Number((bonusAmount * 0.8).toFixed(2));
         rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
         tdsAmount = Number((bonusAmount * 0.02).toFixed(2));
         adminCharge = Number((bonusAmount * 0.1).toFixed(2));
       } else {
-        // PAN Not Verified OR No wallet
         withdrawAmount = Number((bonusAmount * 0.62).toFixed(2));
         rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
         tdsAmount = Number((bonusAmount * 0.2).toFixed(2));
@@ -285,30 +302,27 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
         amount: bonusAmount,
         transaction_type: "Credit",
         status: payoutStatus,
-        details: `${infinityTitle} from ${user.user_id}`,
+        // ✅ details shows the source user (BV maker for DSB, earner for MB)
+        details: `${infinityTitle} from ${sourceUserId}`,
 
         total_amount: bonusAmount,
         withdraw_amount: withdrawAmount,
         reward_amount: rewardAmount,
         tds_amount: tdsAmount,
         admin_charge: adminCharge,
-        from: payout.user_id,
+        from: sourceUserId,
         to: sponsor.user_id,
 
-        // ✅ hold metadata — so admin knows WHY payout is OnHold
         hold_reasons: hold.reasons,
         hold_reason_labels: hold.labels,
         hold_release_reason: hold.summary,
 
-        // ✅ team_users stores the source payout's transaction_id
-        // This is the key used by GUARD 2 to prevent re-processing
-        // the same source payout in future cron runs.
         team_users: [
           {
-            user_id: payout.user_id,
+            user_id: sourceUserId,
             amount: payout.amount,
             bonus_type: payout.name,
-            transaction_id: payout.transaction_id, // ← source payout tx_id
+            transaction_id: payout.transaction_id,
           },
         ],
 
@@ -319,7 +333,6 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
 
       const totalPayout = await getTotalPayout(sponsor.user_id);
 
-      // 🔹 Capture BEFORE state
       const beforeUser = (await User.findOne({ user_id: sponsor.user_id })
         .select("rank club")
         .lean()) as any;
@@ -327,7 +340,6 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
       const updatedClub = await updateClub(sponsor.user_id, totalPayout);
 
       if (updatedClub && beforeUser) {
-        // 🎉 CLUB ENTRY ALERT
         if (beforeUser.club !== updatedClub.newClub) {
           await Alert.create({
             user_id: sponsor.user_id,
@@ -342,7 +354,6 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
           });
         }
 
-        // 🎖️ RANK ACHIEVEMENT ALERT
         if (beforeUser.rank !== updatedClub.newRank) {
           await Alert.create({
             user_id: sponsor.user_id,
@@ -402,7 +413,7 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
             ? "infinity_matching_bonus"
             : "infinity_sales_bonus",
         reference_id: infinityPayout.payout_id,
-        remarks: `${infinityTitle} from ${user.user_id}`,
+        remarks: `${infinityTitle} from ${sourceUserId}`,
         type: "fortnight",
       });
 
@@ -414,11 +425,11 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
             ? "infinity_matching_bonus"
             : "infinity_sales_bonus",
         reference_id: infinityPayout.payout_id,
-        remarks: `${infinityTitle} (reward) from ${user.user_id}`,
+        remarks: `${infinityTitle} (reward) from ${sourceUserId}`,
         type: "reward",
       });
 
-      // ✅ Mark this source payout as checked
+      // ✅ Mark source payout as checked
       await DailyPayout.updateOne(
         { _id: payout._id },
         { $set: { is_checked: true } },
@@ -433,7 +444,7 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
         related_id: infinityPayout.payout_id,
         link: "/wallet/payout/weekly",
         title: `${infinityTitle} Released 🎯`,
-        description: `You received ₹${bonusAmount.toLocaleString()} from ${infinityTitle} generated by ${user.user_id}.`,
+        description: `You received ₹${bonusAmount.toLocaleString()} from ${infinityTitle} generated by ${sourceUserId}.`,
         role: "user",
         priority: "medium",
         read: false,
@@ -443,7 +454,7 @@ const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout
 
       totalCreated++;
       console.log(
-        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (${payout.name} from ${user.user_id}) source=${payout.transaction_id}`,
+        `✅ Infinity Bonus released for ${sponsor.user_id} - ₹${bonusAmount} (${payout.name} | source=${sourceUserId}) payout=${payout.transaction_id}`,
       );
     }
 

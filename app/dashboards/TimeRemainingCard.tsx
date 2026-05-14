@@ -24,27 +24,27 @@ const TimeRemainingCard = () => {
   const [isCritical, setIsCritical] = useState(false);
 
   // ✅ Get seconds left to next cycle (12 PM or 12 AM IST)
-  const calculateSecondsLeft = () => {
-    const now = dayjs().tz("Asia/Kolkata");
+ const calculateSecondsLeft = () => {
+  const now = dayjs().tz("Asia/Kolkata");
 
-    let nextCycle;
+  let nextCycle;
 
-    if (now.hour() < 12) {
-      nextCycle = now.hour(12).minute(0).second(0).millisecond(0);
-    } else {
-      nextCycle = now.add(1, "day").hour(0).minute(0).second(0).millisecond(0);
-    }
+  if (now.hour() < 12) {
+    nextCycle = now.hour(12).minute(0).second(0).millisecond(0);
+  } else {
+    nextCycle = now.add(1, "day").hour(0).minute(0).second(0).millisecond(0);
+  }
 
-    const actualDiff = nextCycle.diff(now, "second");
+  const actualDiff = nextCycle.diff(now, "second");
 
-    // ✅ If last 60 seconds → hold at 00:00:00
-    if (actualDiff <= 60) {
-      return 0;
-    }
+  // ✅ If last 60 seconds → hold at 00:00:00
+  if (actualDiff <= 60) {
+    return 0;
+  }
 
-    // ✅ Otherwise run normally (but shifted by 60 sec)
-    return actualDiff - 60;
-  };
+  // ✅ Otherwise run normally (but shifted by 60 sec)
+  return actualDiff - 60;
+};
 
   // 📌 Fetch team data API
   const fetchTeamData = async () => {
@@ -107,7 +107,9 @@ const TimeRemainingCard = () => {
   return (
     <div
       className={`relative flex flex-col items-center justify-between  transition-all duration-300 bg-white rounded-2xl shadow-md px-5 py-3  border-[1.5px] border-gray-300 ${
-        isCritical ? "border-red-200 bg-red-50" : "bg-blue-50 border-blue-150 "
+        isCritical
+          ? "border-red-200 bg-red-50"
+          : "bg-blue-50 border-blue-150 "
       }`}
     >
       {/* Countdown */}
@@ -129,12 +131,12 @@ const TimeRemainingCard = () => {
       ) : (
         <div className="flex  items-center gap-8 max-md:gap-6 w-full  lg:py-2">
           <div className="flex flex-col items-center px-1 w-1/2">
-            <p className="text-xl font-semibold text-green-600">
-              {Number(teamData.leftTeam || 0) / 100}
+            <p className="text-sm text-gray-800 font-semibold font-sans">
+              Left Team PV
             </p>
 
             <p className="text-xl font-semibold text-green-600">
-              {Number(teamData.leftTeam || 0)}
+              {Number(teamData.leftTeam || 0) /100}
             </p>
           </div>
 

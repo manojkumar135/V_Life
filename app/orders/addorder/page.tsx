@@ -1024,7 +1024,7 @@ order_bv: getTotalBV(),
                 isInCart={
                   !!cart.find((item) => item.product_id === product.product_id)
                 }
-                hideBV={isFirstOrder}
+                // hideBV={isFirstOrder}
                 hidePV={isUseAdvanceFlow}
               />
             ))}
