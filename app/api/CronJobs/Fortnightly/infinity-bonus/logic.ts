@@ -130,7 +130,7 @@ export async function runInfinityBonus() {
 
       console.log(sponsor);
 
-      const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id);
+const bonusPercentage = await getInfinityBonusPercentage(sponsor.user_id, payout.name);
 
       if (bonusPercentage === 0) {
         console.log(
