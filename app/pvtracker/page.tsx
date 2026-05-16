@@ -202,7 +202,7 @@ export default function PvTrackerPage() {
     },
     {
       field: "months",
-      headerName: "Month Breakdown",
+      headerName: "Obligation Breakdown",
       flex: 1.5,
       sortable: false,
       disableColumnMenu: true,

@@ -3,20 +3,22 @@
 // ─── Purpose ──────────────────────────────────────────────────────────────
 //
 //  One document per user per month.
-//  Tracks the monthly payout total, PV obligation, and — importantly —
+//  Tracks the monthly payout total, PV obligation (cumulative-based), and
 //  the full details of every PV order placed to fulfil that obligation.
 //
-// ─── PV Obligation Rules ──────────────────────────────────────────────────
+// ─── PV Obligation Rules (CUMULATIVE) ─────────────────────────────────────
 //
-//  Monthly Payout Total   │  PV Required  │  Notes
-//  ───────────────────────┼───────────────┼────────────────────────────────
-//  < ₹1,00,000            │  0 PV         │  No restriction
-//  ₹1,00,000 – ₹2,99,999  │  50 PV        │  Must place 50 PV order
-//  ≥ ₹3,00,000            │  100 PV       │  Must place 100 PV total (50+50)
+//  Cumulative (all-time) Payout  │  Total PV Repurchases Required
+//  ──────────────────────────────┼──────────────────────────────────────────
+//  < ₹50,000                     │  0 PV  (no restriction)
+//  ₹50,000 – ₹1,49,999           │  50 PV  (1st repurchase)
+//  ₹1,50,000 – ₹2,49,999         │  100 PV (2nd repurchase)
+//  ₹2,50,000 – ₹3,49,999         │  150 PV (3rd repurchase)
+//  ... every ₹1L after first     │  +50 PV each
 //
+//  • pv_required on each tracker = the delta owed when THIS month caused
+//    a new cumulative threshold to be crossed.
 //  • Partial PV does NOT release holds — full pv_required must be met.
-//  • If user placed 50 PV at ₹1L and later crosses ₹3L,
-//    pv_required jumps to 100 but only 50 more PV is needed.
 //  • New-month payouts stay OnHold if ANY prior month's PV is uncleared.
 //
 // ─── Embedded Order Records ───────────────────────────────────────────────
@@ -28,17 +30,6 @@
 //    • how much PV it contributed
 //    • what the order amount was
 //    • whether it triggered the hold release
-//
-// ─── Change from original ─────────────────────────────────────────────────
-//
-//  ADDED to main schema:
-//    user_name  — display name of the user (synced from User model)
-//    contact    — phone/contact of the user
-//    mail       — email of the user
-//
-//  These are populated when the tracker is first created (via
-//  getOrCreateMonthlyTracker) and kept for easy audit/dashboard display
-//  without needing a User lookup every time.
 //
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -114,11 +105,12 @@ const MonthlyPayoutTrackerSchema = new Schema(
 
     // ── PV obligation ─────────────────────────────────────────────────────
 
-    // PV the user must order this month: 0 | 50 | 100
-    //   0   → no restriction (total_payout < ₹1L)
-    //  50   → crossed ₹1,00,000
-    // 100   → crossed ₹3,00,000
-    pv_required: { type: Number, default: 0, enum: [0, 50, 100] },
+    // PV the user must order for THIS month's tracker (delta from cumulative
+    // threshold crossing). Can be any multiple of 50 (0, 50, 100, 150...).
+    // This is the DELTA, not the global total — each tracker only holds the
+    // additional PV obligation created when a new threshold was crossed during
+    // that month.
+    pv_required: { type: Number, default: 0 },
 
     // Total PV ordered so far this month toward the obligation
     // (sum of pv_orders[].pv)
@@ -144,10 +136,15 @@ const MonthlyPayoutTrackerSchema = new Schema(
 
     // ── Threshold timestamps ──────────────────────────────────────────────
 
-    // When ₹1,00,000 was first crossed this month
+    // Snapshot of cumulative total at the time this tracker was last evaluated.
+    // Stored for audit — shows what the user's all-time payout was when
+    // a threshold was triggered this month.
+    cumulative_payout_snapshot: { type: Number, default: 0 },
+
+    // When cumulative payout first crossed ₹50K (1st repurchase threshold)
     crossed_1lakh_at: { type: Date },
 
-    // When ₹3,00,000 was first crossed this month
+    // When cumulative payout first crossed ₹1.5L (2nd repurchase threshold)
     crossed_3lakh_at: { type: Date },
   },
   {

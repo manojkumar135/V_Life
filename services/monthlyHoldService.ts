@@ -2,7 +2,7 @@
 //
 // ─── Purpose ──────────────────────────────────────────────────────────────
 //
-//  All monthly PV obligation logic lives here.
+//  All PV obligation logic lives here.
 //  totalpayout.ts is left completely unchanged (getTotalPayout + checkHoldStatus).
 //
 // ─── Exports ──────────────────────────────────────────────────────────────
@@ -10,8 +10,12 @@
 //  currentMonth()
 //    Returns today's month as "YYYY-MM".
 //
-//  requiredPvForMonthlyTotal(total)
-//    Pure fn: given a monthly payout total → returns 0 | 50 | 100 PV required.
+//  requiredPvForCumulativeTotal(cumulativeTotal)
+//    Pure fn: given cumulative (all-time) payout total → returns how many
+//    50PV repurchases are required total so far.
+//
+//  getCumulativeTotalPayout(user_id)
+//    Returns sum of total_payout across ALL months for a user.
 //
 //  getMonthlyTotalPayout(user_id, month?, forceRecalculate?)
 //    Returns payout total for a given month from the tracker.
@@ -27,12 +31,12 @@
 //
 //  evaluateAndUpdateHoldStatus(user_id, newPayoutAmount, month?)
 //    Call BEFORE creating any DailyPayout or WeeklyPayout.
-//    Updates the tracker total_payout + pv_required and returns
+//    Updates the tracker total_payout + cumulative pv_required and returns
 //    "Pending" | "OnHold".
 //
 //    Hold priority:
 //      1. Any prior month has uncleared PV              → OnHold
-//      2. This month crossed a threshold, PV not met    → OnHold
+//      2. Cumulative total crossed a threshold, PV not met → OnHold
 //      3. All clear                                     → Pending
 //
 //  recordPvFulfillment({ user_id, order_id, pv, order_amount?, month? })
@@ -44,16 +48,27 @@
 //    sets hold_released_at, and returns canRelease = true.
 //    Caller (processPvOrder) then calls releaseHeldPayoutsForMonth().
 //
-// ─── PV Obligation Rules ──────────────────────────────────────────────────
+// ─── PV Obligation Rules (CUMULATIVE) ─────────────────────────────────────
 //
-//  Monthly Payout Total   │  PV Required  │  Notes
-//  ───────────────────────┼───────────────┼────────────────────────────────
-//  < ₹50,000              │  0 PV         │  No restriction
-//  ₹50,000 – ₹1,49,999    │  50 PV        │  Must place 50 PV order
-//  ≥ ₹1,50,000            │  100 PV       │  Must place 100 PV total
+//  Cumulative Payout Total  │  Total PV Repurchases Required (50PV each)
+//  ─────────────────────────┼──────────────────────────────────────────────
+//  < ₹50,000                │  0           (no restriction)
+//  ₹50,000 – ₹1,49,999      │  1 × 50PV    (1st repurchase)
+//  ₹1,50,000 – ₹2,49,999    │  2 × 50PV    (2nd repurchase)
+//  ₹2,50,000 – ₹3,49,999    │  3 × 50PV    (3rd repurchase)
+//  ₹3,50,000 – ₹4,49,999    │  4 × 50PV    (4th repurchase)
+//  ... and so on every ₹1L  │
 //
-//  • If user already placed 50 PV at ₹50K and later crosses ₹1.5L,
-//    pv_required jumps to 100 but only 50 more PV is needed.
+//  Formula:
+//    if cumulative < 50,000  → 0 PV required total
+//    else                    → 1 + floor((cumulative - 50,000) / 100,000) repurchases
+//    total PV required       → repurchases × 50
+//
+//  Thresholds: ₹50K, ₹1.5L, ₹2.5L, ₹3.5L, ₹4.5L ...
+//
+//  • The pv_required stored per MonthlyPayoutTracker is the DELTA still
+//    owed for THAT month's tracker (the increment caused by crossing a new
+//    threshold that month). Global total is managed via cumulative_pv_fulfilled.
 //  • Partial PV does NOT release holds — full pv_required must be met.
 //  • New-month payouts stay OnHold if ANY prior month's PV is uncleared.
 //
@@ -106,20 +121,61 @@ function formatTime(date: Date): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// PV threshold calculator
+// PV threshold calculator (CUMULATIVE)
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
- * Returns the PV a user must order for a given monthly payout total.
+ * Returns the TOTAL PV repurchases required based on cumulative (all-time)
+ * payout total.
  *
- *  < ₹50,000    →   0 PV  (no restriction)
- *  ≥ ₹50,000    →  50 PV
- *  ≥ ₹1,50,000  → 100 PV  (cumulative — if 50 already placed, only 50 more needed)
+ *  Thresholds: ₹50K, ₹1.5L, ₹2.5L, ₹3.5L, ₹4.5L ... (every ₹1L after first)
+ *
+ *  cumulative < ₹50,000              →  0 PV required
+ *  ₹50,000 ≤ cumulative < ₹1,50,000  →  50 PV (1 repurchase)
+ *  ₹1,50,000 ≤ cumulative < ₹2,50,000 → 100 PV (2 repurchases)
+ *  ₹2,50,000 ≤ cumulative < ₹3,50,000 → 150 PV (3 repurchases)
+ *  ... and so on every ₹1L
+ *
+ *  Returns the total PV that must be fulfilled across ALL time.
+ *  The delta (new requirement − already fulfilled) is what gets assigned
+ *  to the current month's tracker.
  */
-export function requiredPvForMonthlyTotal(total: number): 0 | 50 | 100 {
-  if (total >= 150_000) return 100;
-  if (total >= 50_000) return 50;
-  return 0;
+export function requiredPvForCumulativeTotal(cumulativeTotal: number): number {
+  if (cumulativeTotal < 50_000) return 0;
+  // 1st repurchase at ₹50K, then every ₹1L → floor((cumulative - 50000) / 100000) + 1
+  const repurchases = 1 + Math.floor((cumulativeTotal - 50_000) / 100_000);
+  return repurchases * 50;
+}
+
+/**
+ * @deprecated Use requiredPvForCumulativeTotal instead.
+ * Kept for backward-compat if anything still imports this symbol.
+ * Will be removed in a future cleanup.
+ */
+export function requiredPvForMonthlyTotal(total: number): number {
+  return requiredPvForCumulativeTotal(total);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Cumulative payout total across ALL months
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the sum of total_payout across ALL MonthlyPayoutTracker records
+ * for a user — i.e. their all-time cumulative payout total.
+ *
+ * This drives the new repurchase threshold logic: thresholds are checked
+ * against this cumulative figure, not against any single month.
+ */
+export async function getCumulativeTotalPayout(user_id: string): Promise<number> {
+  await connectDB();
+
+  const result = await MonthlyPayoutTracker.aggregate([
+    { $match: { user_id } },
+    { $group: { _id: null, total: { $sum: "$total_payout" } } },
+  ]);
+
+  return result[0]?.total ?? 0;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -239,44 +295,46 @@ export async function hasPreviousUnresolvedHolds(
 /**
  * Call this RIGHT BEFORE creating a DailyPayout or WeeklyPayout record.
  *
+ * CHANGED TO CUMULATIVE: PV thresholds are now based on the user's
+ * ALL-TIME cumulative payout total, not the monthly total.
+ *
  * Steps:
  *  1. Check if any PREVIOUS month has an uncleared PV obligation.
- *     If yes → new payout is OnHold regardless of this month's total.
+ *     If yes → new payout is OnHold regardless of cumulative total.
  *  2. Load (or create) the MonthlyPayoutTracker for this user + month.
- *  3. Add newPayoutAmount to the running total.
- *  4. Recalculate pv_required based on the new total.
- *  5. If pv_required increased:
- *       a. If pv_fulfilled already meets the NEW requirement → keep hold_released = true.
- *       b. Otherwise → flip hold_released = false (user must place more PV).
- *  6. Save the tracker.
- *  7. Return the status the new payout record should be saved with.
+ *  3. Add newPayoutAmount to this month's running total.
+ *  4. Compute the new cumulative total (this month + all previous months).
+ *  5. Compute how many total PV repurchases are required cumulatively.
+ *  6. Compute how many PV have already been fulfilled across ALL months.
+ *  7. If cumulative requirement exceeds cumulative fulfilled:
+ *       a. Assign the delta as this month's pv_required.
+ *       b. Set hold_released = false.
+ *  8. Save the tracker.
+ *  9. Return "Pending" | "OnHold".
  *
  * Hold priority order:
  *  1. OnHold  → any previous month has pv_required > 0 AND hold_released = false
- *  2. OnHold  → this month's pv_required > 0 AND pv_fulfilled < pv_required
+ *  2. OnHold  → cumulative PV required > cumulative PV fulfilled
  *  3. Pending → all clear
  *
  * ─── Example scenarios ───────────────────────────────────────────────────
  *
- *  Scenario A: User crosses ₹50K — 50 PV now required
- *    prevTotal = ₹40,000, newTotal = ₹55,000
- *    prevPvReq = 0, newPvReq = 50
- *    pv_fulfilled = 0 → hold_released = false → return OnHold ✅
+ *  Scenario A: User cumulative crosses ₹50K — 1st repurchase triggered
+ *    prevCumulative = ₹40,000, newCumulative = ₹55,000
+ *    totalPvRequired = 50, totalPvFulfilled = 0 → delta = 50
+ *    pv_required = 50 on this month's tracker → return OnHold ✅
  *
- *  Scenario B: User already placed 50 PV at ₹50K, total now crosses ₹1.5L
- *    prevTotal = ₹1,40,000, newTotal = ₹1,60,000
- *    prevPvReq = 50, newPvReq = 100
- *    pv_fulfilled = 50 → 50 < 100 → hold_released = false → return OnHold ✅
- *    (User needs 50 more PV to reach 100 total)
+ *  Scenario B: User already did 50PV repurchase, cumulative crosses ₹1.5L
+ *    prevCumulative = ₹1,40,000, newCumulative = ₹1,60,000
+ *    totalPvRequired = 100, totalPvFulfilled = 50 → delta = 50
+ *    pv_required = 50 on this month's tracker → return OnHold ✅
  *
- *  Scenario C: User placed 100 PV, total crosses ₹1.5L
- *    prevTotal = ₹1,40,000, newTotal = ₹1,60,000
- *    prevPvReq = 50, newPvReq = 100
- *    pv_fulfilled = 100 → 100 >= 100 → keep hold_released = true → return Pending ✅
+ *  Scenario C: cumulative crosses ₹1.5L but user already placed 100 PV total
+ *    totalPvRequired = 100, totalPvFulfilled = 100 → delta = 0
+ *    pv_required = 0 → return Pending ✅
  *
- *  Scenario D: Total still under ₹50K — no PV needed
- *    prevTotal = ₹30,000, newTotal = ₹45,000
- *    newPvReq = 0 → return Pending ✅
+ *  Scenario D: cumulative still under ₹50K — no PV needed
+ *    totalPvRequired = 0 → return Pending ✅
  */
 export async function evaluateAndUpdateHoldStatus(
   user_id: string,
@@ -291,59 +349,55 @@ export async function evaluateAndUpdateHoldStatus(
   // ── 2. Update this month's tracker ────────────────────────────────────
   const tracker = await getOrCreateMonthlyTracker(user_id, month);
 
-  const prevTotal = tracker.total_payout;
-  const newTotal  = prevTotal + newPayoutAmount;
+  const prevMonthTotal = tracker.total_payout;
+  const newMonthTotal  = prevMonthTotal + newPayoutAmount;
+  tracker.total_payout = newMonthTotal;
+
+  // ── 3. Compute cumulative total across ALL months (including this update) ──
+  const prevCumulativeTotal = await getCumulativeTotalPayout(user_id);
+  // prevCumulativeTotal already includes prevMonthTotal for this month (from DB)
+  // We need to account for the new amount being added now
+  const newCumulativeTotal = prevCumulativeTotal + newPayoutAmount;
+
+  // ── 4. Compute total PV required cumulatively ─────────────────────────
+  const totalPvRequired = requiredPvForCumulativeTotal(newCumulativeTotal);
+
+  // ── 5. Compute total PV fulfilled across ALL months ───────────────────
+  const pvFulfilledResult = await MonthlyPayoutTracker.aggregate([
+    { $match: { user_id } },
+    { $group: { _id: null, total: { $sum: "$pv_fulfilled" } } },
+  ]);
+  const totalPvFulfilled = pvFulfilledResult[0]?.total ?? 0;
+
+  // ── 6. Delta = how much more PV is still needed globally ─────────────
+  const globalPvDelta = Math.max(0, totalPvRequired - totalPvFulfilled);
+
+  // ── 7. Assign delta as this month's obligation ────────────────────────
   const prevPvReq = tracker.pv_required;
-  const newPvReq  = requiredPvForMonthlyTotal(newTotal);
 
-  tracker.total_payout = newTotal;
+  if (globalPvDelta > prevPvReq) {
+    // New cumulative threshold crossed — assign additional requirement here
+    tracker.pv_required  = globalPvDelta;
+    tracker.hold_released    = false;
+    tracker.hold_released_at = undefined;
+  } else if (globalPvDelta === 0 && prevPvReq === 0) {
+    // No obligation — nothing to do
+  }
+  // If globalPvDelta <= prevPvReq, no change needed on this tracker
 
-  // Record exact moment each threshold was first crossed
+  // Record threshold crossing timestamps (cumulative)
   const now = new Date();
-  if (prevTotal < 50_000 && newTotal >= 50_000 && !tracker.crossed_1lakh_at) {
-    tracker.crossed_1lakh_at = now;
+  if (prevCumulativeTotal < 50_000 && newCumulativeTotal >= 50_000 && !tracker.crossed_1lakh_at) {
+    tracker.crossed_1lakh_at = now; // first threshold (₹50K cumulative)
   }
-  if (prevTotal < 150_000 && newTotal >= 150_000 && !tracker.crossed_3lakh_at) {
-    tracker.crossed_3lakh_at = now;
-  }
-
-  // ── FIX: Handle PV requirement increase correctly ─────────────────────
-  //
-  // If the PV obligation increased (e.g. ₹50K → ₹1.5L threshold crossed):
-  //   - Update pv_required to the new higher value.
-  //   - Check if pv_fulfilled ALREADY meets the new requirement.
-  //     • If yes → hold remains released (user had proactively placed enough PV).
-  //     • If no  → invalidate hold_released so user must place more PV.
-  //
-  // BUG IN ORIGINAL: always set hold_released = false without checking
-  // if pv_fulfilled already satisfies the new pv_required.
-  // ─────────────────────────────────────────────────────────────────────
-  if (newPvReq > prevPvReq) {
-    tracker.pv_required = newPvReq;
-
-    if (tracker.pv_fulfilled < newPvReq) {
-      // User hasn't met the new threshold yet → put on hold
-      tracker.hold_released    = false;
-      tracker.hold_released_at = undefined;
-    }
-    // else: pv_fulfilled >= newPvReq → hold stays released, nothing to do
+  if (prevCumulativeTotal < 150_000 && newCumulativeTotal >= 150_000 && !tracker.crossed_3lakh_at) {
+    tracker.crossed_3lakh_at = now; // ₹1.5L cumulative
   }
 
   await tracker.save();
 
-  // ── 3. Determine final status ─────────────────────────────────────────
-  //
-  // thisMonthOnHold is true when:
-  //   - A PV obligation exists for this month (pv_required > 0), AND
-  //   - That obligation hasn't been fully met yet (hold_released = false)
-  //
-  // Note: we use tracker.hold_released (not pv_fulfilled < pv_required directly)
-  // because hold_released is the canonical flag — it accounts for the case where
-  // pv_required was 0 and then became non-zero (hold_released starts false by
-  // default and is only set true by recordPvFulfillment).
-  const thisMonthOnHold =
-    tracker.pv_required > 0 && !tracker.hold_released;
-
+  // ── 8. Determine final status ─────────────────────────────────────────
+  const thisMonthOnHold = tracker.pv_required > 0 && !tracker.hold_released;
   const isOnHold = blockedByPreviousMonth || thisMonthOnHold;
 
   return {
@@ -369,24 +423,20 @@ export async function evaluateAndUpdateHoldStatus(
  * Does NOT release holds itself — returns canRelease = true so the caller
  * (processPvOrder) can call releaseHeldPayoutsForMonth().
  *
+ * NOTE: pv_required on the tracker is the delta assigned to this month when
+ * a cumulative threshold was crossed. The user fulfils it by placing PV orders
+ * (tracked in pv_orders[]). Once pv_fulfilled >= pv_required for this tracker,
+ * hold_released = true and canRelease = true.
+ *
  * ─── canRelease conditions ────────────────────────────────────────────────
  *
  *  canRelease = true ONLY when ALL of:
- *    1. pv_required > 0          (an obligation existed)
+ *    1. pv_required > 0          (an obligation existed for this tracker)
  *    2. newFulfilled >= pv_required  (this order pushed fulfilled over the line)
  *
  *  canRelease = false when:
  *    - No PV obligation (pv_required = 0) — nothing to release
  *    - Partial fulfillment — user still needs more PV
- *
- * ─── Example ─────────────────────────────────────────────────────────────
- *
- *  Month: 2025-03, pv_required = 100, pv_fulfilled = 50
- *  User places order of 50 PV → newFulfilled = 100 → canRelease = true ✅
- *
- *  Month: 2025-03, pv_required = 100, pv_fulfilled = 0
- *  User places order of 50 PV → newFulfilled = 50 → canRelease = false ✅
- *  (user still needs 50 more)
  */
 export async function recordPvFulfillment({
   user_id,

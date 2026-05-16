@@ -148,7 +148,7 @@ export async function getPvAlertSummary(
             totalPvFulfilled: 0,
             totalPvRemaining: 0,
             months:           [],
-            alertMessage:     "All PV obligations fulfilled. No holds pending.",
+            alertMessage:     "All PV repurchase obligations fulfilled. No holds pending.",
         };
     }
 
@@ -174,9 +174,9 @@ export async function getPvAlertSummary(
 
     // ── Build alert message ───────────────────────────────────────────────
     const alertMessage = totalPvRemaining > 0
-        ? `You need to place ${totalPvRemaining} PV across ` +
-          `${pendingMonthsCount} month(s) to release your held payouts.`
-        : "All PV obligations fulfilled. No holds pending.";
+        ? `You need to place ${totalPvRemaining} PV repurchase(s) to release your held payouts. ` +
+          `(Cumulative payout thresholds: ₹50K, ₹1.5L, ₹2.5L, ₹3.5L... — 50 PV each)`
+        : "All PV repurchase obligations fulfilled. No holds pending.";
 
     return {
         hasAlert:         totalPvRemaining > 0,

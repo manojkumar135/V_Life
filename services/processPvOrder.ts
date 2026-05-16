@@ -205,7 +205,7 @@ export async function processPvOrder({
         user_id,
         title:       "📦 PV Order Recorded",
         description:
-          `Your PV order has been recorded (${result.fulfilled}/${result.required} PV this month). ` +
+          `Your PV repurchase order has been recorded (${result.fulfilled}/${result.required} PV for this obligation). ` +
           `You need ${remaining} more PV to release your held payouts.`,
         role:        "user",
         priority:    "medium",

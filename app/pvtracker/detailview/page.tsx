@@ -159,9 +159,9 @@ const MonthCard = ({ month }: { month: PvMonth }) => {
           </div>
         )}
 
-        {/* ── Monthly Payout Total ── */}
+        {/* ── Payout This Month ── */}
         <div className="flex justify-between text-xs text-gray-500">
-          <span>Monthly Payout Total</span>
+          <span>Payout This Month</span>
           <span className="font-semibold text-gray-700">
             ₹ {month.total_payout.toLocaleString("en-IN")}
           </span>
@@ -172,13 +172,13 @@ const MonthCard = ({ month }: { month: PvMonth }) => {
           <div className="space-y-1">
             {month.crossed_1lakh_at && (
               <div className="flex justify-between text-xs text-gray-400">
-                <span>Crossed ₹1L at</span>
+                <span>Crossed ₹50K cumulative at</span>
                 <span>{new Date(month.crossed_1lakh_at).toLocaleString("en-IN")}</span>
               </div>
             )}
             {month.crossed_3lakh_at && (
               <div className="flex justify-between text-xs text-gray-400">
-                <span>Crossed ₹3L at</span>
+                <span>Crossed ₹1.5L cumulative at</span>
                 <span>{new Date(month.crossed_3lakh_at).toLocaleString("en-IN")}</span>
               </div>
             )}
@@ -382,7 +382,7 @@ export default function PvTrackerDetailPage() {
 
             {/* ── Month Cards ── */}
             <p className="text-xs text-gray-400 uppercase font-semibold mb-3">
-              Month-wise Breakdown
+              PV Obligation Breakdown (Cumulative Thresholds)
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">

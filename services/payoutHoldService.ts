@@ -100,14 +100,14 @@ const HOLD_LABELS: Record<HoldReason, string> = {
   NO_WALLET: "No wallet set up",
   WALLET_INACTIVE: "Wallet is inactive",
   WALLET_UNDER_REVIEW: "Wallet is under review (change request pending)",
-  PV_NOT_FULFILLED: "Monthly PV purchase obligation not fulfilled",
+  PV_NOT_FULFILLED: "PV repurchase obligation not fulfilled (cumulative threshold)",
 };
 
 const TRIGGER_LABELS: Record<ReleaseTrigger, string> = {
   wallet_created: "Wallet was created",
   wallet_activated: "Wallet was activated",
   wallet_review_approved: "Wallet change request was approved",
-  pv_fulfilled: "Monthly PV obligation was fulfilled",
+  pv_fulfilled: "PV repurchase obligation was fulfilled",
 };
 
 export interface HoldDecision {
