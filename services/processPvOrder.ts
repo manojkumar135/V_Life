@@ -2,19 +2,29 @@
 //
 // ─── Purpose ──────────────────────────────────────────────────────────────
 //
-//  processPvOrder({ user_id, order_id, pv, order_amount?, month?, userInfo? })
+//  processPvOrder({ user_id, order_id, pv, order_amount?, month?, order_date?, userInfo? })
 //    Main entry point — call from your order API after an order is confirmed.
 //
 //    Flow:
-//      1. Record the full order inside MonthlyPayoutTracker.pv_orders[]
+//      1. Guard: skip if user not yet activated (any path).
+//         Three activation paths exist:
+//           a. First order placed   → activated_date set, user_status = "active"
+//           b. Admin activates      → activated_date set, user_status = "active"
+//           c. Advance payment      → NO activated_date, but user_status = "active"
+//         If activated_date exists: skip orders placed before it (strictly).
+//         If no activated_date but user_status = "active": allow (advance path).
+//         If user_status != "active": skip entirely — not yet activated.
+//         The activation order itself is already excluded at the call site
+//         via !isFirstOrder, so same-day subsequent orders are always allowed.
+//      2. Record the full order inside MonthlyPayoutTracker.pv_orders[]
 //         (idempotent — safe to call twice for the same order).
-//      2. If PV obligation is now fully met → release this month's holds.
-//      3. Cascade forward through later months (oldest-first):
+//      3. If PV obligation is now fully met → release this month's holds.
+//      4. Cascade forward through later months (oldest-first):
 //           - still blocked by another prior month? → STOP
 //           - own hold_released = true?             → release it, continue
 //           - own hold_released = false?            → STOP (own PV unmet)
-//      4. If obligation not yet met → alert user with remaining PV needed.
-//      5. Log any still-outstanding holds.
+//      5. If obligation not yet met → alert user with remaining PV needed.
+//      6. Log any still-outstanding holds.
 //
 //  processPvOrderAcrossMonths({ user_id, order_id, pvByMonth, userInfo? })
 //    Admin use: split a single PV order across multiple months.
@@ -29,19 +39,13 @@
 //     order_id:     order.order_id,
 //     pv:           order.pv,
 //     order_amount: order.total_amount, // optional but good for audit
+//     order_date:   order.created_at,   // pass so activation-date guard runs
 //     userInfo: {                        // optional — saves name/contact/mail
 //       user_name: user.user_name,
 //       contact:   user.contact,
 //       mail:      user.mail,
 //     },
 //   });
-//
-// ─── Change from original ─────────────────────────────────────────────────
-//
-//  ADDED: userInfo? param ({ user_name, contact, mail })
-//    Threaded through to recordPvFulfillment → getOrCreateMonthlyTracker.
-//    Written only on $setOnInsert — never overwrites existing data.
-//    All callers that don't pass userInfo continue to work unchanged.
 //
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -59,6 +63,7 @@ import { releaseOnPvFulfilled } from "./payoutHoldService";
 
 import { MonthlyPayoutTracker } from "@/models/monthlyPayoutTracker";
 import { Alert }                from "@/models/alert";
+import { User }                 from "@/models/user";
 import { connectDB }            from "@/lib/mongodb";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -92,6 +97,7 @@ export async function processPvOrder({
   pv,
   order_amount = 0,
   month = currentMonth(),
+  order_date,
   userInfo,
 }: {
   user_id:       string;
@@ -102,6 +108,14 @@ export async function processPvOrder({
   /** Defaults to current month. Pass only for admin backdating. */
   month?:        string;
   /**
+   * Date the order was placed.
+   * Used to verify the order is on or after the user's activation date.
+   * Orders placed before activation date are never counted toward repurchase PV.
+   * The activation order itself is already excluded by !isFirstOrder at the call site.
+   * Orders placed ON the activation date (other than the activation order) are allowed.
+   */
+  order_date?:   Date;
+  /**
    * Optional user identity fields.
    * Written only on tracker creation ($setOnInsert) — never overwrites.
    * Pass from the order route whenever you have the user object available.
@@ -109,6 +123,53 @@ export async function processPvOrder({
   userInfo?:     UserInfo;
 }): Promise<void> {
   await connectDB();
+
+  // ── Guard: only count PV from activated users, after their activation date ──
+  //
+  // Three activation paths:
+  //
+  //  a) First order placed → userActivation.ts sets activated_date + user_status="active"
+  //     The activation order is blocked at call site (!isFirstOrder).
+  //     Same-day subsequent orders: activated_date exists, oDate >= activationDate → allowed ✅
+  //
+  //  b) Admin activates → getuser-operations sets activated_date + user_status="active"
+  //     No order during activation. First order user places → allowed ✅
+  //
+  //  c) Advance payment → user_status="active" but activated_date is NOT set.
+  //     We allow PV counting as long as user_status is "active" ✅
+  //
+  const userDoc = await User.findOne({ user_id })
+    .select("activated_date user_status")
+    .lean() as any;
+
+  // Not active at all — skip entirely
+  if (!userDoc || userDoc.user_status?.toLowerCase() !== "active") {
+    console.log(
+      `[processPvOrder] Skipped ${order_id} — user ${user_id} is not active.`
+    );
+    return;
+  }
+
+  // If activated_date is set, enforce: order must be on or after that date.
+  // (Covers paths a and b. Path c has no activated_date — passes through.)
+  if (userDoc.activated_date && order_date) {
+    // Parse "DD-MM-YYYY" → Date at midnight
+    const [dd, mm, yyyy] = userDoc.activated_date.split("-").map(Number);
+    const activationDate = new Date(yyyy, mm - 1, dd);
+    activationDate.setHours(0, 0, 0, 0);
+
+    const oDate = new Date(order_date);
+    oDate.setHours(0, 0, 0, 0);
+
+    if (oDate < activationDate) {
+      // Order is strictly before activation date — skip
+      console.log(
+        `[processPvOrder] Skipped ${order_id} — order date ${oDate.toDateString()} ` +
+        `is before activation date ${activationDate.toDateString()}.`
+      );
+      return;
+    }
+  }
 
   // ── Step 1: Record full order details + PV fulfillment ────────────────
   const result = await recordPvFulfillment({

@@ -347,17 +347,20 @@ export async function POST(request: Request) {
       user_id: beneficiary.user_id,
     });
 
-    // ✅ ADD THIS BLOCK — PV tracking, fire-and-forget, does not block response
-    if (totalPV > 0) {
+    // ── PV tracking — fire-and-forget, does not block response ────────────
+    // Skip activation (first) orders — their PV does not count toward
+    // repurchase obligations. Only post-activation orders count.
+    if (totalPV > 0 && !isFirstOrder) {
       processPvOrder({
-        user_id: beneficiary.user_id,
-        order_id: newOrder.order_id,
-        pv: totalPV,
+        user_id:      beneficiary.user_id,
+        order_id:     newOrder.order_id,
+        pv:           totalPV,
         order_amount: newOrder.final_amount ?? amount,
+        order_date:   newOrder.created_at ?? new Date(),
         userInfo: {
           user_name: beneficiary.user_name || "",
-          contact: beneficiary.contact || "",
-          mail: beneficiary.mail || "",
+          contact:   beneficiary.contact   || "",
+          mail:      beneficiary.mail      || "",
         },
       }).catch((err) =>
         console.error("❌ [order-operations] processPvOrder error", err),
