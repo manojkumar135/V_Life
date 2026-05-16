@@ -37,6 +37,10 @@ const TreeNodeSchema = new Schema(
     refer_by: { type: String },
     infinity: { type: String },
 
+
+    pair_star:{ type: String },
+    pairs: { type: Number, default: 0 },
+    
     // 👥 Referral Tracking
     referrals: [{ type: String }], // store referred user_ids
     referral_count: { type: Number, default: 0 },

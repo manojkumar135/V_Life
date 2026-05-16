@@ -103,6 +103,9 @@ const LoginSchema = new mongoose.Schema(
     profile: { type: String },
     score: { type: Number, default: 0 },
 
+    pair_star:{ type: String },
+    pairs: { type: Number, default: 0 },
+
 
     // 🛒 Store cart/order items directly with login
     items: [OrderItemSchema],

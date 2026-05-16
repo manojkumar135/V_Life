@@ -137,6 +137,9 @@ const UserSchema = new mongoose.Schema(
     club: { type: String, default: "none" },
     activated_date: { type: String },
 
+    pair_star:{ type: String },
+    pairs: { type: Number, default: 0 },
+
 
     // 🌳 Binary Team Structure
     left: { type: String },
