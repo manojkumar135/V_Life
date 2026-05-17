@@ -13,6 +13,7 @@ import mongoose from "mongoose";
 import { Alert } from "@/models/alert";
 
 import { getTotalPayout } from "@/services/totalpayout";
+import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
 import { updateClub } from "@/services/clubrank";
 // import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
 
@@ -383,6 +384,11 @@ export async function POST(request) {
             // ✅ FIX: use ordered insert to preserve referred_users position
             // This ensures odd/even infinity assignment is always correct
             await addToPaidDirectsOrdered(referrerId, freshUser.user_id);
+            
+            // 🔥 Fire-and-forget: propagate pair star counts up the tree
+            propagatePairStarOnActivation(body.user_id).catch((err) =>
+              console.error("[PairStar] propagation error (history/advance):", err)
+            );
 
             if (earnedPV > 0) {
               await User.updateOne(
@@ -633,7 +639,7 @@ export async function GET(request) {
       // created_at: -1,
     });
 
-    
+
 
     if (role === "user") {
       histories = histories.filter((h) => {

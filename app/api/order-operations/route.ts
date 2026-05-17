@@ -24,6 +24,7 @@ import {
 } from "@/services/infinity";
 
 import { processPvOrder } from "@/services/processPvOrder";
+import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
 
 // ----------------- Types -----------------
 interface OrderItem {
@@ -338,6 +339,11 @@ export async function POST(request: Request) {
       await activateUser(beneficiary); // does NOT save
       await beneficiary.save();
       justActivated = true;
+
+      // 🔥 Fire-and-forget: propagate pair star counts up the tree
+      propagatePairStarOnActivation(beneficiary.user_id).catch((err) =>
+        console.error("[PairStar] propagation error (order):", err),
+      );
     } else {
       await beneficiary.save();
     }

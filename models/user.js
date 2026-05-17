@@ -132,13 +132,26 @@ const UserSchema = new mongoose.Schema(
 
     score: { type: Number, default: 0 },
     reward: { type: Number, default: 0 },
-    
+
     rank: { type: String, required: true, default: "none" },
     club: { type: String, default: "none" },
     activated_date: { type: String },
 
-    pair_star:{ type: String },
+    pair_star: { type: String },
     pairs: { type: Number, default: 0 },
+    left_active_count: { type: Number, default: 0 },
+    right_active_count: { type: Number, default: 0 },
+    pair_star_start_date: { type: String, default: null },
+    pair_star_released_tiers: {
+  type: [{
+    tier_name:   { type: String },
+    reward:      { type: String },
+    pairs:       { type: Number },
+    released_at: { type: String }, // DD-MM-YYYY HH:MM
+  }],
+  default: [],
+},
+
 
 
     // 🌳 Binary Team Structure

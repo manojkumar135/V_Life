@@ -10,6 +10,8 @@ import { FaUserTimes } from "react-icons/fa";
 
 import { useRouter } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
+import { IoRibbonOutline } from "react-icons/io5";
+
 import { useVLife } from "@/store/context";
 
 const Page = () => {
@@ -71,6 +73,21 @@ const Page = () => {
           >
             <IoInfiniteSharp size={32} />
             <span className="mt-2 text-lg font-semibold">Infinity Team</span>
+          </div>
+
+          {/* Ranks Card */}
+          <div
+            onClick={() =>
+              router.push(
+                user?.role === "user"
+                  ? "/pair-rankings"
+                  : "/admin-pair-rankings",
+              )
+            }
+            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+          >
+            <IoRibbonOutline size={32} />
+            <span className="mt-2 text-lg font-semibold">Ranks</span>
           </div>
 
           {/* Matches Report */}

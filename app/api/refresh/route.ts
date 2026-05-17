@@ -1,10 +1,12 @@
+//api/refresh/route.ts
+
 import { NextResponse } from "next/server";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { generateAccessToken } from "@/utils/auth/token";
 import { connectDB } from "@/lib/mongodb";
 import { Login } from "@/models/login";
 import { User } from "@/models/user";
-import { Wallet } from "@/models/wallet"; // ✅ added
+import { Wallet } from "@/models/wallet";
 import { Score } from "@/models/score";
 
 export const dynamic = "force-dynamic";
@@ -30,20 +32,20 @@ export async function POST(req: Request) {
     if (!refreshToken) {
       return NextResponse.json(
         { success: false, message: "No refresh token provided" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
     // 🔑 Verify refresh token
     const decoded = jwt.verify(
       refreshToken,
-      process.env.JWT_REFRESH_SECRET as string
+      process.env.JWT_REFRESH_SECRET as string,
     ) as DecodedUser;
 
     if (!decoded?.id && !decoded?.user_id) {
       return NextResponse.json(
         { success: false, message: "Invalid token payload" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
     if (!loginUser) {
       return NextResponse.json(
         { success: false, message: "User not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -65,14 +67,14 @@ export async function POST(req: Request) {
     // ✅ Get FULL user data
     const userData = await User.findOne(
       { user_id: loginUser.user_id },
-      { _id: 0 }
+      { _id: 0 },
     ).lean();
 
     // ✅ Get PAN from Wallet (only required fields)
     const walletData = (await Wallet.findOne(
       { user_id: loginUser.user_id },
-      { pan_number: 1, pan_verified: 1, _id: 0 }
-    ).lean() as any);
+      { pan_number: 1, pan_verified: 1, _id: 0 },
+    ).lean()) as any;
 
     // ✅ Merge + PAN override
     const finalUser: any = {
@@ -84,9 +86,9 @@ export async function POST(req: Request) {
 
       pan_verified:
         walletData?.pan_verified === true ||
-        walletData?.pan_verified === "true" || walletData?.pan_verified === "Yes" ,
-              role: loginObj.role || "user",
-
+        walletData?.pan_verified === "true" ||
+        walletData?.pan_verified === "Yes",
+      role: loginObj.role || "user",
     };
 
     // ⭐ Score logic (UNCHANGED)
@@ -98,7 +100,7 @@ export async function POST(req: Request) {
         "cashback.balance": 1,
         "reward.balance": 1,
         _id: 0,
-      }
+      },
     ).lean<{
       daily?: { balance: number };
       fortnight?: { balance: number };
@@ -119,19 +121,30 @@ export async function POST(req: Request) {
       role: loginUser.role,
     });
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       {
         success: true,
         accessToken,
         user: finalUser,
       },
-      { status: 200 }
+      { status: 200 },
     );
+
+    // ✅ Set new accessToken as cookie so subsequent API calls include it
+    response.cookies.set("accessToken", accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "strict",
+      maxAge: 60 * 15, // 15 minutes — same as login
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Refresh error:", error);
     return NextResponse.json(
       { success: false, message: "Invalid refresh token" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 }
