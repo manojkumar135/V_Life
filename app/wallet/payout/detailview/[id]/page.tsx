@@ -232,13 +232,13 @@ export default function PayoutDetailView() {
         )}
 
         {/* Header */}
-        <div className="flex items-center mb-6 max-md:mb-2">
+        <div className="flex items-center mb-3 max-md:mb-2">
           <IoIosArrowBack
             size={25}
             className="mr-2 cursor-pointer"
             onClick={() => router.back()}
           />
-          <p className="text-xl max-md:text-[1rem] font-semibold">
+          <p className="text-lg max-md:text-[1rem] font-semibold">
             Payout Detail View
           </p>
         </div>

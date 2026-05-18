@@ -20,17 +20,14 @@ import { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { handleDownload } from "@/utils/handleDownload";
 import { formatDate } from "@/components/common/formatDate";
 
-// ✅ Filter tab definitions
-type FilterTab = "All" | "Orders" | "Daily" | "Infinity" | "Quick Star";
-
-const FILTER_TABS: FilterTab[] = ["All", "Orders", "Daily", "Infinity", "Quick Star"];
-
+type FilterTab = "All" | "Orders" | "Daily" | "Infinity" | "Pair Star";
+const FILTER_TABS: FilterTab[] = ["All", "Orders", "Daily", "Infinity", "Pair Star"];
 const FILTER_KEYWORDS: Record<FilterTab, string[]> = {
   All: [],
   Orders: ["Advance Payment", "Order placed by", "Order Payment"],
   Daily: ["Daily Matching Bonus", "Referral Bonus for first", "Direct Sales Bonus"],
   Infinity: ["Infinity Matching Bonus", "Infinity Sales Bonus"],
-  "Quick Star": ["Quick Star Bonus"],
+  "Pair Star": ["Pair Star Reward"],
 };
 
 export default function TransactionHistory() {

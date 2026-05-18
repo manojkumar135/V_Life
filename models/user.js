@@ -143,14 +143,17 @@ const UserSchema = new mongoose.Schema(
     right_active_count: { type: Number, default: 0 },
     pair_star_start_date: { type: String, default: null },
     pair_star_released_tiers: {
-  type: [{
-    tier_name:   { type: String },
-    reward:      { type: String },
-    pairs:       { type: Number },
-    released_at: { type: String }, // DD-MM-YYYY HH:MM
-  }],
-  default: [],
-},
+      type: [{
+        tier_name: { type: String },
+        reward: { type: String },
+        pairs: { type: Number },
+        released_at: { type: String },
+        payout_id: { type: String },  
+        payout_status: { type: String, default: "Pending" }, 
+        transaction_id: { type: String, default: null },      
+      }],
+      default: [],
+    },
 
 
 

@@ -3,10 +3,11 @@ import { PAIR_STAR_TIERS, PAIR_STAR_TIER_NAMES } from "@/constant/pairStar";
 import { connectDB } from "@/lib/mongodb";
 
 export type TierConfig = {
-  tier_name:  string;
-  pairs:      number;
-  direct_pv:  number;
-  reward:     string;
+  tier_name: string;
+  pairs: number;
+  direct_pv: number;
+  reward: string;
+  reward_amount: number;
 };
 
 export type GlobalConfig = {
@@ -25,9 +26,9 @@ export async function loadTierConfig(): Promise<TierConfig[]> {
 
   await connectDB();
 
-  const dbRecords = await PairStarConfig.find(
-    { tier_name: { $in: PAIR_STAR_TIER_NAMES } },
-  ).lean() as any[];
+  const dbRecords = (await PairStarConfig.find({
+    tier_name: { $in: PAIR_STAR_TIER_NAMES },
+  }).lean()) as any[];
 
   const dbMap = new Map<string, any>();
   for (const r of dbRecords) dbMap.set(r.tier_name, r);
@@ -36,9 +37,10 @@ export async function loadTierConfig(): Promise<TierConfig[]> {
     const db = dbMap.get(t.name);
     return {
       tier_name: t.name,
-      pairs:     db?.pairs     ?? t.pairs,
+      pairs: db?.pairs ?? t.pairs,
       direct_pv: db?.direct_pv ?? t.directPV,
-      reward:    db?.reward    ?? t.reward,
+      reward: db?.reward ?? t.reward,
+      reward_amount: db?.reward_amount ?? t.rewardAmount,
     };
   });
 
@@ -55,7 +57,9 @@ export async function loadGlobalConfig(): Promise<GlobalConfig> {
 
   await connectDB();
 
-  const global = await PairStarConfig.findOne({ tier_name: "__global__" }).lean() as any;
+  const global = (await PairStarConfig.findOne({
+    tier_name: "__global__",
+  }).lean()) as any;
   const config: GlobalConfig = {
     start_date: global?.start_date ?? null,
   };

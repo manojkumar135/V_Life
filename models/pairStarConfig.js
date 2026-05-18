@@ -16,6 +16,7 @@ const PairStarConfigSchema = new mongoose.Schema(
     direct_pv:  { type: Number },
     reward:     { type: String },
     start_date: { type: String, default: null },
+    reward_amount: { type: Number, default: 0 },
     updated_by: { type: String, default: "admin" },
     updated_at: { type: Date, default: Date.now },
   },

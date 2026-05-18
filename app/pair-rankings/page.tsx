@@ -455,7 +455,7 @@ export default function PairRankingsPage() {
                   </div>
 
                   {/* ── Col 4: Status ── */}
-                  <div>
+                   <div className={isAchieved ? "hidden sm:block" : ""}>
                     <span className="sm:hidden text-xs text-gray-500 font-medium block mb-1">
                       Status:
                     </span>
