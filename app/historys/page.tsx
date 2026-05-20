@@ -202,6 +202,8 @@ export default function TransactionHistory() {
 
     { field: "details", headerName: "Detail", flex: 1.8 },
 
+    { field: "from", headerName: "From", flex: 0.8 },
+
     {
       field: "amount",
       headerName: "Amount (₹)",

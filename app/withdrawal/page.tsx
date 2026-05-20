@@ -21,7 +21,9 @@ const BONUS_TYPE_OPTIONS = [
   { label: "Daily",     value: "daily" },
   { label: "Fortnight", value: "fortnight" },
   { label: "Referral",  value: "referral" },
-  { label: "Quickstar", value: "quickstar" },
+  // { label: "Quickstar", value: "quickstar" },
+    { label: "Pair Star", value: "pairstar" },
+
 ];
 
 export default function WithdrawPage() {
@@ -68,7 +70,8 @@ export default function WithdrawPage() {
           user_id: user.user_id,   // ← required for role=user filtering
           search:  search || "",
           limit:   1000,
-          ...(bonusType && { bonus_type: bonusType }),
+...(bonusType && bonusType !== "pairstar" && { bonus_type: bonusType }),
+...(bonusType === "pairstar" && { payout_name: "Pair Star Reward" }),
           ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
             from: dateFilter.from,

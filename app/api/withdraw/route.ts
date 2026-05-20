@@ -48,6 +48,7 @@ export async function GET(request: Request) {
     const date      = searchParams.get("date")       || null;
     const batchId   = searchParams.get("batch_id")   || "";
     const bonusType = searchParams.get("bonus_type") || "";
+    const payoutName = searchParams.get("payout_name") || "";
     const limit     = Math.min(2000, parseInt(searchParams.get("limit") || "1000"));
 
     /* ── 1. Role-based base query ── */
@@ -86,6 +87,7 @@ export async function GET(request: Request) {
 
     if (batchId.trim())   conditions.push({ batch_id:   batchId.trim() });
     if (bonusType.trim()) conditions.push({ bonus_type: bonusType.trim() });
+    if (payoutName.trim()) conditions.push({ payout_name: { $regex: payoutName.trim(), $options: "i" } });
 
     if (search.trim()) {
       const terms = search.split(",").map((s) => s.trim()).filter(Boolean);
