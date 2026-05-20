@@ -32,7 +32,7 @@ import { Wallet } from "@/models/wallet";
 import { Score } from "@/models/score";
 
 // Names that belong to the daily score bucket
-const DAILY_NAMES = ["Matching Bonus", "Direct Sales Bonus"];
+const DAILY_NAMES = ["Matching Bonus", "Direct Sales Bonus","Pair Star Reward"];
 
 // Names that belong to the fortnight score bucket
 const FORTNIGHT_NAMES = ["Infinity Matching Bonus", "Infinity Sales Bonus"];

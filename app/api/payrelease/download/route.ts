@@ -26,7 +26,7 @@ import { Score } from "@/models/score";
 import { Withdraw } from "@/models/withdraw";
 import { PayoutBatch } from "@/models/batch";
 
-const DAILY_NAMES = ["Matching Bonus", "Direct Sales Bonus"];
+const DAILY_NAMES = ["Matching Bonus", "Direct Sales Bonus","Pair Star Reward"];
 const FORTNIGHT_NAMES = ["Infinity Matching Bonus", "Infinity Sales Bonus"];
 const REFERRAL_NAMES = ["Referral Bonus"];
 const QUICKSTAR_NAMES = ["Quick Star Bonus"];

@@ -159,7 +159,7 @@ export async function PUT(req) {
         if (!bonusAlreadyGiven) {
           await addRewardScore({
             user_id: userIdToUpdate,
-            points: 20000,
+            points: 10000,
             source: "activation_bonus",
             reference_id: userIdToUpdate,
             remarks: "One-time cashback bonus on admin activation",
