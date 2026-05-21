@@ -40,10 +40,11 @@ interface PvTrackerRow {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Month Breakdown Cell
+// Obligation Breakdown Cell
+// Shows Repurchase #1, #2 ... instead of month strings
 // ─────────────────────────────────────────────────────────────────────────
 
-const MonthBreakdownCell = ({ months }: { months: PvMonthBreakdown[] }) => {
+const ObligationBreakdownCell = ({ months }: { months: PvMonthBreakdown[] }) => {
   const [open, setOpen] = useState(false);
 
   return (
@@ -55,17 +56,17 @@ const MonthBreakdownCell = ({ months }: { months: PvMonthBreakdown[] }) => {
         }}
         className="text-xs text-blue-600 underline hover:text-blue-800"
       >
-        {open ? "Hide ▲" : `${months.length} month(s) ▼`}
+        {open ? "Hide ▲" : `${months.length} repurchase(s) ▼`}
       </button>
 
       {open && (
         <div className="mt-1 space-y-0.5">
-          {months.map((m) => (
+          {months.map((m, i) => (
             <div
               key={m.month}
               className="flex justify-between text-xs gap-3 border-b pb-0.5"
             >
-              <span className="text-gray-600 font-medium">{m.month}</span>
+              <span className="text-gray-600 font-medium">Repurchase #{i + 1}</span>
               <span
                 className={
                   m.pv_remaining > 0
@@ -128,7 +129,6 @@ export default function PvTrackerPage() {
           }),
         };
 
-        // No user_id passed → list view
         const { data } = await axios.get("/api/pv-tracker", { params });
         const rows = data.data || [];
 
@@ -149,7 +149,6 @@ export default function PvTrackerPage() {
     goToPage(1);
   }, [debouncedQuery, dateFilter]);
 
-  // ── Navigate to detail — pass user_id as search param ────────────────
   const handleViewDetail = (user_id: string) => {
     router.push(`/pvtracker/detailview?user_id=${user_id}`);
   };
@@ -207,7 +206,7 @@ export default function PvTrackerPage() {
       sortable: false,
       disableColumnMenu: true,
       renderCell: (params: GridRenderCellParams) => (
-        <MonthBreakdownCell months={params.value ?? []} />
+        <ObligationBreakdownCell months={params.value ?? []} />
       ),
     },
   ];
@@ -238,7 +237,6 @@ export default function PvTrackerPage() {
           </div>
         )}
 
-        {/* Floating Filter Icon */}
         <div title="Filter" className="fixed bottom-5 right-6 z-10">
           <button
             className="relative w-12 h-12 rounded-full bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white flex items-center justify-center
@@ -279,7 +277,6 @@ export default function PvTrackerPage() {
           pageSize={12}
           checkboxSelection
           setSelectedRows={setSelectedRows}
-          // ── clicking user_id cell navigates to detail ──
           onIdClick={(user_id) => handleViewDetail(user_id)}
         />
 

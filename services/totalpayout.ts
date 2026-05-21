@@ -21,8 +21,8 @@ export async function getTotalPayout(user_id: string) {
 }
 
 
-export function checkHoldStatus(totalPayout: number, pv: number): boolean {
-  if (totalPayout >= 300000 && pv < 100) return true;
-  if (totalPayout >= 100000 && pv < 50) return true;
-  return false;
-}
+// export function checkHoldStatus(totalPayout: number, pv: number): boolean {
+//   if (totalPayout >= 300000 && pv < 100) return true;
+//   if (totalPayout >= 100000 && pv < 50) return true;
+//   return false;
+// }

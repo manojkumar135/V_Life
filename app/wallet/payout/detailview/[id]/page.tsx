@@ -35,7 +35,6 @@ interface PayoutFormData {
   transaction_type: string;
   details: string;
   status: string;
-  // ✅ ADDED: hold reason fields
   hold_reasons: string[];
   hold_reason_labels: string[];
   hold_release_reason: string;
@@ -46,6 +45,10 @@ export default function PayoutDetailView() {
   const router = useRouter();
   const params = useParams();
   const payoutId = params?.id as string;
+
+  // ✅ Normalizes any casing to lowercase, removes spaces (handles "OnHold", "onhold", "ONHOLD")
+  const normalizeStatus = (s: string) =>
+    s?.toLowerCase().replace(/\s+/g, "") || "";
 
   const [formData, setFormData] = useState<PayoutFormData>({
     transaction_id: "",
@@ -70,7 +73,6 @@ export default function PayoutDetailView() {
     transaction_type: "",
     details: "",
     status: "",
-    // ✅ ADDED: hold reason fields
     hold_reasons: [],
     hold_reason_labels: [],
     hold_release_reason: "",
@@ -82,7 +84,7 @@ export default function PayoutDetailView() {
 
   const statusOptions = [
     { label: "Pending", value: "pending" },
-    { label: "On Hold", value: "OnHold" },
+    { label: "On Hold", value: "onhold" },
     { label: "Completed", value: "completed" },
   ];
 
@@ -120,8 +122,8 @@ export default function PayoutDetailView() {
             admin_charge: p.admin_charge?.toString() || "0.00",
             transaction_type: p.transaction_type || "",
             details: p.details || "",
-            status: p.status || "",
-            // ✅ ADDED: hold reason fields
+            // ✅ Normalize status on fetch
+            status: normalizeStatus(p.status),
             hold_reasons: p.hold_reasons || [],
             hold_reason_labels: p.hold_reason_labels || [],
             hold_release_reason: p.hold_release_reason || "",
@@ -141,7 +143,8 @@ export default function PayoutDetailView() {
   }, [payoutId]);
 
   useEffect(() => {
-    setStatus(formData.status || "");
+    // ✅ Normalize status when formData.status changes
+    setStatus(normalizeStatus(formData.status));
   }, [formData.status]);
 
   const handleStatusChange = (val: string) => setStatus(val);
@@ -189,14 +192,15 @@ export default function PayoutDetailView() {
           admin_charge: updatedRecord?.admin_charge?.toString() || "0.00",
           transaction_type: updatedRecord?.transaction_type || "",
           details: updatedRecord?.details || "",
-          status: updatedRecord?.status || "",
-          // ✅ ADDED: hold reason fields
+          // ✅ Normalize status on update
+          status: normalizeStatus(updatedRecord?.status),
           hold_reasons: updatedRecord?.hold_reasons || [],
           hold_reason_labels: updatedRecord?.hold_reason_labels || [],
           hold_release_reason: updatedRecord?.hold_release_reason || "",
         });
 
-        setStatus(updatedRecord?.status || "");
+        // ✅ Normalize status on update
+        setStatus(normalizeStatus(updatedRecord?.status));
 
         if (updatedRecord?.title === "Matching Bonus") {
           router.push("/wallet/payout/daily");
@@ -214,8 +218,8 @@ export default function PayoutDetailView() {
     }
   };
 
-  // ✅ ADDED: derived boolean — true when payout is OnHold AND reasons exist
-  const isOnHold = formData.status === "OnHold";
+  // ✅ Use normalized status for all derived booleans
+  const isOnHold = normalizeStatus(formData.status) === "onhold";
   const hasHoldReasons = formData.hold_reason_labels.length > 0;
   const hasLegacyReason =
     !hasHoldReasons &&
@@ -243,7 +247,7 @@ export default function PayoutDetailView() {
           </p>
         </div>
 
-        {/* ✅ ADDED: Hold Reason Banner — only shown when status is OnHold */}
+        {/* Hold Reason Banner — only shown when status is OnHold */}
         {isOnHold && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-5 py-4">
             <p className="text-sm font-semibold text-red-700 mb-2">
@@ -259,7 +263,6 @@ export default function PayoutDetailView() {
                 ))}
               </ul>
             ) : hasLegacyReason ? (
-              // Fallback for older payouts that only have hold_release_reason
               <p className="text-sm text-red-600">
                 {formData.hold_release_reason.replace("Payout held: ", "")}
               </p>

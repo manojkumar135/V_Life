@@ -70,25 +70,13 @@ const PayoutPage = () => {
     return () => { isMounted = false; };
   }, [user?.user_id]);
 
-  // ── Build alert message with month breakdown ──────────────────────────
+  // ── PV Alert message — just message + total remaining ─────────────────
   const pvAlertMessage = pvSummary ? (
     <>
       {pvSummary.alertMessage}
-      <div className="mt-2 text-xs space-y-1">
-        {pvSummary.months.map((m) => (
-          <div key={m.month} className="flex justify-between gap-4">
-            <span>{m.month}</span>
-            <span>
-              {m.cleared
-                ? "✅ Cleared"
-                : `${m.pv_remaining} PV remaining`}
-            </span>
-          </div>
-        ))}
-        <div className="flex justify-between gap-4 font-semibold border-t pt-1 mt-1">
-          <span>Total Remaining</span>
-          <span>{pvSummary.totalPvRemaining} PV</span>
-        </div>
+      <div className="mt-2 text-xs font-semibold flex justify-between border-t pt-2">
+        <span>PV Required</span>
+        <span>{pvSummary.totalPvRemaining} PV</span>
       </div>
     </>
   ) : null;
@@ -134,7 +122,7 @@ const PayoutPage = () => {
             <span className="mt-2 text-lg font-semibold">Fortnightly Payouts</span>
           </div>
 
-          {/* Withdrawls Card */}
+          {/* Withdrawals Card */}
           <div
             onClick={() => router.push("/withdrawal")}
             className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"

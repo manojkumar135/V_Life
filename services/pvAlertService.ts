@@ -173,9 +173,9 @@ export async function getPvAlertSummary(
     const pendingMonthsCount = months.filter((m) => !m.cleared).length;
 
     // ── Build alert message ───────────────────────────────────────────────
+    // Simple, clear message — no monthly references
     const alertMessage = totalPvRemaining > 0
-        ? `You need to place ${totalPvRemaining} PV repurchase(s) to release your held payouts. ` +
-          `(Cumulative payout thresholds: ₹50K, ₹1.5L, ₹2.5L, ₹3.5L... — 50 PV each)`
+        ? `Your payouts are on hold. Place a repurchase order of ${totalPvRemaining} PV to release them.`
         : "All PV repurchase obligations fulfilled. No holds pending.";
 
     return {

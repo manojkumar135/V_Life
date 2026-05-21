@@ -65,7 +65,7 @@ const SummaryCard = ({
   value: string | number;
   color?: string;
 }) => (
-  <div className="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+  <div className="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm flex flex-col justify-center">
     <p className="text-xs text-gray-500 mb-1">{label}</p>
     <p className={`text-xl font-bold ${color}`}>{value}</p>
   </div>
@@ -85,10 +85,16 @@ const InfoRow = ({
 );
 
 // ─────────────────────────────────────────────────────────────────────────
-// Month Card
+// Obligation Card
 // ─────────────────────────────────────────────────────────────────────────
 
-const MonthCard = ({ month }: { month: PvMonth }) => {
+const ObligationCard = ({
+  month,
+  index,
+}: {
+  month: PvMonth;
+  index: number;
+}) => {
   const [showOrders, setShowOrders] = useState(false);
 
   const progressPct =
@@ -96,24 +102,32 @@ const MonthCard = ({ month }: { month: PvMonth }) => {
       ? Math.min(100, Math.round((month.pv_fulfilled / month.pv_required) * 100))
       : 100;
 
-  const statusColor = month.hold_released
-    ? "bg-green-100 text-green-700 border-green-300"
-    : month.pv_required === 0
-    ? "bg-gray-100 text-gray-600 border-gray-300"
-    : "bg-red-100 text-red-700 border-red-300";
+  const isCleared = month.hold_released;
 
-  const statusLabel = month.hold_released
-    ? "✅ Cleared"
-    : month.pv_required === 0
-    ? "— No Obligation"
-    : "⏳ Pending";
+  const statusColor = isCleared
+    ? "bg-green-100 text-green-700 border-green-300"
+    : "bg-amber-100 text-amber-700 border-amber-300";
+
+  const statusLabel = isCleared ? "✅ Fulfilled" : "⏳ Pending";
+
+  const thresholdLabel =
+    index === 0
+      ? "₹50,000 cumulative"
+      : `₹${(50 + index * 100).toLocaleString("en-IN")}K cumulative`;
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b">
-        <span className="font-semibold text-gray-800 text-sm">{month.month}</span>
+        <div>
+          <span className="font-bold text-gray-800 text-sm">
+            Repurchase #{index + 1}
+          </span>
+          <span className="ml-2 text-xs text-gray-400">
+            Triggered at {thresholdLabel}
+          </span>
+        </div>
         <span className={`text-xs font-medium px-3 py-1 rounded-full border ${statusColor}`}>
           {statusLabel}
         </span>
@@ -125,70 +139,42 @@ const MonthCard = ({ month }: { month: PvMonth }) => {
         <div className="grid grid-cols-3 gap-3 text-center">
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Required</p>
-            <p className="text-base font-bold text-gray-700">{month.pv_required}</p>
+            <p className="text-base font-bold text-gray-700">{month.pv_required} PV</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Fulfilled</p>
-            <p className="text-base font-bold text-green-600">{month.pv_fulfilled}</p>
+            <p className="text-base font-bold text-green-600">{month.pv_fulfilled} PV</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Remaining</p>
             <p className={`text-base font-bold ${
               month.pv_remaining > 0 ? "text-red-500" : "text-green-600"
             }`}>
-              {month.pv_remaining > 0 ? month.pv_remaining : "✅"}
+              {month.pv_remaining > 0 ? `${month.pv_remaining} PV` : "✅"}
             </p>
           </div>
         </div>
 
         {/* ── Progress Bar ── */}
-        {month.pv_required > 0 && (
-          <div>
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
-              <span>Progress</span>
-              <span>{progressPct}%</span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  progressPct === 100 ? "bg-green-500" : "bg-amber-400"
-                }`}
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
+        <div>
+          <div className="flex justify-between text-xs text-gray-400 mb-1">
+            <span>Progress</span>
+            <span>{progressPct}%</span>
           </div>
-        )}
-
-        {/* ── Payout This Month ── */}
-        <div className="flex justify-between text-xs text-gray-500">
-          <span>Payout This Month</span>
-          <span className="font-semibold text-gray-700">
-            ₹ {month.total_payout.toLocaleString("en-IN")}
-          </span>
+          <div className="w-full bg-gray-100 rounded-full h-2">
+            <div
+              className={`h-2 rounded-full transition-all ${
+                progressPct === 100 ? "bg-green-500" : "bg-amber-400"
+              }`}
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
         </div>
 
-        {/* ── Threshold Timestamps ── */}
-        {(month.crossed_1lakh_at || month.crossed_3lakh_at) && (
-          <div className="space-y-1">
-            {month.crossed_1lakh_at && (
-              <div className="flex justify-between text-xs text-gray-400">
-                <span>Crossed ₹50K cumulative at</span>
-                <span>{new Date(month.crossed_1lakh_at).toLocaleString("en-IN")}</span>
-              </div>
-            )}
-            {month.crossed_3lakh_at && (
-              <div className="flex justify-between text-xs text-gray-400">
-                <span>Crossed ₹1.5L cumulative at</span>
-                <span>{new Date(month.crossed_3lakh_at).toLocaleString("en-IN")}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Released At ── */}
-        {month.hold_released && month.hold_released_at && (
+        {/* ── Fulfilled At ── */}
+        {isCleared && month.hold_released_at && (
           <div className="flex justify-between text-xs text-green-600">
-            <span>Released at</span>
+            <span>Fulfilled on</span>
             <span>{new Date(month.hold_released_at).toLocaleString("en-IN")}</span>
           </div>
         )}
@@ -213,7 +199,7 @@ const MonthCard = ({ month }: { month: PvMonth }) => {
                       <th className="text-left px-2 py-1.5 border-b">Order ID</th>
                       <th className="text-center px-2 py-1.5 border-b">PV</th>
                       <th className="text-center px-2 py-1.5 border-b">Amount</th>
-                      <th className="text-center px-2 py-1.5 border-b">Cumulative</th>
+                      <th className="text-center px-2 py-1.5 border-b">Cumulative PV</th>
                       <th className="text-center px-2 py-1.5 border-b">Date</th>
                       <th className="text-center px-2 py-1.5 border-b">Released?</th>
                     </tr>
@@ -250,8 +236,8 @@ const MonthCard = ({ month }: { month: PvMonth }) => {
         )}
 
         {/* ── No orders yet ── */}
-        {month.pv_orders.length === 0 && month.pv_required > 0 && !month.hold_released && (
-          <p className="text-xs text-red-400 italic">No PV orders placed yet</p>
+        {month.pv_orders.length === 0 && !isCleared && (
+          <p className="text-xs text-red-400 italic">No PV repurchase orders placed yet</p>
         )}
       </div>
     </div>
@@ -281,12 +267,9 @@ export default function PvTrackerDetailPage() {
     (async () => {
       try {
         setLoading(true);
-
-        // ── Same API, pass user_id as param → detail response ──────
         const res = await axios.get("/api/pv-tracker", {
           params: { user_id },
         });
-
         if (res.data.success) {
           setData(res.data.data);
         } else {
@@ -301,17 +284,24 @@ export default function PvTrackerDetailPage() {
     })();
   }, [user_id]);
 
+  const obligations  = data?.months.filter((m) => m.pv_required > 0) ?? [];
+  const pendingCount = obligations.filter((m) => !m.hold_released).length;
+  const clearedCount = obligations.filter((m) => m.hold_released).length;
+
   return (
     <Layout>
       <div className="max-md:px-4 px-6 py-4 w-full max-w-[99%] mx-auto">
 
-        {/* ── Back ── */}
-        <IoIosArrowBack
-          size={25}
-          color="black"
-          className="cursor-pointer mb-4"
-          onClick={() => router.push("/pvtracker")}
-        />
+        {/* ── Header: back + title ── */}
+        <div className="flex items-center gap-3 mb-5">
+          <IoIosArrowBack
+            size={22}
+            color="black"
+            className="cursor-pointer shrink-0"
+            onClick={() => router.push("/pvtracker")}
+          />
+          <h1 className="text-lg font-bold text-gray-800">PV Tracker</h1>
+        </div>
 
         {/* ── Loading ── */}
         {loading && (
@@ -329,67 +319,66 @@ export default function PvTrackerDetailPage() {
 
         {data && (
           <>
-            {/* ── User Info ── */}
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4 mb-6">
-              <p className="text-xs text-gray-400 uppercase font-semibold mb-3">
-                User Details
-              </p>
-              <InfoRow label="User ID"  value={data.user_id}   />
-              <InfoRow label="Name"     value={data.user_name} />
-              <InfoRow label="Contact"  value={data.contact}   />
-              <InfoRow label="Email"    value={data.mail}      />
+            {/* ── Top section: user details (left) + summary cards (right) ── */}
+            {/* On mobile: stacked. On laptop+: side by side 50/50 */}
+            <div className="flex flex-col lg:flex-row gap-4 mb-6">
+
+              {/* Left — User Details */}
+              <div className="w-full lg:w-1/2 bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4">
+                <p className="text-xs text-gray-400 uppercase font-semibold mb-3">
+                  User Details
+                </p>
+                <InfoRow label="User ID" value={data.user_id}   />
+                <InfoRow label="Name"    value={data.user_name} />
+                <InfoRow label="Contact" value={data.contact}   />
+                <InfoRow label="Email"   value={data.mail}      />
+              </div>
+
+              {/* Right — Summary Cards 2x2 grid */}
+              <div className="w-full lg:w-1/2 grid grid-cols-2 gap-4">
+                <SummaryCard
+                  label="Total PV Required"
+                  value={`${data.summary.totalPvRequired} PV`}
+                />
+                <SummaryCard
+                  label="Total PV Fulfilled"
+                  value={`${data.summary.totalPvFulfilled} PV`}
+                  color="text-green-600"
+                />
+                <SummaryCard
+                  label="Total PV Remaining"
+                  value={
+                    data.summary.totalPvRemaining > 0
+                      ? `${data.summary.totalPvRemaining} PV`
+                      : "✅ Clear"
+                  }
+                  color={data.summary.totalPvRemaining > 0 ? "text-red-500" : "text-green-600"}
+                />
+                <SummaryCard
+                  label="Repurchases"
+                  value={`${clearedCount} / ${obligations.length}`}
+                  color={pendingCount > 0 ? "text-amber-600" : "text-green-600"}
+                />
+              </div>
             </div>
 
-            {/* ── Summary Cards ── */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-              <SummaryCard
-                label="Total Required"
-                value={`${data.summary.totalPvRequired} PV`}
-              />
-              <SummaryCard
-                label="Total Fulfilled"
-                value={`${data.summary.totalPvFulfilled} PV`}
-                color="text-green-600"
-              />
-              <SummaryCard
-                label="Total Remaining"
-                value={
-                  data.summary.totalPvRemaining > 0
-                    ? `${data.summary.totalPvRemaining} PV`
-                    : "✅ Clear"
-                }
-                color={
-                  data.summary.totalPvRemaining > 0
-                    ? "text-red-500"
-                    : "text-green-600"
-                }
-              />
-              <SummaryCard
-                label="Total Months"
-                value={data.summary.totalMonths}
-              />
-              <SummaryCard
-                label="Pending Months"
-                value={data.summary.pendingMonths}
-                color={data.summary.pendingMonths > 0 ? "text-red-500" : "text-green-600"}
-              />
-              <SummaryCard
-                label="Cleared Months"
-                value={data.summary.clearedMonths}
-                color="text-green-600"
-              />
-            </div>
-
-            {/* ── Month Cards ── */}
-            <p className="text-xs text-gray-400 uppercase font-semibold mb-3">
-              PV Obligation Breakdown (Cumulative Thresholds)
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {data.months.map((m) => (
-                <MonthCard key={m.month} month={m} />
-              ))}
-            </div>
+            {/* ── Obligation Cards ── */}
+            {obligations.length === 0 ? (
+              <div className="text-center text-gray-400 text-sm py-10">
+                No repurchase obligations triggered yet.
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-gray-400 uppercase font-semibold mb-3">
+                  Repurchase Obligations
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {obligations.map((m, i) => (
+                    <ObligationCard key={m.month} month={m} index={i} />
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

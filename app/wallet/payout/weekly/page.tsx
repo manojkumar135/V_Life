@@ -219,13 +219,11 @@ export default function WithdrawPage() {
 
               const num = Number(value);
 
-              // If number between 1–5
               if (!isNaN(num) && num >= 1 && num <= 5) {
                 if (num === 1) return "1 Star";
-                return "2 Star"; // for 2–5
+                return "2 Star";
               }
 
-              // String case → capitalize only (no "Star")
               return (
                 String(value).charAt(0).toUpperCase() +
                 String(value).slice(1).toLowerCase()
@@ -311,23 +309,13 @@ export default function WithdrawPage() {
   const handlePayOut = () => router.push("/wallet/payout/addpayout");
   const onBack = () => router.push("/wallet/payout");
 
-  // ── PV Alert message ──────────────────────────────────────────────────
+  // ── PV Alert message — just message + total remaining ─────────────────
   const pvAlertMessage = pvSummary ? (
     <>
       {pvSummary.alertMessage}
-      <div className="mt-2 text-xs space-y-1">
-        {pvSummary.months.map((m) => (
-          <div key={m.month} className="flex justify-between gap-4">
-            <span>{m.month}</span>
-            <span>
-              {m.cleared ? "✅ Cleared" : `${m.pv_remaining} PV remaining`}
-            </span>
-          </div>
-        ))}
-        <div className="flex justify-between gap-4 font-semibold border-t pt-1 mt-1">
-          <span>Total Remaining</span>
-          <span>{pvSummary.totalPvRemaining} PV</span>
-        </div>
+      <div className="mt-2 text-xs font-semibold flex justify-between border-t pt-2">
+        <span>PV Required</span>
+        <span>{pvSummary.totalPvRemaining} PV</span>
       </div>
     </>
   ) : null;
