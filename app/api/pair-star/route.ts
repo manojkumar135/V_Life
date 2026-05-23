@@ -76,12 +76,22 @@ async function countActiveFromDate(
   const leftIds  = subtreeIds(root.left);
   const rightIds = subtreeIds(root.right);
 
+ const activeQuery = (ids: string[]) => ({
+    user_id: { $in: ids },
+    user_status: "active",
+    $or: [
+      { status_notes: { $exists: false } },
+      { status_notes: null },
+      { status_notes: { $not: /admin/i } },
+    ],
+  });
+
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
-      ? User.find({ user_id: { $in: leftIds }, user_status: "active" }, { user_id: 1, activated_date: 1 }).lean()
+      ? User.find(activeQuery(leftIds), { user_id: 1, activated_date: 1 }).lean()
       : [],
     rightIds.length
-      ? User.find({ user_id: { $in: rightIds }, user_status: "active" }, { user_id: 1, activated_date: 1 }).lean()
+      ? User.find(activeQuery(rightIds), { user_id: 1, activated_date: 1 }).lean()
       : [],
   ]);
 
