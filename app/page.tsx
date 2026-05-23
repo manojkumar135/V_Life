@@ -130,7 +130,7 @@ const MaverickHome = () => {
   useEffect(() => {
     const t = setInterval(
       () => setHeroSlide((p) => (p + 1) % heroSlides.length),
-      5000,
+      7000,
     );
     return () => clearInterval(t);
   }, []);
