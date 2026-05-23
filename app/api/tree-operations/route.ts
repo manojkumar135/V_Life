@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import TreeNode from "@/models/tree";
 import { User } from "@/models/user";
-import { Club } from "lucide-react";
 
 /** Collect DOWNLINE ONLY (binary children recursively) */
 function collectDescendants(
@@ -65,11 +64,40 @@ function calculateTeamTotals(
     collectSide(node.left, leftIds);
     collectSide(node.right, rightIds);
 
-    user.totalLeftBV = leftIds.reduce((sum, id) => sum + (userMap.get(id)?.bv || 0), 0);
+    user.totalLeftBV  = leftIds.reduce((sum, id) => sum + (userMap.get(id)?.bv || 0), 0);
     user.totalRightBV = rightIds.reduce((sum, id) => sum + (userMap.get(id)?.bv || 0), 0);
-    user.totalLeftPV = leftIds.reduce((sum, id) => sum + (userMap.get(id)?.pv || 0), 0);
+    user.totalLeftPV  = leftIds.reduce((sum, id) => sum + (userMap.get(id)?.pv || 0), 0);
     user.totalRightPV = rightIds.reduce((sum, id) => sum + (userMap.get(id)?.pv || 0), 0);
   }
+}
+
+/**
+ * Count active users in a side subtree.
+ * excludeAdmin = true  → count normal activations only (status_notes does NOT contain "admin")
+ * excludeAdmin = false → count all active users (normal + admin activated)
+ */
+function countActiveInSide(
+  sideId: string | null,
+  nodeMap: Map<string, any>,
+  userMap: Map<string, any>,
+  excludeAdmin: boolean,
+): number {
+  if (!sideId) return 0;
+  const ids: string[] = [];
+  const queue = [sideId];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    ids.push(cur);
+    const node = nodeMap.get(cur);
+    if (node?.left)  queue.push(node.left);
+    if (node?.right) queue.push(node.right);
+  }
+  return ids.reduce((count, id) => {
+    const u = userMap.get(id);
+    if (!u || u.user_status !== "active") return count;
+    if (excludeAdmin && u.status_notes && /admin/i.test(u.status_notes)) return count;
+    return count + 1;
+  }, 0);
 }
 
 /** Build binary subtree */
@@ -82,7 +110,7 @@ function buildTree(
   const node = nodeMap.get(id);
   const user = userMap.get(id);
 
-  const left = node.left ? buildTree(node.left, nodeMap, userMap) : null;
+  const left  = node.left  ? buildTree(node.left,  nodeMap, userMap) : null;
   const right = node.right ? buildTree(node.right, nodeMap, userMap) : null;
 
   const count = (n: any): number =>
@@ -102,28 +130,36 @@ function buildTree(
     infinityRight: user?.infinty_right_count || 0,
 
     rank: user?.rank || "none",
-    club: user?.club || "none",   // ✅ club field
+    club: user?.club || "none",
     bv: user?.bv || 0,
     pv: user?.pv || 0,
     referrals: user?.referred_users?.length || 0,
     status_notes: user?.status_notes || "",
 
     /** Infinity values */
-    leftBV: user?.leftBV ?? 0,
+    leftBV:  user?.leftBV  ?? 0,
     rightBV: user?.rightBV ?? 0,
-    leftPV: user?.leftPV ?? 0,
+    leftPV:  user?.leftPV  ?? 0,
     rightPV: user?.rightPV ?? 0,
 
     /** Total team values from binary tree traversal */
-    totalLeftBV: user?.totalLeftBV ?? 0,
+    totalLeftBV:  user?.totalLeftBV  ?? 0,
     totalRightBV: user?.totalRightBV ?? 0,
-    totalLeftPV: user?.totalLeftPV ?? 0,
+    totalLeftPV:  user?.totalLeftPV  ?? 0,
     totalRightPV: user?.totalRightPV ?? 0,
 
     left,
     right,
-    leftCount: count(left),
+    leftCount:  count(left),
     rightCount: count(right),
+
+    /** Active counts — all (normal + admin activated) */
+    left_active_all:  countActiveInSide(node.left,  nodeMap, userMap, false),
+    right_active_all: countActiveInSide(node.right, nodeMap, userMap, false),
+
+    /** Active counts — normal only (admin activated excluded) */
+    left_active_normal:  countActiveInSide(node.left,  nodeMap, userMap, true),
+    right_active_normal: countActiveInSide(node.right, nodeMap, userMap, true),
   };
 }
 
@@ -133,7 +169,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
 
     const user_id = searchParams.get("user_id");
-    const search = searchParams.get("search");
+    const search  = searchParams.get("search");
 
     if (!user_id)
       return NextResponse.json({ success: false, message: "Missing user_id" });
@@ -143,7 +179,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: false, message: "User not found" });
 
     const allNodes = await TreeNode.find({}).lean();
-    const nodeMap = new Map(allNodes.map((n) => [n.user_id, n]));
+    const nodeMap  = new Map(allNodes.map((n) => [n.user_id, n]));
 
     if (!nodeMap.has(user_id))
       return NextResponse.json({
@@ -155,7 +191,7 @@ export async function GET(req: Request) {
 
     /** SEARCH CASE */
     if (search) {
-      const s = search.trim().toLowerCase();
+      const s     = search.trim().toLowerCase();
       const match = Array.from(downlineIds).find(
         (id) => id.toLowerCase() === s
       );
@@ -169,7 +205,7 @@ export async function GET(req: Request) {
       const subtreeIds = collectDescendants(search, nodeMap);
       subtreeIds.add(search);
 
-      const users = await User.find({
+      const users  = await User.find({
         user_id: { $in: Array.from(subtreeIds) },
       }).lean();
       const userMap = new Map(users.map((u) => [u.user_id, u]));
@@ -188,7 +224,7 @@ export async function GET(req: Request) {
     /** ROOT CASE */
     const allowedIds = new Set([user_id, ...downlineIds]);
 
-    const users = await User.find({
+    const users  = await User.find({
       user_id: { $in: Array.from(allowedIds) },
     }).lean();
     const userMap = new Map(users.map((u) => [u.user_id, u]));

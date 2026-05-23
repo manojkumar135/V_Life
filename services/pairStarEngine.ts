@@ -577,7 +577,7 @@ async function checkAndUpgradePairStar(
         name: "Pair Star Reward",
         title: tier.tier_name,
         details: `Pair Star Reward — ${tier.tier_name} (${currentPairs} pairs)`,
-        from: "system",
+        from: "Life Time Reward",
         to: ancestor.user_id,
         first_payment: false,
         first_order: false,

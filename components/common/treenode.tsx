@@ -24,6 +24,12 @@ export interface TreeNode {
   right?: TreeNode | null;
   leftCount?: string;
   rightCount?: string;
+
+  left_active_all?: number;
+  right_active_all?: number;
+  left_active_normal?: number;
+  right_active_normal?: number;
+
   referrals?: string;
   bv?: string;
   sv?: string;
@@ -502,13 +508,55 @@ const BinaryTreeNode: React.FC<Props> = ({
                 <span>{node.parent}</span>
               </div>
             )}
-            <div className="flex">
+            {/* <div className="flex">
               <strong className="w-20">Left Team:</strong>
               <span>{node.leftCount ?? 0}</span>
             </div>
             <div className="flex">
               <strong className="w-20">Right Team:</strong>
               <span>{node.rightCount ?? 0}</span>
+            </div> */}
+            <div className="flex">
+              <strong className="w-20">Left Active:</strong>
+              <span>
+                {node.left_active_normal ?? 0}
+                {(node.left_active_all ?? 0) >
+                  (node.left_active_normal ?? 0) && (
+                  <span className="text-gray-400 ml-1">
+                    {user?.role === "admin" &&
+                      (node.left_active_all ?? 0) >
+                        (node.left_active_normal ?? 0) && (
+                        <span className="text-gray-400 ml-1">
+                          (+
+                          {(node.left_active_all ?? 0) -
+                            (node.left_active_normal ?? 0)}{" "}
+                          admin)
+                        </span>
+                      )}
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex">
+              <strong className="w-20">Right Active:</strong>
+              <span>
+                {node.right_active_normal ?? 0}
+                {(node.right_active_all ?? 0) >
+                  (node.right_active_normal ?? 0) && (
+                  <span className="text-gray-400 ml-1">
+                    {user?.role === "admin" &&
+                      (node.right_active_all ?? 0) >
+                        (node.right_active_normal ?? 0) && (
+                        <span className="text-gray-400 ml-1">
+                          (+
+                          {(node.right_active_all ?? 0) -
+                            (node.right_active_normal ?? 0)}{" "}
+                          admin)
+                        </span>
+                      )}
+                  </span>
+                )}
+              </span>
             </div>
             {node.infinityLeft != null && (
               <div className="flex">

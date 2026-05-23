@@ -308,7 +308,12 @@ export async function getUserTeamsAndHistories() {
     status: "Completed",
     ischecked: false,
     created_at: { $gte: start, $lte: end },
-    $or: [{ first_order: true }, { advance: true }],
+    transaction_type: "Debit",
+    $or: [
+      { first_order: true },
+      { advance: true },
+      { first_order: false, advance: false }, // normal orders
+    ],
   }).lean()) as any[];
 
   console.log(
