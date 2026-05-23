@@ -312,7 +312,7 @@ export async function getUserTeamsAndHistories() {
     $or: [
       { first_order: true },
       { advance: true },
-      { first_order: false, advance: false }, // normal orders
+      { first_order: false, advance: false }, 
     ],
   }).lean()) as any[];
 

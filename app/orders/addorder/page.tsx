@@ -221,7 +221,7 @@ export default function AddOrderPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [address, setAddress] = useState("");
   const [showCart, setShowCart] = useState(false);
-  const [isFirstOrder, setIsFirstOrder] = useState(false);
+const [isFirstOrder, setIsFirstOrder] = useState<boolean | null>(null);
   const [beneficiaryUser, setBeneficiaryUser] = useState<any>(null);
 
   // const [advancePaid, setAdvancePaid] = useState(false);
@@ -232,7 +232,7 @@ export default function AddOrderPage() {
 
   // console.log(isFirstOrder,"isFirstOrder")
 
-  const isRestrictedFirstOrder = isFirstOrder && user?.status === "inactive";
+const isRestrictedFirstOrder = isFirstOrder === true && user?.status === "inactive";
 
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
@@ -442,7 +442,7 @@ export default function AddOrderPage() {
   const isProductFetchReady =
     !!user?.user_id &&
     orderContext !== null &&
-    typeof isFirstOrder === "boolean" &&
+isFirstOrder !== null &&
     typeof isAdvancePaidUser === "boolean";
 
   useEffect(() => {
@@ -455,7 +455,11 @@ export default function AddOrderPage() {
         const res = await axios.get("/api/product-operations", {
           params: {
             order_mode: orderContext!.order_mode,
-            pv: isUseAdvanceFlow ? 100 : (orderContext!.pv ?? null),
+            pv: isUseAdvanceFlow
+              ? 100
+              : isFirstOrder
+                ? 100
+                : (orderContext!.pv ?? null),
             is_first_order: isFirstOrder,
             is_advance_paid: isAdvancePaidUser,
             is_use_advance: isUseAdvanceFlow, // ✅ NEW
@@ -786,7 +790,7 @@ export default function AddOrderPage() {
         payment_signature: razorpayResponse.razorpay_signature,
         payment_type: razorpayResponse.method || "razorpay",
         items: orderItems,
-order_bv: getTotalBV(),
+        order_bv: getTotalBV(),
         order_pv: isUseAdvanceFlow ? 0 : getTotalPV(),
         total_gst: calcTotalGST(cart),
         order_mode: orderContext?.order_mode ?? "SELF",

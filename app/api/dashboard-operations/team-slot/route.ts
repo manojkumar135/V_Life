@@ -65,14 +65,14 @@ export async function GET(request: Request) {
 
     /* ---------------- HISTORIES IN WINDOW ---------------- */
     const historiesInWindow = await History.find({
-      first_payment: true,
+      // first_payment: true,
       ischecked: false,
       transaction_type:"Debit",
       created_at: { $gte: start, $lte: end },
-      $or: [
-        { first_order: true }, // normal order
-        { advance: true },     // advance activation
-      ],
+      // $or: [
+      //   { first_order: true }, // normal order
+      //   { advance: true },     // advance activation
+      // ],
     }).lean();
 
     // console.log(historiesInWindow)

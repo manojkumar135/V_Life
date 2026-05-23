@@ -184,7 +184,7 @@ export default function ActivationForm() {
                     type="button"
                     disabled={!validUser}
                     className="px-6 py-2 bg-orange-500 disabled:opacity-50"
-                    onClick={() => handleOrderRedirect(50, values.user_id)}
+                    // onClick={() => handleOrderRedirect(50, values.user_id)}
                   >
                     ORDER 50 PV
                   </SubmitButton>
