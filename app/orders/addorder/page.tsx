@@ -221,7 +221,7 @@ export default function AddOrderPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [address, setAddress] = useState("");
   const [showCart, setShowCart] = useState(false);
-const [isFirstOrder, setIsFirstOrder] = useState<boolean | null>(null);
+  const [isFirstOrder, setIsFirstOrder] = useState<boolean | null>(null);
   const [beneficiaryUser, setBeneficiaryUser] = useState<any>(null);
 
   // const [advancePaid, setAdvancePaid] = useState(false);
@@ -232,7 +232,8 @@ const [isFirstOrder, setIsFirstOrder] = useState<boolean | null>(null);
 
   // console.log(isFirstOrder,"isFirstOrder")
 
-const isRestrictedFirstOrder = isFirstOrder === true && user?.status === "inactive";
+  const isRestrictedFirstOrder =
+    isFirstOrder === true && user?.status === "inactive";
 
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
@@ -442,7 +443,7 @@ const isRestrictedFirstOrder = isFirstOrder === true && user?.status === "inacti
   const isProductFetchReady =
     !!user?.user_id &&
     orderContext !== null &&
-isFirstOrder !== null &&
+    isFirstOrder !== null &&
     typeof isAdvancePaidUser === "boolean";
 
   useEffect(() => {
@@ -457,12 +458,15 @@ isFirstOrder !== null &&
             order_mode: orderContext!.order_mode,
             pv: isUseAdvanceFlow
               ? 100
-              : isFirstOrder
+              : isOtherOrder
                 ? 100
-                : (orderContext!.pv ?? null),
+                : isFirstOrder && user?.status === "inactive"
+                  ? 100
+                  : null,
             is_first_order: isFirstOrder,
             is_advance_paid: isAdvancePaidUser,
-            is_use_advance: isUseAdvanceFlow, // ✅ NEW
+            is_use_advance: isUseAdvanceFlow,
+            is_admin_activated: isAdminActivated,
             user_status: user!.status,
           },
         });

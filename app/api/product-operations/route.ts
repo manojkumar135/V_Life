@@ -17,11 +17,14 @@ export async function POST(request: Request) {
 
     // console.log(newProduct)
 
-    return NextResponse.json({ success: true, data: newProduct }, { status: 201 });
+    return NextResponse.json(
+      { success: true, data: newProduct },
+      { status: 201 },
+    );
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -41,6 +44,8 @@ export async function GET(request: Request) {
     const isFirstOrder = searchParams.get("is_first_order") === "true";
     const isAdvancePaid = searchParams.get("is_advance_paid") === "true";
     const isUseAdvance = searchParams.get("is_use_advance") === "true";
+    const isAdminActivated = searchParams.get("is_admin_activated") === "true";
+
     const userStatus = searchParams.get("user_status");
     const orderMode = searchParams.get("order_mode");
 
@@ -61,13 +66,13 @@ export async function GET(request: Request) {
       if (!product) {
         return NextResponse.json(
           { success: false, message: "Product not found", data: null },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
       return NextResponse.json(
         { success: true, data: product },
-        { status: 200 }
+        { status: 200 },
       );
     }
 
@@ -84,19 +89,20 @@ export async function GET(request: Request) {
     }
 
     // 🔒 2️⃣ ACTIVATION BUTTON FLOW (50 / 100 PV)
-    else if (pv !== null && pv > 0) {
+    else if (pv !== null && pv > 0 && !isAdminActivated) {
       query.pv = pv;
     }
 
     // 🔓 3️⃣ FIRST ORDER + INACTIVE + NO ADVANCE
-    else if (
-      !isAdvancePaid &&
-      orderMode === "SELF" &&
-      isFirstOrder &&
-      userStatus === "inactive"
-    ) {
-      query.pv = { $in: [50, 100] };
-    }
+  else if (
+  !isAdvancePaid &&
+  !isAdminActivated &&
+  orderMode === "SELF" &&
+  isFirstOrder &&
+  userStatus === "inactive" 
+) {
+  query.pv = { $in: [50, 100] };
+}
 
     // ✅ 4️⃣ ALL OTHER CASES → NO PV RESTRICTION
     // (query remains { status: "active" })
@@ -105,18 +111,15 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { success: true, data: products },
-      { status: 200 }
+      { status: 200 },
     );
-
   } catch (error: any) {
     return NextResponse.json(
       { success: false, message: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-
-
 
 // 🔹 PUT - Replace a product
 export async function PUT(request: Request) {
@@ -129,7 +132,7 @@ export async function PUT(request: Request) {
     if (!updateId) {
       return NextResponse.json(
         { success: false, message: "id or product_id is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -138,21 +141,30 @@ export async function PUT(request: Request) {
 
     let updatedProduct;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedProduct = await Product.findByIdAndUpdate(updateId, updateFields, { new: true });
+      updatedProduct = await Product.findByIdAndUpdate(updateId, updateFields, {
+        new: true,
+      });
     } else {
-      updatedProduct = await Product.findOneAndUpdate({ product_id: updateId }, updateFields, { new: true });
+      updatedProduct = await Product.findOneAndUpdate(
+        { product_id: updateId },
+        updateFields,
+        { new: true },
+      );
     }
 
     if (!updatedProduct) {
       return NextResponse.json(
         { success: false, message: "Product not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return NextResponse.json({ success: true, data: updatedProduct });
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 },
+    );
   }
 }
 
@@ -171,24 +183,39 @@ export async function PATCH(request: Request) {
     if (!updateId) {
       return NextResponse.json(
         { success: false, message: "id or product_id is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     let updatedProduct;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedProduct = await Product.findByIdAndUpdate(updateId, updates, { new: true });
+      updatedProduct = await Product.findByIdAndUpdate(updateId, updates, {
+        new: true,
+      });
     } else {
-      updatedProduct = await Product.findOneAndUpdate({ product_id: updateId }, updates, { new: true });
+      updatedProduct = await Product.findOneAndUpdate(
+        { product_id: updateId },
+        updates,
+        { new: true },
+      );
     }
 
     if (!updatedProduct) {
-      return NextResponse.json({ success: false, message: "Product not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Product not found" },
+        { status: 404 },
+      );
     }
 
-    return NextResponse.json({ success: true, data: updatedProduct }, { status: 200 });
+    return NextResponse.json(
+      { success: true, data: updatedProduct },
+      { status: 200 },
+    );
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 },
+    );
   }
 }
 
@@ -208,11 +235,20 @@ export async function DELETE(request: Request) {
     }
 
     if (!deletedProduct) {
-      return NextResponse.json({ success: false, message: "Product not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Product not found" },
+        { status: 404 },
+      );
     }
 
-    return NextResponse.json({ success: true, message: "Product deleted" }, { status: 200 });
+    return NextResponse.json(
+      { success: true, message: "Product deleted" },
+      { status: 200 },
+    );
   } catch (error: any) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 },
+    );
   }
 }
