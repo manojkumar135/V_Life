@@ -233,6 +233,11 @@ export default function OrdersPage() {
     user?.role === "admin" && {
       field: "user_id",
       headerName: "User ID",
+      flex: 0.8,
+    },
+     user?.role === "admin" && {
+      field: "user_name",
+      headerName: "User Name",
       flex: 1,
     },
     user?.role === "admin" && {
