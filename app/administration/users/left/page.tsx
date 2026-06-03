@@ -144,7 +144,7 @@ export default function LeftTeam() {
               : u,
           ),
         );
-         setIsStatusModalOpen(false);
+        setIsStatusModalOpen(false);
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -200,6 +200,7 @@ export default function LeftTeam() {
         );
       },
     },
+    { field: "activated_date", headerName: "Activation Date", flex: 1 },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 

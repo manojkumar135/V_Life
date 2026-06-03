@@ -202,7 +202,7 @@ export default function RightTeam() {
         );
       },
     },
-
+    { field: "activated_date", headerName: "Activation Date", flex: 1 },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 

@@ -774,8 +774,10 @@ export default function OrderFormCartSection({
                     )}
 
                     {/* Subtotal + Reward section only if reward exists */}
-                    {((!isOtherOrder && rewardPoints > 0) ||
-                      fortnightPoints + dailyPoints > 0) && (
+                    {((!isOtherOrder && rewardPoints > 0)
+                    //  || fortnightPoints + dailyPoints > 0
+                    ) 
+                      && (
                       <>
                         {/* Subtotal */}
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">

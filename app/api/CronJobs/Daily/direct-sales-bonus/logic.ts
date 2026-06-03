@@ -451,10 +451,20 @@ export async function runDirectSalesBonus(): Promise<{
 
           await addRewardScore({
             user_id: referBy,
+            points: withdrawAmount,
+            source: "direct_sales_bonus",
+            reference_id: order.order_id,
+            remarks: `Direct sales bonus from ${referBy}`,
+            type: "daily",
+          });
+
+          await addRewardScore({
+            user_id: referBy,
             points: rewardAmount,
             source: "direct_sales_bonus",
             reference_id: order.order_id,
-            type: "daily",
+            remarks: `Direct sales bonus (reward) from ${referBy} on ${formattedDate}`,
+            type: "reward",
           });
 
           await updateClub(referBy, totalAmount);

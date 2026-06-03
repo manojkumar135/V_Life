@@ -49,7 +49,7 @@ export default function AdminUserListPage({ title, apiUrl, backPath }: Props) {
     itemsPerPage: 12,
     onPageChange: useCallback(
       (_page: number, _offset: number, _limit: number) => {},
-      []
+      [],
     ),
   });
 
@@ -90,7 +90,7 @@ export default function AdminUserListPage({ title, apiUrl, backPath }: Props) {
         setLoading(false);
       }
     },
-    [apiUrl, dateFilter, title]
+    [apiUrl, dateFilter, title],
   );
 
   useEffect(() => {
@@ -102,6 +102,7 @@ export default function AdminUserListPage({ title, apiUrl, backPath }: Props) {
     { field: "user_id", headerName: "User ID", flex: 1 },
     { field: "user_name", headerName: "Name", flex: 1.2 },
     { field: "contact", headerName: "Contact", flex: 1 },
+    { field: "mail", headerName: "Email", flex: 1.5 },
     { field: "activation_date", headerName: "Activation Date", flex: 1 },
   ];
 
