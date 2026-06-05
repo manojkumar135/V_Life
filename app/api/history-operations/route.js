@@ -384,7 +384,7 @@ export async function POST(request) {
             // ✅ FIX: use ordered insert to preserve referred_users position
             // This ensures odd/even infinity assignment is always correct
             await addToPaidDirectsOrdered(referrerId, freshUser.user_id);
-            
+
             // 🔥 Fire-and-forget: propagate pair star counts up the tree
             propagatePairStarOnActivation(body.user_id).catch((err) =>
               console.error("[PairStar] propagation error (history/advance):", err)
@@ -612,18 +612,15 @@ export async function GET(request) {
       const endDate = parseDate(to);
 
       if (startDate && endDate) {
-        const startDay = ("0" + startDate.getDate()).slice(-2);
-        const startMonth = ("0" + (startDate.getMonth() + 1)).slice(-2);
-        const startYear = startDate.getFullYear();
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
 
-        const endDay = ("0" + endDate.getDate()).slice(-2);
-        const endMonth = ("0" + (endDate.getMonth() + 1)).slice(-2);
-        const endYear = endDate.getFullYear();
-
-        const startFormatted = `${startDay}-${startMonth}-${startYear}`;
-        const endFormatted = `${endDay}-${endMonth}-${endYear}`;
-
-        conditions.push({ date: { $gte: startFormatted, $lte: endFormatted } });
+        conditions.push({
+          created_at: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        });
       }
     }
 

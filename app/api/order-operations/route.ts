@@ -588,28 +588,23 @@ export async function GET(request: Request) {
       }
     }
 
-    // Date range filter
-    if (from || to) {
-      const startDate = parseDate(from);
-      const endDate = parseDate(to);
+   // Date range filter
+if (from || to) {
+  const startDate = parseDate(from);
+  const endDate = parseDate(to);
 
-      if (startDate && endDate) {
-        const startDay = ("0" + startDate.getDate()).slice(-2);
-        const startMonth = ("0" + (startDate.getMonth() + 1)).slice(-2);
-        const startYear = startDate.getFullYear();
+  if (startDate && endDate) {
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
 
-        const endDay = ("0" + endDate.getDate()).slice(-2);
-        const endMonth = ("0" + (endDate.getMonth() + 1)).slice(-2);
-        const endYear = endDate.getFullYear();
-
-        const startFormatted = `${startDay}-${startMonth}-${startYear}`;
-        const endFormatted = `${endDay}-${endMonth}-${endYear}`;
-
-        conditions.push({
-          payment_date: { $gte: startFormatted, $lte: endFormatted },
-        });
-      }
-    }
+    conditions.push({
+      created_at: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+    });
+  }
+}
 
     // ✅ Advance used filter
     if (advance_used !== null && advance_used !== "") {
