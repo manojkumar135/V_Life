@@ -24,6 +24,8 @@ import Loader from "@/components/common/loader";
 import ShowToast from "@/components/common/Toast/toast";
 import DateField from "@/components/InputFields/dateField";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
+import ChangeSponsorModal from "@/components/ChangeSponsorModal";
+import { HiOutlineSwitchHorizontal } from "react-icons/hi";
 
 /* ─────────────────────────────────────────────────────────────────────────────
    VALIDATION
@@ -196,6 +198,7 @@ export default function ProfileEditPage() {
   const [panChecking, setPanChecking] = useState(false);
   const [value, setValue] = useState("");
   const [userMeta, setUserMeta] = useState<any>(null);
+  const [showChangeSponsor, setShowChangeSponsor] = useState(false);
 
   /* Tracks the PAN loaded from DB so duplicate-check is skipped when unchanged */
   const [originalPan, setOriginalPan] = useState<string>("");
@@ -891,6 +894,23 @@ export default function ProfileEditPage() {
                     </div>
                   )}
                 </Grid>
+                {isAdmin &&
+                  userMeta &&
+                  userMeta.user_status === "inactive" &&
+                  String(userMeta.status_notes ?? "")
+                    .trim()
+                    .toLowerCase() !== "deactivated by admin" && (
+                    <div className="mt-4 pt-4 border-t border-gray-100 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowChangeSponsor(true)}
+                        className="flex items-center gap-2 h-9 px-5 rounded-xl border border-[#106187] text-[#106187] text-sm font-semibold hover:bg-[#106187]/5 transition"
+                      >
+                        <HiOutlineSwitchHorizontal size={16} />
+                        Change Sponsor
+                      </button>
+                    </div>
+                  )}
               </Card>
 
               {/* ADDRESS */}
@@ -1219,6 +1239,16 @@ export default function ProfileEditPage() {
           )}
         </Formik>
       </div>
+
+      <ChangeSponsorModal
+        isOpen={showChangeSponsor}
+        onClose={() => setShowChangeSponsor(false)}
+        prefillUserId={userMeta?.user_id ?? ""}
+        adminUserId={user?.user_id ?? ""}
+        onSuccess={() => {
+          if (userMeta?.user_id) searchUser(userMeta.user_id);
+        }}
+      />
     </Layout>
   );
 }
