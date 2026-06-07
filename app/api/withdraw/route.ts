@@ -2,33 +2,8 @@
  * GET /api/withdraw/route.ts
  *
  * Role-based access:
- *   role=admin  → returns cumulative records for all users
- *   role=user   → returns only records for that user_id
- *
- * ── Amount logic — mirrors payrelease/route.ts exactly ────────────────────────
- *
- *   In payrelease:
- *     withdraw_total  = sum of payout.withdraw_amount   → "Total Original Amount"
- *     score_balance   = withdraw_total - points_used_on_orders
- *     payable         = score_balance                   → "Grand Release Amount"
- *     deducted        = withdraw_total - score_balance  → "Total Deducted (Orders)"
- *
- *   In Withdraw records (one per payout_id):
- *     withdraw_amount      = payout.withdraw_amount  (net after TDS/admin) → original
- *     released_amount      = proportional share of score_balance at release → released
- *     score_balance_before = total score balance at release time (group-level field)
- *
- *   Correct original per record = withdraw_amount (when saved, i.e. > 0)
- *   Fallback for older records where withdraw_amount = 0:
- *     referral/quickstar → released_amount (they are always equal, no deduction possible)
- *     daily/fortnight    → released_amount (best available — means no orders were placed,
- *                          or the record predates the withdraw_amount field)
- *
- *   Grand Release ≤ Total Original always, because:
- *     released = original - deducted, deducted ≥ 0
- *
- * ── Cumulative grouping ───────────────────────────────────────────────────────
- *   One row per user+batch (matches payrelease page — one row per user).
+ *   role=admin  → one row per BATCH (grouped by batch_id only)
+ *   role=user   → one row per user+batch (only their own records)
  */
 
 import { NextResponse } from "next/server";
@@ -40,16 +15,16 @@ export async function GET(request: Request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
-    const role      = searchParams.get("role")       || "";
-    const userId    = searchParams.get("user_id")    || "";
-    const search    = searchParams.get("search")     || "";
-    const from      = searchParams.get("from")       || null;
-    const to        = searchParams.get("to")         || null;
-    const date      = searchParams.get("date")       || null;
-    const batchId   = searchParams.get("batch_id")   || "";
-    const bonusType = searchParams.get("bonus_type") || "";
+    const role       = searchParams.get("role")        || "";
+    const userId     = searchParams.get("user_id")     || "";
+    const search     = searchParams.get("search")      || "";
+    const from       = searchParams.get("from")        || null;
+    const to         = searchParams.get("to")          || null;
+    const date       = searchParams.get("date")        || null;
+    const batchId    = searchParams.get("batch_id")    || "";
+    const bonusType  = searchParams.get("bonus_type")  || "";
     const payoutName = searchParams.get("payout_name") || "";
-    const limit     = Math.min(2000, parseInt(searchParams.get("limit") || "1000"));
+    const limit      = Math.min(2000, parseInt(searchParams.get("limit") || "1000"));
 
     /* ── 1. Role-based base query ── */
     let baseQuery: Record<string, any> = {};
@@ -85,8 +60,8 @@ export async function GET(request: Request) {
       conditions.push({ released_at: dateRange });
     }
 
-    if (batchId.trim())   conditions.push({ batch_id:   batchId.trim() });
-    if (bonusType.trim()) conditions.push({ bonus_type: bonusType.trim() });
+    if (batchId.trim())    conditions.push({ batch_id:    batchId.trim() });
+    if (bonusType.trim())  conditions.push({ bonus_type:  bonusType.trim() });
     if (payoutName.trim()) conditions.push({ payout_name: { $regex: payoutName.trim(), $options: "i" } });
 
     if (search.trim()) {
@@ -107,22 +82,13 @@ export async function GET(request: Request) {
         ? { $and: [baseQuery, ...conditions] }
         : baseQuery;
 
-    /* ── 3. Aggregate — group by user_id + batch_id ──────────────────────────
-       Per-record "effective_original":
-         Use withdraw_amount when it was saved (> 0).
-         Fall back to released_amount for older records where withdraw_amount = 0.
+    /* ── 3. Group ID — admin: per batch / user: per user+batch ── */
+    const groupById =
+      role === "admin"
+        ? { batch_id: "$batch_id" }
+        : { user_id: "$user_id", batch_id: "$batch_id" };
 
-         Why released_amount as fallback?
-           - referral/quickstar: released = withdraw_amount always (not spendable)
-           - daily/fortnight with no order deductions: released = withdraw_amount
-           - daily/fortnight WITH deductions + withdraw_amount=0 (old records):
-             released_amount < actual original, so deducted will show 0 for these.
-             This is the best we can do without the original data.
-
-       Grand Release = sum(released_amount) — always correct, directly from DB.
-       Total Original = sum(effective_original) — always ≥ Grand Release.
-       Total Deducted = Total Original - Grand Release — always ≥ 0.
-    ─────────────────────────────────────────────────────────────────────────── */
+    /* ── 4. Aggregate ── */
     const grouped = await Withdraw.aggregate([
       { $match: matchQuery },
 
@@ -131,11 +97,8 @@ export async function GET(request: Request) {
         $addFields: {
           effective_original: {
             $cond: {
-              // withdraw_amount was saved and is > 0 → use it (correct net baseline)
               if:   { $gt: [{ $ifNull: ["$withdraw_amount", 0] }, 0] },
               then: "$withdraw_amount",
-              // Fallback: use released_amount (safe for referral/quickstar always,
-              // and for daily/fortnight records without deductions)
               else: { $ifNull: ["$released_amount", 0] },
             },
           },
@@ -144,10 +107,21 @@ export async function GET(request: Request) {
 
       {
         $group: {
-          _id: {
-            user_id:  "$user_id",
-            batch_id: "$batch_id",
-          },
+          _id: groupById,
+
+          released_date:       { $first: "$released_date"       },
+          released_at:         { $first: "$released_at"         },
+          total_original:      { $sum: "$effective_original"    },
+          total_released:      { $sum: "$released_amount"       },
+          payout_count:        { $sum: 1                        },
+          bonus_types:         { $addToSet: "$bonus_type"       },
+          neft_utrs:           { $addToSet: "$neft_utr"         },
+          payout_ids:          { $push: "$payout_id"            },
+
+          // Admin: collect unique users per batch
+          unique_user_ids:     { $addToSet: "$user_id"          },
+
+          // User: per-user fields (only meaningful when grouped by user+batch)
           user_name:           { $first: "$user_name"           },
           account_holder_name: { $first: "$account_holder_name" },
           contact:             { $first: "$contact"             },
@@ -156,25 +130,12 @@ export async function GET(request: Request) {
           bank_name:           { $first: "$bank_name"           },
           account_number:      { $first: "$account_number"      },
           ifsc_code:           { $first: "$ifsc_code"           },
-          released_date:       { $first: "$released_date"       },
-          released_at:         { $first: "$released_at"         },
-
-          // Original = sum of effective_original (net after TDS/admin)
-          total_original: { $sum: "$effective_original" },
-          // Released = actual bank transfer
-          total_released: { $sum: "$released_amount"    },
-
-          payout_count: { $sum: 1 },
-          bonus_types:  { $addToSet: "$bonus_type" },
-          neft_utrs:    { $addToSet: "$neft_utr"   },
-          payout_ids:   { $push: "$payout_id"      },
         },
       },
 
       {
         $addFields: {
           // Deducted = original - released, always ≥ 0
-          // This mirrors payrelease: deducted = withdraw_total - score_balance
           deducted: {
             $max: [{ $subtract: ["$total_original", "$total_released"] }, 0],
           },
@@ -213,35 +174,43 @@ export async function GET(request: Request) {
         },
       },
 
-      { $sort: { released_at: -1, "_id.user_id": 1 } },
+      { $sort: { released_at: -1 } },
       { $limit: limit },
     ]);
 
-    /* ── 4. Shape output ── */
-    const records = grouped.map((g) => ({
-      id:                  `${g._id.user_id}_${g._id.batch_id}`,
-      user_id:             g._id.user_id,
-      batch_id:            g._id.batch_id,
-      user_name:           g.user_name,
-      account_holder_name: g.account_holder_name,
-      contact:             g.contact,
-      mail:                g.mail,
-      rank:                g.rank,
-      bank_name:           g.bank_name,
-      account_number:      g.account_number,
-      ifsc_code:           g.ifsc_code,
-      released_date:       g.released_date,
-      released_at:         g.released_at,
-      original_amount:     g.total_original,  // net after TDS/admin = payrelease "Total Original"
-      released_amount:     g.total_released,  // actual bank transfer = payrelease "Grand Release"
-      deducted_amount:     g.deducted,        // points used on orders = payrelease "Total Deducted"
-      payout_count:        g.payout_count,
-      bonus_types:         (g.bonus_types || []).filter(Boolean).sort().join(", "),
-      payout_ids:          g.payout_ids || [],
-      neft_utr:            g.neft_utr_display,
-    }));
+    /* ── 5. Shape output ── */
+    const records = grouped.map((g) => {
+      const isAdminRole = role === "admin";
+      const batchIdVal  = isAdminRole ? g._id.batch_id : g._id.batch_id;
+      const userIdVal   = isAdminRole ? null : g._id.user_id;
+      const userCount   = isAdminRole ? (g.unique_user_ids?.length ?? 0) : 1;
 
-    /* ── 5. Summary — same effective_original logic ── */
+      return {
+        id:                  isAdminRole ? batchIdVal : `${userIdVal}_${batchIdVal}`,
+        batch_id:            batchIdVal,
+        user_id:             userIdVal,
+        user_count:          userCount,
+        user_name:           g.user_name           || null,
+        account_holder_name: g.account_holder_name || null,
+        contact:             g.contact             || null,
+        mail:                g.mail                || null,
+        rank:                g.rank                || null,
+        bank_name:           g.bank_name           || null,
+        account_number:      g.account_number      || null,
+        ifsc_code:           g.ifsc_code           || null,
+        released_date:       g.released_date,
+        released_at:         g.released_at,
+        original_amount:     g.total_original,
+        released_amount:     g.total_released,
+        deducted_amount:     g.deducted,
+        payout_count:        g.payout_count,
+        bonus_types:         (g.bonus_types || []).filter(Boolean).sort().join(", "),
+        payout_ids:          g.payout_ids || [],
+        neft_utr:            g.neft_utr_display,
+      };
+    });
+
+    /* ── 6. Summary ── */
     const summaryAgg = await Withdraw.aggregate([
       { $match: matchQuery },
       {
@@ -266,9 +235,9 @@ export async function GET(request: Request) {
       },
     ]);
 
-    const agg            = summaryAgg[0] || {};
-    const totalOriginal  = agg.total_original ?? 0;
-    const totalReleased  = agg.total_released ?? 0;
+    const agg           = summaryAgg[0] || {};
+    const totalOriginal = agg.total_original ?? 0;
+    const totalReleased = agg.total_released ?? 0;
 
     const summary = {
       total_records:  records.length,

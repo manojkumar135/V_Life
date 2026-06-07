@@ -203,6 +203,7 @@ export async function PUT(request) {
 }
 
 // PATCH - Partial update
+// PATCH - Partial update
 export async function PATCH(request) {
   try {
     await connectDB();
@@ -216,22 +217,24 @@ export async function PATCH(request) {
       );
     }
 
-    // 🔎 Duplicate check for email/phone
-    if (updates.phone || updates.email) {
+    // ── Duplicate check for contact and mail ──────────────────────────────
+    if (updates.contact || updates.mail) {
+      const orConditions = [];
+      if (updates.contact) orConditions.push({ contact: updates.contact });
+      if (updates.mail)    orConditions.push({ mail: updates.mail });
+
       const duplicate = await User.findOne({
-        $or: [
-          updates.phone ? { contact: updates.phone } : null,
-          updates.email ? { mail: updates.email } : null,
-        ].filter(Boolean),
+        $or: orConditions,
         user_id: { $ne: updateId },
       });
+
       if (duplicate) {
         return NextResponse.json(
           {
             success: false,
             message:
-              duplicate.contact === updates.phone
-                ? "Contact already exists"
+              duplicate.contact === updates.contact
+                ? "Contact number already exists"
                 : "Email already exists",
           },
           { status: 400 }
@@ -239,12 +242,20 @@ export async function PATCH(request) {
       }
     }
 
-    // 🔄 Update User
+    // ── Update User ───────────────────────────────────────────────────────
     let updatedUser;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedUser = await User.findByIdAndUpdate(updateId, updates, { new: true });
+      updatedUser = await User.findByIdAndUpdate(
+        updateId,
+        { $set: updates },
+        { new: true }
+      );
     } else {
-      updatedUser = await User.findOneAndUpdate({ user_id: updateId }, updates, { new: true });
+      updatedUser = await User.findOneAndUpdate(
+        { user_id: updateId },
+        { $set: updates },
+        { new: true }
+      );
     }
 
     if (!updatedUser) {
@@ -254,49 +265,90 @@ export async function PATCH(request) {
       );
     }
 
-    // 🔄 Sync Login
-    const loginUpdates = {};
-    if (updates.userName) loginUpdates.user_name = updates.userName;
-    if (updates.first_name) loginUpdates.first_name = updates.first_name;
-    if (updates.last_name) loginUpdates.last_name = updates.last_name;
-    if (updates.phone) loginUpdates.contact = updates.phone;
-    if (updates.email) loginUpdates.mail = updates.email;
-    if (updates.gender) loginUpdates.gender = updates.gender;
-    if (updates.blood) loginUpdates.blood = updates.blood;
+    // ── Build sync payloads ───────────────────────────────────────────────
+    // Fields shared across Login, TreeNode, Wallet
+    const loginUpdates  = {};
+    const treeUpdates   = {};
+    const walletUpdates = {};
 
-    if (updates.address) loginUpdates.address = updates.address;
-    if (updates.pincode) loginUpdates.pincode = updates.pincode;
-    if (updates.locality) loginUpdates.locality = updates.locality;
-    if (updates.country) loginUpdates.country = updates.country;
-    if (updates.state) loginUpdates.state = updates.state;
-    if (updates.city || updates.district) {
-      loginUpdates.district = updates.city || updates.district;
+    if (updates.user_name) {
+      loginUpdates.user_name = updates.user_name;
+      treeUpdates.name       = updates.user_name;
+      walletUpdates.user_name = updates.user_name;
+    }
+    if (updates.contact) {
+      loginUpdates.contact  = updates.contact;
+      treeUpdates.contact   = updates.contact;
+      walletUpdates.contact = updates.contact;
+    }
+    if (updates.mail) {
+      loginUpdates.mail  = updates.mail;
+      treeUpdates.mail   = updates.mail;
+      walletUpdates.mail = updates.mail;
+    }
+    if (updates.gender) {
+      loginUpdates.gender = updates.gender;
+      treeUpdates.gender  = updates.gender;
+    }
+    if (updates.dob) {
+      loginUpdates.dob = updates.dob;
+      treeUpdates.dob  = updates.dob;
+    }
+    if (updates.blood) {
+      loginUpdates.blood = updates.blood;
+      treeUpdates.blood  = updates.blood;
+    }
+    if (updates.address) {
+      loginUpdates.address = updates.address;
+      treeUpdates.address  = updates.address;
+    }
+    if (updates.pincode) {
+      loginUpdates.pincode = updates.pincode;
+      treeUpdates.pincode  = updates.pincode;
+    }
+    if (updates.locality) {
+      loginUpdates.locality = updates.locality;
+      treeUpdates.locality  = updates.locality;
+    }
+    if (updates.country) {
+      loginUpdates.country = updates.country;
+      treeUpdates.country  = updates.country;
+    }
+    if (updates.state) {
+      loginUpdates.state = updates.state;
+      treeUpdates.state  = updates.state;
+    }
+    if (updates.district) {
+      loginUpdates.district = updates.district;
+      treeUpdates.district  = updates.district;
     }
 
-    if (Object.keys(loginUpdates).length > 0) {
-      await Login.findOneAndUpdate({ user_id: updatedUser.user_id }, loginUpdates, { new: true });
-    }
+    // ── Sync all collections in parallel ─────────────────────────────────
+    await Promise.all([
+      Object.keys(loginUpdates).length > 0
+        ? Login.findOneAndUpdate(
+            { user_id: updatedUser.user_id },
+            { $set: loginUpdates },
+            { new: true }
+          )
+        : Promise.resolve(),
 
-    // 🔄 Sync TreeNode
-    const treeUpdates = {};
-    if (updates.userName) treeUpdates.name = updates.userName;
-    if (updates.phone) treeUpdates.contact = updates.phone;
-    if (updates.email) treeUpdates.mail = updates.email;
-    if (updates.gender) treeUpdates.gender = updates.gender;
-    if (updates.blood) treeUpdates.blood = updates.blood;
+      Object.keys(treeUpdates).length > 0
+        ? TreeNode.findOneAndUpdate(
+            { user_id: updatedUser.user_id },
+            { $set: treeUpdates },
+            { new: true }
+          )
+        : Promise.resolve(),
 
-    if (updates.address) treeUpdates.address = updates.address;
-    if (updates.locality) treeUpdates.locality = updates.locality;
-    if (updates.pincode) treeUpdates.pincode = updates.pincode;
-    if (updates.country) treeUpdates.country = updates.country;
-    if (updates.state) treeUpdates.state = updates.state;
-    if (updates.city || updates.district) {
-      treeUpdates.district = updates.city || updates.district;
-    }
-
-    if (Object.keys(treeUpdates).length > 0) {
-      await TreeNode.findOneAndUpdate({ user_id: updatedUser.user_id }, treeUpdates, { new: true });
-    }
+      Object.keys(walletUpdates).length > 0
+        ? Wallet.findOneAndUpdate(
+            { user_id: updatedUser.user_id },
+            { $set: walletUpdates },
+            { new: true }
+          )
+        : Promise.resolve(),
+    ]);
 
     return NextResponse.json(
       {

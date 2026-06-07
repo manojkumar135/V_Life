@@ -68,6 +68,8 @@ export default function ProfileSection() {
   });
 
   const mapVals = (v: any) => ({
+    mail: v.email,
+    contact: v.contact,
     dob: v.dob,
     gender: v.gender,
     blood: v.bloodGroup,
@@ -89,8 +91,8 @@ export default function ProfileSection() {
       return {
         user_id: user.user_id,
         user_name: toTitleCase(values.fullName),
-        mail: values.email,
-        contact: values.contact,
+        // mail: values.email,
+        // contact: values.contact,
         ...mapVals(values),
       };
     }
@@ -105,7 +107,7 @@ export default function ProfileSection() {
       setLoading(true);
       const res = await axios.patch(
         "/api/users-operations",
-        buildPayload(values)
+        buildPayload(values),
       );
       if (res.data.success) {
         ShowToast.success("Profile Updated");
@@ -201,7 +203,7 @@ export default function ProfileSection() {
       try {
         setLoading(true);
         const res = await axios.get(
-          `/api/location-by-pincode?pincode=${formik.values.pincode}`
+          `/api/location-by-pincode?pincode=${formik.values.pincode}`,
         );
         if (res.data.success) {
           const { city, state, country, postOffices } = res.data.data;
@@ -211,7 +213,7 @@ export default function ProfileSection() {
           setPostOfficeData(postOffices);
           formik.setFieldValue(
             "locality",
-            postOffices.length ? postOffices[0].Name : ""
+            postOffices.length ? postOffices[0].Name : "",
           );
         } else resetLocation();
       } catch {
@@ -242,7 +244,7 @@ export default function ProfileSection() {
 
     return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
       2,
-      "0"
+      "0",
     )}`;
   };
 
@@ -277,9 +279,8 @@ export default function ProfileSection() {
               name="email"
               type="email"
               value={formik.values.email}
-              disabled={!isAdmin}
-              onChange={isAdmin ? formik.handleChange : undefined}
-              onBlur={isAdmin ? formik.handleBlur : undefined}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               error={formik.touched.email ? formik.errors.email : undefined}
             />
 
@@ -287,9 +288,8 @@ export default function ProfileSection() {
               label="Contact"
               name="contact"
               value={formik.values.contact}
-              disabled={!isAdmin}
-              onChange={isAdmin ? formik.handleChange : undefined}
-              onBlur={isAdmin ? formik.handleBlur : undefined}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
               error={formik.touched.contact ? formik.errors.contact : undefined}
             />
 

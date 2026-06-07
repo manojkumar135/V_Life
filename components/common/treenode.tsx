@@ -31,6 +31,7 @@ export interface TreeNode {
   right_active_normal?: number;
 
   referrals?: string;
+  paid_directs?: number;
   bv?: string;
   sv?: string;
   leftBV?: number;
@@ -431,14 +432,19 @@ const BinaryTreeNode: React.FC<Props> = ({
               </span>
             </div>
 
-            <div className="flex">
-              <strong className="w-20">ID:</strong>
-              <span className="truncate">{node.user_id}</span>
-            </div>
-            <div className="flex">
-              <strong className="w-20">Name:</strong>
-              <span className="capitalize truncate">{node.name}</span>
-            </div>
+            {user?.role === "admin" && (
+              <>
+                <div className="flex">
+                  <strong className="w-20">ID:</strong>
+                  <span className="truncate">{node.user_id}</span>
+                </div>
+                <div className="flex">
+                  <strong className="w-20">Name:</strong>
+                  <span className="capitalize truncate">{node.name}</span>
+                </div>
+              </>
+            )}
+
             <div className="flex">
               <strong className="w-20">Status:</strong>
               <span
@@ -484,12 +490,6 @@ const BinaryTreeNode: React.FC<Props> = ({
               </>
             )}
 
-            {node.referrals != null && (
-              <div className="flex">
-                <strong className="w-20">Referrals:</strong>
-                <span className="truncate">{node.referrals}</span>
-              </div>
-            )}
             {node.referBy && (
               <div className="flex">
                 <strong className="w-20">Sponsor:</strong>
@@ -502,12 +502,17 @@ const BinaryTreeNode: React.FC<Props> = ({
                 <span>{node.infinity}</span>
               </div>
             )}
-            {node.parent && (
-              <div className="flex">
-                <strong className="w-20">Parent:</strong>
-                <span>{node.parent}</span>
-              </div>
+            {user?.role === "admin" && (
+              <>
+                {node.parent && (
+                  <div className="flex">
+                    <strong className="w-20">Parent:</strong>
+                    <span>{node.parent}</span>
+                  </div>
+                )}
+              </>
             )}
+
             {/* <div className="flex">
               <strong className="w-20">Left Team:</strong>
               <span>{node.leftCount ?? 0}</span>
@@ -516,6 +521,20 @@ const BinaryTreeNode: React.FC<Props> = ({
               <strong className="w-20">Right Team:</strong>
               <span>{node.rightCount ?? 0}</span>
             </div> */}
+
+            {node.referrals != null && (
+              <div className="flex">
+                <strong className="w-20">Referrals:</strong>
+                <span className="truncate">
+                  {node.referrals} 
+                  {node.paid_directs != null && (
+                    <span className="text-gray-600 ml-1">
+                      ({node.paid_directs} active)
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
             <div className="flex">
               <strong className="w-20">Left Active:</strong>
               <span>
@@ -571,21 +590,28 @@ const BinaryTreeNode: React.FC<Props> = ({
               </div>
             )}
             <div className="flex">
-              <strong className="w-20">Total BV:</strong>
+              <strong className="w-27">Total Infinify BV:</strong>
               <span>{(node.totalLeftBV ?? 0) + (node.totalRightBV ?? 0)}</span>
             </div>
-            <div className="flex">
-              <strong className="w-20">Total PV:</strong>
-              <span>{(node.totalLeftPV ?? 0) + (node.totalRightPV ?? 0)}</span>
-            </div>
-            <div className="flex">
-              <strong className="w-20">Left BV:</strong>
-              <span>{node.leftBV ?? 0}</span>
-            </div>
-            <div className="flex">
-              <strong className="w-20">Right BV:</strong>
-              <span>{node.rightBV ?? 0}</span>
-            </div>
+            {user?.role === "admin" && (
+              <>
+                <div className="flex">
+                  <strong className="w-20">Total PV:</strong>
+                  <span>
+                    {(node.totalLeftPV ?? 0) + (node.totalRightPV ?? 0)}
+                  </span>
+                </div>
+                <div className="flex">
+                  <strong className="w-20">Left BV:</strong>
+                  <span>{node.leftBV ?? 0}</span>
+                </div>
+                <div className="flex">
+                  <strong className="w-20">Right BV:</strong>
+                  <span>{node.rightBV ?? 0}</span>
+                </div>
+              </>
+            )}
+
             <div className="flex">
               <strong className="w-20">Left PV:</strong>
               <span>{pvLoading ? "..." : (currentPV?.leftPV ?? 0)}</span>

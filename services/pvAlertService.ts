@@ -175,9 +175,8 @@ export async function getPvAlertSummary(
     // ── Build alert message ───────────────────────────────────────────────
     // Simple, clear message — no monthly references
     const alertMessage = totalPvRemaining > 0
-        ? `Your payouts are on hold. Place a repurchase order of ${totalPvRemaining} PV to release them.`
-        : "All PV repurchase obligations fulfilled. No holds pending.";
-
+  ? `Your payouts are currently on hold due to an incomplete PV repurchase requirement. To release your pending payouts and maintain eligibility for future earnings, please place a repurchase order of ${totalPvRemaining} PV. Once completed, your held payouts will be released automatically.`
+  : "All PV repurchase obligations fulfilled. No holds pending.";
     return {
         hasAlert:         totalPvRemaining > 0,
         totalPvRequired,

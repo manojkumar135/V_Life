@@ -64,7 +64,7 @@ export async function GET(
 
     // ── Role-based filtering ──────────────────────────────────────────────────
     const { searchParams } = new URL(req.url);
-    const role    = searchParams.get("role")    || "user";
+    const role = searchParams.get("role") || "user";
     const user_id = searchParams.get("user_id") || null;
 
     const [batch, withdraws] = await Promise.all([
@@ -84,19 +84,31 @@ export async function GET(
         { status: 404 },
       );
     }
-    
 
-    const totalWithdraws   = withdraws.length;
+    const totalWithdraws = withdraws.length;
     const updatedWithdraws = withdraws.filter((w: any) => w.neft_utr).length;
     const pendingWithdraws = totalWithdraws - updatedWithdraws;
+
+    // For user role — compute their own released total from their withdraw records
+    // batch.total_amount is the grand total across ALL users (wrong for user view)
+    const isUser = role !== "admin";
+    const userTotal = isUser
+      ? withdraws.reduce(
+          (sum: number, w: any) => sum + (w.released_amount || 0),
+          0,
+        )
+      : (batch as any).total_amount;
 
     return NextResponse.json(
       {
         success: true,
-        batch,
+        batch: {
+          ...(batch as any),
+          total_amount: userTotal, // ← correct amount per role
+        },
         withdraws,
         summary: {
-          total:   totalWithdraws,
+          total: totalWithdraws,
           updated: updatedWithdraws,
           pending: pendingWithdraws,
         },
@@ -140,7 +152,7 @@ export async function PATCH(
         neft_transaction_date,
         neft_transaction_time,
         neft_bank_ref = null,
-        neft_remarks  = null,
+        neft_remarks = null,
       } = body;
 
       if (!neft_utr) {
@@ -164,8 +176,8 @@ export async function PATCH(
           {
             $set: {
               neft_utr,
-              neft_transaction_date:  neft_transaction_date || null,
-              neft_transaction_time:  neft_transaction_time || null,
+              neft_transaction_date: neft_transaction_date || null,
+              neft_transaction_time: neft_transaction_time || null,
               neft_bank_ref,
               neft_remarks,
               transaction_updated_at: now,
@@ -180,7 +192,7 @@ export async function PATCH(
           { payout_id: { $in: payoutIds } },
           {
             $set: {
-              transaction_id:   neft_utr,
+              transaction_id: neft_utr,
               last_modified_at: now,
               last_modified_by: updated_by,
             },
@@ -192,7 +204,7 @@ export async function PATCH(
           { payout_id: { $in: payoutIds } },
           {
             $set: {
-              transaction_id:   neft_utr,
+              transaction_id: neft_utr,
               last_modified_at: now,
               last_modified_by: updated_by,
             },
@@ -215,7 +227,13 @@ export async function PATCH(
               update_history: {
                 updated_at: now,
                 updated_by,
-                fields: { neft_utr, neft_transaction_date, neft_transaction_time, neft_bank_ref, neft_remarks },
+                fields: {
+                  neft_utr,
+                  neft_transaction_date,
+                  neft_transaction_time,
+                  neft_bank_ref,
+                  neft_remarks,
+                },
                 note: `Batch-level NEFT update applied to all ${payoutIds.length} withdraw records`,
               },
             },
@@ -225,10 +243,10 @@ export async function PATCH(
 
       return NextResponse.json(
         {
-          success:  true,
-          message:  `NEFT details applied to all withdraw records in batch ${batchId}`,
+          success: true,
+          message: `NEFT details applied to all withdraw records in batch ${batchId}`,
           batch_id: batchId,
-          mode:     "batch",
+          mode: "batch",
         },
         { status: 200 },
       );
@@ -238,18 +256,21 @@ export async function PATCH(
     if (mode === "selective") {
       const { updates } = body as {
         updates: Array<{
-          payout_id:              string;
-          neft_utr?:              string;
+          payout_id: string;
+          neft_utr?: string;
           neft_transaction_date?: string;
           neft_transaction_time?: string;
-          neft_bank_ref?:         string;
-          neft_remarks?:          string;
+          neft_bank_ref?: string;
+          neft_remarks?: string;
         }>;
       };
 
       if (!updates || updates.length === 0) {
         return NextResponse.json(
-          { success: false, message: "updates array is required for selective mode" },
+          {
+            success: false,
+            message: "updates array is required for selective mode",
+          },
           { status: 400 },
         );
       }
@@ -260,11 +281,11 @@ export async function PATCH(
           filter: { payout_id: u.payout_id, batch_id: batchId },
           update: {
             $set: {
-              neft_utr:               u.neft_utr              || null,
-              neft_transaction_date:  u.neft_transaction_date || null,
-              neft_transaction_time:  u.neft_transaction_time || null,
-              neft_bank_ref:          u.neft_bank_ref         || null,
-              neft_remarks:           u.neft_remarks          || null,
+              neft_utr: u.neft_utr || null,
+              neft_transaction_date: u.neft_transaction_date || null,
+              neft_transaction_time: u.neft_transaction_time || null,
+              neft_bank_ref: u.neft_bank_ref || null,
+              neft_remarks: u.neft_remarks || null,
               transaction_updated_at: now,
               transaction_updated_by: updated_by,
             },
@@ -282,7 +303,7 @@ export async function PATCH(
             filter: { payout_id: u.payout_id },
             update: {
               $set: {
-                transaction_id:   u.neft_utr,  // bank UTR = final transaction reference
+                transaction_id: u.neft_utr, // bank UTR = final transaction reference
                 last_modified_at: now,
                 last_modified_by: updated_by,
               },
@@ -309,7 +330,8 @@ export async function PATCH(
         $or: [{ neft_utr: null }, { neft_utr: { $exists: false } }],
       });
 
-      const newStatus = pendingCount === 0 ? "transaction_updated" : "partially_updated";
+      const newStatus =
+        pendingCount === 0 ? "transaction_updated" : "partially_updated";
 
       /* ── Fix: set neft_utr on the PayoutBatch document for selective mode ──
          The batches list page reads batch.neft_utr to show in the NEFT UTR column.
@@ -317,11 +339,15 @@ export async function PATCH(
          as a representative value, or "multiple" if more than one distinct UTR.
          This ensures the list page never shows "Pending" when all records are done.
       ─────────────────────────────────────────────────────────────────────────── */
-      const distinctUtrs = [...new Set(updates.map((u) => u.neft_utr).filter(Boolean))];
+      const distinctUtrs = [
+        ...new Set(updates.map((u) => u.neft_utr).filter(Boolean)),
+      ];
       const batchNeftUtr =
-        distinctUtrs.length === 0 ? null :
-        distinctUtrs.length === 1 ? distinctUtrs[0] :
-        "multiple";
+        distinctUtrs.length === 0
+          ? null
+          : distinctUtrs.length === 1
+            ? distinctUtrs[0]
+            : "multiple";
 
       await PayoutBatch.updateOne(
         { batch_id: batchId },
@@ -333,8 +359,8 @@ export async function PATCH(
             ...(pendingCount === 0 && batchNeftUtr
               ? { neft_utr: batchNeftUtr }
               : !batch.neft_utr && batchNeftUtr
-              ? { neft_utr: batchNeftUtr }
-              : {}),
+                ? { neft_utr: batchNeftUtr }
+                : {}),
           },
           $push: {
             update_history: {
@@ -342,7 +368,7 @@ export async function PATCH(
               updated_by,
               fields: {
                 payout_ids: updates.map((u) => u.payout_id),
-                count:      updates.length,
+                count: updates.length,
               },
               note: `Selective NEFT update — ${updates.length} payout record(s). Pending after update: ${pendingCount}`,
             },
@@ -352,20 +378,23 @@ export async function PATCH(
 
       return NextResponse.json(
         {
-          success:        true,
-          message:        `Updated ${updates.length} withdraw record(s)`,
-          batch_id:       batchId,
-          mode:           "selective",
+          success: true,
+          message: `Updated ${updates.length} withdraw record(s)`,
+          batch_id: batchId,
+          mode: "selective",
           modified_count: updates.length,
-          pending_count:  pendingCount,
-          batch_status:   newStatus,
+          pending_count: pendingCount,
+          batch_status: newStatus,
         },
         { status: 200 },
       );
     }
 
     return NextResponse.json(
-      { success: false, message: `Invalid mode "${mode}". Use "batch" or "selective"` },
+      {
+        success: false,
+        message: `Invalid mode "${mode}". Use "batch" or "selective"`,
+      },
       { status: 400 },
     );
   } catch (error: any) {

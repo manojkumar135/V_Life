@@ -82,7 +82,7 @@ export async function handleIDFCDownload({
         bottom: { style: "thin", color: { argb: "FFAAAAAA" } },
       };
     });
-    headerRow.height = 20;
+  headerRow.height = 30;
 
     /* ── Row 2: IDFC field instructions (matches template exactly) */
     const instructions = [
@@ -113,7 +113,7 @@ export async function handleIDFCDownload({
         fgColor: { argb: "FFFFF2CC" }, // light yellow — matches IDFC template
       };
     });
-    instrRow.height = 72;
+    instrRow.height = 85;
 
     /* ── Rows 3+: Payment data ─────────────────────────────────── */
     const today = new Date();
@@ -127,13 +127,13 @@ export async function handleIDFCDownload({
       if (amount <= 0) continue; // skip zero-amount rows
 
       const dataRow = worksheet.addRow([
-        row.account_holder_name || row.user_name || "", // Beneficiary Name          — bank-registered name, MANDATORY
+        (row.account_holder_name || row.user_name || "").slice(0, 35), // Beneficiary Name          — bank-registered name, MANDATORY
         row.account_number || "", // Beneficiary Account Number — MANDATORY
         row.ifsc_code || "", // IFSC                       — MANDATORY for NEFT/RTGS
         "NEFT", // Transaction Type           — MANDATORY
         debitAccountNumber, // Debit Account Number       — fill via env or setting
         todayFormatted, // Transaction Date           — DD/MM/YYYY MANDATORY
-        amount, // Amount                     — MANDATORY
+        parseFloat(amount.toFixed(2)), // Amount                     — MANDATORY
         "INR", // Currency                   — MANDATORY
         row.mail || "", // Beneficiary Email ID       — OPTIONAL
         "", // Remarks                    — OPTIONAL
@@ -146,7 +146,7 @@ export async function handleIDFCDownload({
 
       // Style amount cell as number
       const amountCell = dataRow.getCell(7); // column G = Amount
-      amountCell.numFmt = "#,##0.00";
+      amountCell.numFmt = "0.00";
       amountCell.alignment = { horizontal: "right" };
 
       // Alternate row shading for readability
@@ -164,19 +164,19 @@ export async function handleIDFCDownload({
         };
       });
 
-      dataRow.height = 18;
+      dataRow.height = 22;
     }
 
     /* ── Column widths (tuned to IDFC template proportions) ────── */
     const colWidths = [
-      22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14,
+    25, 28, 16, 18, 26, 16, 14, 12, 25, 24, 18, 18, 18, 18, 18,
     ];
     worksheet.columns.forEach((col, i) => {
       if (col) col.width = colWidths[i] ?? 15;
     });
 
     /* ── Freeze top 2 rows so header + instructions stay visible ─ */
-    worksheet.views = [{ state: "frozen", ySplit: 2 }];
+    // worksheet.views = [{ state: "frozen", ySplit: 1 }];
 
     /* ── Write and save ────────────────────────────────────────── */
     const buffer = await workbook.xlsx.writeBuffer();

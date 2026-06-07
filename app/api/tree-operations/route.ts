@@ -134,6 +134,7 @@ function buildTree(
     bv: user?.bv || 0,
     pv: user?.pv || 0,
     referrals: user?.referred_users?.length || 0,
+    paid_directs: user?.paid_directs?.length || 0,
     status_notes: user?.status_notes || "",
 
     /** Infinity values */

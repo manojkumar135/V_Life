@@ -43,7 +43,8 @@ export async function POST(req: Request) {
 
     // console.log("Decoded token:", decoded);
     // find login user
-    const user = await Login.findById(decoded.id);
+    // console.log("Decoded token ID:", decoded._id);
+    const user = await Login.findById(decoded._id);
     if (!user) {
       return NextResponse.json(
         { success: false, message: "User not found" },

@@ -21,10 +21,20 @@ export async function GET(request: Request) {
     await connectDB();
 
     const { searchParams } = new URL(request.url);
+    const role = searchParams.get("role") || "user";
+
+    // Block non-admin access
+    if (role !== "admin") {
+      return NextResponse.json(
+        { success: false, message: "Access denied" },
+        { status: 403 },
+      );
+    }
+
     const status = searchParams.get("status") || "";
     const search = searchParams.get("search") || "";
-    const page   = Math.max(1, parseInt(searchParams.get("page")  || "1"));
-    const limit  = Math.min(100, parseInt(searchParams.get("limit") || "20"));
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+    const limit = Math.min(100, parseInt(searchParams.get("limit") || "20"));
 
     const query: any = {};
     if (status) query.status = status;
@@ -47,7 +57,7 @@ export async function GET(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        data:    batches,
+        data: batches,
         total,
         page,
         limit,

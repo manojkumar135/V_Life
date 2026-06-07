@@ -8,7 +8,8 @@ import axios from "axios";
 import Loader from "@/components/common/loader";
 import ShowToast from "@/components/common/Toast/toast";
 import { useRouter } from "next/navigation";
-import { FiDownload, FiEye } from "react-icons/fi";
+import { FiDownload } from "react-icons/fi";
+import { useVLife } from "@/store/context";
 
 const API_URL = "/api/payrelease/batches";
 
@@ -33,6 +34,13 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function BatchesPage() {
   const router = useRouter();
+  const { user } = useVLife();
+
+  useEffect(() => {
+  if (user?.role && user.role !== "admin") {
+    router.replace("/withdrawal");
+  }
+}, [user?.role]);
 
   const { query, setQuery, debouncedQuery } = useSearch();
   const [batches, setBatches] = useState<any[]>([]);
@@ -52,32 +60,41 @@ export default function BatchesPage() {
   } = usePagination({ totalItems, itemsPerPage: 15, onPageChange: () => {} });
 
   /* ── Fetch batches ── */
-  const fetchBatches = useCallback(
-    async (search: string, page: number) => {
-      try {
-        setLoading(true);
-        const params: any = {
-          page,
-          limit: 15,
-          ...(search.trim() && { search: search.trim() }),
-          ...(statusFilter && { status: statusFilter }),
-        };
-        const { data } = await axios.get(API_URL, { params });
-        setBatches(data.data || []);
-        setTotalItems(data.total || 0);
-      } catch (err) {
-        console.error("Error fetching batches:", err);
-        ShowToast.error("Failed to load batches");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [statusFilter],
-  );
+  // AFTER
+const fetchBatches = useCallback(
+  async (search: string, page: number) => {
+    if (!user?.role) return;           // ← wait until role is known
+    if (user.role !== "admin") return; // ← don't even call API for non-admin
 
-  useEffect(() => {
-    fetchBatches(debouncedQuery, currentPage);
-  }, [debouncedQuery, statusFilter, currentPage]);
+    try {
+      setLoading(true);
+      const params: any = {
+        page,
+        limit: 15,
+        role: user.role,               // ← guaranteed defined
+        ...(search.trim() && { search: search.trim() }),
+        ...(statusFilter && { status: statusFilter }),
+      };
+      const { data } = await axios.get(API_URL, { params });
+      setBatches(data.data || []);
+      setTotalItems(data.total || 0);
+    } catch (err) {
+      console.error("Error fetching batches:", err);
+      ShowToast.error("Failed to load batches");
+    } finally {
+      setLoading(false);
+    }
+  },
+  [statusFilter, user?.role],         
+);
+
+useEffect(() => {
+  fetchBatches(debouncedQuery, currentPage);
+}, [debouncedQuery, statusFilter, currentPage, user?.role]); 
+
+  // useEffect(() => {
+  //   fetchBatches(debouncedQuery, currentPage);
+  // }, [debouncedQuery, statusFilter, currentPage,user?.role]);
 
   useEffect(() => {
     goToPage(1);
@@ -118,7 +135,7 @@ export default function BatchesPage() {
     }
   };
 
-  const onBack = () => router.push("/reports");
+  const onBack = () => router.push("/wallet/payout");
 
   /* ── Render ── */
   return (
@@ -216,7 +233,12 @@ export default function BatchesPage() {
                   >
                     {/* Batch ID */}
                     <td className="px-4 py-3">
-                      <span className="font-mono text-xs text-[#0C3978] font-semibold">
+                      <span
+                        onClick={() =>
+                          router.push(`/batches/${batch.batch_id}`)
+                        }
+                        className="font-mono text-xs text-[#0C3978] font-semibold cursor-pointer hover:underline"
+                      >
                         {batch.batch_id}
                       </span>
                     </td>
@@ -273,7 +295,7 @@ export default function BatchesPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
                         {/* View detail */}
-                        <button
+                        {/* <button
                           title="View batch detail"
                           onClick={() =>
                             router.push(`/batches/${batch.batch_id}`)
@@ -281,7 +303,7 @@ export default function BatchesPage() {
                           className="p-1.5 rounded-lg text-[#0C3978] hover:bg-blue-50 transition-colors cursor-pointer"
                         >
                           <FiEye size={16} />
-                        </button>
+                        </button> */}
 
                         {/* Re-download Excel */}
                         <button

@@ -75,7 +75,7 @@ async function buildExcel(
     };
     cell.border = { bottom: { style: "thin", color: { argb: "FFAAAAAA" } } };
   });
-  headerRow.height = 20;
+  headerRow.height = 30;
 
   // ── Row 2: IDFC field instructions ────────────────────────────────────────
   const INSTRUCTIONS = [
@@ -111,7 +111,7 @@ async function buildExcel(
       fgColor: { argb: "FFFFF2CC" }, // light yellow — matches IDFC template
     };
   });
-  instrRow.height = 72;
+    instrRow.height = 85;
 
   // ── Collapse withdraw records to one row per user ─────────────────────────
   const userMap = new Map<string, any>();
@@ -156,17 +156,17 @@ async function buildExcel(
 
   // ── Rows 3+: Payment data ─────────────────────────────────────────────────
   const debitAccountNumber = process.env.IDFC_DEBIT_ACCOUNT_NUMBER ?? "";
-  const txDate = releaseDate || todayDDMMYYYY();
+  const txDate = (releaseDate || todayDDMMYYYY()).replace(/-/g, "/");
 
   rows.forEach((r, i) => {
     const dataRow = ws.addRow([
-      r.account_holder_name || r.user_name || "", // Beneficiary Name          — MANDATORY
+      (r.account_holder_name || r.user_name || "").slice(0, 35), // Beneficiary Name          — MANDATORY
       r.account_number || "", // Beneficiary Account Number — MANDATORY
       r.ifsc_code || "", // IFSC                       — MANDATORY for NEFT
       "NEFT", // Transaction Type           — MANDATORY
       "10269542603", // Debit Account Number
       txDate, // Transaction Date           — DD/MM/YYYY MANDATORY
-      r.released_total, // Amount                     — MANDATORY
+      parseFloat(r.released_total.toFixed(2)), // Amount                     — MANDATORY
       "INR", // Currency                   — MANDATORY
       r.mail || "", // Beneficiary Email ID       — OPTIONAL
       "", // Remarks                    — OPTIONAL
@@ -179,7 +179,7 @@ async function buildExcel(
 
     // Amount cell — number format, right-aligned (column G = index 7)
     const amountCell = dataRow.getCell(7);
-    amountCell.numFmt = `"₹"#,##0.00`;
+    amountCell.numFmt = "0.00";
     amountCell.alignment = { horizontal: "right" };
 
     // Alternate row shading — same logic as IDFC handler
@@ -195,19 +195,19 @@ async function buildExcel(
       cell.border = { bottom: { style: "hair", color: { argb: "FFE0E0E0" } } };
     });
 
-    dataRow.height = 18;
+    dataRow.height = 22;
   });
 
   // ── Column widths — tuned to IDFC template proportions ───────────────────
   const COL_WIDTHS = [
-    22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14,
+    25, 28, 16, 18, 26, 16, 14, 12, 25, 24, 18, 18, 18, 18, 18,
   ];
   ws.columns.forEach((col, i) => {
     if (col) col.width = COL_WIDTHS[i] ?? 15;
   });
 
   // ── Freeze top 2 rows so header + instructions stay visible ──────────────
-  ws.views = [{ state: "frozen", ySplit: 2 }];
+  // ws.views = [{ state: "frozen", ySplit: 1 }];
 
   return (await wb.xlsx.writeBuffer()) as unknown as ArrayBuffer;
 }

@@ -55,7 +55,7 @@ const Page = () => {
             className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <RiMoneyRupeeCircleLine size={32} />
-            <span className="mt-2 text-lg font-semibold">Cashback Report</span>
+            <span className="mt-2 text-lg font-semibold">Redeem Report</span>
           </div>
 
           {/* Reward Report */}

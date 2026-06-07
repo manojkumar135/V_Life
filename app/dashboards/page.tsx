@@ -23,8 +23,9 @@ import {
   FaRupeeSign,
   FaUser,
   FaShoppingBag,
-  FaWallet,FaReceipt,FaPercent 
+  FaWallet,FaReceipt,FaPercent ,FaTrophy
 } from "react-icons/fa";
+
 
 import { MdOutlineCheckCircle } from "react-icons/md";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
@@ -50,6 +51,7 @@ interface DashboardSummary {
   totalGST: number;
   totalTDS: number;
   totalAdminCharge: number;
+  pairRewardTotal:number;
 }
 
 interface CycleStats {
@@ -642,6 +644,12 @@ const DashboardPage: React.FC = () => {
                     onClick={() => router.push("/wallet/rewards?tab=score")}
                   />
                 </div>
+                 <DashBox
+                  icon={<FaTrophy />}
+                  title="Pair Reward"
+                  value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
+                  index={3}
+                />
 
                 <div className="hidden md:block">
                   <DashBox
@@ -651,6 +659,7 @@ const DashboardPage: React.FC = () => {
                     index={0}
                   />
                 </div>
+                 
 
                 {/* Payout Released — visible on all screens */}
                 <DashBox
@@ -670,7 +679,7 @@ const DashboardPage: React.FC = () => {
 
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
-                  title="Cashback Points"
+                  title="Redeem Points"
                   value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
                   index={3}
                 />
@@ -714,12 +723,12 @@ const DashboardPage: React.FC = () => {
                     index={7}
                   />
                 </div>
-                <DashBox
+                {/* <DashBox
                   icon={<FaReceipt />}
                   title="Total GST"
                   value={`${summary?.totalGST?.toFixed(2) || "0.00"}`}
                   index={3}
-                />
+                /> */}
                 <DashBox
                   icon={<FaPercent  />}
                   title="Total TDS"

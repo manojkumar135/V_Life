@@ -799,11 +799,11 @@ export default function OrderFormCartSection({
                               />
                               <div>
                                 <span className="font-medium">
-                                  Use Cashback Points
+                                  Use Redeem Points
                                 </span>
                                 <div className="text-xs text-gray-500">
                                   {cashbackCap <= 0 ? (
-                                    <>Cashback not applicable</>
+                                    <>Redeem not applicable</>
                                   ) : cashbackPoints <= maxCashbackUsable ? (
                                     <>
                                       You can use full {cashbackPoints} points.

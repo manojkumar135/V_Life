@@ -21,9 +21,7 @@ const BONUS_TYPE_OPTIONS = [
   { label: "Daily",     value: "daily" },
   { label: "Fortnight", value: "fortnight" },
   { label: "Referral",  value: "referral" },
-  // { label: "Quickstar", value: "quickstar" },
-    { label: "Pair Star", value: "pairstar" },
-
+  { label: "Pair Star", value: "pairstar" },
 ];
 
 export default function WithdrawPage() {
@@ -48,7 +46,9 @@ export default function WithdrawPage() {
     grand_release:  0,
   });
 
-  /* ── Pagination — client-side ── */
+  const isAdmin = user?.role === "admin";
+
+  /* ── Pagination ── */
   const {
     currentPage,
     totalPages,
@@ -59,19 +59,19 @@ export default function WithdrawPage() {
     goToPage,
   } = usePagination({ totalItems, itemsPerPage: 12, onPageChange: () => {} });
 
-  /* ── Fetch — role + user_id sent so backend filters correctly ── */
+  /* ── Fetch ── */
   const fetchRecords = useCallback(
     async (search: string) => {
       if (!user?.user_id) return;
       try {
         setLoading(true);
         const params: any = {
-          role:    user.role,      // ← "admin" gets all, "user" gets own only
-          user_id: user.user_id,   // ← required for role=user filtering
+          role:    user.role,
+          user_id: user.user_id,
           search:  search || "",
           limit:   1000,
-...(bonusType && bonusType !== "pairstar" && { bonus_type: bonusType }),
-...(bonusType === "pairstar" && { payout_name: "Pair Star Reward" }),
+          ...(bonusType && bonusType !== "pairstar" && { bonus_type: bonusType }),
+          ...(bonusType === "pairstar" && { payout_name: "Pair Star Reward" }),
           ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
             from: dateFilter.from,
@@ -108,18 +108,30 @@ export default function WithdrawPage() {
     goToPage(1);
   }, [debouncedQuery, dateFilter, bonusType, user?.user_id]);
 
-  const isAdmin = user?.role === "admin";
-
-  /* ── Columns ── */
+  /* ── Columns ──
+     Admin: one row per batch → show batch_id (clickable), user_count, totals
+     User:  one row per batch → show batch_id, bank, types, deductions
+  ── */
   const columns: GridColDef[] = [
+    // ── Batch ID — clickable for admin to navigate to batch detail ──
     {
       field: "batch_id",
       headerName: "Batch ID",
       flex: 1.5,
-      renderCell: (p: any) => (
-        <span className="text-gray-600 text-xs">{p.value || "—"}</span>
-      ),
+      renderCell: (p: any) =>
+        isAdmin ? (
+          <span
+            onClick={() => router.push(`/batches/${p.value}`)}
+            className="text-[#0C3978] text-xs font-semibold cursor-pointer hover:underline"
+          >
+            {p.value || "—"}
+          </span>
+        ) : (
+          <span className="text-gray-600 text-xs">{p.value || "—"}</span>
+        ),
     },
+
+    // ── Date ──
     {
       field: "released_date",
       headerName: "Date",
@@ -129,19 +141,28 @@ export default function WithdrawPage() {
       ),
     },
 
-    ...(isAdmin
-      ? [{ field: "user_id", headerName: "User ID", flex: 0.9 } as GridColDef]
-      : []),
+    // ── Admin only: Users count per batch ──
     ...(isAdmin
       ? [{
-          field: "account_holder_name",
-          headerName: "Account Name",
-          flex: 1.2,
+          field: "user_count",
+          headerName: "Users",
+          flex: 0.6,
+          align: "center" as const,
+          headerAlign: "center" as const,
+          renderCell: (p: any) => (
+            <span className="text-xs font-semibold text-[#0C3978]">
+              {p.value ?? "—"}
+            </span>
+          ),
         } as GridColDef]
       : []),
 
-    { field: "bank_name", headerName: "Bank", flex: 1 },
+    // ── User only: Bank ──
+    ...(!isAdmin
+      ? [{ field: "bank_name", headerName: "Bank", flex: 1 } as GridColDef]
+      : []),
 
+    // ── Types ──
     {
       field: "bonus_types",
       headerName: "Types",
@@ -151,22 +172,25 @@ export default function WithdrawPage() {
       ),
     },
 
+    // ── Payouts count ──
     {
       field: "payout_count",
       headerName: "Payouts",
       flex: 0.7,
-      align: "center",
+      align: "center" as const,
+      headerAlign: "center" as const,
       renderCell: (p: any) => (
         <span className="text-gray-500 text-xs">{p.value ?? "—"}</span>
       ),
     },
 
+    // ── Original amount ──
     {
       field: "original_amount",
       headerName: "Original (₹)",
       flex: 1,
-      align: "right",
-      headerAlign: "right",
+      align: "right" as const,
+      headerAlign: "right" as const,
       renderCell: (p: GridRenderCellParams<any, number>) => (
         <span className="text-gray-700 text-xs truncate">
           ₹ {Number(p.value ?? 0).toFixed(2)}
@@ -174,12 +198,13 @@ export default function WithdrawPage() {
       ),
     },
 
+    // ── Deducted amount ──
     {
       field: "deducted_amount",
       headerName: "Deducted (₹)",
       flex: 1,
-      align: "right",
-      headerAlign: "right",
+      align: "right" as const,
+      headerAlign: "right" as const,
       renderCell: (p: GridRenderCellParams<any, number>) => (
         <span className={`text-xs font-medium truncate ${(p.value ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
           {(p.value ?? 0) > 0 ? `₹ ${Number(p.value).toFixed(2)}` : "—"}
@@ -187,12 +212,13 @@ export default function WithdrawPage() {
       ),
     },
 
+    // ── Released amount ──
     {
       field: "released_amount",
       headerName: "Released (₹)",
       flex: 1,
-      align: "right",
-      headerAlign: "right",
+      align: "right" as const,
+      headerAlign: "right" as const,
       renderCell: (p: GridRenderCellParams<any, number>) => (
         <span className="text-green-700 text-xs font-bold truncate">
           ₹ {Number(p.value ?? 0).toFixed(2)}
@@ -200,6 +226,7 @@ export default function WithdrawPage() {
       ),
     },
 
+    // ── NEFT UTR ──
     {
       field: "neft_utr",
       headerName: "NEFT UTR",
@@ -243,7 +270,7 @@ export default function WithdrawPage() {
     },
   ];
 
-  const onBack    = () => router.push("/wallet/payout");
+  const onBack     = () => router.push("/wallet/payout");
   const handleEdit = (_id: string, row: any) => router.push(`/batches/${row.batch_id}`);
 
   return (
@@ -321,7 +348,9 @@ export default function WithdrawPage() {
         <div className="flex gap-4 mb-3 text-xs text-gray-500 flex-wrap">
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-[#0C3978]" />
-            Original = net after TDS/admin · one row per user per batch
+            {isAdmin
+              ? "One row per batch · click Batch ID to view full detail"
+              : "Original = net after TDS/admin · one row per batch"}
           </span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-full bg-orange-500" />

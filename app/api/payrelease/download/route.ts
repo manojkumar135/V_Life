@@ -146,7 +146,7 @@ async function buildExcel(
     };
     cell.border = { bottom: { style: "thin", color: { argb: "FFAAAAAA" } } };
   });
-  headerRow.height = 20;
+  headerRow.height = 30;
 
   const instructions = [
     "Enter beneficiary name.\nMANDATORY",
@@ -176,7 +176,7 @@ async function buildExcel(
       fgColor: { argb: "FFFFF2CC" },
     };
   });
-  instrRow.height = 72;
+    instrRow.height = 85;
 
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, "0");
@@ -189,13 +189,13 @@ async function buildExcel(
     if (amount <= 0) continue;
 
     const dataRow = worksheet.addRow([
-      row.account_holder_name || row.user_name || "",
+(row.account_holder_name || row.user_name || "").slice(0, 35),
       row.account_number || "",
       row.ifsc_code || "",
       "NEFT",
       "10269542603",
       todayFormatted,
-      amount,
+      parseFloat(amount.toFixed(2)),
       "INR",
       row.mail || "",
       "",
@@ -207,7 +207,7 @@ async function buildExcel(
     ]);
 
     const amountCell = dataRow.getCell(7);
-    amountCell.numFmt = "#,##0.00";
+amountCell.numFmt = "0.00";
     amountCell.alignment = { horizontal: "right" };
 
     const isEven = (dataRow.number - 2) % 2 === 0;
@@ -221,16 +221,16 @@ async function buildExcel(
       cell.alignment = cell.alignment || { vertical: "middle" };
       cell.border = { bottom: { style: "hair", color: { argb: "FFE0E0E0" } } };
     });
-    dataRow.height = 18;
+    dataRow.height = 22;
   }
 
   const colWidths = [
-    22, 26, 14, 16, 24, 14, 12, 10, 28, 24, 16, 16, 16, 14, 14,
+    25, 28, 16, 18, 26, 16, 14, 12, 25, 24, 18, 18, 18, 18, 18,
   ];
   worksheet.columns.forEach((col, i) => {
     if (col) col.width = colWidths[i] ?? 15;
   });
-  worksheet.views = [{ state: "frozen", ySplit: 2 }];
+  // worksheet.views = [{ state: "frozen", ySplit: 1 }];
 
   return (await workbook.xlsx.writeBuffer()) as unknown as ArrayBuffer;
 }

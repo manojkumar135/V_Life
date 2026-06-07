@@ -200,8 +200,16 @@ export default function TransactionHistory() {
       },
     },
 
-    { field: "details", headerName: "Detail", flex: 1.8 },
-
+{
+  field: "details",
+  headerName: "Detail",
+  flex: 1.3,
+  renderCell: (params: GridRenderCellParams<any, string>) => {
+    const detail = String(params.value ?? "");
+    const cleaned = detail.replace(/\s+from\s+\S+$/i, "").trim();
+    return <span>{cleaned}</span>;
+  },
+},
     { field: "from", headerName: "From", flex: 0.8 },
 
     {
