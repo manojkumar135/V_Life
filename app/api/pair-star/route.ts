@@ -73,10 +73,10 @@ async function countActiveFromDate(
     return ids;
   }
 
-  const leftIds  = subtreeIds(root.left);
+  const leftIds = subtreeIds(root.left);
   const rightIds = subtreeIds(root.right);
 
- const activeQuery = (ids: string[]) => ({
+  const activeQuery = (ids: string[]) => ({
     user_id: { $in: ids },
     user_status: "active",
     $or: [
@@ -88,10 +88,16 @@ async function countActiveFromDate(
 
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
-      ? User.find(activeQuery(leftIds), { user_id: 1, activated_date: 1 }).lean()
+      ? User.find(activeQuery(leftIds), {
+          user_id: 1,
+          activated_date: 1,
+        }).lean()
       : [],
     rightIds.length
-      ? User.find(activeQuery(rightIds), { user_id: 1, activated_date: 1 }).lean()
+      ? User.find(activeQuery(rightIds), {
+          user_id: 1,
+          activated_date: 1,
+        }).lean()
       : [],
   ]);
 
@@ -104,7 +110,7 @@ async function countActiveFromDate(
   };
 
   return {
-    leftCount:  filterByDate(leftUsers as any[]),
+    leftCount: filterByDate(leftUsers as any[]),
     rightCount: filterByDate(rightUsers as any[]),
   };
 }
@@ -117,7 +123,9 @@ async function buildUserProgress(user_id: string) {
   ]);
 
   const user = (await User.findOne({ user_id })
-    .select("user_id user_name pairs pair_star left_active_count right_active_count activated_date pair_star_released_tiers")
+    .select(
+      "user_id user_name pairs pair_star left_active_count right_active_count activated_date pair_star_released_tiers",
+    )
     .lean()) as any;
 
   if (!user) return null;
@@ -132,73 +140,98 @@ async function buildUserProgress(user_id: string) {
 
   if (globalStartDate) {
     const counted = await countActiveFromDate(user_id, globalStartDate);
-    leftCount  = counted.leftCount;
+    leftCount = counted.leftCount;
     rightCount = counted.rightCount;
   } else {
-    leftCount  = user.left_active_count  ?? 0;
+    leftCount = user.left_active_count ?? 0;
     rightCount = user.right_active_count ?? 0;
   }
 
   const currentPairs = Math.min(leftCount, rightCount);
-  const releasedTiers: Array<{ tier_name: string; reward: string; pairs: number; released_at: string }> =
-    user.pair_star_released_tiers ?? [];
+  const releasedTiers: Array<{
+    tier_name: string;
+    reward: string;
+    pairs: number;
+    released_at: string;
+    payout_status: string;
+    transaction_id: string | null;
+  }> = user.pair_star_released_tiers ?? [];
 
   let leftDirectPV = 0;
   let rightDirectPV = 0;
   try {
     const pv = await getDirectPV(user_id);
-    leftDirectPV  = pv.leftDirectPV;
+    leftDirectPV = pv.leftDirectPV;
     rightDirectPV = pv.rightDirectPV;
   } catch (_) {}
 
   const tiers = tierConfig.map((tier) => {
-    const pairsAchieved    = currentPairs  >= tier.pairs;
-    const leftPVAchieved   = leftDirectPV  >= tier.direct_pv;
-    const rightPVAchieved  = rightDirectPV >= tier.direct_pv;
-    const achieved         = pairsAchieved && leftPVAchieved && rightPVAchieved;
+    const pairsAchieved = currentPairs >= tier.pairs;
+    const leftPVAchieved = leftDirectPV >= tier.direct_pv;
+    const rightPVAchieved = rightDirectPV >= tier.direct_pv;
+    const achieved = pairsAchieved && leftPVAchieved && rightPVAchieved;
 
-    // Check reward_released from the released tiers array
-    const releaseRecord = releasedTiers.find((r) => r.tier_name === tier.tier_name);
+    // Normalize underscore → space for matching e.g. "BRONZE_STAR" → "BRONZE STAR"
+    const releaseRecord = releasedTiers.find(
+      (r) => r.tier_name.replace(/_/g, " ") === tier.tier_name,
+    );
     const reward_released = !!releaseRecord;
 
+    // payout_status "Paid" means payment received → show received date
+    const isPaid = releaseRecord?.payout_status === "Paid";
+
     return {
-      name:               tier.tier_name,
-      required_pairs:     tier.pairs,
+      name: tier.tier_name,
+      required_pairs: tier.pairs,
       required_direct_pv: tier.direct_pv,
-      reward:             tier.reward,
-      // start_date:         tier.start_date,
+      reward: tier.reward,
 
-      current_pairs:      currentPairs,
-      pairs_balance:      Math.max(0, tier.pairs - currentPairs),
-      pairs_percent:      Math.min(100, Math.round((currentPairs / tier.pairs) * 100)),
+      current_pairs: currentPairs,
+      pairs_balance: Math.max(0, tier.pairs - currentPairs),
+      pairs_percent: Math.min(
+        100,
+        Math.round((currentPairs / tier.pairs) * 100),
+      ),
 
-      left_active:        leftCount,
-      right_active:       rightCount,
-      left_direct_pv:     leftDirectPV,
-      right_direct_pv:    rightDirectPV,
-      left_pv_balance:    Math.max(0, tier.direct_pv - leftDirectPV),
-      right_pv_balance:   Math.max(0, tier.direct_pv - rightDirectPV),
-      left_pv_percent:    Math.min(100, Math.round((leftDirectPV  / tier.direct_pv) * 100)),
-      right_pv_percent:   Math.min(100, Math.round((rightDirectPV / tier.direct_pv) * 100)),
+      left_active: leftCount,
+      right_active: rightCount,
+      left_direct_pv: leftDirectPV,
+      right_direct_pv: rightDirectPV,
+      left_pv_balance: Math.max(0, tier.direct_pv - leftDirectPV),
+      right_pv_balance: Math.max(0, tier.direct_pv - rightDirectPV),
+      left_pv_percent: Math.min(
+        100,
+        Math.round((leftDirectPV / tier.direct_pv) * 100),
+      ),
+      right_pv_percent: Math.min(
+        100,
+        Math.round((rightDirectPV / tier.direct_pv) * 100),
+      ),
 
       achieved,
       reward_released,
-      released_at:        releaseRecord?.released_at ?? null, // when reward was released
-      released_pairs:     releaseRecord?.pairs       ?? null, // pairs count at time of release
+
+      // achieved_date = when reward was released/unlocked (released_at from DB)
+      achieved_date: releaseRecord?.released_at ?? null,
+
+      // released_at (received) = only when payout_status is "Paid"
+      released_at: isPaid ? (releaseRecord?.released_at ?? null) : null,
+
+      released_pairs: releaseRecord?.pairs ?? null,
     };
   });
 
   return {
     user_id,
-    user_name:            user.user_name,
-    current_pairs:        currentPairs,
-    current_pair_star:    user.pair_star ?? null,
-    left_active:          leftCount,
-    right_active:         rightCount,
-    left_direct_pv:       leftDirectPV,
-    right_direct_pv:      rightDirectPV,
+    user_name: user.user_name,
+    current_pairs: currentPairs,
+    current_pair_star: user.pair_star ?? null,
+    left_active: leftCount,
+    right_active: rightCount,
+    left_direct_pv: leftDirectPV,
+    right_direct_pv: rightDirectPV,
     start_date: globalConfig.start_date ?? null, // global — same for all users
-    activated_date:       user.activated_date       ?? null,
+    activated_date: user.activated_date ?? null,
     pair_star_released_tiers: releasedTiers,
     tiers,
   };
@@ -215,49 +248,59 @@ export async function GET(req: Request) {
     if (searchUser) {
       const progress = await buildUserProgress(searchUser);
       if (!progress) {
-        return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+        return NextResponse.json(
+          { success: false, message: "User not found" },
+          { status: 404 },
+        );
       }
       return NextResponse.json({ success: true, data: progress });
     }
 
     // ── ADMIN: list all achievers ─────────────────────────────────────────
     if (searchParams.get("admin") === "true") {
-      const tierConfig  = await loadTierConfig();
-      const search      = searchParams.get("search")    || "";
-      const filterTier  = searchParams.get("pair_star") || "";
+      const tierConfig = await loadTierConfig();
+      const search = searchParams.get("search") || "";
+      const filterTier = searchParams.get("pair_star") || "";
 
       const query: any = { pair_star: { $exists: true, $ne: null } };
       if (filterTier) query.pair_star = filterTier;
       if (search) {
         query.$or = [
-          { user_id:   { $regex: search, $options: "i" } },
+          { user_id: { $regex: search, $options: "i" } },
           { user_name: { $regex: search, $options: "i" } },
-          { contact:   { $regex: search, $options: "i" } },
+          { contact: { $regex: search, $options: "i" } },
         ];
       }
 
       const users = await User.find(query, {
-        user_id: 1, user_name: 1, contact: 1, pairs: 1, pair_star: 1,
-        left_active_count: 1, right_active_count: 1,
+        user_id: 1,
+        user_name: 1,
+        contact: 1,
+        pairs: 1,
+        pair_star: 1,
+        left_active_count: 1,
+        right_active_count: 1,
         activated_date: 1,
         pair_star_released_tiers: 1,
-      }).sort({ pairs: -1 }).lean();
+      })
+        .sort({ pairs: -1 })
+        .lean();
 
       const data = (users as any[]).map((u) => {
-        const tierInfo    = tierConfig.find((t) => t.tier_name === u.pair_star);
+        const tierInfo = tierConfig.find((t) => t.tier_name === u.pair_star);
         const releasedTiers = u.pair_star_released_tiers ?? [];
         return {
-          user_id:              u.user_id,
-          user_name:            u.user_name,
-          contact:              u.contact,
-          pairs:                u.pairs ?? 0,
-          pair_star:            u.pair_star,
-          left_active_count:    u.left_active_count  ?? 0,
-          right_active_count:   u.right_active_count ?? 0,
-          activated_date:       u.activated_date,
-          reward:               tierInfo?.reward ?? "",
-          required_pairs:       tierInfo?.pairs  ?? 0,
-          released_tiers:       releasedTiers,
+          user_id: u.user_id,
+          user_name: u.user_name,
+          contact: u.contact,
+          pairs: u.pairs ?? 0,
+          pair_star: u.pair_star,
+          left_active_count: u.left_active_count ?? 0,
+          right_active_count: u.right_active_count ?? 0,
+          activated_date: u.activated_date,
+          reward: tierInfo?.reward ?? "",
+          required_pairs: tierInfo?.pairs ?? 0,
+          released_tiers: releasedTiers,
         };
       });
 
@@ -267,18 +310,26 @@ export async function GET(req: Request) {
     // ── USER: own progress ────────────────────────────────────────────────
     const user_id = searchParams.get("user_id");
     if (!user_id) {
-      return NextResponse.json({ success: false, message: "user_id is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "user_id is required" },
+        { status: 400 },
+      );
     }
 
     const progress = await buildUserProgress(user_id);
     if (!progress) {
-      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "User not found" },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ success: true, data: progress });
   } catch (err: any) {
     console.error("[PairStar API] GET error:", err);
-    return NextResponse.json({ success: false, message: err.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: err.message || "Server error" },
+      { status: 500 },
+    );
   }
 }
-  

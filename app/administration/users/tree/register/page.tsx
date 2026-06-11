@@ -48,6 +48,9 @@ function RegisterContent() {
   const [panVerified, setPanVerified] = useState(false);
   const [panChecking, setPanChecking] = useState(false);
 
+  const [referralName, setReferralName] = useState<string | null>(null);
+  const [referralChecking, setReferralChecking] = useState(false);
+
   const [modalType, setModalType] = useState<
     "terms" | "privacy" | "refund" | null
   >(null);
@@ -194,11 +197,37 @@ function RegisterContent() {
     }
   };
 
+  const checkReferralId = async (id: string) => {
+    if (id.length !== 10) {
+      setReferralName(null);
+      return;
+    }
+    try {
+      setReferralChecking(true);
+      const res = await axios.get(`/api/users-operations?user_id=${id}`);
+      if (res.data.success && res.data.data?.user_name) {
+        setReferralName(res.data.data.user_name);
+      } else {
+        setReferralName("User not found");
+      }
+    } catch {
+      setReferralName("User not found");
+    } finally {
+      setReferralChecking(false);
+    }
+  };
+
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (formik.values.referBy?.length === 10) {
+      checkReferralId(formik.values.referBy);
+    }
+  }, [formik.values.referBy]);
 
   const handleNavigateToLogin = () => router.push("/auth/login");
 
@@ -514,7 +543,13 @@ function RegisterContent() {
                     name="referBy"
                     placeholder="Referral ID"
                     value={formik.values.referBy}
-                    onChange={formik.handleChange}
+                    onChange={(e) => {
+                      formik.handleChange(e);
+                      setReferralName(null);
+                      if (e.target.value.length === 10) {
+                        checkReferralId(e.target.value);
+                      }
+                    }}
                     onBlur={formik.handleBlur}
                     className="w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
                   />
@@ -524,6 +559,33 @@ function RegisterContent() {
                     ? formik.errors.referBy
                     : "\u00A0"}
                 </span>
+                {/* Referral name lookup */}
+                {referralChecking && (
+                  <p className="text-xs text-gray-400 -mt-3">Checking...</p>
+                )}
+                {!referralChecking && referralName && (
+                  <p
+                    className={`text-[10px] -mt-3 flex items-center gap-1 ${
+                      referralName === "User not found"
+                        ? "text-red-500"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    {referralName === "User not found" ? (
+                      <>❌ Referral ID not found</>
+                    ) : (
+                      <>
+                        ✓
+                        <span>
+                          Referred by{" "}
+                          <span className="font-medium text-gray-800">
+                            {referralName}
+                          </span>
+                        </span>
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* Team */}
@@ -549,7 +611,6 @@ function RegisterContent() {
                       styles={customSelectStyles}
                       placeholder="Select Team"
                       className="w-full"
-                      
                     />
                   )}
                 </div>

@@ -76,6 +76,24 @@ const TIER_COLORS: Record<string, string> = {
   "MAVERICK AMBASSADOR": "text-indigo-900",
 };
 
+const TIER_NAME_TO_BADGE: Record<string, string> = {
+  "BRONZE STAR": "bronze",
+  "SILVER STAR": "silver",
+  "GOLD STAR": "gold",
+  "PLATINUM STAR": "platinum",
+  "RUBY EXECUTIVE": "ruby",
+  "PEARL EXECUTIVE": "pearl",
+  "SAPHIRE EXECUTIVE": "saphire",
+  "EMERALD EXECUTIVE": "emerald",
+  DIAMOND: "diamond",
+  "BLUE DIAMOND": "bluediamond",
+  "BLACK DIAMOND": "blackdiamond",
+  "CROWN DIAMOND": "crowndiamond",
+  AMBASSADOR: "ambassador",
+  "CROWN AMBASSADOR": "crownambassador",
+  "MAVERICK AMBASSADOR": "maverickambassador",
+};
+
 // Convert DD-MM-YYYY ↔ YYYY-MM-DD for input[type=date]
 function toInputDate(ddmmyyyy: string | null): string {
   if (!ddmmyyyy) return "";
@@ -388,7 +406,7 @@ export default function AdminPairConfigPage() {
                       <tr>
                         {[
                           "Tier Name",
-                          "Required Pairs",
+                          "Required Points",
                           "Direct PV / Side",
                           "Reward",
                           "Updated",
@@ -565,7 +583,7 @@ export default function AdminPairConfigPage() {
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           <div>
                             <p className="text-xs text-gray-400">
-                              Required Pairs
+                              Required Points
                             </p>
                             {isEditing ? (
                               <input
@@ -650,7 +668,10 @@ export default function AdminPairConfigPage() {
                       value: `${userProgress.user_name} (${userProgress.user_id})`,
                       small: true,
                     },
-                    { label: "Total Pairs", value: userProgress.current_pairs },
+                    {
+                      label: "Total Points",
+                      value: userProgress.current_pairs,
+                    },
                     { label: "Left Active", value: userProgress.left_active },
                     { label: "Right Active", value: userProgress.right_active },
                   ].map((s) => (
@@ -683,16 +704,15 @@ export default function AdminPairConfigPage() {
                       {/* Top row: tier name + status badge */}
                       <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
                         <div className="flex items-center gap-2">
-                          <div
-                            className={`p-1.5 rounded-lg ${isAchieved ? "bg-green-100" : "bg-gray-100"}`}
-                          >
-                            <FaTrophy
-                              size={14}
-                              className={
-                                isAchieved ? "text-green-500" : "text-gray-400"
-                              }
-                            />
-                          </div>
+                          <img
+                            src={`/badges/newbadges/${TIER_NAME_TO_BADGE[tier.name] ?? "associate"}.png`}
+                            alt={tier.name}
+                            className={`w-12 h-12 object-contain drop-shadow-sm ${!isAchieved ? "opacity-40 grayscale" : ""}`}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display =
+                                "none";
+                            }}
+                          />
                           <span
                             className={`font-bold text-sm ${TIER_COLORS[tier.name] ?? "text-gray-800"}`}
                           >
@@ -780,7 +800,7 @@ export default function AdminPairConfigPage() {
                         <div>
                           <div className="flex justify-between text-[10px] mb-1">
                             <span className="font-semibold text-purple-600">
-                              Pairs
+                              Points
                             </span>
                             <span className="text-gray-500">
                               {Math.min(

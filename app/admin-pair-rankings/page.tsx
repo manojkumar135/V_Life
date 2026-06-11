@@ -249,7 +249,7 @@ export default function AdminPairRankingsPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {[
-                  "User", "Contact", "Pair Star", "Pairs",
+                  "User", "Contact", "Star", "Points",
                   "Left Active", "Right Active", "Reward",
                   "Payout ID", "Activated Date",
                 ].map((h) => (
@@ -331,7 +331,7 @@ export default function AdminPairRankingsPage() {
 
                 <div className="grid grid-cols-3 gap-2 text-center mb-3">
                   <div className="bg-blue-50 rounded-lg py-1.5">
-                    <p className="text-[10px] text-gray-500">Pairs</p>
+                    <p className="text-[10px] text-gray-500">Points</p>
                     <p className="font-bold text-blue-700 text-sm">{u.pairs.toLocaleString()}</p>
                   </div>
                   <div className="bg-green-50 rounded-lg py-1.5">

@@ -46,6 +46,8 @@ function RegisterContent() {
 
   const [loading, setLoading] = useState(false);
   // const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [referralName, setReferralName] = useState<string | null>(null);
+  const [referralChecking, setReferralChecking] = useState(false);
 
   const [panVerified, setPanVerified] = useState(false);
   const [panChecking, setPanChecking] = useState(false);
@@ -144,6 +146,34 @@ function RegisterContent() {
   });
 
   const [isInitialSet, setIsInitialSet] = useState(false);
+
+  const checkReferralId = async (id: string) => {
+    if (id.length !== 10) {
+      setReferralName(null);
+      return;
+    }
+    try {
+      setReferralChecking(true);
+      const res = await axios.get(`/api/users-operations?user_id=${id}`);
+      if (res.data.success && res.data.data?.user_name) {
+        setReferralName(res.data.data.user_name);
+      } else {
+        setReferralName("User not found");
+      }
+    } catch {
+      setReferralName("User not found");
+    } finally {
+      setReferralChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (formik.values.referBy?.length === 10) {
+      checkReferralId(formik.values.referBy);
+    } else {
+      setReferralName(null);
+    }
+  }, [formik.values.referBy]);
 
   useEffect(() => {
     if (isInitialSet) return;
@@ -469,7 +499,7 @@ function RegisterContent() {
                       )}
                       onChange={(opt) => {
                         formik.setFieldValue("gender", opt?.value || "", true);
-                        // formik.setFieldTouched("gender", true); 
+                        // formik.setFieldTouched("gender", true);
                       }}
                       onBlur={() => {
                         setTimeout(
@@ -560,7 +590,7 @@ function RegisterContent() {
                     value={formik.values.referBy}
                     onChange={formik.handleChange}
                     onBlur={formik.handleBlur}
-                    readOnly={isReferByPreset} // only read-only if preset
+                    readOnly={isReferByPreset}
                     className={`w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200 ${
                       isReferByPreset ? " cursor-not-allowed" : ""
                     }`}
@@ -571,6 +601,33 @@ function RegisterContent() {
                     ? formik.errors.referBy
                     : "\u00A0"}
                 </span>
+                {/* Referral name display */}
+                {referralChecking && (
+                  <p className="text-xs text-gray-400 -mt-3">Checking...</p>
+                )}
+                {!referralChecking && referralName && (
+                  <p
+                    className={`text-[10px] -mt-3 flex items-center gap-1 ${
+                      referralName === "User not found"
+                        ? "text-red-500"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    {referralName === "User not found" ? (
+                      <>❌ Referral ID not found</>
+                    ) : (
+                      <>
+                        ✓
+                        <span>
+                          Referred by {" "}
+                          <span className="font-medium text-gray-800">
+                            {referralName}
+                          </span>
+                        </span>
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
 
               {/* Team */}
@@ -585,7 +642,7 @@ function RegisterContent() {
                       // Team Select
                       onChange={(opt) => {
                         formik.setFieldValue("team", opt?.value || "");
-                        // formik.setFieldTouched("team", true); 
+                        // formik.setFieldTouched("team", true);
                       }}
                       onBlur={() => {
                         setTimeout(

@@ -23,9 +23,11 @@ import {
   FaRupeeSign,
   FaUser,
   FaShoppingBag,
-  FaWallet,FaReceipt,FaPercent ,FaTrophy
+  FaWallet,
+  FaReceipt,
+  FaPercent,
+  FaTrophy,
 } from "react-icons/fa";
-
 
 import { MdOutlineCheckCircle } from "react-icons/md";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
@@ -51,7 +53,7 @@ interface DashboardSummary {
   totalGST: number;
   totalTDS: number;
   totalAdminCharge: number;
-  pairRewardTotal:number;
+  pairRewardTotal: number;
 }
 
 interface CycleStats {
@@ -70,77 +72,51 @@ interface LinkButtonProps {
   onClick: () => void;
 }
 
+// ── Pair Star → Badge file mapping ──────────────────────────────────────────
+const PAIR_STAR_TO_BADGE: Record<string, string> = {
+  STAR: "bronze",
+  "BRONZE STAR": "bronze",
+  "SILVER STAR": "silver",
+  "GOLD STAR": "gold",
+  "PLATINUM STAR": "platinum",
+  "RUBY EXECUTIVE": "ruby",
+  "PEARL EXECUTIVE": "pearl",
+  "SAPHIRE EXECUTIVE": "saphire",
+  "EMERALD EXECUTIVE": "emerald",
+  DIAMOND: "diamond",
+  "BLUE DIAMOND": "bluediamond",
+  "BLACK DIAMOND": "blackdiamond",
+  "CROWN DIAMOND": "crowndiamond",
+  AMBASSADOR: "ambassador",
+  "CROWN AMBASSADOR": "crownambassador",
+  "MAVERICK AMBASSADOR": "maverickambassador",
+};
+
 function resolveBadge(user: any): string {
   const status = (user?.user_status || user?.status || "").toLowerCase();
   const notes = (user?.status_notes || "").toLowerCase();
-  const rank = user?.rank || "";
-  const club = user?.club || "";
 
+  // 1️⃣ Blocked / inactive — highest priority
   if (status === "inactive" || status === "deactivated") {
     if (notes.includes("deactivated by admin")) return "blocked";
     return "registered";
   }
 
-  if (!rank || rank === "none" || rank === "0") return "associate";
-
-  // ✅ Handle numeric star ranks
-  const numericRank = Number(rank);
-  if (!isNaN(numericRank)) {
-    if (numericRank === 1) return "star";
-    if (numericRank >= 2 && numericRank <= 5) return "twostar";
+  // 2️⃣ Active user — pair_star drives the badge
+  const pairStar = user?.pair_star as string | undefined;
+  if (pairStar && PAIR_STAR_TO_BADGE[pairStar]) {
+    return PAIR_STAR_TO_BADGE[pairStar];
   }
 
-  // Keep club fallback if needed
-  if (club === "Star") return "star";
+  // 3️⃣ No pair_star but has any rank > 0 → show star badge
+  const rank = user?.rank;
+  const hasRank = rank && rank !== "none" && rank !== "0" && Number(rank) !== 0;
 
-  const namedRanks: Record<string, string> = {
-    Bronze: "bronze",
-    Sliver: "sliver",
-    Silver: "sliver",
-    Gold: "gold",
-    Emerald: "emerald",
-    Platinum: "platinum",
-    Diamond: "diamond",
-    "Blue Diamond": "bluediamond",
-    "Black Diamond": "blackdiamond",
-    "Crown Diamond": "crowndiamond",
-    "Royal Crown Diamond": "royalcrowndiamond",
-    Royality: "royalcrowndiamond",
-  };
+  if (hasRank) return "star";
 
-  if (namedRanks[rank]) return namedRanks[rank];
-
+  // 4️⃣ Fallback
   return "associate";
 }
-
-const rankImages: Record<string, string> = {
-  no: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761374765/Untitled_design_2_buhazb.png",
-  star: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1769360047/Gemini_Generated_Image_qg6njaqg6njaqg6n_a8dpp6.png",
-  1: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367318/ChatGPT_Image_Oct_25_2025_09_53_33_AM_b6tic2.png",
-  2: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367492/ChatGPT_Image_Oct_20_2025_09_19_12_PM_lykzu7.png",
-  3: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367549/ChatGPT_Image_Oct_20_2025_09_21_04_PM_fpgj0v.png",
-  4: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367566/ChatGPT_Image_Oct_20_2025_09_26_35_PM_bbl4go.png",
-  5: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1761367581/ChatGPT_Image_Oct_20_2025_09_30_19_PM_ixcuyj.png",
-  Bronze:
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764656253/Untitled_design_6_fwn8o6.png",
-  Sliver:
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664375/Untitled_design_7_pyar1u.png",
-  Gold: "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664414/Untitled_design_8_vh0npp.png",
-  Emerald:
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664466/Untitled_design_9_n46vye.png",
-  Platinum:
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664632/Untitled_design_10_gvft4o.png",
-  Diamond:
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664884/Untitled_design_11_m1wixb.png",
-  "Blue Diamond":
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764664916/Untitled_design_12_opwh7d.png",
-  "Black Diamond":
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764665001/Untitled_design_13_mkxup3.png",
-  "Crown Diamond":
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764665045/Untitled_design_14_kyqgsj.png",
-  "Royal Crown Diamond":
-    "https://res.cloudinary.com/dtb4vozhy/image/upload/v1764665085/Untitled_design_15_kfpqqa.png",
-};
 
 const DashboardPage: React.FC = () => {
   const { user } = useVLife();
@@ -400,11 +376,12 @@ const DashboardPage: React.FC = () => {
                         : "border-red-500"
                     }`}
                   />
+                  {/* ── Profile badge (bottom-right of avatar) ── */}
                   <img
-                    src={`/badges/${badgeKey}.png`}
+                    src={`/badges/newbadges/${badgeKey}.png`}
                     alt={badgeKey}
-                    className="absolute w-14 h-14 object-contain drop-shadow-md"
-                    style={{ bottom: "-15px", right: "-20px" }}
+                    className="absolute w-16 h-16 object-contain drop-shadow-md"
+                    style={{ bottom: "-10px", right: "-20px" }}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
@@ -503,7 +480,6 @@ const DashboardPage: React.FC = () => {
             </div>
 
             {/* ── Maverick Cycle + MNF — mobile only ── */}
-            {/* ✅ UPDATED: onClick navigates to rewards with correct tab param */}
             <div className="md:hidden grid grid-cols-2 gap-3">
               <DashBox
                 icon={<BsFillPeopleFill />}
@@ -575,8 +551,9 @@ const DashboardPage: React.FC = () => {
               <div className="hidden sm:block">
                 <InfoCard title="Achieved Rank">
                   <div className="mx-auto flex flex-col items-center justify-center py-2">
+                    {/* ── Rank card badge ── */}
                     <img
-                      src={`/badges/${badgeKey}.png`}
+                      src={`/badges/newbadges/${badgeKey}.png`}
                       alt={badgeKey}
                       className="h-30 w-30 object-contain drop-shadow-md mx-auto"
                       onError={(e) => {
@@ -621,8 +598,6 @@ const DashboardPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
-                {/* Hidden on mobile — already shown above */}
-                {/* ✅ UPDATED: onClick navigates to rewards with tab=matching */}
                 <div className="hidden md:block">
                   <DashBox
                     icon={<BsFillPeopleFill />}
@@ -633,8 +608,6 @@ const DashboardPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Hidden on mobile — already shown above */}
-                {/* ✅ UPDATED: onClick navigates to rewards with tab=score */}
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaGift />}
@@ -644,9 +617,10 @@ const DashboardPage: React.FC = () => {
                     onClick={() => router.push("/wallet/rewards?tab=score")}
                   />
                 </div>
-                 <DashBox
+
+                <DashBox
                   icon={<FaTrophy />}
-                  title="Pair Reward"
+                  title="Ranks & rewards"
                   value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
                   index={3}
                 />
@@ -659,9 +633,7 @@ const DashboardPage: React.FC = () => {
                     index={0}
                   />
                 </div>
-                 
 
-                {/* Payout Released — visible on all screens */}
                 <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Payout Released"
@@ -669,7 +641,6 @@ const DashboardPage: React.FC = () => {
                   index={0}
                 />
 
-                {/* Payout On Hold — visible on all screens */}
                 <DashBox
                   icon={<FaWallet />}
                   title="Payout On Hold"
@@ -684,7 +655,6 @@ const DashboardPage: React.FC = () => {
                   index={3}
                 />
 
-                {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaShoppingBag />}
@@ -694,7 +664,6 @@ const DashboardPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaShoppingBag />}
@@ -704,7 +673,6 @@ const DashboardPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaShoppingBag />}
@@ -714,7 +682,6 @@ const DashboardPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Hidden on mobile — already shown above */}
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaShoppingBag />}
@@ -723,14 +690,16 @@ const DashboardPage: React.FC = () => {
                     index={7}
                   />
                 </div>
+
                 {/* <DashBox
                   icon={<FaReceipt />}
                   title="Total GST"
                   value={`${summary?.totalGST?.toFixed(2) || "0.00"}`}
                   index={3}
                 /> */}
+
                 <DashBox
-                  icon={<FaPercent  />}
+                  icon={<FaPercent />}
                   title="Total TDS"
                   value={`${summary?.totalTDS?.toFixed(2) || "0.00"}`}
                   index={3}
@@ -798,7 +767,6 @@ const DASH_GRADIENTS = [
   "linear-gradient(135deg, #0C3978 0%, #106187 50%, #16B8E4 100%)",
 ];
 
-// ✅ UPDATED: DashBox now accepts an optional onClick prop
 const DashBox = ({
   icon,
   title,

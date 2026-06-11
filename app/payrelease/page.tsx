@@ -175,31 +175,46 @@ export default function EligiblePayoutsPage() {
     { field: "user_name", headerName: "Username", flex: 1 },
     { field: "account_holder_name", headerName: "Account Name", flex: 1 },
     // { field: "contact", headerName: "Contact", flex: 1 },
-    {
-      field: "rank",
-      headerName: "Rank",
-      flex: 0.8,
-      renderCell: (params: any) => {
-        const value = params.value;
-        if (
-          value === null ||
-          value === undefined ||
-          value === "" ||
-          value === "none" ||
-          String(value).toLowerCase() === "null"
-        )
-          return "-";
+   {
+  field: "rank",
+  headerName: "Rank",
+  flex: 1,
+  renderCell: (params: any) => {
+    const row = params.row;
+    const pairStar = row?.pair_star;
+    const status = (row?.user_status || row?.status || "").toLowerCase();
+    const rank = params.value;
 
-        const num = Number(value);
-        if (!isNaN(num) && num >= 1 && num <= 5) {
-          return num === 1 ? "1 Star" : "2 Star";
-        }
-        return (
-          String(value).charAt(0).toUpperCase() +
-          String(value).slice(1).toLowerCase()
-        );
-      },
-    },
+    // 1️⃣ If user has pair_star — show it (capitalize)
+    if (pairStar && pairStar !== "none" && pairStar !== "") {
+      return (
+        <span className="capitalize text-xs font-medium">
+          {String(pairStar)
+            .toLowerCase()
+            .replace(/\b\w/g, (c) => c.toUpperCase())}
+        </span>
+      );
+    }
+
+    // 2️⃣ No pair_star — check rank + active status
+    const isActive = status === "active";
+    const rankNum = Number(rank);
+    const hasRank =
+      rank !== null &&
+      rank !== undefined &&
+      rank !== "" &&
+      rank !== "none" &&
+      String(rank).toLowerCase() !== "null" &&
+      (!isNaN(rankNum) ? rankNum > 0 : true);
+
+    if (isActive && hasRank) {
+      return <span className="text-xs font-medium">Star</span>;
+    }
+
+    // 3️⃣ Fallback
+    return <span className="text-gray-400">-</span>;
+  },
+},
     { field: "bank_name", headerName: "Bank", flex: 1 },
     { field: "account_number", headerName: "Account No.", flex: 1.2 },
     { field: "ifsc_code", headerName: "IFSC", flex: 0.8 },

@@ -160,7 +160,9 @@ export async function GET(request: Request) {
   }
 }
 
-// ✅ PUT — Full update (replace fields)
+// ✅ PUT — Update booking (safe nested merge using $set)
+// CHANGED: replaced `rest` spread with explicit $set to safely update
+// shipping subdocument and status without wiping other fields
 export async function PUT(request: Request) {
   try {
     await connectDB();
@@ -174,15 +176,33 @@ export async function PUT(request: Request) {
       );
     }
 
+    // Build a $set payload so nested fields (e.g. shipping.tracking_id)
+    // are merged rather than replaced entirely
+    const setPayload: any = {};
+
+    Object.entries(rest).forEach(([key, value]) => {
+      if (key === "shipping" && typeof value === "object" && value !== null) {
+        // Flatten shipping fields into dotted paths so only sent
+        // sub-fields are updated (mirrors OrderDetailView behavior)
+        Object.entries(value as Record<string, any>).forEach(([subKey, subVal]) => {
+          setPayload[`shipping.${subKey}`] = subVal;
+        });
+      } else {
+        setPayload[key] = value;
+      }
+    });
+
     let updatedBooking;
     if (mongoose.Types.ObjectId.isValid(updateId)) {
-      updatedBooking = await Booking.findByIdAndUpdate(updateId, rest, {
-        new: true,
-      });
+      updatedBooking = await Booking.findByIdAndUpdate(
+        updateId,
+        { $set: setPayload },
+        { new: true }
+      );
     } else {
       updatedBooking = await Booking.findOneAndUpdate(
         { booking_id: updateId },
-        rest,
+        { $set: setPayload },
         { new: true }
       );
     }

@@ -1198,8 +1198,8 @@ const MaverickHome = () => {
                 </p>
                 <div className="flex flex-col gap-2 mb-6 sm:mb-8">
                   {[
-                    "Success without growth is hollow",
-                    "Built for Life Fulfillment",
+                    "Success without growth is hollow & Life without success is subtle.",
+                    "MAVERICK is programmed for LIFE FULFILLMENT.",
                   ].map((line, i) => (
                     <div
                       key={i}
@@ -1225,7 +1225,7 @@ const MaverickHome = () => {
                 className="flex-1 flex flex-col gap-4 w-full lg:w-auto" // ← flex-col instead of grid
               >
                 {/* ── Label + pills — full width, above the grid ── */}
-                <div className="flex flex-col gap-2 w-full">
+                {/* <div className="flex flex-col gap-2 w-full">
                   <p className="text-white/55 text-xs sm:text-sm mb-3 sm:mb-4">
                     Our Quad-Core Plan is:
                   </p>
@@ -1249,7 +1249,7 @@ const MaverickHome = () => {
                       </span>
                     ))}
                   </div>
-                </div>
+                </div> */}
 
                 {/* ── Plan tags grid — below the pills ── */}
                 <div className="grid grid-cols-2 gap-2.5 sm:gap-3 w-full">

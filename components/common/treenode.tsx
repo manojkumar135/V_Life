@@ -13,6 +13,7 @@ export interface TreeNode {
   name: string;
   user_status: string;
   status_notes?: string;
+  pair_star?: string;
 
   rank?: string;
   club?: string;
@@ -80,46 +81,49 @@ const formatRank = (rank?: string): string => {
  * 4. club === "Star" OR numeric rank                         → star
  * 5. named rank (Bronze … Royal Crown Diamond)               → matching file
  */
+
+// ── Pair Star → Badge file mapping ──────────────────────────────────────────
+const PAIR_STAR_TO_BADGE: Record<string, string> = {
+  STAR: "bronze",
+  "BRONZE STAR": "bronze",
+  "SILVER STAR": "silver",
+  "GOLD STAR": "gold",
+  "PLATINUM STAR": "platinum",
+  "RUBY EXECUTIVE": "ruby",
+  "PEARL EXECUTIVE": "pearl",
+  "SAPHIRE EXECUTIVE": "saphire",
+  "EMERALD EXECUTIVE": "emerald",
+  DIAMOND: "diamond",
+  "BLUE DIAMOND": "bluediamond",
+  "BLACK DIAMOND": "blackdiamond",
+  "CROWN DIAMOND": "crowndiamond",
+  AMBASSADOR: "ambassador",
+  "CROWN AMBASSADOR": "crownambassador",
+  "MAVERICK AMBASSADOR": "maverickambassador",
+};
+
 function resolveBadge(node: TreeNode): string {
   const status = (node.user_status || "").toLowerCase();
   const notes = (node.status_notes || "").toLowerCase();
-  const rank = node.rank || "";
-  const club = node.club || "";
 
+  // 1️⃣ Blocked / inactive
   if (status === "inactive" || status === "deactivated") {
     if (notes.includes("deactivated by admin")) return "blocked";
     return "registered";
   }
 
-  if (!rank || rank === "none" || rank === "0") return "associate";
-
-  // ✅ Handle numeric star ranks properly
-  const numericRank = Number(rank);
-  if (!isNaN(numericRank)) {
-    if (numericRank === 1) return "star";
-    if (numericRank >= 2 && numericRank <= 5) return "twostar";
+  // 2️⃣ Active — pair_star drives the badge
+  const pairStar = (node as any).pair_star as string | undefined;
+  if (pairStar && PAIR_STAR_TO_BADGE[pairStar]) {
+    return PAIR_STAR_TO_BADGE[pairStar];
   }
 
-  // Keep club logic if needed
-  if (club === "Star") return "star";
+  // 3️⃣ No pair_star but has rank > 0 → star
+  const rank = node.rank || "";
+  const hasRank = rank && rank !== "none" && rank !== "0" && Number(rank) !== 0;
+  if (hasRank) return "star";
 
-  const namedRanks: Record<string, string> = {
-    Bronze: "bronze",
-    Sliver: "sliver",
-    Silver: "sliver",
-    Gold: "gold",
-    Emerald: "emerald",
-    Platinum: "platinum",
-    Diamond: "diamond",
-    "Blue Diamond": "bluediamond",
-    "Black Diamond": "blackdiamond",
-    "Crown Diamond": "crowndiamond",
-    "Royal Crown Diamond": "royalcrowndiamond",
-    Royality: "royalcrowndiamond",
-  };
-
-  if (namedRanks[rank]) return namedRanks[rank];
-
+  // 4️⃣ Fallback
   return "associate";
 }
 
@@ -370,7 +374,7 @@ const BinaryTreeNode: React.FC<Props> = ({
             onTouchEnd={handleTouchEnd}
           >
             <img
-              src={`/badges/${badgeKey}.png`}
+              src={`/badges/newbadges/${badgeKey}.png`}
               alt={badgeKey}
               className="w-14 h-14 object-contain drop-shadow-md"
               onError={(e) => {
@@ -413,7 +417,7 @@ const BinaryTreeNode: React.FC<Props> = ({
             {/* Badge preview in tooltip */}
             <div className="flex items-center gap-2 pb-1 border-b border-gray-100 mb-1">
               <img
-                src={`/badges/${badgeKey}.png`}
+                src={`/badges/newbadges/${badgeKey}.png`}
                 alt={badgeKey}
                 className="w-8 h-8 object-contain"
                 onError={(e) => {
@@ -421,14 +425,11 @@ const BinaryTreeNode: React.FC<Props> = ({
                 }}
               />
               <span className="font-semibold capitalize text-gray-700">
-                {(() => {
-                  const rank = node.rank || "";
-                  const num = Number(rank);
-                  if (!isNaN(num) && num >= 1 && num <= 5) {
-                    return num === 1 ? "1 Star" : "2 Star";
-                  }
-                  return badgeKey.replace(/([a-z])([A-Z])/g, "$1 $2");
-                })()}
+                {node.pair_star
+                  ? node.pair_star
+                      .toLowerCase()
+                      .replace(/\b\w/g, (c) => c.toUpperCase())
+                  : badgeKey.replace(/([a-z])([A-Z])/g, "$1 $2")}
               </span>
             </div>
 
@@ -526,7 +527,7 @@ const BinaryTreeNode: React.FC<Props> = ({
               <div className="flex">
                 <strong className="w-20">Referrals:</strong>
                 <span className="truncate">
-                  {node.referrals} 
+                  {node.referrals}
                   {node.paid_directs != null && (
                     <span className="text-gray-600 ml-1">
                       ({node.paid_directs} active)

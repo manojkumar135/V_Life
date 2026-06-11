@@ -29,6 +29,8 @@ interface Tier {
   right_pv_percent: number;
   achieved: boolean;
   reward_released: boolean;
+  achieved_date?: string | null;
+  released_at?: string | null;
 }
 
 interface PairStarData {
@@ -70,9 +72,27 @@ function fmtNum(n: number): string {
   return String(n);
 }
 
+const TIER_NAME_TO_BADGE: Record<string, string> = {
+  STAR: "bronze",
+  "BRONZE STAR": "bronze",
+  "SILVER STAR": "silver",
+  "GOLD STAR": "gold",
+  "PLATINUM STAR": "platinum",
+  "RUBY EXECUTIVE": "ruby",
+  "PEARL EXECUTIVE": "pearl",
+  "SAPHIRE EXECUTIVE": "saphire",
+  "EMERALD EXECUTIVE": "emerald",
+  DIAMOND: "diamond",
+  "BLUE DIAMOND": "bluediamond",
+  "BLACK DIAMOND": "blackdiamond",
+  "CROWN DIAMOND": "crowndiamond",
+  AMBASSADOR: "ambassador",
+  "CROWN AMBASSADOR": "crownambassador",
+  "MAVERICK AMBASSADOR": "maverickambassador",
+};
 const TIER_COLORS: Record<string, { bg: string; badge: string; text: string }> =
   {
-    STAR: {
+    "BRONZE STAR": {
       bg: "from-purple-500 to-purple-700",
       badge: "bg-purple-600",
       text: "text-purple-700",
@@ -239,7 +259,7 @@ export default function PairRankingsPage() {
             <IoIosArrowBack
               size={24}
               className="cursor-pointer text-gray-700 hover:text-black"
-              onClick={() =>router.push("/administration/users")}
+              onClick={() => router.push("/administration/users")}
             />
             <FaTrophy size={22} className="text-yellow-500" />
             <h1 className="text-lg md:text-xl font-bold text-gray-900">
@@ -247,12 +267,12 @@ export default function PairRankingsPage() {
             </h1>
           </div>
 
-          {/* Start date — read only for user, set by admin globally */}
-          {data?.start_date && (
+          {/* current_pairs — read only for user, set by admin globally */}
+          {data?.current_pairs && (
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span>Counting from:</span>
+              <span>Total Points:</span>
               <span className="font-semibold text-gray-700">
-                {data.start_date}
+                {data.current_pairs}
               </span>
             </div>
           )}
@@ -262,11 +282,6 @@ export default function PairRankingsPage() {
         {data && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
             {[
-              {
-                label: "Total Pairs",
-                value: data.current_pairs,
-                color: "text-blue-700",
-              },
               {
                 label: "Left Active",
                 value: data.left_active,
@@ -281,6 +296,18 @@ export default function PairRankingsPage() {
                 label: "Current Rank",
                 value: data.current_pair_star ?? "—",
                 color: "text-purple-700",
+                small: true,
+              },
+              {
+                label: "Next Star",
+                value: (() => {
+                  const currentIdx = data.tiers.findIndex(
+                    (t) => t.name === data.current_pair_star,
+                  );
+                  const next = data.tiers[currentIdx + 1];
+                  return next ? next.name : "—";
+                })(),
+                color: "text-blue-700",
                 small: true,
               },
             ].map((s) => (
@@ -308,7 +335,7 @@ export default function PairRankingsPage() {
           <div className="hidden sm:grid grid-cols-[1.8fr_1.2fr_2fr_1.6fr_1fr_0.8fr] gap-4 px-4 pb-2 border-b border-gray-200 mb-2">
             {[
               "Rank",
-              "Required Pairs",
+              "Required Points",
               "Your Progress",
               "Status",
               "Incentive",
@@ -351,18 +378,23 @@ export default function PairRankingsPage() {
                 <div className="p-4 grid grid-cols-1 sm:grid-cols-[1.8fr_1.2fr_2fr_1.6fr_1fr_0.8fr] gap-3 sm:gap-4 items-center">
                   {/* ── Col 1: Rank badge + name ── */}
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`bg-gradient-to-br ${color.bg} p-2.5 rounded-full flex-shrink-0`}
-                    >
-                      <FaTrophy size={18} className="text-white" />
-                    </div>
+                    <img
+                      src={`/badges/newbadges/${TIER_NAME_TO_BADGE[tier.name] ?? "associate"}.png`}
+                      alt={tier.name}
+                      className="w-18 h-18 object-contain drop-shadow-md shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
                     <div>
                       <p className="font-bold text-gray-900 text-sm sm:text-base leading-tight">
                         {tier.name}
                       </p>
                       <p className="text-[11px] text-gray-400 mt-0.5">
                         {isAchieved
-                          ? "✓ Reward Released"
+                          ? tier.released_at
+                            ? `Released: ${tier.released_at}`
+                            : "✓ Reward Released"
                           : isNext
                             ? "Up Next"
                             : "Locked"}
@@ -377,7 +409,7 @@ export default function PairRankingsPage() {
                     </span>
                     <div>
                       <p className="text-sm font-bold text-gray-800">
-                        {tier.required_pairs.toLocaleString()} pairs
+                        {tier.required_pairs.toLocaleString()} points
                       </p>
                       <p className="text-[11px] text-gray-500">
                         PV/side: {tier.required_direct_pv}
@@ -438,7 +470,7 @@ export default function PairRankingsPage() {
                       <div>
                         <div className="flex justify-between items-center mb-0.5">
                           <span className="text-xs font-semibold text-purple-600">
-                            Pairs
+                            Points
                           </span>
                           <span className="text-xs text-gray-600">
                             {tier.pairs_percent}%
@@ -455,13 +487,31 @@ export default function PairRankingsPage() {
                   </div>
 
                   {/* ── Col 4: Status ── */}
-                   <div className={isAchieved ? "hidden sm:block" : ""}>
+                  <div className={isAchieved ? "hidden sm:block" : ""}>
                     <span className="sm:hidden text-xs text-gray-500 font-medium block mb-1">
                       Status:
                     </span>
                     {isAchieved ? (
-                      <div className="inline-flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
-                        <FaCheck size={10} /> Achieved
+                      <div className="space-y-1">
+                        <div className="inline-flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                          <FaCheck size={10} /> Achieved
+                        </div>
+                        {tier.achieved_date && (
+                          <p className="text-[11px] text-gray-500">
+                            <span className="font-medium text-green-600">
+                              Achieved:
+                            </span>{" "}
+                            {tier.achieved_date}
+                          </p>
+                        )}
+                        {tier.released_at && (
+                          <p className="text-[11px] text-gray-500">
+                            <span className="font-medium text-blue-600">
+                              Received:
+                            </span>{" "}
+                            {tier.released_at}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div>
@@ -486,7 +536,7 @@ export default function PairRankingsPage() {
                         </p>
                         <p className="text-[11px] text-gray-500 leading-snug">
                           <span className="text-purple-600 font-medium">
-                            Pairs:
+                            Points:
                           </span>{" "}
                           {tier.pairs_balance > 0
                             ? `${tier.pairs_balance.toLocaleString()} more needed`
