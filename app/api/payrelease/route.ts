@@ -32,7 +32,11 @@ import { Wallet } from "@/models/wallet";
 import { Score } from "@/models/score";
 
 // Names that belong to the daily score bucket
-const DAILY_NAMES = ["Matching Bonus", "Direct Sales Bonus","Pair Star Reward"];
+const DAILY_NAMES = [
+  "Matching Bonus",
+  "Direct Sales Bonus",
+  "Pair Star Reward",
+];
 
 // Names that belong to the fortnight score bucket
 const FORTNIGHT_NAMES = ["Infinity Matching Bonus", "Infinity Sales Bonus"];
@@ -276,18 +280,24 @@ export async function GET(request: Request) {
       group.score_fortnight_balance = sc?.fortnight?.balance ?? 0;
 
       if (group.daily) {
-        group.daily.payable = group.score_daily_balance;
+        group.daily.payable = Math.min(
+          group.daily.withdraw_total, // ← never pay MORE than what was earned
+          group.score_daily_balance, // ← reduce if user spent on orders
+        );
         group.deducted_daily = Math.max(
           0,
-          group.daily.withdraw_total - group.score_daily_balance,
+          group.daily.withdraw_total - group.daily.payable,
         );
       }
 
       if (group.fortnight) {
-        group.fortnight.payable = group.score_fortnight_balance;
+        group.fortnight.payable = Math.min(
+          group.fortnight.withdraw_total, // ← never pay MORE than what was earned
+          group.score_fortnight_balance, // ← reduce if user spent on orders
+        );
         group.deducted_fortnight = Math.max(
           0,
-          group.fortnight.withdraw_total - group.score_fortnight_balance,
+          group.fortnight.withdraw_total - group.fortnight.payable,
         );
       }
 

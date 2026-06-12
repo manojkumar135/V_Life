@@ -26,7 +26,11 @@ import { Score } from "@/models/score";
 import { Withdraw } from "@/models/withdraw";
 import { PayoutBatch } from "@/models/batch";
 
-const DAILY_NAMES = ["Matching Bonus", "Direct Sales Bonus","Pair Star Reward"];
+const DAILY_NAMES = [
+  "Matching Bonus",
+  "Direct Sales Bonus",
+  "Pair Star Reward",
+];
 const FORTNIGHT_NAMES = ["Infinity Matching Bonus", "Infinity Sales Bonus"];
 const REFERRAL_NAMES = ["Referral Bonus"];
 const QUICKSTAR_NAMES = ["Quick Star Bonus"];
@@ -176,7 +180,7 @@ async function buildExcel(
       fgColor: { argb: "FFFFF2CC" },
     };
   });
-    instrRow.height = 85;
+  instrRow.height = 85;
 
   const today = new Date();
   const dd = String(today.getDate()).padStart(2, "0");
@@ -189,7 +193,7 @@ async function buildExcel(
     if (amount <= 0) continue;
 
     const dataRow = worksheet.addRow([
-(row.account_holder_name || row.user_name || "").slice(0, 35),
+      (row.account_holder_name || row.user_name || "").slice(0, 35),
       row.account_number || "",
       row.ifsc_code || "",
       "NEFT",
@@ -207,7 +211,7 @@ async function buildExcel(
     ]);
 
     const amountCell = dataRow.getCell(7);
-amountCell.numFmt = "0.00";
+    amountCell.numFmt = "0.00";
     amountCell.alignment = { horizontal: "right" };
 
     const isEven = (dataRow.number - 2) % 2 === 0;
@@ -435,17 +439,24 @@ export async function POST(_request: Request) {
       group.score_quickstar_balance = sc?.quickstar?.balance ?? 0;
 
       if (group.daily) {
-        group.daily.payable = group.score_daily_balance;
+        group.daily.payable = Math.min(
+          group.daily.withdraw_total, // ← never pay MORE than what was earned
+          group.score_daily_balance, // ← reduce if user spent on orders
+        );
         group.deducted_daily = Math.max(
           0,
-          group.daily.withdraw_total - group.score_daily_balance,
+          group.daily.withdraw_total - group.daily.payable,
         );
       }
+
       if (group.fortnight) {
-        group.fortnight.payable = group.score_fortnight_balance;
+        group.fortnight.payable = Math.min(
+          group.fortnight.withdraw_total, // ← never pay MORE than what was earned
+          group.score_fortnight_balance, // ← reduce if user spent on orders
+        );
         group.deducted_fortnight = Math.max(
           0,
-          group.fortnight.withdraw_total - group.score_fortnight_balance,
+          group.fortnight.withdraw_total - group.fortnight.payable,
         );
       }
       if (group.referral)

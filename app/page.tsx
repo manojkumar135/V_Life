@@ -569,7 +569,7 @@ const MaverickHome = () => {
                     </div>
                   ))}
                   <div className="hidden sm:block h-8 w-px bg-white/20" />
-                  <div className="hidden sm:flex -space-x-2">
+                  {/* <div className="hidden sm:flex -space-x-2">
                     {["RK", "PS", "AM", "SK"].map((init, i) => (
                       <div
                         key={i}
@@ -581,7 +581,7 @@ const MaverickHome = () => {
                     <div className="w-7 h-7 rounded-full border-2 border-white/60 bg-white/20 flex items-center justify-center text-white text-[8px] font-bold">
                       +9k
                     </div>
-                  </div>
+                  </div> */}
                 </motion.div>
               </motion.div>
             </AnimatePresence>
