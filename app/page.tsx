@@ -1328,13 +1328,13 @@ const MaverickHome = () => {
             </motion.div>
             <motion.div variants={fadeUp} className="flex flex-col gap-2.5">
               <a
-                href="mailto:info@maverickmoney.in"
+                href="mailto:support@mavericksignature.com"
                 className="flex items-center gap-3 text-white/55 hover:text-white transition text-sm"
               >
                 <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center shrink-0">
                   <FaEnvelope className="text-[#16B8E4] text-xs" />
                 </div>
-                info@maverickmoney.in
+                support@mavericksignature.com
               </a>
               <a
                 href="tel:+10095447818"

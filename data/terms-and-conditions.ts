@@ -12,8 +12,8 @@ In these Terms, references to "you", "User" shall mean the end user accessing th
 
 
 
-a) www.maverickmoney.in website ("Website") is an Internet based content and e-commerce portal owned and operated by  Maverick Signature Network PVT Ltd; a company incorporated under the laws of India.  
-b) Use of the Website is offered to you conditioned on acceptance without modification of all the terms, conditions and notices contained in these Terms, as may be posted on the Website from time to time. www.maverickmoney.in at its sole discretion reserves the right not to accept a user from registering on the website without assigning any reason thereof. 
+a) www.mavericksignature.com website ("Website") is an Internet based content and e-commerce portal owned and operated by  Maverick Signature Network PVT Ltd; a company incorporated under the laws of India.  
+b) Use of the Website is offered to you conditioned on acceptance without modification of all the terms, conditions and notices contained in these Terms, as may be posted on the Website from time to time. www.mavericksignature.com at its sole discretion reserves the right not to accept a user from registering on the website without assigning any reason thereof. 
 
 &nbsp;
 
@@ -22,14 +22,14 @@ b) Use of the Website is offered to you conditioned on acceptance without modifi
 You will receive a password and account designation upon completing the website's registration process. You are responsible for maintaining the confidentiality of the password and account, and are fully responsible for all activities that occur under your password or account.
 
 You agree to  
-a) Immediately notify maverickmoney.in of any unauthorized use of your password or account or any other breach of security, and  
-b) Ensure that you exit (log out) from your account at the end of each session. maverickmoney.in cannot and will not be liable for any loss or damage arising from your failure to comply with this section.
+a) Immediately notify mavericksignature.com of any unauthorized use of your password or account or any other breach of security, and  
+b) Ensure that you exit (log out) from your account at the end of each session. mavericksignature.com cannot and will not be liable for any loss or damage arising from your failure to comply with this section.
 
 &nbsp;
 
 ## **Services Offered**
 
-www.maverickmoney.in provides several Internet-based services through the Website (all such services, collectively, the "Service"). One such service enables users to purchase products of MAVERICK such as Health care, Personal care products, food & beverages, Homecare, Lifestyle products, skin care products & Electronic Products, etc., (collectively, "Products"). Upon placing order, MAVERICK or its designated allies shall ship the product to you and be entitled to its payment for the Services. 
+www.mavericksignature.com provides several Internet-based services through the Website (all such services, collectively, the "Service"). One such service enables users to purchase products of MAVERICK such as Health care, Personal care products, food & beverages, Homecare, Lifestyle products, skin care products & Electronic Products, etc., (collectively, "Products"). Upon placing order, MAVERICK or its designated allies shall ship the product to you and be entitled to its payment for the Services. 
 
 &nbsp;
 
@@ -164,5 +164,5 @@ As per these Terms, users are solely responsible for every material or content u
 
 Users can be held legally liable for their contents and may be held legally accountable if their contents or material include, for example, defamatory comments or material protected by copyright, trademark, etc.
 
-If you come across any abuse or violation of these Terms, please report to **support@maverickmoney.in**
+If you come across any abuse or violation of these Terms, please report to **support@mavericksignature.com**
 `;

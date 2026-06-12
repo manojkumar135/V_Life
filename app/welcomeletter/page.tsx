@@ -164,17 +164,17 @@ export default function WelcomeLetter() {
                 <br />
                 <strong>MAVERICK</strong>
                 <br />
-                www.maverickmoney.in
+                www.mavericksignature.com
               </p>
 
               <div className="pt-6 border-t border-gray-300">
                 <p className="text-sm max-md:text-xs">
                   <strong>Maverick Signature Network PVT Ltd</strong>
                   <br />
-                 14‑681, Kanuru, Andhra Pradesh - 520007
-                  <br />
+                 {/* 14‑681, Kanuru, Andhra Pradesh - 520007 */}
+                  {/* <br /> */}
                   {/* Bengaluru - 560024 <br /> */}
-                  Email : info@maverickmoney.in 
+                  Email : support@mavericksignature.com 
                 </p>
               </div>
             </div>

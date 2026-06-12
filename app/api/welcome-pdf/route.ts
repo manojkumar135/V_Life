@@ -141,13 +141,13 @@ export async function GET(req: Request) {
     y -= 14;
 
     write("Maverick Signature Network PVT Ltd", 9, 4);
+    // write(
+    //   "14‑681, Kanuru, Andhra Pradesh - 520007",
+    //   9,
+    //   4
+    // );
     write(
-      "14‑681, Kanuru, Andhra Pradesh - 520007",
-      9,
-      4
-    );
-    write(
-      "Email : info@maverickmoney.in ",
+      "Email : support@mavericksignature.com ",
       9,
       4
     );

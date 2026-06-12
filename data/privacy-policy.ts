@@ -79,7 +79,7 @@ If you have any questions about this Privacy Statement, the practices of this We
 
 **Maverick Signature Network Pvt. Ltd.**  
 # 14‑681, Kanuru, NTR Dt., Andhra Pradesh‑520007  
-Website: www.maverickmoney.in  
+Website: www.mavericksignature.com  
 Email: mavericksignaturenetwork@gmail.com
 
 `;

@@ -3,7 +3,7 @@ import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
-const API = process.env.NEXT_PUBLIC_BASE_URL || "https://maverickmoney.in";
+const API = process.env.NEXT_PUBLIC_BASE_URL || "https://mavericksignature.com";
 // console.log(API)
 
 

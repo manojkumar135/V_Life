@@ -27,7 +27,7 @@ function createEncryptedInviteLink(
     SECRET_KEY!
   ).toString();
 
-  return `https://maverickmoney.in/auth/register?ref=${encodeURIComponent(
+  return `https://mavericksignature.com/auth/register?ref=${encodeURIComponent(
     encrypted
   )}`;
 }

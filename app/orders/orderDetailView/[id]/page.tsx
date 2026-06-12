@@ -31,6 +31,9 @@ interface CartItem {
 
 interface ShippingData {
   tracking_id?: string;
+  sr_order_id?: string;
+  sr_shipment_id?: string;
+  awb_code?: string;
   courier_partner?: string;
   dispatch_date?: string;
   dispatch_time?: string;
@@ -274,6 +277,8 @@ export default function OrderDetailView() {
   const [trackForm, setTrackForm] = useState<TrackForm>(EMPTY_TRACK_FORM);
   const [trackSaving, setTrackSaving] = useState<boolean>(false);
   const [trackError, setTrackError] = useState<string>("");
+  const [srLoading, setSrLoading] = useState<boolean>(false);
+  const [srMessage, setSrMessage] = useState<string>("");
 
   // ── fetch order ──────────────────────────
   useEffect(() => {
@@ -410,6 +415,72 @@ export default function OrderDetailView() {
     }
   };
 
+  const handleCreateShipment = async () => {
+    if (!order) return;
+    setSrLoading(true);
+    setSrMessage("");
+    try {
+      const res = await axios.post("/api/shiprocket-operations?action=create", {
+        order_id: order.orderId,
+      });
+      if (res.data.success) {
+        setSrMessage(
+          `✅ SR order created. AWB: ${res.data.awb_code || "pending"}`,
+        );
+        const refreshed = await axios.get(
+          `/api/order-operations?id=${orderId}`,
+        );
+        if (refreshed.data.success) {
+          const raw = refreshed.data.data[0];
+          setOrder((prev) =>
+            prev ? { ...prev, shipping: raw.shipping } : prev,
+          );
+        }
+      } else {
+        setSrMessage(`❌ ${res.data.message}`);
+      }
+    } catch (err: any) {
+      setSrMessage(`❌ ${err.response?.data?.message || err.message}`);
+    } finally {
+      setSrLoading(false);
+    }
+  };
+
+  const handleSyncTracking = async () => {
+    if (!order) return;
+    setSrLoading(true);
+    setSrMessage("");
+    try {
+      const res = await axios.get(
+        `/api/shiprocket-operations?action=track&order_id=${order.orderId}`,
+      );
+      if (res.data.success) {
+        setSrMessage(`✅ Synced. Status: ${res.data.sr_status}`);
+        const refreshed = await axios.get(
+          `/api/order-operations?id=${orderId}`,
+        );
+        if (refreshed.data.success) {
+          const raw = refreshed.data.data[0];
+          setOrder((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  orderStatus: raw.order_status,
+                  shipping: raw.shipping,
+                }
+              : prev,
+          );
+        }
+      } else {
+        setSrMessage(`❌ ${res.data.message}`);
+      }
+    } catch (err: any) {
+      setSrMessage(`❌ ${err.response?.data?.message || err.message}`);
+    } finally {
+      setSrLoading(false);
+    }
+  };
+
   // ── field updater helper ──────────────────
   const setField = <K extends keyof TrackForm>(key: K, value: TrackForm[K]) =>
     setTrackForm((prev) => ({ ...prev, [key]: value }));
@@ -453,7 +524,7 @@ export default function OrderDetailView() {
     <Layout>
       <div className="flex flex-col rounded-2xl p-4 max-lg:p-3 bg-white shadow-lg h-full">
         {/* ── Header ── */}
-        <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row gap-3 xl:items-center xl:pr-1">
+        <div className="flex-none border-b pb-1 max-lg:pb-3 mb-2 flex flex-col xl:flex-row gap-3 xl:items-center xl:pr-1 lg:-mt-4">
           <button
             onClick={() => router.push("/orders")}
             className="flex items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
@@ -492,24 +563,52 @@ export default function OrderDetailView() {
             </div>
 
             {/* action buttons */}
-            <div className="flex items-center gap-2 max-lg:self-end">
-              {user.role === "admin" && (
-                <button
-                  onClick={openEditTrack}
-                  className="text-sm px-4 py-2 rounded-lg border border-gray-300 bg-gray-600
-                             text-white font-medium transition-colors
-                             duration-200 cursor-pointer whitespace-nowrap"
+            <div className="flex flex-col items-end gap-1 max-lg:w-full">
+              <div className="flex items-center gap-2 max-lg:justify-end max-lg:w-full">
+                {user.role === "admin" && (
+                  <>
+                    {!order.shipping?.sr_order_id && (
+                      <button
+                        onClick={handleCreateShipment}
+                        disabled={srLoading}
+                        className="text-sm px-3 py-2 rounded-lg border border-blue-300 bg-blue-600
+                                   text-white font-medium cursor-pointer whitespace-nowrap
+                                   disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {srLoading ? "Creating..." : "Create Shipment"}
+                      </button>
+                    )}
+                    {order.shipping?.sr_order_id && (
+                      <button
+                        onClick={handleSyncTracking}
+                        disabled={srLoading}
+                        className="text-sm px-3 py-2 rounded-lg border border-green-300 bg-green-600
+                                   text-white font-medium cursor-pointer whitespace-nowrap
+                                   disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {srLoading ? "Syncing..." : "Sync Tracking"}
+                      </button>
+                    )}
+                  </>
+                )}
+                <SubmitButton
+                  onClick={() => setShowAddress(true)}
+                  className="text-sm transition-colors duration-200 whitespace-nowrap"
                 >
-                  Edit Track
-                </button>
+                  Order Details
+                </SubmitButton>
+              </div>
+              {srMessage && (
+                <p
+                  className={`text-xs font-medium text-right max-lg:w-full ${
+                    srMessage.startsWith("✅")
+                      ? "text-green-600"
+                      : "text-red-500"
+                  }`}
+                >
+                  {srMessage}
+                </p>
               )}
-
-              <SubmitButton
-                onClick={() => setShowAddress(true)}
-                className="text-sm transition-colors duration-200 max-lg:items-end max-lg:self-end"
-              >
-                Order Details
-              </SubmitButton>
             </div>
           </div>
         </div>
@@ -869,9 +968,7 @@ export default function OrderDetailView() {
                     )}
 
                     {order.shipping!.remarks && (
-                      <KVRow label="Remarks">
-                        {order.shipping!.remarks}
-                      </KVRow>
+                      <KVRow label="Remarks">{order.shipping!.remarks}</KVRow>
                     )}
                   </div>
                 </div>
@@ -886,6 +983,21 @@ export default function OrderDetailView() {
                   </p>
                 )}
             </div>
+            {/* Edit Track button — admin only, inside modal */}
+            {user.role === "admin" && (
+              <div className="mt-5 pt-4 border-t border-gray-200 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowAddress(false);
+                    openEditTrack();
+                  }}
+                  className="text-sm px-4 py-2 rounded-lg border border-gray-300 bg-gray-600
+                             text-white font-medium cursor-pointer"
+                >
+                  Edit Track
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

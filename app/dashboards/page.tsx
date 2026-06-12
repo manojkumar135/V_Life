@@ -283,7 +283,7 @@ const DashboardPage: React.FC = () => {
       SECRET_KEY,
     ).toString();
 
-    const link = `https://maverickmoney.in/auth/register?ref=${encodeURIComponent(
+    const link = `https://mavericksignature.com/auth/register?ref=${encodeURIComponent(
       encrypted,
     )}`;
 

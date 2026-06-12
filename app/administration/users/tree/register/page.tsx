@@ -565,7 +565,7 @@ function RegisterContent() {
                 )}
                 {!referralChecking && referralName && (
                   <p
-                    className={`text-[10px] -mt-3 flex items-center gap-1 ${
+                    className={`text-[12px] -mt-3 flex items-center gap-1 ${
                       referralName === "User not found"
                         ? "text-red-500"
                         : "text-gray-600"

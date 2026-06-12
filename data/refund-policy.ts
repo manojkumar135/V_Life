@@ -7,7 +7,7 @@ Once the cancellation request is approved, the refund will be processed within *
 
 ❗ **Order cancellation is not allowed after the order has been shipped.**
 
-To cancel your order, please email us at **support@maverickmoney.in** with your Order ID.
+To cancel your order, please email us at **support@mavericksignature.com** with your Order ID.
 
 &nbsp;
 
@@ -46,13 +46,13 @@ We take the utmost care in providing you the best products. However, if you chan
 Maverick Signature Network Pvt. Ltd.  
 # 14‑681, Kanuru, NTR Dt., Andhra Pradesh‑520007  
 
-Website: www.maverickmoney.in  
+Website: www.mavericksignature.com  
 Email: mavericksignaturenetwork@gmail.com
 
 &nbsp;
 
 ## **Grievance Redressal**
 
-For any grievance or dispute related to cancellation, return, or refund, please contact us through the "Contact Us" section or email us at **support@maverickmoney.in**
+For any grievance or dispute related to cancellation, return, or refund, please contact us through the "Contact Us" section or email us at **support@mavericksignature.com**
 
 `;

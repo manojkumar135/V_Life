@@ -168,18 +168,18 @@ export default function WelcomePDF({ data }) {
                         MAVERICK
                     </Text>
 
-                    <Text style={styles.paragraph}>www.maverickmoney.in</Text>
+                    <Text style={styles.paragraph}>www.mavericksignature.com</Text>
                 </View>
 
                 {/* Footer */}
                 <View style={styles.footer}>
                     <Text style={styles.bold}>Maverick Signature Network PVT Ltd</Text>
-                    <Text>
+                    {/* <Text>
                         14‑681, Kanuru, Andhra Pradesh - 520007,
-                    </Text>
+                    </Text> */}
                     {/* <Text>Bengaluru - 560024</Text> */}
                     <Text>
-                        Email : info@maverickmoney.in | Toll-Free No : 18002965586
+                        Email : support@mavericksignature.com | Toll-Free No : 
                     </Text>
                 </View>
             </Page>

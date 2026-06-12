@@ -186,7 +186,7 @@ export default function ActivationForm() {
                     className="px-6 py-2 bg-orange-500 disabled:opacity-50"
                     // onClick={() => handleOrderRedirect(50, values.user_id)}
                   >
-                    ORDER 50 PV
+                    Retail Pack
                   </SubmitButton>
 
                   <SubmitButton
@@ -195,7 +195,7 @@ export default function ActivationForm() {
                     className="px-6 py-2 bg-green-600 disabled:opacity-50"
                     onClick={() => handleOrderRedirect(100, values.user_id)}
                   >
-                    ORDER 100 PV
+                    Activation Pack
                   </SubmitButton>
                 </div>
               </Form>
