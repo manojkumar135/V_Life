@@ -219,46 +219,46 @@ export default function ReportTypePage() {
     { field: "user_id", headerName: "User ID", flex: 1 },
     { field: "user_name", headerName: "Name", flex: 1.2 },
     { field: "contact", headerName: "Contact", flex: 1.1 },
-   {
-  field: "rank",
-  headerName: "Rank",
-  flex: 1,
-  renderCell: (params: any) => {
-    const row = params.row;
-    const pairStar = row?.pair_star;
-    const status = (row?.user_status || row?.status || "").toLowerCase();
-    const rank = params.value;
+    {
+      field: "rank",
+      headerName: "Rank",
+      flex: 1,
+      renderCell: (params: any) => {
+        const row = params.row;
+        const pairStar = row?.pair_star;
+        const status = (row?.user_status || row?.status || "").toLowerCase();
+        const rank = params.value;
 
-    // 1️⃣ If user has pair_star — show it (capitalize)
-    if (pairStar && pairStar !== "none" && pairStar !== "") {
-      return (
-        <span className="capitalize text-xs font-medium">
-          {String(pairStar)
-            .toLowerCase()
-            .replace(/\b\w/g, (c) => c.toUpperCase())}
-        </span>
-      );
-    }
+        // 1️⃣ If user has pair_star — show it (capitalize)
+        if (pairStar && pairStar !== "none" && pairStar !== "") {
+          return (
+            <span className="capitalize text-xs font-medium">
+              {String(pairStar)
+                .toLowerCase()
+                .replace(/\b\w/g, (c) => c.toUpperCase())}
+            </span>
+          );
+        }
 
-    // 2️⃣ No pair_star — check rank + active status
-    const isActive = status === "active";
-    const rankNum = Number(rank);
-    const hasRank =
-      rank !== null &&
-      rank !== undefined &&
-      rank !== "" &&
-      rank !== "none" &&
-      String(rank).toLowerCase() !== "null" &&
-      (!isNaN(rankNum) ? rankNum > 0 : true);
+        // 2️⃣ No pair_star — check rank + active status
+        const isActive = status === "active";
+        const rankNum = Number(rank);
+        const hasRank =
+          rank !== null &&
+          rank !== undefined &&
+          rank !== "" &&
+          rank !== "none" &&
+          String(rank).toLowerCase() !== "null" &&
+          (!isNaN(rankNum) ? rankNum > 0 : true);
 
-    if (isActive && hasRank) {
-      return <span className="text-xs font-medium">Star</span>;
-    }
+        if (isActive && hasRank) {
+          return <span className="text-xs font-medium">Star</span>;
+        }
 
-    // 3️⃣ Fallback
-    return <span className="text-gray-400">-</span>;
-  },
-},
+        // 3️⃣ Fallback
+        return <span className="text-gray-400">-</span>;
+      },
+    },
     { field: "club", headerName: "Club", flex: 0.7 },
     {
       field: "earned",
@@ -366,7 +366,11 @@ export default function ReportTypePage() {
     },
   ];
 
-  const label = type.charAt(0).toUpperCase() + type.slice(1);
+  const label =
+    type.toLowerCase() === "cashback"
+      ? "Redeem"
+      : type.charAt(0).toUpperCase() + type.slice(1);
+
   const onBack = () => router.push("/reports");
 
   return (

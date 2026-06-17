@@ -109,7 +109,6 @@ interface OrderPayload {
     };
   };
 
-
   shipping?: {
     tracking_id?: string;
     courier_partner?: string;
@@ -305,8 +304,7 @@ export async function POST(request: Request) {
 
     /* ---------------- 🎁 REWARD EARNING (BENEFICIARY) ---------------- */
     if (isFirstOrder && beneficiary.user_status !== "active") {
-      const cashbackPoints =  Math.round(Number(newOrder.total_amount));
-
+      const cashbackPoints = 10000;
       if (cashbackPoints > 0) {
         await addRewardScore({
           user_id: beneficiary.user_id,
@@ -360,15 +358,15 @@ export async function POST(request: Request) {
     // repurchase obligations. Only post-activation orders count.
     if (totalPV > 0 && !isFirstOrder) {
       processPvOrder({
-        user_id:      beneficiary.user_id,
-        order_id:     newOrder.order_id,
-        pv:           totalPV,
+        user_id: beneficiary.user_id,
+        order_id: newOrder.order_id,
+        pv: totalPV,
         order_amount: newOrder.final_amount ?? amount,
-        order_date:   newOrder.created_at ?? new Date(),
+        order_date: newOrder.created_at ?? new Date(),
         userInfo: {
           user_name: beneficiary.user_name || "",
-          contact:   beneficiary.contact   || "",
-          mail:      beneficiary.mail      || "",
+          contact: beneficiary.contact || "",
+          mail: beneficiary.mail || "",
         },
       }).catch((err) =>
         console.error("❌ [order-operations] processPvOrder error", err),
@@ -590,23 +588,23 @@ export async function GET(request: Request) {
       }
     }
 
-   // Date range filter
-if (from || to) {
-  const startDate = parseDate(from);
-  const endDate = parseDate(to);
+    // Date range filter
+    if (from || to) {
+      const startDate = parseDate(from);
+      const endDate = parseDate(to);
 
-  if (startDate && endDate) {
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+      if (startDate && endDate) {
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
 
-    conditions.push({
-      created_at: {
-        $gte: startDate,
-        $lte: endDate,
-      },
-    });
-  }
-}
+        conditions.push({
+          created_at: {
+            $gte: startDate,
+            $lte: endDate,
+          },
+        });
+      }
+    }
 
     // ✅ Advance used filter
     if (advance_used !== null && advance_used !== "") {
@@ -666,7 +664,7 @@ export async function PUT(request: Request) {
         mongoose.Types.ObjectId.isValid(updateId)
           ? { _id: updateId }
           : { order_id: updateId },
-        { shipping: 1 }
+        { shipping: 1 },
       ).lean();
 
       const existingShipping = (existing as any)?.shipping ?? {};
@@ -674,7 +672,7 @@ export async function PUT(request: Request) {
       const mergedShipping = {
         ...existingShipping,
         ...Object.fromEntries(
-          Object.entries(shipping).filter(([_, v]) => v !== undefined)
+          Object.entries(shipping).filter(([_, v]) => v !== undefined),
         ),
       };
 
