@@ -9,10 +9,6 @@ import Layout from "@/layout/Layout";
 import SubmitButton from "@/components/common/submitbutton";
 import { useVLife } from "@/store/context";
 
-// ─────────────────────────────────────────
-// Interfaces
-// ─────────────────────────────────────────
-
 interface CartItem {
   id: string | number;
   name: string;
@@ -35,6 +31,7 @@ interface ShippingData {
   sr_shipment_id?: string;
   awb_code?: string;
   courier_partner?: string;
+  courier_name?: string;
   dispatch_date?: string;
   dispatch_time?: string;
   estimated_delivery?: string;
@@ -43,7 +40,17 @@ interface ShippingData {
   return_reason?: string;
   remarks?: string;
   tracking_url?: string;
+  sr_status?: string;
   updated_by?: string;
+  // Actual address sent to ShipRocket (admin may have changed from order defaults)
+  shipment_name?: string;
+  shipment_phone?: string;
+  shipment_email?: string;
+  shipment_address?: string;
+  shipment_city?: string;
+  shipment_pincode?: string;
+  shipment_state?: string;
+  shipment_country?: string;
 }
 
 interface TrackForm {
@@ -60,6 +67,22 @@ interface TrackForm {
   tracking_url: string;
 }
 
+interface ShipmentForm {
+  billing_customer_name: string;
+  billing_phone: string;
+  billing_email: string;
+  billing_address: string;
+  billing_city: string;
+  billing_pincode: string;
+  billing_state: string;
+  billing_country: string;
+  length: string;
+  breadth: string;
+  height: string;
+  weight: string;
+  payment_method: string;
+}
+
 interface OrderData {
   orderId: string | number;
   userId?: string;
@@ -67,6 +90,11 @@ interface OrderData {
   mail?: string;
   contact?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  pincode?: string;
+  landmark?: string;
   description?: string;
   orderStatus?: string;
   cart: CartItem[];
@@ -101,13 +129,8 @@ interface OrderData {
   shipping?: ShippingData;
 }
 
-// ─────────────────────────────────────────
-// Status Badge
-// ─────────────────────────────────────────
-
 function StatusBadge({ status }: { status?: string }) {
   if (!status) return null;
-
   const map: Record<string, { label: string; classes: string }> = {
     pending: { label: "Pending", classes: "bg-yellow-100 text-yellow-700" },
     packed: { label: "Packed", classes: "bg-blue-100 text-blue-700" },
@@ -123,12 +146,10 @@ function StatusBadge({ status }: { status?: string }) {
     returned: { label: "Returned", classes: "bg-red-100 text-red-700" },
     cancelled: { label: "Cancelled", classes: "bg-gray-100 text-gray-500" },
   };
-
   const cfg = map[status] ?? {
     label: status,
     classes: "bg-gray-100 text-gray-500",
   };
-
   return (
     <span
       className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cfg.classes}`}
@@ -137,10 +158,6 @@ function StatusBadge({ status }: { status?: string }) {
     </span>
   );
 }
-
-// ─────────────────────────────────────────
-// Reusable form field components
-// ─────────────────────────────────────────
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -165,8 +182,7 @@ function TextInput({
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
-                 focus:outline-none focus:ring-2 focus:ring-black"
+      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-black"
     />
   );
 }
@@ -181,25 +197,21 @@ function DateInput({
   const toInputVal = (v: string) => {
     if (!v) return "";
     const parts = v.split("-");
-    if (parts.length === 3 && parts[2].length === 4) {
+    if (parts.length === 3 && parts[2].length === 4)
       return `${parts[2]}-${parts[1]}-${parts[0]}`;
-    }
     return v;
   };
-
   const fromInputVal = (v: string) => {
     if (!v) return "";
     const [y, m, d] = v.split("-");
     return `${d}-${m}-${y}`;
   };
-
   return (
     <input
       type="date"
       value={toInputVal(value)}
       onChange={(e) => onChange(fromInputVal(e.target.value))}
-      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
-                 focus:outline-none focus:ring-2 focus:ring-black"
+      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-black"
     />
   );
 }
@@ -216,15 +228,10 @@ function TimeInput({
       type="time"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
-                 focus:outline-none focus:ring-2 focus:ring-black"
+      className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-black"
     />
   );
 }
-
-// ─────────────────────────────────────────
-// Inline KV row used inside the modal
-// ─────────────────────────────────────────
 
 function KVRow({
   label,
@@ -242,10 +249,6 @@ function KVRow({
   );
 }
 
-// ─────────────────────────────────────────
-// Main Component
-// ─────────────────────────────────────────
-
 const EMPTY_TRACK_FORM: TrackForm = {
   order_status: "",
   tracking_id: "",
@@ -260,6 +263,22 @@ const EMPTY_TRACK_FORM: TrackForm = {
   tracking_url: "",
 };
 
+const EMPTY_SHIP_FORM: ShipmentForm = {
+  billing_customer_name: "",
+  billing_phone: "",
+  billing_email: "",
+  billing_address: "",
+  billing_city: "",
+  billing_pincode: "",
+  billing_state: "",
+  billing_country: "India",
+  length: "10",
+  breadth: "10",
+  height: "10",
+  weight: "0.5",
+  payment_method: "Prepaid",
+};
+
 export default function OrderDetailView() {
   const params = useParams();
   const router = useRouter();
@@ -268,35 +287,41 @@ export default function OrderDetailView() {
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-
-  // shipping details popup
   const [showAddress, setShowAddress] = useState<boolean>(false);
 
-  // edit track popup
+  // Edit Track
   const [showEditTrack, setShowEditTrack] = useState<boolean>(false);
   const [trackForm, setTrackForm] = useState<TrackForm>(EMPTY_TRACK_FORM);
   const [trackSaving, setTrackSaving] = useState<boolean>(false);
   const [trackError, setTrackError] = useState<string>("");
+
+  // ShipRocket
   const [srLoading, setSrLoading] = useState<boolean>(false);
   const [srMessage, setSrMessage] = useState<string>("");
+  const [showShipModal, setShowShipModal] = useState<boolean>(false);
+  const [shipForm, setShipForm] = useState<ShipmentForm>(EMPTY_SHIP_FORM);
+  const [cancelLoading, setCancelLoading] = useState<boolean>(false);
 
-  // ── fetch order ──────────────────────────
+  // ── fetch order ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         setLoading(true);
         const res = await axios.get(`/api/order-operations?id=${orderId}`);
-
         if (res?.data?.success) {
           const raw = res.data.data[0];
-
-          const mappedOrder: OrderData = {
+          setOrder({
             orderId: raw.order_id,
             userId: raw.user_id,
             userName: raw.user_name,
             mail: raw.mail,
             contact: raw.contact,
             address: raw.address,
+            city: raw.city,
+            state: raw.state,
+            country: raw.country,
+            pincode: raw.pincode,
+            landmark: raw.landmark,
             description: raw.description,
             orderStatus: raw.order_status,
             cart: raw.items.map((item: any) => ({
@@ -325,9 +350,7 @@ export default function OrderDetailView() {
             rewardUsage: raw.reward_usage,
             placedBy: raw.placed_by,
             shipping: raw.shipping,
-          };
-
-          setOrder(mappedOrder);
+          });
         } else {
           setOrder(null);
         }
@@ -338,20 +361,21 @@ export default function OrderDetailView() {
         setLoading(false);
       }
     };
-
     if (orderId) fetchOrder();
   }, [orderId]);
 
-  // ── open edit track modal ─────────────────
+  // ── Edit Track ───────────────────────────────────────────────────────────────
   const openEditTrack = () => {
     if (!order) return;
     setTrackForm({
       order_status: order.orderStatus ?? "",
-      tracking_id: order.shipping?.tracking_id ?? "",
-      courier_partner: order.shipping?.courier_partner ?? "",
+      tracking_id:
+        order.shipping?.tracking_id || order.shipping?.awb_code || "",
+      courier_partner:
+        order.shipping?.courier_partner || order.shipping?.courier_name || "",
       dispatch_date: order.shipping?.dispatch_date ?? "",
       dispatch_time: order.shipping?.dispatch_time ?? "",
-      estimated_delivery: order.shipping?.estimated_delivery ?? "",
+      estimated_delivery: (order.shipping?.estimated_delivery ?? "").trim(),
       delivered_date: order.shipping?.delivered_date ?? "",
       delivered_time: order.shipping?.delivered_time ?? "",
       return_reason: order.shipping?.return_reason ?? "",
@@ -362,12 +386,10 @@ export default function OrderDetailView() {
     setShowEditTrack(true);
   };
 
-  // ── save track details ────────────────────
   const saveTrackDetails = async () => {
     try {
       setTrackSaving(true);
       setTrackError("");
-
       await axios.put("/api/order-operations", {
         order_id: order?.orderId,
         order_status: trackForm.order_status,
@@ -385,13 +407,13 @@ export default function OrderDetailView() {
           updated_at: new Date(),
         },
       });
-
       setOrder((prev) =>
         prev
           ? {
               ...prev,
               orderStatus: trackForm.order_status,
               shipping: {
+                ...prev.shipping,
                 tracking_id: trackForm.tracking_id,
                 courier_partner: trackForm.courier_partner,
                 dispatch_date: trackForm.dispatch_date,
@@ -406,13 +428,39 @@ export default function OrderDetailView() {
             }
           : prev,
       );
-
       setShowEditTrack(false);
     } catch {
       setTrackError("Failed to save. Please try again.");
     } finally {
       setTrackSaving(false);
     }
+  };
+
+  const setField = <K extends keyof TrackForm>(key: K, value: TrackForm[K]) =>
+    setTrackForm((prev) => ({ ...prev, [key]: value }));
+
+  // ── ShipRocket ───────────────────────────────────────────────────────────────
+  const openShipModal = () => {
+    if (!order) return;
+    setShipForm({
+      billing_customer_name: order.userName || "",
+      billing_phone: String(order.contact || "")
+        .replace(/\D/g, "")
+        .slice(-10),
+      billing_email: order.mail || "",
+      billing_address: order.address || "",
+      billing_city: order.city || "",
+      billing_pincode: String(order.pincode || ""),
+      billing_state: order.state || "",
+      billing_country: order.country || "India",
+      length: "10",
+      breadth: "10",
+      height: "10",
+      weight: "0.5",
+      payment_method: "Prepaid",
+    });
+    setSrMessage("");
+    setShowShipModal(true);
   };
 
   const handleCreateShipment = async () => {
@@ -422,11 +470,13 @@ export default function OrderDetailView() {
     try {
       const res = await axios.post("/api/shiprocket-operations?action=create", {
         order_id: order.orderId,
+        overrides: shipForm,
       });
       if (res.data.success) {
         setSrMessage(
-          `✅ SR order created. AWB: ${res.data.awb_code || "pending"}`,
+          `✅ Shipment created! AWB: ${res.data.awb_code || "pending"}`,
         );
+        setShowShipModal(false);
         const refreshed = await axios.get(
           `/api/order-operations?id=${orderId}`,
         );
@@ -455,7 +505,9 @@ export default function OrderDetailView() {
         `/api/shiprocket-operations?action=track&order_id=${order.orderId}`,
       );
       if (res.data.success) {
-        setSrMessage(`✅ Synced. Status: ${res.data.sr_status}`);
+        setSrMessage(
+          `✅ Synced. SR Status: ${res.data.sr_status || "updated"}`,
+        );
         const refreshed = await axios.get(
           `/api/order-operations?id=${orderId}`,
         );
@@ -481,14 +533,53 @@ export default function OrderDetailView() {
     }
   };
 
-  // ── field updater helper ──────────────────
-  const setField = <K extends keyof TrackForm>(key: K, value: TrackForm[K]) =>
-    setTrackForm((prev) => ({ ...prev, [key]: value }));
+  const handleCancelShipment = async () => {
+    if (!order?.shipping?.sr_order_id) return;
+    if (!confirm("Cancel this ShipRocket shipment? This cannot be undone."))
+      return;
+    setCancelLoading(true);
+    setSrMessage("");
+    try {
+      const res = await axios.post("/api/shiprocket-operations?action=cancel", {
+        sr_order_ids: [Number(order.shipping.sr_order_id)],
+      });
+      if (res.data.success) {
+        setSrMessage("✅ Shipment cancelled in ShipRocket");
+        setOrder((prev) =>
+          prev
+            ? {
+                ...prev,
+                shipping: {
+                  ...prev.shipping,
+                  sr_order_id: "",
+                  sr_shipment_id: "",
+                  awb_code: "",
+                  courier_name: "",
+                },
+              }
+            : prev,
+        );
+        await axios.put("/api/order-operations", {
+          order_id: order.orderId,
+          shipping: {
+            sr_order_id: "",
+            sr_shipment_id: "",
+            awb_code: "",
+            courier_name: "",
+            sr_status: "",
+          },
+        });
+      } else {
+        setSrMessage(`❌ ${res.data.message}`);
+      }
+    } catch (err: any) {
+      setSrMessage(`❌ ${err.response?.data?.message || err.message}`);
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
-  // ─────────────────────────────────────────
-  // Guards
-  // ─────────────────────────────────────────
-
+  // ── Guards ───────────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
@@ -513,12 +604,14 @@ export default function OrderDetailView() {
 
   const hasAdvance =
     Boolean(order.isFirstOrder) && (order.advanceDeducted ?? 0) > 0;
-
-  const hasTracking = Boolean(order.shipping?.tracking_id);
-
-  // ─────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────
+  const hasTracking = Boolean(
+    order.shipping?.tracking_id && order.shipping.tracking_id.trim() !== "",
+  );
+  // Fix: check for non-empty string — DB stores "" when cleared
+  const hasSROrder = Boolean(
+    order.shipping?.sr_order_id &&
+    String(order.shipping.sr_order_id).trim() !== "",
+  );
 
   return (
     <Layout>
@@ -528,17 +621,13 @@ export default function OrderDetailView() {
           <button
             onClick={() => router.push("/orders")}
             className="flex items-center gap-2 text-black hover:text-black transition-colors cursor-pointer"
-            aria-label="Go back to Orders"
           >
             <IoIosArrowBack size={25} />
           </button>
 
           <div className="flex flex-col xl:flex-row max-lg:items-start items-center max-lg:justify-start justify-between gap-4 w-full">
             {/* order meta */}
-            <div
-              className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between
-                            xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5"
-            >
+            <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5">
               <span className="text-sm font-medium text-gray-600">
                 Order ID:{" "}
                 <span className="text-black font-semibold">
@@ -562,35 +651,9 @@ export default function OrderDetailView() {
               </span>
             </div>
 
-            {/* action buttons */}
+            {/* action buttons — admin only SR buttons, everyone sees Order Details */}
             <div className="flex flex-col items-end gap-1 max-lg:w-full">
               <div className="flex items-center gap-2 max-lg:justify-end max-lg:w-full">
-                {user.role === "admin" && (
-                  <>
-                    {!order.shipping?.sr_order_id && (
-                      <button
-                        onClick={handleCreateShipment}
-                        disabled={srLoading}
-                        className="text-sm px-3 py-2 rounded-lg border border-blue-300 bg-blue-600
-                                   text-white font-medium cursor-pointer whitespace-nowrap
-                                   disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      >
-                        {srLoading ? "Creating..." : "Create Shipment"}
-                      </button>
-                    )}
-                    {order.shipping?.sr_order_id && (
-                      <button
-                        onClick={handleSyncTracking}
-                        disabled={srLoading}
-                        className="text-sm px-3 py-2 rounded-lg border border-green-300 bg-green-600
-                                   text-white font-medium cursor-pointer whitespace-nowrap
-                                   disabled:bg-gray-400 disabled:cursor-not-allowed"
-                      >
-                        {srLoading ? "Syncing..." : "Sync Tracking"}
-                      </button>
-                    )}
-                  </>
-                )}
                 <SubmitButton
                   onClick={() => setShowAddress(true)}
                   className="text-sm transition-colors duration-200 whitespace-nowrap"
@@ -613,7 +676,7 @@ export default function OrderDetailView() {
           </div>
         </div>
 
-        {/* ── Cart (scrollable) ── */}
+        {/* ── Cart ── */}
         <div className="flex-1 overflow-y-auto pr-2">
           {order.cart.length === 0 ? (
             <p className="text-gray-500 text-center py-6">
@@ -621,7 +684,6 @@ export default function OrderDetailView() {
             </p>
           ) : (
             <>
-              {/* desktop header row */}
               <div className="hidden lg:grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 xl:px-15">
                 <div className="col-span-4">Product</div>
                 <div className="col-span-1 text-center">Quantity</div>
@@ -631,14 +693,13 @@ export default function OrderDetailView() {
                 <div className="col-span-1 text-right">GST(₹)</div>
                 <div className="col-span-2 text-right">Total(₹)</div>
               </div>
-
               <div className="space-y-4 lg:scrollbar-custom">
                 {order.cart.map((item) => (
                   <div
                     key={item.id}
                     className="w-full rounded-xl p-4 transition-all shadow-sm hover:shadow-lg border border-gray-200"
                   >
-                    {/* Desktop row */}
+                    {/* Desktop */}
                     <div className="hidden lg:grid grid-cols-12 items-center xl:px-5">
                       <div className="col-span-4 flex items-center gap-4">
                         <img
@@ -683,8 +744,7 @@ export default function OrderDetailView() {
                         )}
                       </div>
                     </div>
-
-                    {/* Mobile row */}
+                    {/* Mobile */}
                     <div className="lg:hidden flex flex-col gap-3">
                       <div className="flex items-start gap-3">
                         <img
@@ -739,7 +799,6 @@ export default function OrderDetailView() {
 
         {/* ── Footer ── */}
         <div className="flex-none border-t pt-4 lg:px-10 bg-white py-3 space-y-2">
-          {/* first order + advance */}
           {hasAdvance && (
             <>
               <div className="flex justify-between items-center text-sm text-gray-700">
@@ -773,8 +832,6 @@ export default function OrderDetailView() {
               </div>
             </>
           )}
-
-          {/* normal order */}
           {!hasAdvance && (
             <>
               {order.rewardUsed > 0 && (
@@ -820,11 +877,7 @@ export default function OrderDetailView() {
         </div>
       </div>
 
-      {/* ══════════════════════════════════════════
-          Popup 1 — View Shipping Details
-          Mobile  : single column (stacked)
-          Desktop : two columns side-by-side
-      ══════════════════════════════════════════ */}
+      {/* ══ Popup 1 — Order Details ══ */}
       {showAddress && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
@@ -832,29 +885,27 @@ export default function OrderDetailView() {
         >
           <div
             className={`bg-white rounded-xl shadow-lg w-[95%] p-6 relative max-h-[90vh] overflow-y-auto
-              ${hasTracking ? "max-w-3xl" : "max-w-md"}`}
+              ${hasTracking || hasSROrder ? "max-w-3xl" : "max-w-md"}`}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setShowAddress(false)}
               className="absolute top-3 right-3 text-gray-500 hover:text-black text-lg font-bold"
-              aria-label="Close"
             >
               ✕
             </button>
 
             <p className="text-lg font-semibold mb-4">Order Details</p>
 
-            {/* ── Two-column on desktop when tracking exists, single otherwise ── */}
             <div
-              className={`flex flex-col ${
-                hasTracking ? "lg:flex-row lg:gap-6" : ""
-              }`}
+              className={`flex flex-col ${hasTracking || hasSROrder ? "lg:flex-row lg:gap-6" : ""}`}
             >
-              {/* ── Left / full: Shipping Details ── */}
-              <div className={hasTracking ? "lg:flex-1" : "w-full"}>
+              {/* ── LEFT: Order Info ── */}
+              <div
+                className={hasTracking || hasSROrder ? "lg:flex-1" : "w-full"}
+              >
                 <p className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">
-                  📦 Shipping Details
+                  📦 Order Info
                 </p>
                 <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
                   <KVRow label="Order ID">{order.orderId}</KVRow>
@@ -865,14 +916,12 @@ export default function OrderDetailView() {
                   </KVRow>
                   <KVRow label="Contact">{order.contact}</KVRow>
                   <KVRow label="Payment">{order.payment}</KVRow>
-
                   {order.placedBy?.user_id && (
                     <KVRow label="Placed by">
                       {order.placedBy.user_id}
                       {order.placedBy.name ? ` (${order.placedBy.name})` : ""}
                     </KVRow>
                   )}
-
                   <KVRow label="Address">
                     <span className="whitespace-pre-line">
                       {order.address || "No address available"}
@@ -887,95 +936,292 @@ export default function OrderDetailView() {
                     <StatusBadge status={order.orderStatus} />
                   </KVRow>
                 </div>
+
+                {/* ── Tracking for normal user (read-only) ── */}
+                {/* ── Tracking for normal user (read-only) ── */}
+                {user.role !== "admin" && (
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <p className="text-sm font-bold text-gray-700 mb-3">🚚 Shipment & Tracking</p>
+                    <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
+                      <KVRow label="Order Status"><StatusBadge status={order.orderStatus} /></KVRow>
+
+                      {/* SR shipment IDs */}
+                      {order.shipping?.sr_order_id && order.shipping.sr_order_id.trim() !== "" && (
+                        <KVRow label="Shipment ID">{order.shipping.sr_order_id}</KVRow>
+                      )}
+
+                      {/* AWB / Tracking */}
+                      {(order.shipping?.awb_code && order.shipping.awb_code.trim() !== "") ||
+                       (order.shipping?.tracking_id && order.shipping.tracking_id.trim() !== "") ? (
+                        <KVRow label="Tracking No">
+                          {order.shipping.tracking_url
+                            ? <a href={order.shipping.tracking_url} target="_blank" rel="noopener noreferrer"
+                                 className="text-blue-600 underline break-all">
+                                {order.shipping.awb_code || order.shipping.tracking_id}
+                              </a>
+                            : (order.shipping.awb_code || order.shipping.tracking_id)}
+                        </KVRow>
+                      ) : (
+                        order.shipping?.sr_order_id && order.shipping.sr_order_id.trim() !== "" && (
+                          <KVRow label="AWB">
+                            <span className="text-gray-400 italic text-xs">Pending — courier not yet assigned</span>
+                          </KVRow>
+                        )
+                      )}
+
+                      {/* Courier */}
+                      {(order.shipping?.courier_partner || order.shipping?.courier_name) && (
+                        <KVRow label="Courier">
+                          {order.shipping.courier_partner || order.shipping.courier_name}
+                        </KVRow>
+                      )}
+
+                      {/* Estimated Delivery */}
+                      {order.shipping?.estimated_delivery && order.shipping.estimated_delivery.trim() !== "" && (
+                        <KVRow label="Est. Delivery">{order.shipping.estimated_delivery}</KVRow>
+                      )}
+
+                      {/* Dispatch Date */}
+                      {order.shipping?.dispatch_date && order.shipping.dispatch_date.trim() !== "" && (
+                        <KVRow label="Dispatched">
+                          {order.shipping.dispatch_date}
+                          {order.shipping.dispatch_time ? ` at ${order.shipping.dispatch_time}` : ""}
+                        </KVRow>
+                      )}
+
+                      {/* Delivered */}
+                      {order.shipping?.delivered_date && (
+                        <KVRow label="Delivered On">
+                          <span className="text-green-600 font-semibold">
+                            {order.shipping.delivered_date}
+                            {order.shipping.delivered_time ? ` at ${order.shipping.delivered_time}` : ""}
+                          </span>
+                        </KVRow>
+                      )}
+
+                      {/* Return Reason */}
+                      {order.shipping?.return_reason && (
+                        <KVRow label="Return Reason">
+                          <span className="text-red-600">{order.shipping.return_reason}</span>
+                        </KVRow>
+                      )}
+
+                      {/* No shipment yet */}
+                      {!order.shipping?.sr_order_id && !order.shipping?.tracking_id && (
+                        <span className="col-span-3 text-gray-400 italic text-xs">
+                          Shipment not yet created.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* ── Divider ── */}
-              {hasTracking && (
+              {/* ── Divider (admin only when SR order exists or tracking exists) ── */}
+              {user.role === "admin" && (hasTracking || hasSROrder) && (
                 <>
-                  {/* horizontal on mobile */}
                   <div className="lg:hidden border-t border-dashed border-gray-300 my-4" />
-                  {/* vertical on desktop */}
                   <div className="hidden lg:block w-px bg-gray-200 self-stretch mx-1" />
                 </>
               )}
 
-              {/* ── Right: Tracking Info (only when tracking_id exists) ── */}
-              {hasTracking && (
-                <div className="lg:flex-1">
+              {/* ── RIGHT: Shipment Details (admin only) ── */}
+              {user.role === "admin" && (
+                <div
+                  className={
+                    hasTracking || hasSROrder
+                      ? "lg:flex-1"
+                      : "w-full mt-4 pt-4 border-t border-gray-200"
+                  }
+                >
                   <p className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">
-                    🚚 Tracking Info
+                    🚚 Shipment Details
                   </p>
                   <div className="grid grid-cols-[max-content_1ch_1fr] gap-y-2 gap-x-2 text-gray-700 text-sm">
-                    <KVRow label="Courier">
-                      {order.shipping!.courier_partner || "—"}
-                    </KVRow>
+                    {hasSROrder ? (
+                      <>
+                        {/* SR IDs */}
+                        <KVRow label="SR Order ID">
+                          {order.shipping!.sr_order_id}
+                        </KVRow>
+                        <KVRow label="Shipment ID">
+                          {order.shipping!.sr_shipment_id || "—"}
+                        </KVRow>
+                        {order.shipping?.sr_status && (
+                          <KVRow label="SR Status">
+                            {order.shipping.sr_status}
+                          </KVRow>
+                        )}
+                        {order.shipping?.awb_code &&
+                        order.shipping.awb_code.trim() !== "" ? (
+                          <KVRow label="AWB">
+                            {order.shipping.tracking_url ? (
+                              <a
+                                href={order.shipping.tracking_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 underline break-all"
+                              >
+                                {order.shipping.awb_code}
+                              </a>
+                            ) : (
+                              order.shipping.awb_code
+                            )}
+                          </KVRow>
+                        ) : (
+                          <KVRow label="AWB">
+                            <span className="text-gray-400 italic text-xs">
+                              Pending — sync after courier assigned
+                            </span>
+                          </KVRow>
+                        )}
+                        {(order.shipping?.courier_name ||
+                          order.shipping?.courier_partner) && (
+                          <KVRow label="Courier">
+                            {order.shipping.courier_name ||
+                              order.shipping.courier_partner}
+                          </KVRow>
+                        )}
+                        {order.shipping?.dispatch_date &&
+                          order.shipping.dispatch_date.trim() !== "" && (
+                            <KVRow label="Dispatched">
+                              {order.shipping.dispatch_date}
+                              {order.shipping.dispatch_time
+                                ? ` at ${order.shipping.dispatch_time}`
+                                : ""}
+                            </KVRow>
+                          )}
+                        {order.shipping?.estimated_delivery &&
+                          order.shipping.estimated_delivery.trim() !== "" && (
+                            <KVRow label="Est. Delivery">
+                              {order.shipping.estimated_delivery}
+                            </KVRow>
+                          )}
+                        {order.shipping?.delivered_date && (
+                          <KVRow label="Delivered On">
+                            <span className="text-green-600 font-semibold">
+                              {order.shipping.delivered_date}
+                              {order.shipping.delivered_time
+                                ? ` at ${order.shipping.delivered_time}`
+                                : ""}
+                            </span>
+                          </KVRow>
+                        )}
+                        {order.shipping?.return_reason && (
+                          <KVRow label="Return Reason">
+                            <span className="text-red-600">
+                              {order.shipping.return_reason}
+                            </span>
+                          </KVRow>
+                        )}
+                        {order.shipping?.remarks && (
+                          <KVRow label="Remarks">
+                            {order.shipping.remarks}
+                          </KVRow>
+                        )}
 
-                    <KVRow label="Tracking ID">
-                      {order.shipping!.tracking_url ? (
-                        <a
-                          href={order.shipping!.tracking_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 underline break-all"
+                        {/* Shipment address — what was actually sent to SR */}
+                        {order.shipping?.shipment_name && (
+                          <>
+                            <span className="col-span-3 mt-2 pt-2 border-t border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                              Shipment Address Sent to SR
+                            </span>
+                            <KVRow label="Name">
+                              {order.shipping.shipment_name}
+                            </KVRow>
+                            {order.shipping.shipment_phone && (
+                              <KVRow label="Phone">
+                                {order.shipping.shipment_phone}
+                              </KVRow>
+                            )}
+                            {order.shipping.shipment_email && (
+                              <KVRow label="Email">
+                                {order.shipping.shipment_email}
+                              </KVRow>
+                            )}
+                            {order.shipping.shipment_address && (
+                              <KVRow label="Address">
+                                {order.shipping.shipment_address}
+                              </KVRow>
+                            )}
+                            {order.shipping.shipment_city && (
+                              <KVRow label="City / State">
+                                {order.shipping.shipment_city}
+                                {order.shipping.shipment_state
+                                  ? `, ${order.shipping.shipment_state}`
+                                  : ""}
+                                {order.shipping.shipment_pincode
+                                  ? ` - ${order.shipping.shipment_pincode}`
+                                  : ""}
+                              </KVRow>
+                            )}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <span className="col-span-3 text-gray-400 italic text-sm">
+                        No shipment created yet. Click "Create Shipment" to push
+                        to ShipRocket.
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Admin action buttons inside modal */}
+                  <div className="mt-4 pt-3 border-t border-gray-200 flex gap-2 justify-end flex-wrap">
+                    {!hasSROrder ? (
+                      // No SR order yet — Create Shipment
+                      <button
+                        onClick={() => {
+                          setShowAddress(false);
+                          openShipModal();
+                        }}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 text-white font-medium cursor-pointer whitespace-nowrap"
+                      >
+                        Create Shipment
+                      </button>
+                    ) : (
+                      // SR order exists — Sync + Cancel
+                      <>
+                        <button
+                          onClick={() => {
+                            setShowAddress(false);
+                            handleSyncTracking();
+                          }}
+                          disabled={srLoading}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white font-medium cursor-pointer
+                                     disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
                         >
-                          {order.shipping!.tracking_id}
-                        </a>
-                      ) : (
-                        order.shipping!.tracking_id
-                      )}
-                    </KVRow>
-
-                    <KVRow label="Dispatched">
-                      {order.shipping!.dispatch_date || "—"}
-                      {order.shipping!.dispatch_time
-                        ? ` at ${order.shipping!.dispatch_time}`
-                        : ""}
-                    </KVRow>
-
-                    <KVRow label="Est. Delivery">
-                      {order.shipping!.estimated_delivery || "—"}
-                    </KVRow>
-
-                    {order.shipping!.delivered_date && (
-                      <>
-                        <span className="font-bold text-black">
-                          Delivered On
-                        </span>
-                        <span className="font-bold text-black text-center">
-                          :
-                        </span>
-                        <span className="font-semibold text-green-600">
-                          {order.shipping!.delivered_date}
-                          {order.shipping!.delivered_time
-                            ? ` at ${order.shipping!.delivered_time}`
-                            : ""}
-                        </span>
+                          {srLoading ? "Syncing..." : "Sync Tracking"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowAddress(false);
+                            handleCancelShipment();
+                          }}
+                          disabled={cancelLoading}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-red-600 text-white font-medium cursor-pointer
+                                     disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
+                        >
+                          {cancelLoading ? "Cancelling..." : "Cancel Shipment"}
+                        </button>
                       </>
                     )}
-
-                    {order.shipping!.return_reason && (
-                      <>
-                        <span className="font-bold text-black">
-                          Return Reason
-                        </span>
-                        <span className="font-bold text-black text-center">
-                          :
-                        </span>
-                        <span className="font-normal text-red-600">
-                          {order.shipping!.return_reason}
-                        </span>
-                      </>
-                    )}
-
-                    {order.shipping!.remarks && (
-                      <KVRow label="Remarks">{order.shipping!.remarks}</KVRow>
-                    )}
+                    <button
+                      onClick={() => {
+                        setShowAddress(false);
+                        openEditTrack();
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-gray-600 text-white font-medium cursor-pointer whitespace-nowrap"
+                    >
+                      Edit Track
+                    </button>
                   </div>
                 </div>
               )}
 
-              {/* not yet dispatched notice */}
+              {/* Not yet dispatched notice */}
               {!hasTracking &&
+                !hasSROrder &&
                 order.orderStatus !== "pending" &&
                 order.orderStatus !== "cancelled" && (
                   <p className="mt-4 text-xs text-gray-400 italic">
@@ -983,28 +1229,11 @@ export default function OrderDetailView() {
                   </p>
                 )}
             </div>
-            {/* Edit Track button — admin only, inside modal */}
-            {user.role === "admin" && (
-              <div className="mt-5 pt-4 border-t border-gray-200 flex justify-end">
-                <button
-                  onClick={() => {
-                    setShowAddress(false);
-                    openEditTrack();
-                  }}
-                  className="text-sm px-4 py-2 rounded-lg border border-gray-300 bg-gray-600
-                             text-white font-medium cursor-pointer"
-                >
-                  Edit Track
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* ══════════════════════════════════════════
-          Popup 2 — Edit Track (admin)
-      ══════════════════════════════════════════ */}
+      {/* ══ Popup 2 — Edit Track ══ */}
       {showEditTrack && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50"
@@ -1017,7 +1246,6 @@ export default function OrderDetailView() {
             <button
               onClick={() => setShowEditTrack(false)}
               className="absolute top-3 right-3 text-gray-500 hover:text-black text-lg font-bold"
-              aria-label="Close"
             >
               ✕
             </button>
@@ -1025,14 +1253,12 @@ export default function OrderDetailView() {
             <p className="text-lg font-semibold mb-5">Edit Tracking Details</p>
 
             <div className="flex flex-col gap-4">
-              {/* Order Status */}
               <div className="flex flex-col gap-1">
                 <FieldLabel>Order Status</FieldLabel>
                 <select
                   value={trackForm.order_status}
                   onChange={(e) => setField("order_status", e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
-                             focus:outline-none focus:ring-2 focus:ring-black"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-black"
                 >
                   <option value="">— Select Status —</option>
                   <option value="pending">Pending</option>
@@ -1045,7 +1271,6 @@ export default function OrderDetailView() {
                 </select>
               </div>
 
-              {/* Courier + Tracking ID */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <FieldLabel>Courier Partner</FieldLabel>
@@ -1065,7 +1290,6 @@ export default function OrderDetailView() {
                 </div>
               </div>
 
-              {/* Dispatch Date + Time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <FieldLabel>Dispatch Date</FieldLabel>
@@ -1083,7 +1307,6 @@ export default function OrderDetailView() {
                 </div>
               </div>
 
-              {/* Estimated Delivery */}
               <div className="flex flex-col gap-1">
                 <FieldLabel>Estimated Delivery Date</FieldLabel>
                 <DateInput
@@ -1092,7 +1315,6 @@ export default function OrderDetailView() {
                 />
               </div>
 
-              {/* Delivered Date + Time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
                   <FieldLabel>Delivered Date</FieldLabel>
@@ -1110,7 +1332,6 @@ export default function OrderDetailView() {
                 </div>
               </div>
 
-              {/* Tracking URL */}
               <div className="flex flex-col gap-1">
                 <FieldLabel>Tracking URL (optional)</FieldLabel>
                 <input
@@ -1118,12 +1339,10 @@ export default function OrderDetailView() {
                   placeholder="https://courier.com/track/..."
                   value={trackForm.tracking_url}
                   onChange={(e) => setField("tracking_url", e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
-                             focus:outline-none focus:ring-2 focus:ring-black"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-black"
                 />
               </div>
 
-              {/* Return Reason */}
               <div className="flex flex-col gap-1">
                 <FieldLabel>Return Reason (if applicable)</FieldLabel>
                 <TextInput
@@ -1133,7 +1352,6 @@ export default function OrderDetailView() {
                 />
               </div>
 
-              {/* Remarks */}
               <div className="flex flex-col gap-1">
                 <FieldLabel>Remarks</FieldLabel>
                 <textarea
@@ -1141,22 +1359,18 @@ export default function OrderDetailView() {
                   placeholder="Any additional notes..."
                   value={trackForm.remarks}
                   onChange={(e) => setField("remarks", e.target.value)}
-                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full
-                             focus:outline-none focus:ring-2 focus:ring-black resize-none"
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-black resize-none"
                 />
               </div>
 
-              {/* error */}
               {trackError && (
                 <p className="text-red-500 text-xs">{trackError}</p>
               )}
 
-              {/* actions */}
               <div className="flex justify-end gap-3 pt-1">
                 <button
                   onClick={() => setShowEditTrack(false)}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm
-                             text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -1168,6 +1382,202 @@ export default function OrderDetailView() {
                   {trackSaving ? "Saving..." : "Save"}
                 </SubmitButton>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Popup 3 — Create Shipment ══ */}
+      {showShipModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-[60]"
+          onClick={() => setShowShipModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-lg w-[95%] max-w-2xl p-6 relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowShipModal(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-black text-lg font-bold"
+            >
+              ✕
+            </button>
+
+            <p className="text-lg font-semibold mb-1">Create Shipment</p>
+            <p className="text-xs text-gray-500 mb-4">
+              Review and edit before pushing to ShipRocket. Fields are
+              pre-filled from the order.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Customer Name *</FieldLabel>
+                <TextInput
+                  value={shipForm.billing_customer_name}
+                  onChange={(v) =>
+                    setShipForm((p) => ({ ...p, billing_customer_name: v }))
+                  }
+                  placeholder="Full name"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Phone (10 digits) *</FieldLabel>
+                <TextInput
+                  value={shipForm.billing_phone}
+                  onChange={(v) =>
+                    setShipForm((p) => ({ ...p, billing_phone: v }))
+                  }
+                  placeholder="10-digit mobile"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Email</FieldLabel>
+                <TextInput
+                  value={shipForm.billing_email}
+                  onChange={(v) =>
+                    setShipForm((p) => ({ ...p, billing_email: v }))
+                  }
+                  placeholder="email"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Pincode *</FieldLabel>
+                <TextInput
+                  value={shipForm.billing_pincode}
+                  onChange={(v) =>
+                    setShipForm((p) => ({ ...p, billing_pincode: v }))
+                  }
+                  placeholder="6-digit pincode"
+                />
+              </div>
+              <div className="sm:col-span-2 flex flex-col gap-1">
+                <FieldLabel>Address *</FieldLabel>
+                <TextInput
+                  value={shipForm.billing_address}
+                  onChange={(v) =>
+                    setShipForm((p) => ({ ...p, billing_address: v }))
+                  }
+                  placeholder="House no, Street, Landmark"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel>City *</FieldLabel>
+                <TextInput
+                  value={shipForm.billing_city}
+                  onChange={(v) =>
+                    setShipForm((p) => ({ ...p, billing_city: v }))
+                  }
+                  placeholder="City"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel>State *</FieldLabel>
+                <TextInput
+                  value={shipForm.billing_state}
+                  onChange={(v) =>
+                    setShipForm((p) => ({ ...p, billing_state: v }))
+                  }
+                  placeholder="State"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Country</FieldLabel>
+                <TextInput
+                  value={shipForm.billing_country}
+                  onChange={(v) =>
+                    setShipForm((p) => ({ ...p, billing_country: v }))
+                  }
+                  placeholder="India"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <FieldLabel>Payment Method</FieldLabel>
+                <select
+                  value={shipForm.payment_method}
+                  onChange={(e) =>
+                    setShipForm((p) => ({
+                      ...p,
+                      payment_method: e.target.value,
+                    }))
+                  }
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-black"
+                >
+                  <option value="Prepaid">Prepaid</option>
+                  <option value="COD">COD</option>
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Package Dimensions
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel>Length (cm)</FieldLabel>
+                    <TextInput
+                      value={shipForm.length}
+                      onChange={(v) =>
+                        setShipForm((p) => ({ ...p, length: v }))
+                      }
+                      placeholder="cm"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel>Breadth (cm)</FieldLabel>
+                    <TextInput
+                      value={shipForm.breadth}
+                      onChange={(v) =>
+                        setShipForm((p) => ({ ...p, breadth: v }))
+                      }
+                      placeholder="cm"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel>Height (cm)</FieldLabel>
+                    <TextInput
+                      value={shipForm.height}
+                      onChange={(v) =>
+                        setShipForm((p) => ({ ...p, height: v }))
+                      }
+                      placeholder="cm"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <FieldLabel>Weight (kg)</FieldLabel>
+                    <TextInput
+                      value={shipForm.weight}
+                      onChange={(v) =>
+                        setShipForm((p) => ({ ...p, weight: v }))
+                      }
+                      placeholder="kg"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {srMessage && (
+              <p
+                className={`text-xs font-medium mt-3 ${srMessage.startsWith("✅") ? "text-green-600" : "text-red-500"}`}
+              >
+                {srMessage}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 mt-5 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setShowShipModal(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <SubmitButton
+                onClick={handleCreateShipment}
+                disabled={srLoading}
+                className="text-sm px-6"
+              >
+                {srLoading ? "Creating..." : "Create Shipment"}
+              </SubmitButton>
             </div>
           </div>
         </div>

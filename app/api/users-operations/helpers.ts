@@ -34,6 +34,7 @@ export interface ITreeNode {
 export interface CreateUserInput {
   mail: string;
   contact: string;
+  password: string;
   dob?: string;
   user_name: string;
   first_name?: string;
@@ -76,7 +77,7 @@ const createWelcomeEmailBody = (
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to Our Platform</title>
+      <title>Welcome to Maverick Signature</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -187,16 +188,12 @@ const createWelcomeEmailBody = (
             <div class="credential-item">
               <strong>Contact Number:</strong> ${contact}
             </div>
-            <div class="credential-item">
-              <strong>Default Password:</strong> ${contact} (your contact number)
-            </div>
           </div>
 
           <div class="notice">
             <span class="important">Important:</span> You can use either your User ID or Contact Number to login.
           </div>
 
-          <p>For security reasons, please change your password in the settings section after your first login.</p>
           <p>If you have any questions, please contact our support team.</p>
         </div>
 
@@ -570,7 +567,7 @@ const user_id = await generateUniqueCustomId("IND", User, 7, 7);
     paid_directs: [],
   });
 
-  const hashedPassword = await bcrypt.hash(contact, 10);
+const hashedPassword = await bcrypt.hash(body.password || contact, 10);
 
   const newLoginDoc = await Login.create({
     ...body,

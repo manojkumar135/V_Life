@@ -55,7 +55,7 @@ export default function RegistrationSuccess() {
             Your User ID:{" "}
             <span className="text-md font-semibold text-gray-900">
               {userId}
-            </span> 
+            </span>
           </p>
         </div>
 
@@ -81,7 +81,7 @@ export default function RegistrationSuccess() {
           <ol className="mt-1 text-gray-700 text-[13px] space-y-1 list-decimal ml-5">
             <li>Check your email inbox (including spam/junk folder).</li>
             <li>Click the activation link to verify your email.</li>
-            <li>Login using User ID & mobile number.</li>
+            <li>Login using User ID & Password.</li>
           </ol>
         </div>
 

@@ -294,7 +294,14 @@ export default function PairRankingsPage() {
               },
               {
                 label: "Current Rank",
-                value: data.current_pair_star ?? "—",
+                value:
+                  data.current_pair_star ??
+                  (() => {
+                    // No pair_star — check PV both sides
+                    const hasPV =
+                      data.left_direct_pv >= 100 && data.right_direct_pv >= 100;
+                    return hasPV ? "Star" : "Associate";
+                  })(),
                 color: "text-purple-700",
                 small: true,
               },

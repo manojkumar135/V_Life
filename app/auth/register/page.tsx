@@ -15,6 +15,7 @@ import { IoCalendarOutline } from "react-icons/io5";
 import { FaTransgender } from "react-icons/fa";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
 import { FaIdCard } from "react-icons/fa";
+import { FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import DatePicker from "react-datepicker";
@@ -51,6 +52,7 @@ function RegisterContent() {
 
   const [panVerified, setPanVerified] = useState(false);
   const [panChecking, setPanChecking] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [isReferByPreset, setIsReferByPreset] = useState(false);
   const [isTeamPreset, setIsTeamPreset] = useState(false);
@@ -116,10 +118,13 @@ function RegisterContent() {
         .test("valid-pan", "* Invalid PAN format (ABCDE1234F)", (value) => {
           if (!value) return true; // optional
           if (value.length < 10) return true; // do NOT validate
-          return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value); // only validate when length = 10
+          return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value);
         })
         .nullable()
         .notRequired(),
+      password: Yup.string()
+        .required("* Password is required")
+        .min(6, "* Password must be at least 6 characters"),
     }),
     onSubmit: async (values) => {
       setLoading(true);
@@ -364,11 +369,26 @@ function RegisterContent() {
                     showMonthDropdown
                     scrollableYearDropdown
                     yearDropdownItemNumber={100}
-                    popperPlacement="bottom-start"
+                    popperPlacement="bottom"
+                    popperProps={{
+                      strategy: "fixed",
+                    }}
                     popperClassName="z-[999] xl:w-[350px]"
                     onKeyDown={(e) => e.preventDefault()}
                     shouldCloseOnSelect
                     calendarClassName="custom-datepicker-calendar"
+                    customInput={
+                      <input
+                        readOnly
+                        inputMode="none"
+                        onFocus={(e) => e.target.blur()}
+                        className={`w-full pl-10 pr-4 py-1 rounded-md border ${
+                          formik.touched.dob && formik.errors.dob
+                            ? "border-red-500"
+                            : "border-gray-400"
+                        } focus:ring-2 focus:ring-gray-200`}
+                      />
+                    }
                     className={`w-full pl-10 pr-4 py-1 rounded-md border ${
                       formik.touched.dob && formik.errors.dob
                         ? "border-red-500"
@@ -388,18 +408,20 @@ function RegisterContent() {
                         { length: 101 },
                         (_, i) => currentYear - i,
                       );
-                      const monthOptions = Array.from({ length: 12 }).map(
-                        (_, m) => ({
-                          value: m,
-                          label: new Date(0, m).toLocaleString("default", {
-                            month: "long",
-                          }),
-                        }),
-                      );
-                      const yearOptions = years.map((y) => ({
-                        value: y,
-                        label: y.toString(),
-                      }));
+                      const months = [
+                        "January",
+                        "February",
+                        "March",
+                        "April",
+                        "May",
+                        "June",
+                        "July",
+                        "August",
+                        "September",
+                        "October",
+                        "November",
+                        "December",
+                      ];
 
                       return (
                         <div className="flex items-center justify-between w-full px-2 py-1">
@@ -413,57 +435,37 @@ function RegisterContent() {
                           </button>
 
                           <div className="flex items-center gap-2">
-                            <div className="min-w-25">
-                              <Select
-                                options={monthOptions}
-                                value={monthOptions.find(
-                                  (m) => m.value === date.getMonth(),
-                                )}
-                                onChange={(selected) =>
-                                  selected && changeMonth(selected.value)
-                                }
-                                styles={{
-                                  control: (base) => ({
-                                    ...base,
-                                    minHeight: "34px",
-                                    fontSize: "0.85rem",
-                                  }),
-                                  menu: (base) => ({ ...base, zIndex: 9999 }),
-                                  option: (base) => ({
-                                    ...base,
-                                    fontSize: "0.85rem",
-                                  }),
-                                }}
-                                menuPortalTarget={document.body}
-                                menuPosition="fixed"
-                              />
-                            </div>
+                            {/* Month - plain select, no keyboard */}
+                            <select
+                              value={date.getMonth()}
+                              onChange={(e) =>
+                                changeMonth(Number(e.target.value))
+                              }
+                              onFocus={(e) => e.target.blur()} // ← prevents keyboard
+                              className="border border-gray-300 rounded px-1 py-1 text-sm bg-white cursor-pointer"
+                            >
+                              {months.map((month, idx) => (
+                                <option key={month} value={idx}>
+                                  {month}
+                                </option>
+                              ))}
+                            </select>
 
-                            <div className="min-w-20">
-                              <Select
-                                options={yearOptions}
-                                value={yearOptions.find(
-                                  (y) => y.value === date.getFullYear(),
-                                )}
-                                onChange={(selected) =>
-                                  selected && changeYear(selected.value)
-                                }
-                                styles={{
-                                  control: (base) => ({
-                                    ...base,
-                                    minHeight: "34px",
-                                    fontSize: "0.85rem",
-                                  }),
-                                  menu: (base) => ({ ...base, zIndex: 9999 }),
-                                  option: (base) => ({
-                                    ...base,
-                                    fontSize: "0.85rem",
-                                  }),
-                                }}
-                                menuPortalTarget={document.body}
-                                menuPosition="fixed"
-                              />
-                            </div>
+                            {/* Year - plain select, no keyboard */}
+                            <select
+                              value={date.getFullYear()}
+                              onChange={(e) =>
+                                changeYear(Number(e.target.value))
+                              }
+                              onFocus={(e) => e.target.blur()} // ← prevents keyboard
+                              className="border border-gray-300 rounded px-1 py-1 text-sm bg-white cursor-pointer"
+                            >
+                              {years.map((year) => (
+                                <option key={year} value={year}>
+                                  {year}
+                                </option>
+                              ))}
+                            </select>
                           </div>
 
                           <button
@@ -619,8 +621,8 @@ function RegisterContent() {
                       <>
                         ✓
                         <span>
-                          Referred by {" "}
-                          <span className="font-medium text-gray-800">
+                          Referred by{" "}
+                          <span className="font-semibold text-green-700">
                             {referralName}
                           </span>
                         </span>
@@ -762,10 +764,38 @@ function RegisterContent() {
                   {formik.errors.pan || "\u00A0"}
                 </span>
               </div>
+
+              {/* Password */}
+              <div>
+                <div className="relative">
+                  <FaLock className="absolute left-3 top-2 text-gray-500" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="Password"
+                    value={formik.values.password}
+                    onChange={formik.handleChange}
+                    onBlur={formik.handleBlur}
+                    className="w-full pl-10 pr-10 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-3 top-2 text-gray-500"
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
+                <span className="text-red-500 text-xs mt-1 block">
+                  {formik.touched.password && formik.errors.password
+                    ? formik.errors.password
+                    : "\u00A0"}
+                </span>
+              </div>
             </div>
 
             {/* PAN Note */}
-            <p className="text-[0.75rem] text-red-600 -mt-3 mb-8">
+            <p className="text-[0.75rem] text-red-600 -mt-2 mb-4">
               <strong className="text-gray-600">Note:</strong> If PAN is
               verified, TDS will be <strong>2%</strong>. If not verified, TDS
               will be <strong>20%</strong>.

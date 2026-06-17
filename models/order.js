@@ -48,10 +48,10 @@ const OrderSchema = new mongoose.Schema(
     referBy: { type: String, },
     infinity: { type: String, },
 
-    door_no: { type: String,  },
+    door_no: { type: String, },
     // street: { type: String, },
     landmark: { type: String, },
-    city: { type: String,  },
+    city: { type: String, },
     state: { type: String, required: true },
     country: { type: String, required: true },
     pincode: { type: String, required: true },
@@ -68,7 +68,7 @@ const OrderSchema = new mongoose.Schema(
     total_amount: { type: Number, },
     final_amount: { type: Number, },
     advance_deducted: { type: Number, default: 0 }, // amount deducted from advance
-    advance_used:{ type: Boolean, default: false },
+    advance_used: { type: Boolean, default: false },
     is_first_order: { type: Boolean, default: false },
     reward_used: { type: Number, default: 0 },
     reward_remaining: { type: Number, default: 0 },
@@ -89,21 +89,35 @@ const OrderSchema = new mongoose.Schema(
     bonus_checked: { type: Boolean, default: false },
     direct_bonus_checked: { type: Boolean, default: false },
     matching_bonus_checked: { type: Boolean, default: false },
-
     shipping: {
-  tracking_id:        { type: String },
-  courier_partner:    { type: String },
-  dispatch_date:      { type: String },  
-  dispatch_time:      { type: String },   
-  estimated_delivery: { type: String },   
-  delivered_date:     { type: String },
-  delivered_time:     { type: String },
-  return_reason:      { type: String },   
-  remarks:            { type: String },
-  tracking_url:       { type: String },
-  updated_by:         { type: String },  
-  updated_at:         { type: Date },
-},
+      tracking_id: { type: String },
+      courier_partner: { type: String },
+      dispatch_date: { type: String },
+      dispatch_time: { type: String },
+      estimated_delivery: { type: String },
+      delivered_date: { type: String },
+      delivered_time: { type: String },
+      return_reason: { type: String },
+      remarks: { type: String },
+      tracking_url: { type: String },
+      updated_by: { type: String },
+      updated_at: { type: Date },
+      // ShipRocket fields
+      sr_order_id: { type: String },
+      sr_shipment_id: { type: String },
+      awb_code: { type: String },
+      courier_name: { type: String },
+      sr_status: { type: String },
+      // Actual address sent to ShipRocket (admin may change from order defaults)
+      shipment_name: { type: String },
+      shipment_phone: { type: String },
+      shipment_email: { type: String },
+      shipment_address: { type: String },
+      shipment_city: { type: String },
+      shipment_pincode: { type: String },
+      shipment_state: { type: String },
+      shipment_country: { type: String },
+    },
 
 
     // who placed / paid for the order
@@ -125,11 +139,11 @@ const OrderSchema = new mongoose.Schema(
 
     // detailed reward breakdown (informational)
     reward_usage: {
-       daily: {                                
-    used: { type: Number, default: 0 },
-    before: { type: Number, default: 0 },
-    after: { type: Number, default: 0 },
-  },
+      daily: {
+        used: { type: Number, default: 0 },
+        before: { type: Number, default: 0 },
+        after: { type: Number, default: 0 },
+      },
       fortnight: {
         used: { type: Number, default: 0 },
         before: { type: Number, default: 0 },

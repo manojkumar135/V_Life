@@ -758,9 +758,10 @@ const MaverickHome = () => {
               <span className="bg-linear-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">
                 INNOVATION{" "}
               </span>
-               & 
-               <span className="bg-linear-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">
-                  {" "}ABUNDANCE
+              &
+              <span className="bg-linear-to-r from-[#16B8E4] to-white bg-clip-text text-transparent">
+                {" "}
+                ABUNDANCE
               </span>
             </motion.h2>
             <motion.p
@@ -1455,37 +1456,64 @@ const MaverickHome = () => {
                     Products
                   </a>
                 </li>
-                <li>
+                {/* <li>
                   <a
                     href="#contact"
                     className="hover:text-[#16B8E4] transition"
                   >
                     Contact
                   </a>
-                </li>
+                </li> */}
                 <li>
-                  <span
-                    className="cursor-pointer hover:text-[#16B8E4] transition"
-                    onClick={() => openModal("privacy")}
-                  >
-                    Privacy Policy
-                  </span>
-                </li>
-                <li>
-                  <span
-                    className="cursor-pointer hover:text-[#16B8E4] transition"
-                    onClick={() => openModal("terms")}
+                  <a
+                    href="/terms-and-conditions"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#16B8E4] transition"
                   >
                     Terms & Conditions
-                  </span>
+                  </a>
                 </li>
                 <li>
-                  <span
-                    className="cursor-pointer hover:text-[#16B8E4] transition"
-                    onClick={() => openModal("refund")}
+                  <a
+                    href="/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#16B8E4] transition"
+                  >
+                    Privacy Policy
+                  </a>
+                </li>
+                
+                <li>
+                  <a
+                    href="/refund-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#16B8E4] transition"
                   >
                     Refund Policy
-                  </span>
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/shipping-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#16B8E4] transition"
+                  >
+                    Shipping Policy
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="/contact-us"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#16B8E4] transition"
+                  >
+                    Contact Us
+                  </a>
                 </li>
               </ul>
             </div>
@@ -1511,24 +1539,46 @@ const MaverickHome = () => {
           <div className="pt-4 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-600">
             <p>© {new Date().getFullYear()} Maverick. All Rights Reserved.</p>
             <div className="flex gap-4 sm:gap-5">
-              <span
-                className="cursor-pointer hover:text-[#16B8E4] transition"
-                onClick={() => openModal("privacy")}
-              >
-                Privacy Policy
-              </span>
-              <span
-                className="cursor-pointer hover:text-[#16B8E4] transition"
-                onClick={() => openModal("terms")}
+              <a
+                href="/terms-and-conditions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#16B8E4] transition"
               >
                 Terms & Conditions
-              </span>
-              <span
-                className="cursor-pointer hover:text-[#16B8E4] transition"
-                onClick={() => openModal("refund")}
+              </a>
+              <a
+                href="/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#16B8E4] transition"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="/refund-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#16B8E4] transition"
               >
                 Refund Policy
-              </span>
+              </a>
+              <a
+                href="/shipping-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#16B8E4] transition"
+              >
+                Shipping Policy
+              </a>
+              <a
+                href="/contact-us"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-[#16B8E4] transition"
+              >
+                Contact Us
+              </a>
             </div>
           </div>
         </div>
