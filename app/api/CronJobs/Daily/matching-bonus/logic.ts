@@ -312,7 +312,7 @@ export async function getUserTeamsAndHistories() {
     $or: [
       { first_order: true },
       { advance: true },
-      { first_order: false, advance: false }, 
+      { first_order: false, advance: false },
     ],
   }).lean()) as any[];
 
@@ -531,9 +531,16 @@ export async function runMatchingBonus() {
         user_id: u.user_id,
       }).lean()) as any;
       const user = (await User.findOne({ user_id: u.user_id }).lean()) as any;
+      const rawPan = wallet?.pan_verified;
       const isPanVerified =
-        wallet?.pan_verified === true ||
-        ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
+        rawPan === true ||
+        rawPan === 1 ||
+        (typeof rawPan === "string" &&
+          ["yes", "true", "1"].includes(rawPan.toLowerCase().trim()));
+
+      console.log(
+        `[PAN Check] user=${u.user_id} raw=${rawPan} → isPanVerified=${isPanVerified}`,
+      );
 
       const walletId = wallet ? wallet.wallet_id : null;
 

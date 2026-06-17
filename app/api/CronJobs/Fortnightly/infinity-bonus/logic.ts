@@ -129,9 +129,7 @@ export async function runInfinityBonus() {
       // ✅ Fetch the source user
       const sourceUser = await User.findOne({ user_id: sourceUserId });
       if (!sourceUser) {
-        console.log(
-          `⚠️ Source user ${sourceUserId} not found, skipping.`,
-        );
+        console.log(`⚠️ Source user ${sourceUserId} not found, skipping.`);
         await DailyPayout.updateOne(
           { _id: payout._id },
           { $set: { is_checked: true } },
@@ -262,9 +260,16 @@ export async function runInfinityBonus() {
       let tdsAmount = 0;
       let adminCharge = 0;
 
+      const rawPan = wallet?.pan_verified;
       const isPanVerified =
-        wallet?.pan_verified === true ||
-        ["yes", "true"].includes(String(wallet?.pan_verified).toLowerCase());
+        rawPan === true ||
+        rawPan === 1 ||
+        (typeof rawPan === "string" &&
+          ["yes", "true", "1"].includes(rawPan.toLowerCase().trim()));
+
+      console.log(
+        `[PAN Check] user=${sponsor.user_id} raw=${rawPan} → isPanVerified=${isPanVerified}`,
+      );
 
       if (wallet && isPanVerified) {
         withdrawAmount = Number((bonusAmount * 0.8).toFixed(2));
@@ -285,7 +290,7 @@ export async function runInfinityBonus() {
         user_name: sponsor.user_name,
         rank: sponsor?.rank || "none",
         wallet_id: wallet ? wallet.wallet_id : "",
-        pan_verified: isPanVerified || false,
+        pan_verified: isPanVerified === true,
         mail: sponsor?.mail || "",
         contact: sponsor?.contact || "",
         user_status: sponsor?.status || "active",
