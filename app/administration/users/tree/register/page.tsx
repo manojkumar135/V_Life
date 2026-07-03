@@ -237,7 +237,7 @@ function RegisterContent() {
   const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
-    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden  bg-[#106187]/85">
+    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden max-sm:overflow-y-visible bg-[#106187]/85">
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
@@ -300,7 +300,7 @@ function RegisterContent() {
               {/* DOB */}
               <div>
                 <div className="relative" inputMode="none">
-                  <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
+                  <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none z-100" />
                   <DatePicker
                     selected={
                       formik.values.dob ? new Date(formik.values.dob) : null
@@ -324,7 +324,8 @@ function RegisterContent() {
                     showMonthDropdown
                     scrollableYearDropdown
                     yearDropdownItemNumber={100}
-                    popperPlacement="bottom-start"
+                    popperPlacement="bottom"
+                    popperProps={{ strategy: "fixed" }}
                     popperClassName="z-[999] xl:w-[350px]"
                     onKeyDown={(e) => e.preventDefault()}
                     shouldCloseOnSelect
@@ -338,12 +339,12 @@ function RegisterContent() {
                       <input
                         readOnly
                         inputMode="none"
-                        placeholder="Date of Birth"
+                        onFocus={(e) => e.target.blur()}
                         className={`w-full pl-10 pr-4 py-1 rounded-md border ${
                           formik.touched.dob && formik.errors.dob
                             ? "border-red-500"
                             : "border-gray-400"
-                        } focus:ring-2 focus:ring-gray-200 bg-white`}
+                        } focus:ring-2 focus:ring-gray-200`}
                       />
                     }
                     renderCustomHeader={({
@@ -393,8 +394,7 @@ function RegisterContent() {
                               onChange={(e) =>
                                 changeMonth(Number(e.target.value))
                               }
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onTouchStart={(e) => e.stopPropagation()}
+                              onFocus={(e) => e.target.blur()}
                               className="border border-gray-300 rounded px-1 py-1 text-sm bg-white cursor-pointer focus:outline-none"
                             >
                               {months.map((month, idx) => (
@@ -410,8 +410,7 @@ function RegisterContent() {
                               onChange={(e) =>
                                 changeYear(Number(e.target.value))
                               }
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onTouchStart={(e) => e.stopPropagation()}
+                              onFocus={(e) => e.target.blur()}
                               className="border border-gray-300 rounded px-1 py-1 text-sm bg-white cursor-pointer focus:outline-none"
                             >
                               {years.map((year) => (
@@ -445,7 +444,7 @@ function RegisterContent() {
               {/* Gender */}
               <div>
                 <div className="relative">
-                  <FaTransgender className="absolute left-3 top-2.5 text-gray-500" />
+                  <FaTransgender className="absolute left-3 top-2.5 text-gray-500 " />
                   {isClient && (
                     <Select
                       options={gender}

@@ -79,7 +79,7 @@ export default function DirectTeam() {
         setLoading(false);
       }
     },
-    [user?.user_id]
+    [user?.user_id],
   );
 
   useEffect(() => {
@@ -116,10 +116,10 @@ export default function DirectTeam() {
         // ✅ Update UI
         setUsersData((prev: User[]) =>
           prev.map((u) =>
-            u._id === id ? { ...u, user_status: res.data.data.user_status } : u
-          )
+            u._id === id ? { ...u, user_status: res.data.data.user_status } : u,
+          ),
         );
-         setIsStatusModalOpen(false);
+        setIsStatusModalOpen(false);
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -148,47 +148,47 @@ export default function DirectTeam() {
     { field: "bv", headerName: "BV", flex: 1 },
     { field: "pv", headerName: "PV", flex: 1 },
 
-   {
-  field: "rank",
-  headerName: "Rank",
-  flex: 1,
-  renderCell: (params: any) => {
-    const row = params.row;
-    const pairStar = row?.pair_star;
-    const status = (row?.user_status || row?.status || "").toLowerCase();
-    const rank = params.value;
+    {
+      field: "rank",
+      headerName: "Rank",
+      flex: 1,
+      renderCell: (params: any) => {
+        const row = params.row;
+        const pairStar = row?.pair_star;
+        const status = (row?.user_status || row?.status || "").toLowerCase();
+        const rank = params.value;
 
-    // 1️⃣ If user has pair_star — show it (capitalize)
-    if (pairStar && pairStar !== "none" && pairStar !== "") {
-      return (
-        <span className="capitalize text-xs font-medium">
-          {String(pairStar)
-            .toLowerCase()
-            .replace(/\b\w/g, (c) => c.toUpperCase())}
-        </span>
-      );
-    }
+        // 1️⃣ If user has pair_star — show it (capitalize)
+        if (pairStar && pairStar !== "none" && pairStar !== "") {
+          return (
+            <span className="capitalize text-xs font-medium">
+              {String(pairStar)
+                .toLowerCase()
+                .replace(/\b\w/g, (c) => c.toUpperCase())}
+            </span>
+          );
+        }
 
-    // 2️⃣ No pair_star — check rank + active status
-    const isActive = status === "active";
-    const rankNum = Number(rank);
-    const hasRank =
-      rank !== null &&
-      rank !== undefined &&
-      rank !== "" &&
-      rank !== "none" &&
-      String(rank).toLowerCase() !== "null" &&
-      (!isNaN(rankNum) ? rankNum > 0 : true);
+        // 2️⃣ No pair_star — check rank + active status
+        const isActive = status === "active";
+        const rankNum = Number(rank);
+        const hasRank =
+          rank !== null &&
+          rank !== undefined &&
+          rank !== "" &&
+          rank !== "none" &&
+          String(rank).toLowerCase() !== "null" &&
+          (!isNaN(rankNum) ? rankNum > 0 : true);
 
-    if (isActive && hasRank) {
-      return <span className="text-xs font-medium">Star</span>;
-    }
+        if (isActive && hasRank) {
+          return <span className="text-xs font-medium">Star</span>;
+        }
 
-    // 3️⃣ Fallback
-    return <span className="text-gray-400">-</span>;
-  },
-},
-        { field: "activated_date", headerName: "Activation Date", flex: 1 },
+        // 3️⃣ Fallback
+        return <span className="text-gray-400">-</span>;
+      },
+    },
+    { field: "activated_date", headerName: "Activation Date", flex: 1 },
     { field: "user_status", headerName: "Status", flex: 1 },
   ];
 

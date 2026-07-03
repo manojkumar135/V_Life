@@ -87,7 +87,7 @@ async function countActiveInSubtree(
   const leftIds = subtreeIds(root.left);
   const rightIds = subtreeIds(root.right);
 
- // Exclude admin-activated users — they have "admin" in status_notes
+  // Exclude admin-activated users — they have "admin" in status_notes
   const activeQuery = (ids: string[]) => ({
     user_id: { $in: ids },
     user_status: "active",
@@ -100,10 +100,16 @@ async function countActiveInSubtree(
 
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
-      ? User.find(activeQuery(leftIds), { user_id: 1, activated_date: 1 }).lean()
+      ? User.find(activeQuery(leftIds), {
+          user_id: 1,
+          activated_date: 1,
+        }).lean()
       : [],
     rightIds.length
-      ? User.find(activeQuery(rightIds), { user_id: 1, activated_date: 1 }).lean()
+      ? User.find(activeQuery(rightIds), {
+          user_id: 1,
+          activated_date: 1,
+        }).lean()
       : [],
   ]);
 
@@ -499,16 +505,26 @@ async function checkAndUpgradePairStar(
       let tdsAmount = 0;
       let adminCharge = 0;
 
+      // if (wallet && isPanVerified) {
+      //   withdrawAmount = Number((totalAmount * 0.8).toFixed(2));
+      //   rewardAmount = Number((totalAmount * 0.08).toFixed(2));
+      //   tdsAmount = Number((totalAmount * 0.02).toFixed(2));
+      //   adminCharge = Number((totalAmount * 0.1).toFixed(2));
+      // } else {
+      //   withdrawAmount = Number((totalAmount * 0.62).toFixed(2));
+      //   rewardAmount = Number((totalAmount * 0.08).toFixed(2));
+      //   tdsAmount = Number((totalAmount * 0.2).toFixed(2));
+      //   adminCharge = Number((totalAmount * 0.1).toFixed(2));
+      // }
+
       if (wallet && isPanVerified) {
-        withdrawAmount = Number((totalAmount * 0.8).toFixed(2)); // 80% to user wallet
-        rewardAmount = Number((totalAmount * 0.08).toFixed(2)); // 8% reward points
-        tdsAmount = Number((totalAmount * 0.02).toFixed(2)); // 2% TDS
-        adminCharge = Number((totalAmount * 0.1).toFixed(2)); // 10% admin
+        withdrawAmount = Number((totalAmount * 0.88).toFixed(2));
+        tdsAmount = Number((totalAmount * 0.02).toFixed(2));
+        adminCharge = Number((totalAmount * 0.1).toFixed(2));
       } else {
-        withdrawAmount = Number((totalAmount * 0.62).toFixed(2)); // 62% to user wallet
-        rewardAmount = Number((totalAmount * 0.08).toFixed(2)); // 8% reward points
-        tdsAmount = Number((totalAmount * 0.2).toFixed(2)); // 20% TDS (no PAN)
-        adminCharge = Number((totalAmount * 0.1).toFixed(2)); // 10% admin
+        withdrawAmount = Number((totalAmount * 0.7).toFixed(2));
+        tdsAmount = Number((totalAmount * 0.2).toFixed(2));
+        adminCharge = Number((totalAmount * 0.1).toFixed(2));
       }
 
       // ── Create DailyPayout record (status: Pending) ───────────────────
@@ -590,14 +606,16 @@ async function checkAndUpgradePairStar(
       });
 
       // ── Save reward_amount → Score type: "reward" ─────────────────────
-      await addRewardScore({
-        user_id: ancestor.user_id,
-        points: rewardAmount,
-        source: "pair_star_reward",
-        reference_id: payout.payout_id,
-        remarks: `Pair Star Reward — ${tier.tier_name} (${currentPairs} pairs)`,
-        type: "reward",
-      });
+      if (rewardAmount > 0) {
+        await addRewardScore({
+          user_id: ancestor.user_id,
+          points: rewardAmount,
+          source: "pair_star_reward",
+          reference_id: payout.payout_id,
+          remarks: `Pair Star Reward — ${tier.tier_name} (${currentPairs} pairs)`,
+          type: "reward",
+        });
+      }
 
       // ── Save withdraw_amount → Score type: "daily" ────────────────────
       await addRewardScore({

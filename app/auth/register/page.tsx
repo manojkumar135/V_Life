@@ -288,7 +288,7 @@ function RegisterContent() {
   const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
-    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden  bg-[#106187]/85">
+<div className="flex flex-row max-md:flex-col h-screen overflow-hidden max-sm:overflow-y-visible bg-[#106187]/85">
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />

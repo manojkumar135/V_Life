@@ -27,6 +27,7 @@ export interface UserType {
   infinity_left_users?: string[];
   infinity_right_users?: string[];
   self_bv?: number;
+  pair_star?: string;
 }
 
 export interface TreeNodeType {
@@ -49,13 +50,14 @@ export async function GET(req: Request) {
     if (!rootId) {
       return NextResponse.json(
         { error: "user_id is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 1) Fetch root user — only need infinity_users for level lookup
-    const rootUser = await User.findOne({ user_id: rootId })
-      .lean<UserType | null>();
+    const rootUser = await User.findOne({
+      user_id: rootId,
+    }).lean<UserType | null>();
 
     if (!rootUser) {
       return NextResponse.json({ data: [], total: 0 });
@@ -98,9 +100,9 @@ export async function GET(req: Request) {
         infinity_left_users: 1,
         infinity_right_users: 1,
         self_bv: 1,
-      }
-    )
-      .lean<UserType[]>();
+        pair_star: 1,
+      },
+    ).lean<UserType[]>();
 
     if (teamMembers.length === 0) {
       return NextResponse.json({ data: [], total: 0 });
@@ -109,7 +111,7 @@ export async function GET(req: Request) {
     // 4) Load all TreeNodes into maps for side + level detection
     const allNodes = await TreeNode.find(
       {},
-      { user_id: 1, parent: 1, left: 1, right: 1 }
+      { user_id: 1, parent: 1, left: 1, right: 1 },
     ).lean<TreeNodeType[]>();
 
     const nodeMapByUser = new Map<string, TreeNodeType>();
@@ -137,7 +139,7 @@ export async function GET(req: Request) {
     // then check whether the direct child under root is left or right.
     function determineTeam(
       rootNode: TreeNodeType | undefined,
-      targetNode: TreeNodeType | undefined
+      targetNode: TreeNodeType | undefined,
     ): "left" | "right" | "unknown" {
       if (!rootNode || !targetNode) return "unknown";
       let current: TreeNodeType | undefined = targetNode;
@@ -182,13 +184,14 @@ export async function GET(req: Request) {
     const allSideUserIds = new Set<string>();
     for (const member of teamMembers) {
       for (const id of member.infinity_left_users ?? []) allSideUserIds.add(id);
-      for (const id of member.infinity_right_users ?? []) allSideUserIds.add(id);
+      for (const id of member.infinity_right_users ?? [])
+        allSideUserIds.add(id);
     }
 
     // Batch fetch self_bv for all side users in one query
     const sideUserBvDocs = await User.find(
       { user_id: { $in: [...allSideUserIds] } },
-      { user_id: 1, self_bv: 1 }
+      { user_id: 1, self_bv: 1 },
     ).lean<{ user_id: string; self_bv?: number }[]>();
 
     const bvByUserId = new Map<string, number>();
@@ -211,11 +214,11 @@ export async function GET(req: Request) {
       // BV calculations using batched data
       const leftBV = (member.infinity_left_users ?? []).reduce(
         (sum, uid) => sum + (bvByUserId.get(uid) ?? 0),
-        0
+        0,
       );
       const rightBV = (member.infinity_right_users ?? []).reduce(
         (sum, uid) => sum + (bvByUserId.get(uid) ?? 0),
-        0
+        0,
       );
       const cumulativeBV =
         leftBV > 0 && rightBV > 0 ? Math.min(leftBV, rightBV) : 0;
@@ -264,7 +267,7 @@ export async function GET(req: Request) {
           .map((v) => String(v).toLowerCase());
 
         return terms.every((term) =>
-          values.some((field) => field.startsWith(term))
+          values.some((field) => field.startsWith(term)),
         );
       });
     }
@@ -277,7 +280,7 @@ export async function GET(req: Request) {
     console.error("❌ Error in /api/infinityteam:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -488,12 +488,19 @@ const DashboardPage: React.FC = () => {
                 index={2}
                 onClick={() => router.push("/wallet/rewards?tab=matching")}
               />
-              <DashBox
+              {/* <DashBox
                 icon={<FaGift />}
                 title="MAVERICK NEXUS"
                 value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
                 index={1}
                 onClick={() => router.push("/wallet/rewards?tab=score")}
+              /> */}
+              <DashBox
+                icon={<FaTrophy />}
+                title="Ranks & rewards"
+                value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
+                index={1}
+                onClick={() => router.push("/pair-rankings")}
               />
             </div>
 
@@ -610,23 +617,6 @@ const DashboardPage: React.FC = () => {
 
                 <div className="hidden md:block">
                   <DashBox
-                    icon={<FaGift />}
-                    title="MAVERICK NEXUS"
-                    value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
-                    index={1}
-                    onClick={() => router.push("/wallet/rewards?tab=score")}
-                  />
-                </div>
-
-                <DashBox
-                  icon={<FaTrophy />}
-                  title="Ranks & rewards"
-                  value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
-                  index={3}
-                />
-
-                <div className="hidden md:block">
-                  <DashBox
                     icon={<FaRupeeSign />}
                     title="Total Payout"
                     value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
@@ -646,13 +636,6 @@ const DashboardPage: React.FC = () => {
                   title="Payout On Hold"
                   value={`₹ ${summary?.payoutOnHold?.toFixed(2) || "0.00"}`}
                   index={5}
-                />
-
-                <DashBox
-                  icon={<MdOutlineCheckCircle />}
-                  title="Redeem Points"
-                  value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
-                  index={3}
                 />
 
                 <div className="hidden md:block">
@@ -676,7 +659,7 @@ const DashboardPage: React.FC = () => {
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaShoppingBag />}
-                    title="Direct Team Sales"
+                    title="Direct Sales Bonus"
                     value={`₹ ${summary?.directTeamSales?.toFixed(2) || "0.00"}`}
                     index={6}
                   />
@@ -685,7 +668,7 @@ const DashboardPage: React.FC = () => {
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaShoppingBag />}
-                    title="Infinity Team Sales"
+                    title="Infinity Sales Bonus"
                     value={`₹ ${summary?.infinityTeamSales?.toFixed(2) || "0.00"}`}
                     index={7}
                   />
@@ -697,6 +680,29 @@ const DashboardPage: React.FC = () => {
                   value={`${summary?.totalGST?.toFixed(2) || "0.00"}`}
                   index={3}
                 /> */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaTrophy />}
+                    title="Ranks & rewards"
+                    value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
+                    index={3}
+                  />
+                </div>
+
+                <DashBox
+                  icon={<FaGift />}
+                  title="MAVERICK NEXUS"
+                  value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
+                  index={1}
+                  onClick={() => router.push("/wallet/rewards?tab=score")}
+                />
+
+                <DashBox
+                  icon={<MdOutlineCheckCircle />}
+                  title="Redeem Points"
+                  value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
+                  index={3}
+                />
 
                 <DashBox
                   icon={<FaPercent />}

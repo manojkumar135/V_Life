@@ -271,14 +271,26 @@ export async function runInfinityBonus() {
         `[PAN Check] user=${sponsor.user_id} raw=${rawPan} → isPanVerified=${isPanVerified}`,
       );
 
+      // if (wallet && isPanVerified) {
+      //   withdrawAmount = Number((bonusAmount * 0.8).toFixed(2));
+      //   rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
+      //   tdsAmount = Number((bonusAmount * 0.02).toFixed(2));
+      //   adminCharge = Number((bonusAmount * 0.1).toFixed(2));
+      // } else {
+      //   withdrawAmount = Number((bonusAmount * 0.62).toFixed(2));
+      //   rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
+      //   tdsAmount = Number((bonusAmount * 0.2).toFixed(2));
+      //   adminCharge = Number((bonusAmount * 0.1).toFixed(2));
+      // }
+
       if (wallet && isPanVerified) {
-        withdrawAmount = Number((bonusAmount * 0.8).toFixed(2));
-        rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
+        // PAN Verified
+        withdrawAmount = Number((bonusAmount * 0.88).toFixed(2));
         tdsAmount = Number((bonusAmount * 0.02).toFixed(2));
         adminCharge = Number((bonusAmount * 0.1).toFixed(2));
       } else {
-        withdrawAmount = Number((bonusAmount * 0.62).toFixed(2));
-        rewardAmount = Number((bonusAmount * 0.08).toFixed(2));
+        // PAN Not Verified / No Wallet
+        withdrawAmount = Number((bonusAmount * 0.7).toFixed(2));
         tdsAmount = Number((bonusAmount * 0.2).toFixed(2));
         adminCharge = Number((bonusAmount * 0.1).toFixed(2));
       }
@@ -422,17 +434,19 @@ export async function runInfinityBonus() {
         type: "fortnight",
       });
 
-      await addRewardScore({
-        user_id: sponsor.user_id,
-        points: rewardAmount,
-        source:
-          payout.name === "Matching Bonus"
-            ? "infinity_matching_bonus"
-            : "infinity_sales_bonus",
-        reference_id: infinityPayout.payout_id,
-        remarks: `${infinityTitle} (reward) from ${sourceUserId}`,
-        type: "reward",
-      });
+      if (rewardAmount > 0) {
+        await addRewardScore({
+          user_id: sponsor.user_id,
+          points: rewardAmount,
+          source:
+            payout.name === "Matching Bonus"
+              ? "infinity_matching_bonus"
+              : "infinity_sales_bonus",
+          reference_id: infinityPayout.payout_id,
+          remarks: `${infinityTitle} (reward) from ${sourceUserId}`,
+          type: "reward",
+        });
+      }
 
       // ✅ Mark source payout as checked
       await DailyPayout.updateOne(

@@ -570,16 +570,26 @@ export async function runMatchingBonus() {
       let tdsAmount = 0;
       let adminCharge = 0;
 
+      // if (wallet && isPanVerified) {
+      //   withdrawAmount = Number((totalAmount * 0.8).toFixed(2));
+      //   rewardAmount = Number((totalAmount * 0.08).toFixed(2));
+      //   tdsAmount = Number((totalAmount * 0.02).toFixed(2));
+      //   adminCharge = Number((totalAmount * 0.1).toFixed(2));
+      // } else {
+      //   withdrawAmount = Number((totalAmount * 0.62).toFixed(2));
+      //   rewardAmount = Number((totalAmount * 0.08).toFixed(2));
+      //   tdsAmount = Number((totalAmount * 0.2).toFixed(2));
+      //   adminCharge = Number((totalAmount * 0.1).toFixed(2));
+      // }
+
       if (wallet && isPanVerified) {
         // PAN Verified
-        withdrawAmount = Number((totalAmount * 0.8).toFixed(2));
-        rewardAmount = Number((totalAmount * 0.08).toFixed(2));
+        withdrawAmount = Number((totalAmount * 0.88).toFixed(2));
         tdsAmount = Number((totalAmount * 0.02).toFixed(2));
         adminCharge = Number((totalAmount * 0.1).toFixed(2));
       } else {
         // PAN Not Verified OR No wallet
-        withdrawAmount = Number((totalAmount * 0.62).toFixed(2));
-        rewardAmount = Number((totalAmount * 0.08).toFixed(2));
+        withdrawAmount = Number((totalAmount * 0.7).toFixed(2));
         tdsAmount = Number((totalAmount * 0.2).toFixed(2));
         adminCharge = Number((totalAmount * 0.1).toFixed(2));
       }
@@ -727,14 +737,16 @@ export async function runMatchingBonus() {
           type: "daily",
         });
 
-        await addRewardScore({
-          user_id: u.user_id,
-          points: rewardAmount,
-          source: "matching_bonus",
-          reference_id: payout.payout_id,
-          remarks: `Matching bonus (reward) for cycle ${formattedDate}`,
-          type: "reward",
-        });
+        if (rewardAmount > 0) {
+          await addRewardScore({
+            user_id: u.user_id,
+            points: rewardAmount,
+            source: "matching_bonus",
+            reference_id: payout.payout_id,
+            remarks: `Matching bonus (reward) for cycle ${formattedDate}`,
+            type: "reward",
+          });
+        }
 
         await Alert.create({
           user_id: u.user_id,

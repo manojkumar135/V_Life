@@ -373,13 +373,28 @@ export async function runDirectSalesBonus(): Promise<{
           `[PAN Check] user=${referBy} raw=${rawPan} → isPanVerified=${isPanVerified}`,
         );
 
+        // const withdrawAmount = isPanVerified
+        //   ? totalAmount * 0.8
+        //   : totalAmount * 0.62;
+        // const rewardAmount = totalAmount * 0.08;
+        // const tdsAmount = isPanVerified
+        //   ? totalAmount * 0.02
+        //   : totalAmount * 0.2;
+        // const adminCharge = totalAmount * 0.1;
+
+        // Reward amount removed (0%)
+        // Reward amount is now added to Withdraw amount.
+
+        const rewardAmount = 0;
+
         const withdrawAmount = isPanVerified
-          ? totalAmount * 0.8
-          : totalAmount * 0.62;
-        const rewardAmount = totalAmount * 0.08;
+          ? totalAmount * 0.88
+          : totalAmount * 0.7;
+
         const tdsAmount = isPanVerified
           ? totalAmount * 0.02
           : totalAmount * 0.2;
+
         const adminCharge = totalAmount * 0.1;
 
         /* ── Create payout record ─────────────────────────────────── */
@@ -466,14 +481,16 @@ export async function runDirectSalesBonus(): Promise<{
             type: "daily",
           });
 
-          await addRewardScore({
-            user_id: referBy,
-            points: rewardAmount,
-            source: "direct_sales_bonus",
-            reference_id: order.order_id,
-            remarks: `Direct sales bonus (reward) from ${referBy} on ${formattedDate}`,
-            type: "reward",
-          });
+          if (rewardAmount > 0) {
+            await addRewardScore({
+              user_id: referBy,
+              points: rewardAmount,
+              source: "direct_sales_bonus",
+              reference_id: order.order_id,
+              remarks: `Direct sales bonus (reward) from ${referBy} on ${formattedDate}`,
+              type: "reward",
+            });
+          }
 
           await updateClub(referBy, totalAmount);
 
