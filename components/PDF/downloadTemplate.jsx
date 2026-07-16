@@ -7,27 +7,21 @@ import {
   Image,
   Font,
 } from "@react-pdf/renderer";
-import fs from "fs";
-import path from "path";
+// import fs from "fs";
+// import path from "path";
 
 const BASE_URL =
-  typeof window !== "undefined"
-    ? window.location.origin
-    : process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
 
-const isServer = typeof process !== "undefined" && !!process.versions?.node;
+const FONT_BASE_URL = `${BASE_URL.replace(/\/$/, "")}/fonts/Roboto`;
 
 Font.register({
   family: "Roboto",
-  fonts: isServer
-    ? [
-        { src: fs.readFileSync(path.join(process.cwd(), "public/fonts/Roboto/Roboto-Regular.ttf")) },
-        { src: fs.readFileSync(path.join(process.cwd(), "public/fonts/Roboto/Roboto-Bold.ttf")), fontWeight: "bold" },
-      ]
-    : [
-        { src: "/fonts/Roboto/Roboto-Regular.ttf" },
-        { src: "/fonts/Roboto/Roboto-Bold.ttf", fontWeight: "bold" },
-      ],
+  fonts: [
+    { src: `${FONT_BASE_URL}/Roboto-Regular.ttf` },
+    { src: `${FONT_BASE_URL}/Roboto-Bold.ttf`, fontWeight: "bold" },
+  ],
 });
 
 const BORDER = "0.7 solid #000";
