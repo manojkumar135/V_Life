@@ -54,6 +54,7 @@ interface DashboardSummary {
   totalTDS: number;
   totalAdminCharge: number;
   pairRewardTotal: number;
+  pendingPayout: number;
 }
 
 interface CycleStats {
@@ -495,12 +496,18 @@ const DashboardPage: React.FC = () => {
                 index={1}
                 onClick={() => router.push("/wallet/rewards?tab=score")}
               /> */}
-              <DashBox
+              {/* <DashBox
                 icon={<FaTrophy />}
                 title="Ranks & rewards"
                 value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
                 index={1}
                 onClick={() => router.push("/pair-rankings")}
+              /> */}
+              <DashBox
+                icon={<FaRupeeSign />}
+                title="Current Payout"
+                value={`₹ ${summary?.pendingPayout?.toFixed(2) || "0.00"}`}
+                index={1}
               />
             </div>
 
@@ -680,14 +687,21 @@ const DashboardPage: React.FC = () => {
                   value={`${summary?.totalGST?.toFixed(2) || "0.00"}`}
                   index={3}
                 /> */}
-                <div className="hidden md:block">
+                {/* <div className="hidden md:block">
                   <DashBox
                     icon={<FaTrophy />}
                     title="Ranks & rewards"
                     value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
                     index={3}
                   />
-                </div>
+                </div> */}
+
+                <DashBox
+                    icon={<FaTrophy />}
+                    title="Ranks & rewards"
+                    value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
+                    index={3}
+                  />
 
                 <DashBox
                   icon={<FaGift />}

@@ -7,6 +7,11 @@ import {
   Image,
   Font,
 } from "@react-pdf/renderer";
+import path from "path";
+
+
+const isServer = typeof window === "undefined";
+
 
 const BASE_URL =
   typeof window !== "undefined"
@@ -15,10 +20,15 @@ const BASE_URL =
 
 Font.register({
   family: "Roboto",
-  fonts: [
-    { src: `${BASE_URL}/fonts/Roboto/Roboto-Regular.ttf` },
-    { src: `${BASE_URL}/fonts/Roboto/Roboto-Bold.ttf`, fontWeight: "bold" },
-  ],
+  fonts: isServer
+    ? [
+      { src: path.join(process.cwd(), "public/fonts/Roboto/Roboto-Regular.ttf") },
+      { src: path.join(process.cwd(), "public/fonts/Roboto/Roboto-Bold.ttf"), fontWeight: "bold" },
+    ]
+    : [
+      { src: "/fonts/Roboto/Roboto-Regular.ttf" },
+      { src: "/fonts/Roboto/Roboto-Bold.ttf", fontWeight: "bold" },
+    ],
 });
 
 const BORDER = "0.7 solid #000";
@@ -415,13 +425,13 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
             )}
             {(invoice.order?.reward_usage?.daily?.used > 0 ||
               invoice.order?.reward_usage?.fortnight?.used > 0) && (
-              <View style={styles.totalsRow}>
-                <Text>Reward Points</Text>
-                <Text style={styles.deduction}>
-                  {`- \u20B9 ${(invoice.order.reward_used || 0).toFixed(2)}`}
-                </Text>
-              </View>
-            )}
+                <View style={styles.totalsRow}>
+                  <Text>Reward Points</Text>
+                  <Text style={styles.deduction}>
+                    {`- \u20B9 ${(invoice.order.reward_used || 0).toFixed(2)}`}
+                  </Text>
+                </View>
+              )}
           </>
         )}
 

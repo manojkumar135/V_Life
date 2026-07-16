@@ -56,7 +56,7 @@ export default function LeftTeam() {
       rows: selectedRows,
       fileName: "left-team",
       format: "xlsx",
-      excludeHeaders: ["_id", "__v", "created_at", "last_modified_at"], // ✅ skip these
+      excludeHeaders: ["_id", "__v", "created_at", "last_modified_at"],
       onStart: () => setDownloading(true),
       onFinish: () => setDownloading(false),
     });
@@ -247,13 +247,14 @@ export default function LeftTeam() {
           <HeaderWithActions
             title="Left Team"
             search={query}
-            setSearch={setQuery} // ✅ string setter
+            setSearch={setQuery}
             addLabel="+ ADD USER"
             showAddButton
             showBack
             onBack={onBack}
             onAdd={handleAddUser}
-            onMore={handleDownloadClick} // ✅ Now Download
+            onMore={handleDownloadClick}
+            showMoreOptions={user?.role === "admin" && totalItems > 0}
             showPagination
             currentPage={currentPage}
             totalPages={totalPages}

@@ -235,7 +235,7 @@ export default function OrdersPage() {
       headerName: "User ID",
       flex: 0.8,
     },
-     user?.role === "admin" && {
+    user?.role === "admin" && {
       field: "user_name",
       headerName: "User Name",
       flex: 1,
@@ -375,7 +375,7 @@ export default function OrdersPage() {
           onAdd={handleAddOrder}
           onMore={handleDownloadClick}
           showPagination
-          showMoreOptions={selectedRows.length > 0}
+          showMoreOptions={user?.role === "admin" && ordersData.length > 0}
           currentPage={currentPage}
           totalPages={totalPages}
           totalItems={totalItems}

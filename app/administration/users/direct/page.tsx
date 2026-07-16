@@ -233,7 +233,8 @@ export default function DirectTeam() {
             showBack
             onBack={onBack}
             // onAdd={handleAddUser}
-            onMore={handleDownloadClick} // ✅ Now Download
+            onMore={handleDownloadClick}
+            showMoreOptions={user?.role === "admin" && totalItems > 0}
             showPagination
             currentPage={currentPage}
             totalPages={totalPages}

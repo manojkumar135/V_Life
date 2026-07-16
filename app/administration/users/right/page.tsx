@@ -251,13 +251,14 @@ export default function RightTeam() {
         <HeaderWithActions
           title="Right Team"
           search={query}
-          setSearch={setQuery} // ✅ string setter
+          setSearch={setQuery}
           addLabel="+ ADD USER"
           showAddButton
           showBack
           onBack={onBack}
           onAdd={handleAddUser}
-          onMore={handleDownloadClick} // ✅ Now Download
+          onMore={handleDownloadClick}
+          showMoreOptions={user?.role === "admin" && totalItems > 0}
           showPagination
           currentPage={currentPage}
           totalPages={totalPages}

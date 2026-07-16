@@ -23,16 +23,16 @@ export async function GET(request: Request) {
     const user = await User.findOne({ user_id });
 
     const pairRewardTotal = (user?.pair_star_released_tiers || []).reduce(
-  (sum: number, tier: any) => {
-    // reward is stored as "₹2,500" — strip ₹ and commas, parse to number
-    const raw = String(tier.reward || "0")
-      .replace(/[₹,\s]/g, "")
-      .trim();
-    const val = parseFloat(raw);
-    return sum + (isNaN(val) ? 0 : val);
-  },
-  0,
-);
+      (sum: number, tier: any) => {
+        // reward is stored as "₹2,500" — strip ₹ and commas, parse to number
+        const raw = String(tier.reward || "0")
+          .replace(/[₹,\s]/g, "")
+          .trim();
+        const val = parseFloat(raw);
+        return sum + (isNaN(val) ? 0 : val);
+      },
+      0,
+    );
 
     // 🆕 Compute days after activation
     let daysAfterActivation = 0;
@@ -218,6 +218,43 @@ export async function GET(request: Request) {
     const totalAdminCharge =
       (dailyAdmin[0]?.total || 0) + (weeklyAdmin[0]?.total || 0);
 
+    const pendingRegex = /^pending$/i;
+
+    const [dailyPending, weeklyPending] = await Promise.all([
+      DailyPayout.aggregate([
+        {
+          $match: {
+            user_id,
+            status: { $regex: pendingRegex },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$withdraw_amount" },
+          },
+        },
+      ]),
+
+      WeeklyPayout.aggregate([
+        {
+          $match: {
+            user_id,
+            status: { $regex: pendingRegex },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$withdraw_amount" },
+          },
+        },
+      ]),
+    ]);
+
+    const pendingPayout =
+      (dailyPending[0]?.total || 0) + (weeklyPending[0]?.total || 0);
+
     return NextResponse.json(
       {
         success: true,
@@ -239,6 +276,7 @@ export async function GET(request: Request) {
           totalTDS,
           totalAdminCharge,
           pairRewardTotal,
+          pendingPayout,
         },
       },
       { status: 200 },
