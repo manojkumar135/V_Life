@@ -6,21 +6,21 @@ import {
   Document,
   StyleSheet,
   Image,
-  Font,
+  // Font,
 } from "@react-pdf/renderer";
 
 // ADD these imports at the top
-import path from "path";
-import fs from "fs";
+// import path from "path";
+// import fs from "fs";
 
-// REPLACE the Font.register block with this
-Font.register({
-  family: "Roboto",
-  fonts: [
-    { src: "/fonts/Roboto/Roboto-Regular.ttf" },
-    { src: "/fonts/Roboto/Roboto-Bold.ttf", fontWeight: "bold" },
-  ],
-});
+// // REPLACE the Font.register block with this
+// Font.register({
+//   family: "Roboto",
+//   fonts: [
+//     { src: "/fonts/Roboto/Roboto-Regular.ttf" },
+//     { src: "/fonts/Roboto/Roboto-Bold.ttf", fontWeight: "bold" },
+//   ],
+// });
 
 const BORDER = "0.7 solid #000";
 
@@ -28,7 +28,7 @@ const styles = StyleSheet.create({
   page: {
     padding: 20,
     fontSize: 9,
-    fontFamily: "Roboto",
+    fontFamily: "Helvetica",
     color: "#000",
   },
   headerBox: {
@@ -448,7 +448,7 @@ function BookingPage({ booking, office }: { booking: any; office: any }) {
               </Text>
               <Text style={[styles.col, styles.cTotal, { textAlign: "right" }]}>
                 {itemTotal > 0
-                  ? `\u20B9 ${itemTotal.toFixed(2)}`
+                  ? `Rs. ${itemTotal.toFixed(2)}`
                   : `${used} ${unitLabel}`}
               </Text>
             </View>
@@ -467,7 +467,7 @@ function BookingPage({ booking, office }: { booking: any; office: any }) {
           </Text>
           <Text style={{ fontWeight: "bold", fontSize: 10 }}>
             {grandTotal > 0
-              ? `\u20B9 ${grandTotal.toFixed(2)}`
+              ? `Rs. ${grandTotal.toFixed(2)}`
               : `${totalUsed} ${unitLabel}`}
           </Text>
         </View>

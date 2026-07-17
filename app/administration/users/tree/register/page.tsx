@@ -110,14 +110,15 @@ function RegisterContent() {
       gender: Yup.string().required("* Gender is required"),
       pan: Yup.string()
         .trim()
-        .max(10, "* PAN must be exactly 10 characters")
-        .test("valid-pan", "* Invalid PAN format (ABCDE1234F)", (value) => {
-          if (!value) return true; // optional
-          if (value.length < 10) return true; // do NOT validate
-          return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value); // only validate when length = 10
-        })
-        .nullable()
-        .notRequired(),
+        .required("* PAN is required")
+        .length(10, "* PAN must be exactly 10 characters")
+        .matches(
+          /^[A-Z]{5}[0-9]{4}[A-Z]$/,
+          "* Invalid PAN format (ABCDE1234F)",
+        ),
+      pancheck: Yup.boolean()
+        .oneOf([true], "* PAN must be verified")
+        .required("* PAN must be verified"),
       password: Yup.string()
         .required("* Password is required")
         .min(6, "* Password must be at least 6 characters"),
@@ -147,7 +148,7 @@ function RegisterContent() {
     const position = params.get("position");
     const parent = params.get("parent");
 
-    if (referBy) formik.setFieldValue("referBy", parent);
+    if (referBy) formik.setFieldValue("referBy", referBy.toUpperCase());
     if (position) formik.setFieldValue("team", position);
     if (parent) formik.setFieldValue("parent", parent);
   }, [params]);
@@ -209,7 +210,9 @@ function RegisterContent() {
     }
     try {
       setReferralChecking(true);
-      const res = await axios.get(`/api/users-operations?user_id=${id}`);
+      const res = await axios.get(
+        `/api/users-operations?user_id=${id.toUpperCase()}`,
+      );
       if (res.data.success && res.data.data?.user_name) {
         setReferralName(res.data.data.user_name);
       } else {
@@ -230,7 +233,7 @@ function RegisterContent() {
 
   useEffect(() => {
     if (formik.values.referBy?.length === 10) {
-      checkReferralId(formik.values.referBy);
+      checkReferralId(formik.values.referBy.toUpperCase());
     }
   }, [formik.values.referBy]);
 
@@ -542,12 +545,15 @@ function RegisterContent() {
                     type="text"
                     name="referBy"
                     placeholder="Referral ID"
-                    value={formik.values.referBy}
+                    value={formik.values.referBy.toUpperCase()}
                     onChange={(e) => {
-                      formik.handleChange(e);
+                      const value = e.target.value.toUpperCase();
+
+                      formik.setFieldValue("referBy", value);
                       setReferralName(null);
-                      if (e.target.value.length === 10) {
-                        checkReferralId(e.target.value);
+
+                      if (value.length === 10) {
+                        checkReferralId(value);
                       }
                     }}
                     onBlur={formik.handleBlur}
@@ -632,13 +638,14 @@ function RegisterContent() {
                     type="text"
                     name="pan"
                     maxLength={10}
-                    placeholder="PAN Number (Optional)"
+                    placeholder="PAN Number"
                     value={formik.values.pan.toUpperCase() || ""}
                     onChange={async (e) => {
                       const value = e.target.value.toUpperCase();
 
                       formik.setFieldValue("pan", value);
                       setPanVerified(false);
+                      formik.setFieldValue("pancheck", false);
 
                       // 👉 1️⃣ If typing and < 10 chars → NO ERROR, NO CHECK
                       if (value.length < 10) {
@@ -708,7 +715,11 @@ function RegisterContent() {
 
                 {/* PAN Error */}
                 <span className="text-red-500 text-xs mt-1 block">
-                  {formik.errors.pan || "\u00A0"}
+                  {formik.errors.pan ||
+                    (formik.touched.pan || formik.values.pan
+                      ? formik.errors.pancheck
+                      : "") ||
+                    "\u00A0"}
                 </span>
               </div>
 
@@ -792,15 +803,17 @@ function RegisterContent() {
                 loading ||
                 !formik.isValid ||
                 !formik.dirty ||
-                !formik.values.terms
+                !formik.values.terms ||
+                !formik.values.pancheck
               }
               className={`w-full py-1 mt-1 font-semibold rounded-md text-[1.2rem] ${
                 loading ||
                 !formik.isValid ||
                 !formik.dirty ||
-                !formik.values.terms
+                !formik.values.terms ||
+                !formik.values.pancheck
                   ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
+                  : "bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
               }`}
             >
               Register

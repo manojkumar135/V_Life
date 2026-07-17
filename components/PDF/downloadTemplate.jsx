@@ -5,24 +5,25 @@ import {
   Document,
   StyleSheet,
   Image,
-  Font,
+  // Font,
 } from "@react-pdf/renderer";
 // import fs from "fs";
 // import path from "path";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_BASE_URL ||
-  (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
+// const isServer = typeof process !== "undefined" && !!process.versions?.node;
 
-const FONT_BASE_URL = `${BASE_URL.replace(/\/$/, "")}/fonts/Roboto`;
-
-Font.register({
-  family: "Roboto",
-  fonts: [
-    { src: `${FONT_BASE_URL}/Roboto-Regular.ttf` },
-    { src: `${FONT_BASE_URL}/Roboto-Bold.ttf`, fontWeight: "bold" },
-  ],
-});
+// Font.register({
+//   family: "Roboto",
+//   fonts: isServer
+//     ? [
+//         { src: fs.readFileSync(path.join(process.cwd(), "public/fonts/Roboto/Roboto-Regular.ttf")) },
+//         { src: fs.readFileSync(path.join(process.cwd(), "public/fonts/Roboto/Roboto-Bold.ttf")), fontWeight: "bold" },
+//       ]
+//     : [
+//         { src: "/fonts/Roboto/Roboto-Regular.ttf" },
+//         { src: "/fonts/Roboto/Roboto-Bold.ttf", fontWeight: "bold" },
+//       ],
+// });
 
 const BORDER = "0.7 solid #000";
 
@@ -30,7 +31,7 @@ const styles = StyleSheet.create({
   page: {
     padding: 20,
     fontSize: 9,
-    fontFamily: "Roboto",
+    fontFamily: "Helvetica",
     color: "#000",
   },
   headerBox: {
@@ -285,7 +286,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
           </Text>
           <Text style={[styles.col, styles.headerCol, styles.cQty]}>Qty</Text>
           <Text style={[styles.col, styles.headerCol, styles.cPrice]}>
-            Unit Price (₹)
+            Unit Price (Rs.)
           </Text>
           <Text style={[styles.col, styles.headerCol, styles.cTaxable]}>
             Taxable Amount
@@ -300,7 +301,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
             IGST (%)
           </Text>
           <Text style={[styles.col, styles.headerCol, styles.cTotal]}>
-            Total (₹)
+            Total (Rs.)
           </Text>
         </View>
 
@@ -347,12 +348,12 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
               <Text
                 style={[styles.col, styles.cPrice, { textAlign: "right" }]}
               >
-                {`\u20B9 ${dealerPrice.toFixed(2)}`}
+                {`Rs. ${dealerPrice.toFixed(2)}`}
               </Text>
               <Text
                 style={[styles.col, styles.cTaxable, { textAlign: "right" }]}
               >
-                {`\u20B9 ${taxableAmount.toFixed(2)}`}
+                {`Rs. ${taxableAmount.toFixed(2)}`}
               </Text>
               <Text
                 style={[styles.col, styles.cGST, { textAlign: "right" }]}
@@ -372,7 +373,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
               <Text
                 style={[styles.col, styles.cTotal, { textAlign: "right" }]}
               >
-                {`\u20B9 ${total.toFixed(2)}`}
+                {`Rs. ${total.toFixed(2)}`}
               </Text>
             </View>
           );
@@ -383,7 +384,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
       <View style={styles.totalsSection}>
         <View style={styles.totalsRow}>
           <Text>Total Before Tax</Text>
-          <Text>{`\u20B9 ${(
+          <Text>{`Rs. ${(
             (invoice.order?.total_amount || 0) -
             (invoice.order?.total_gst || 0)
           ).toFixed(2)}`}</Text>
@@ -391,7 +392,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
 
         <View style={styles.totalsRow}>
           <Text>Add GST</Text>
-          <Text>{`\u20B9 ${(invoice.order?.total_gst || 0).toFixed(2)}`}</Text>
+          <Text>{`Rs. ${(invoice.order?.total_gst || 0).toFixed(2)}`}</Text>
         </View>
 
         {invoice.order?.is_first_order &&
@@ -399,7 +400,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
             <View style={styles.totalsRow}>
               <Text>Advance Deducted:</Text>
               <Text style={styles.deduction}>
-                {`- \u20B9 ${(invoice.order.advance_deducted || 0).toFixed(2)}`}
+                {`- Rs. ${(invoice.order.advance_deducted || 0).toFixed(2)}`}
               </Text>
             </View>
           )}
@@ -410,7 +411,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
               <View style={styles.totalsRow}>
                 <Text>Cashback</Text>
                 <Text style={styles.deduction}>
-                  {`- \u20B9 ${(
+                  {`- Rs. ${(
                     invoice.order.reward_usage.cashback.used || 0
                   ).toFixed(2)}`}
                 </Text>
@@ -421,7 +422,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
                 <View style={styles.totalsRow}>
                   <Text>Reward Points</Text>
                   <Text style={styles.deduction}>
-                    {`- \u20B9 ${(invoice.order.reward_used || 0).toFixed(2)}`}
+                    {`- Rs. ${(invoice.order.reward_used || 0).toFixed(2)}`}
                   </Text>
                 </View>
               )}
@@ -433,7 +434,7 @@ function InvoicePage({ invoice, invoiceIndex, totalInvoices, isBulk }) {
         <View style={styles.totalsRow}>
           <Text style={{ fontWeight: "bold", fontSize: 10 }}>Grand Total</Text>
           <Text style={{ fontWeight: "bold", fontSize: 10 }}>
-            {`\u20B9 ${(invoice.order?.final_amount || 0).toFixed(2)}`}
+            {`Rs. ${(invoice.order?.final_amount || 0).toFixed(2)}`}
           </Text>
         </View>
       </View>

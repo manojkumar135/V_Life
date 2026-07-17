@@ -11,7 +11,7 @@ import { MdOutlineVerifiedUser } from "react-icons/md";
 import { VscGraph } from "react-icons/vsc";
 import { FaBoxesPacking } from "react-icons/fa6";
 import { IoMdClose } from "react-icons/io";
-import { IoChevronDownOutline } from "react-icons/io5"; // ← NEW arrow icon
+import { IoChevronDownOutline } from "react-icons/io5";
 import Images from "@/constant/Image";
 import LogoutModal from "@/components/common/logoutModal";
 import { useVLife } from "@/store/context";
@@ -54,13 +54,13 @@ export default function SideNav({
           : "/administration/users",
       icon: <IoPeople />,
       label: "My Team",
-      match: ["administration", "/admin-","/pair"],
+      match: ["administration", "/admin-", "/pair"],
     },
     {
       href: "/wallet",
       icon: <FaWallet />,
       label: "My Wallet",
-      match: ["/wallet", "/tds","/profile","/withdrawal","/batches"],
+      match: ["/wallet", "/tds", "/profile", "/withdrawal", "/batches"],
     },
     {
       href: "/orders",
@@ -88,7 +88,7 @@ export default function SideNav({
       href: "/reports",
       icon: <VscGraph />,
       label: "My Reports",
-      match: ["/report", "pvtracker","/payre"],
+      match: ["/report", "pvtracker", "/payre"],
     },
     {
       href: "/settings",
@@ -126,7 +126,7 @@ export default function SideNav({
     <>
       {/* Desktop SideNav — completely unchanged */}
       <div
-        className="hidden md:flex flex-col items-center
+        className="hidden lg:flex flex-col items-center
        w-20 bg-linear-to-b from-[#0C3978] to-[#16B8E4]  pt-20 pb-6 
        rounded-r-2xl justify-between border-r border-yellow-500/20 shadow-lg relative"
       >
@@ -158,8 +158,8 @@ export default function SideNav({
                 </button>
                 <span
                   className="absolute left-full top-1/2 -translate-y-1/2 ml-0 px-2 py-1 text-xs 
-                  font-medium text-white bg-gray-700 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-400
-                  translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50"
+  font-medium text-white bg-gray-700 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-400
+  translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50 pointer-events-none"
                 >
                   {item.label}
                 </span>
@@ -181,8 +181,8 @@ export default function SideNav({
             </button>
             <span
               className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs font-medium 
-              text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-300
-              translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50"
+  text-white bg-gray-900 rounded-md shadow-md opacity-0 group-hover:opacity-100 group-hover:delay-300
+  translate-x-2 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap z-50 pointer-events-none"
             >
               Logout
             </span>
@@ -193,14 +193,14 @@ export default function SideNav({
       {/* Blurred Background Overlay (Mobile Only) */}
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300"
+          className="lg:hidden fixed inset-0 z-40 bg-black/30 backdrop-blur-sm transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Mobile SideNav */}
       <div
-        className={`md:hidden fixed top-0 left-0 z-50 h-full w-50 rounded-r-xl bg-linear-to-b from-[#0C3978] to-[#16B8E4] p-6 transform transition-transform duration-300 ${
+        className={`lg:hidden fixed top-0 left-0 z-50 h-full w-50 rounded-r-xl bg-linear-to-b from-[#0C3978] to-[#16B8E4] p-6 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -259,8 +259,8 @@ export default function SideNav({
                         ? "bg-white text-black"
                         : "text-white hover:bg-white/90 hover:text-black"
                       : isActive
-                      ? "bg-white text-black"
-                      : "text-white hover:bg-white/90 hover:text-black"
+                        ? "bg-white text-black"
+                        : "text-white hover:bg-white/90 hover:text-black"
                   }`}
                 >
                   <span className="text-[22px] max-md:text-[18px]">

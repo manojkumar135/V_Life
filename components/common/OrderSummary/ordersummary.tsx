@@ -274,26 +274,50 @@ export default function OrderFormCartSection({
     setActiveTab("customer");
   };
 
-  useEffect(() => {
-    const fetchAddress = async () => {
-      try {
-        const res = await axios.post("/api/address-operations", {
-          user_id: user_id,
-        });
-        if (res.data.success) {
-          setAddress(res.data.address);
-        } else {
-          setAddress("No address available");
-        }
-      } catch (err) {
-        setAddress("Error fetching address");
-      }
-    };
+useEffect(() => {
+  let cancelled = false; // 👈 add this
 
-    if (user_id) {
-      fetchAddress();
+  const fetchAddress = async () => {
+    try {
+      const res = await axios.post("/api/address-operations", {
+        user_id: user_id,
+      });
+
+      if (cancelled) return; // 👈 add this — ignore stale responses
+
+      if (res.data.success) {
+        setAddress(res.data.address);
+
+        if (!isOtherOrder) {
+          const d = res.data.details;
+          if (d) {
+            setFormData((prev: any) => ({
+              ...prev,
+              door_no: prev.door_no || d.door_no,
+              landmark: prev.landmark || d.landmark,
+              city: prev.city || d.city,
+              state: prev.state || d.state,
+              country: prev.country || d.country,
+              pincode: prev.pincode || d.pincode,
+            }));
+          }
+        }
+      } else {
+        setAddress("No address available");
+      }
+    } catch (err) {
+      if (!cancelled) setAddress("Error fetching address");
     }
-  }, [user_id, cart]);
+  };
+
+  if (user_id) {
+    fetchAddress();
+  }
+
+  return () => {
+    cancelled = true; // 👈 add this — runs when isOtherOrder (or deps) change
+  };
+}, [user_id, cart, isOtherOrder]);
 
   const handlePlaceOrder = async (e: React.MouseEvent) => {
     e.preventDefault();

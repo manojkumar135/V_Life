@@ -649,12 +649,23 @@ export default function ProfileEditPage() {
   };
 
   const handleSearch = () => {
-    if (!value.trim()) {
-      ShowToast.error("Please enter User ID");
-      return;
-    }
-    searchUser(value.trim());
-  };
+  let searchValue = value.trim();
+
+  if (!searchValue) {
+    ShowToast.error("Please enter User ID");
+    return;
+  }
+
+  // Convert to uppercase ONLY if it's a User ID (3 letters + 7 digits)
+  if (
+    searchValue.length === 10 &&
+    /^[a-zA-Z]{3}[0-9]{7}$/.test(searchValue)
+  ) {
+    searchValue = searchValue.toUpperCase();
+  }
+
+  searchUser(searchValue);
+};
 
   /* ---------------- RENDER (unchanged) ---------------- */
 

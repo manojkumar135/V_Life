@@ -96,22 +96,35 @@ export default function TreeView() {
     }
   }, [user?.user_id]);
 
-  const handleSearch = useCallback(
-    (searchText: string) => {
-      if (!tree || !user?.user_id) return;
-      setLoading(true);
-      const effectiveSearch = searchText.trim() ? searchText : user.user_id;
-      const found = findNode(tree, effectiveSearch);
-      if (found) {
-        setCurrentRoot(found);
-        setHighlightedId(found.user_id);
-      } else {
-        ShowToast.error("User not found!");
-      }
-      setLoading(false);
-    },
-    [tree, user?.user_id, findNode]
-  );
+const handleSearch = useCallback(
+  (searchText: string) => {
+    if (!tree || !user?.user_id) return;
+
+    setLoading(true);
+
+    let effectiveSearch = searchText.trim() || user.user_id;
+
+    // Only convert User IDs
+    if (
+      effectiveSearch.length === 10 &&
+      /^[a-zA-Z]{3}[0-9]{7}$/.test(effectiveSearch)
+    ) {
+      effectiveSearch = effectiveSearch.toUpperCase();
+    }
+
+    const found = findNode(tree, effectiveSearch);
+
+    if (found) {
+      setCurrentRoot(found);
+      setHighlightedId(found.user_id);
+    } else {
+      ShowToast.error("User not found!");
+    }
+
+    setLoading(false);
+  },
+  [tree, user?.user_id, findNode]
+);
 
   // ✅ Refresh from parent of parent (for activation/deactivation/registration)
   const handleRefreshFromParent = async (userId?: string) => {

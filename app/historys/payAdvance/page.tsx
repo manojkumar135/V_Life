@@ -116,7 +116,7 @@ the amount will be adjusted in your first order.`;
             {!mode100 ? (
               <>
                 <button
-                  // onClick={() => handleOrder(50)}
+                  onClick={() => handleOrder(50)}
                   className="flex-1 cursor-pointer bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
                   text-white font-semibold py-3 rounded-lg"
                 >

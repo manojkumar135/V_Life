@@ -138,27 +138,39 @@ export default function TreeView({ id, newuser }: TreeViewProps) {
   // }, [id]);
 
   // Manual search only when button clicked
-  const handleSearch = async () => {
-    if (!search.trim()) return;
+ const handleSearch = async () => {
+  const value = search.trim();
 
-    try {
-      setLoading(true);
-      const { data } = await axios.get(API_URL, {
-        params: { user_id: user.user_id, search },
-      });
+  if (!value) return;
 
-      if (data?.data) {
-        setCurrentRoot(data.data);
-        setHighlightedId(search);
-      } else {
-        ShowToast.error("User not found!");
-      }
-    } catch (error) {
+  // Convert to uppercase ONLY if it's a valid User ID
+  const searchValue =
+    value.length === 10 && /^[a-zA-Z]{3}[0-9]{7}$/.test(value)
+      ? value.toUpperCase()
+      : value;
+
+  try {
+    setLoading(true);
+
+    const { data } = await axios.get(API_URL, {
+      params: {
+        user_id: user.user_id,
+        search: searchValue,
+      },
+    });
+
+    if (data?.data) {
+      setCurrentRoot(data.data);
+      setHighlightedId(searchValue);
+    } else {
       ShowToast.error("User not found!");
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    ShowToast.error("User not found!");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Reset tree when search cleared manually
   useEffect(() => {

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     // Extract fields
-    const { address, locality, district, state, country, pincode } = user;
+    const { address, landmark, locality, district, state, country, pincode } = user;
 
     // Build address parts, filter out empty/undefined
     const addressParts = [address, locality, district, state, country]
@@ -38,9 +38,22 @@ export async function POST(request: Request) {
       formattedAddress += ` - ${pincode} .`;
     }
 
+    // ✅ NEW: separate structured fields, without touching the combined string above
+    const details = {
+      door_no: address || "",
+      landmark: landmark || "",
+      city: locality || district || "",
+      state: state || "",
+      country: country || "India",
+      pincode: pincode ? pincode.toString() : "",
+      locality: locality || "",
+      district: district || "",
+    };
+
     return NextResponse.json({
       success: true,
-      address: formattedAddress.trim(),
+      address: formattedAddress.trim(), // unchanged, existing consumers still work
+      details, // new — use this for form auto-fill
     });
   } catch (error: any) {
     return NextResponse.json(

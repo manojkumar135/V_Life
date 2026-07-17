@@ -147,7 +147,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="flex items-center space-x-3">
         <button
           onClick={onMenuClick}
-          className="md:hidden p-1 rounded-md hover:bg-gray-100"
+          className="lg:hidden p-1 rounded-md hover:bg-gray-100"
         >
           <HiOutlineMenuAlt2 size={30} className="text-gray-800" />
         </button>
