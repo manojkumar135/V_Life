@@ -179,6 +179,18 @@ export async function runInfinityBonus() {
         `✅ Sponsor resolved: ${sponsor.user_id} (${sponsor.user_name}) for source=${sourceUserId}`,
       );
 
+      // ✅ Sponsor must be active to receive any Infinity Bonus
+      if (sponsor.user_status !== "active") {
+        console.log(
+          `⚠️ Sponsor ${sponsor.user_id} is not active, not eligible for Infinity Bonus (${payout.name})`,
+        );
+        await DailyPayout.updateOne(
+          { _id: payout._id },
+          { $set: { is_checked: true } },
+        );
+        continue;
+      }
+
       const bonusPercentage = await getInfinityBonusPercentage(
         sponsor.user_id,
         payout.name,
