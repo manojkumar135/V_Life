@@ -118,16 +118,20 @@ export default function AddOrderPage() {
 
   const searchParams = useSearchParams();
 
-  const flow = searchParams.get("flow");
-  const isUseAdvanceFlow = flow === "USE_ADVANCE";
-
   const [decodedAmount, setDecodedAmount] = useState<number | null>(null);
   const [orderContext, setOrderContext] = useState<OrderContext | null>(null);
   const isOtherOrder = orderContext?.order_mode === "OTHER";
 
+  const flow = searchParams.get("flow");
+  const isUseAdvanceFlow = flow === "USE_ADVANCE";
+ const [starPV, setStarPV] = useState<number | null>(null);
+
+  const isUpgradeFlow =
+    flow === "UPGRADE_PV" && !isOtherOrder && starPV === 50;
+
   // console.log(orderContext);
 
-  useEffect(() => {
+ useEffect(() => {
     if (!user?.user_id) return;
 
     let mounted = true;
@@ -145,6 +149,30 @@ export default function AddOrderPage() {
         setAdvanceUsed(advanceRes.advanceUsed);
       } catch (err) {
         console.error("Advance / first order check failed", err);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.user_id]);
+
+  // ✅ NEW — fetch star-relevant PV (first order + upgrade only) via getPV
+  useEffect(() => {
+    if (!user?.user_id) return;
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const res = await axios.get("/api/user-pv", {
+          params: { user_id: user.user_id },
+        });
+        if (!mounted) return;
+        setStarPV(res.data.success ? res.data.pv : null);
+      } catch (err) {
+        console.error("Failed to fetch star PV", err);
+        if (mounted) setStarPV(null);
       }
     })();
 
@@ -234,6 +262,8 @@ export default function AddOrderPage() {
 
   const isRestrictedFirstOrder =
     isFirstOrder === true && user?.status === "inactive";
+
+  const isRestrictedSingleProduct = isRestrictedFirstOrder || isUpgradeFlow;
 
   const [formData, setFormData] = useState<OrderFormData>({
     customerName: user.user_name || "",
@@ -368,7 +398,7 @@ export default function AddOrderPage() {
     checkFirstOrder();
   }, [orderContext, isOtherOrder, user?.user_id]); // 👈 changed orderContext?.beneficiary_id → orderContext
 
-  useEffect(() => {
+ useEffect(() => {
     // OTHER ORDER → always fresh
     if (isOtherOrder) {
       setCart([]);
@@ -381,9 +411,15 @@ export default function AddOrderPage() {
       return;
     }
 
+    // ✅ NEW — any locked-PV SELF flow (Retail/Activation Pack, Upgrade) → start fresh
+    if (isUpgradeFlow || orderContext?.pv != null) {
+      setCart([]);
+      return;
+    }
+
     // NORMAL SELF ORDER → load saved cart
     setCart(normalizeCart(user.items ?? []));
-  }, [isOtherOrder, isUseAdvanceFlow]);
+  }, [isOtherOrder, isUseAdvanceFlow, isUpgradeFlow, orderContext?.pv]);
 
   // Fetch address
   useEffect(() => {
@@ -453,19 +489,24 @@ export default function AddOrderPage() {
       try {
         setLoading(true);
 
-        const res = await axios.get("/api/product-operations", {
+       const res = await axios.get("/api/product-operations", {
           params: {
             order_mode: orderContext!.order_mode,
             pv: isUseAdvanceFlow
               ? 100
-              : isOtherOrder
-                ? (orderContext?.pv ?? 100)
-                : isFirstOrder && user?.status === "inactive"
-                  ? 100
-                  : null,
+              : isUpgradeFlow
+                ? 50
+                : isOtherOrder
+                  ? (orderContext?.pv ?? 100)
+                  : orderContext?.pv != null
+                    ? orderContext.pv 
+                    : isFirstOrder && user?.status === "inactive"
+                      ? 100
+                      : null,
             is_first_order: isFirstOrder,
             is_advance_paid: isAdvancePaidUser,
             is_use_advance: isUseAdvanceFlow,
+            is_upgrade_order: isUpgradeFlow,
             is_admin_activated: isAdminActivated,
             user_status: user!.status,
           },
@@ -518,6 +559,7 @@ export default function AddOrderPage() {
     isFirstOrder,
     // isAdvancePaidFirstOrder,
     isUseAdvanceFlow,
+    isUpgradeFlow,
     user?.status,
   ]);
 
@@ -552,9 +594,13 @@ export default function AddOrderPage() {
   // };
 
   const addToCart = async (product: Product) => {
-    if (isRestrictedFirstOrder) {
+    if (isRestrictedSingleProduct) {
       if (cart.length >= 1) {
-        ShowToast.error("You can select only one product for your first order");
+        ShowToast.error(
+          isUpgradeFlow
+            ? "You can select only one product for your upgrade order"
+            : "You can select only one product for your first order",
+        );
         return;
       }
     }
@@ -620,8 +666,8 @@ export default function AddOrderPage() {
 
   // console.log(cart);
   const updateQuantity = async (id: number, newQuantity: number) => {
-    if (isRestrictedFirstOrder && newQuantity > 1) {
-      ShowToast.error("Quantity cannot exceed 1 for first order");
+    if (isRestrictedSingleProduct && newQuantity > 1) {
+      ShowToast.error("Quantity cannot exceed 1 for this order");
       return;
     }
 
@@ -813,6 +859,7 @@ export default function AddOrderPage() {
         advance_used: isUseAdvanceFlow,
 
         is_first_order: isFirstOrder,
+        is_upgrade_order: isUpgradeFlow,
         bonus_checked: false,
         direct_bonus_checked: false,
         matching_bonus_checked: false,
@@ -1025,9 +1072,9 @@ export default function AddOrderPage() {
                 key={product.product_id}
                 {...product}
                 onAddToCart={addToCart}
-                disabled={
+               disabled={
                   (isOtherOrder && cart.length >= 1) ||
-                  (isRestrictedFirstOrder && cart.length >= 1)
+                  (isRestrictedSingleProduct && cart.length >= 1)
                 }
                 isInCart={
                   !!cart.find((item) => item.product_id === product.product_id)

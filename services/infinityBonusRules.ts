@@ -1,15 +1,17 @@
 // services/infinityBonusRules.ts
 
 import { getDirectPV } from "@/services/directPV";
+import { getPV } from "@/services/getPV"; // ✅ NEW
 
 /**
  * Infinity Bonus Percentage Rules
  * ------------------------------------------------
  * Infinity Sales Bonus:    No star/PV check → flat 200% (2.0)
- * Infinity Matching Bonus: Star check based on min(left, right) direct PV
+ * Infinity Matching Bonus: Must achieve star (min direct PV ≥ 100 on both legs),
+ *                          then percentage is based on the user's OWN PV (getPV):
  *                            ≥ 100 PV → 100% (1.0)
- *                            ≥ 50 PV  → 50%  (0.5)
- *                            < 50 PV  → 0 (not eligible)
+ *                            < 100 PV → 50%  (0.5)
+ *                          Star not achieved (minPV < 100) → 0 (not eligible)
  */
 export async function getInfinityBonusPercentage(
   userId: string,
@@ -20,18 +22,23 @@ export async function getInfinityBonusPercentage(
     return 2.0;
   }
 
-  // ✅ Matching Bonus → star check via direct PV on both legs
+  // ✅ Matching Bonus
   if (bonusType === "Matching Bonus") {
+    // Step 1: Star check — untouched, still via directPV (both legs)
     const { leftDirectPV, rightDirectPV } = await getDirectPV(userId);
     const minPV = Math.min(leftDirectPV, rightDirectPV);
 
-    if (minPV >= 100) {
-      return 1.0; // 100%
+    if (minPV < 100) {
+      return 0; // star not achieved — not eligible
     }
-    if (minPV >= 50) {
-      return 0.5; // 50%
+
+    // Step 2: Star achieved (minPV >= 100) — decide 50% vs 100% using the user's OWN PV
+    const userPV = await getPV(userId);
+
+    if (userPV >= 100) {
+      return 1.0; 
     }
-    return 0; // below 50 PV — not eligible
+    return 0.5; 
   }
 
   return 0;

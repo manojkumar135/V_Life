@@ -10,11 +10,11 @@
 //
 //  Cumulative (all-time) Payout  │  Total PV Repurchases Required
 //  ──────────────────────────────┼──────────────────────────────────────────
-//  < ₹50,000                     │  0 PV  (no restriction)
-//  ₹50,000 – ₹1,49,999           │  50 PV  (1st repurchase)
-//  ₹1,50,000 – ₹2,49,999         │  100 PV (2nd repurchase)
-//  ₹2,50,000 – ₹3,49,999         │  150 PV (3rd repurchase)
-//  ... every ₹1L after first     │  +50 PV each
+//  < ₹60,000                     │  0 PV  (no restriction)
+//  ₹60,000 – ₹1,19,999           │  50 PV  (1st repurchase)
+//  ₹1,20,000 – ₹1,79,999         │  100 PV (2nd repurchase)
+//  ₹1,80,000 – ₹2,39,999         │  150 PV (3rd repurchase)
+//  ... every ₹60K after first    │  +50 PV each
 //
 //  • pv_required on each tracker = the delta owed when THIS month caused
 //    a new cumulative threshold to be crossed.

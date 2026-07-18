@@ -2,15 +2,25 @@
 
 import React, { useState } from "react";
 import Layout from "@/layout/Layout";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { IoIosArrowBack } from "react-icons/io";
 
 export default function OrderModePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+
+  // ✅ NEW — distinguishes advance-choice popup vs upgrade-choice popup
+  const choice = searchParams.get("choice");
+  const isUpgradeChoice = choice === "upgrade";
 
   const handleUseAdvance = () => {
     router.push("/orders/addorder?flow=USE_ADVANCE");
+  };
+
+  // ✅ NEW
+  const handleUpgrade = () => {
+    router.push("/orders/addorder?flow=UPGRADE_PV");
   };
 
   const handleReOrder = () => {
@@ -38,21 +48,34 @@ export default function OrderModePage() {
           </h1>
 
           <p className="text-gray-600 text-sm mb-4 text-center">
-            You have an unused advance payment.
-            Choose how you want to proceed.
+            {isUpgradeChoice
+              ? "You're currently at 50 PV. Choose how you want to proceed."
+              : "You have an unused advance payment. Choose how you want to proceed."}
           </p>
 
           <div className="flex flex-col gap-4 lg:flex-row">
 
-            {/* Use Advance */}
-            <button
-              onClick={handleUseAdvance}
-              className="flex-1 bg-gradient-to-r 
-              from-[#0E8A3A] via-[#16A34A] to-[#22C55E]
-              text-white font-semibold py-3 rounded-lg cursor-pointer"
-            >
-              Use Advance ₹15,000
-            </button>
+            {isUpgradeChoice ? (
+              /* Upgrade to 100 PV */
+              <button
+                onClick={handleUpgrade}
+                className="flex-1 bg-gradient-to-r 
+                from-[#0E8A3A] via-[#16A34A] to-[#22C55E]
+                text-white font-semibold py-3 rounded-lg cursor-pointer"
+              >
+                Upgrade
+              </button>
+            ) : (
+              /* Use Advance */
+              <button
+                onClick={handleUseAdvance}
+                className="flex-1 bg-gradient-to-r 
+                from-[#0E8A3A] via-[#16A34A] to-[#22C55E]
+                text-white font-semibold py-3 rounded-lg cursor-pointer"
+              >
+                Use Advance ₹15,000
+              </button>
+            )}
 
             {/* Re-Order */}
             <button

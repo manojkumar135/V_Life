@@ -69,6 +69,7 @@ export async function GET(request: Request) {
       ischecked: false,
       transaction_type:"Debit",
       created_at: { $gte: start, $lte: end },
+      is_upgrade_order: { $ne: true },
       // $or: [
       //   { first_order: true }, // normal order
       //   { advance: true },     // advance activation

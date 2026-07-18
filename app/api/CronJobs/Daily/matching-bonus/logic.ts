@@ -309,6 +309,7 @@ export async function getUserTeamsAndHistories() {
     ischecked: false,
     created_at: { $gte: start, $lte: end },
     transaction_type: "Debit",
+    is_upgrade_order: { $ne: true },
     $or: [
       { first_order: true },
       { advance: true },

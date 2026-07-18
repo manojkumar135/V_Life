@@ -33,6 +33,7 @@ const HistorySchema = new mongoose.Schema(
     status: { type: String, required: true, },
     first_payment: { type: Boolean, default: false },
     first_order: { type: Boolean, default: false },
+    is_upgrade_order: { type: Boolean, default: false },
     reward_used: { type: Number, default: 0 },
     reward_added: { type: Number, default: 0 },
     reward_remaining: { type: Number, default: 0 },

@@ -141,9 +141,9 @@ function formatTime(date: Date): string {
  *  to the current month's tracker.
  */
 export function requiredPvForCumulativeTotal(cumulativeTotal: number): number {
-  if (cumulativeTotal < 50_000) return 0;
-  // 1st repurchase at ₹50K, then every ₹1L → floor((cumulative - 50000) / 100000) + 1
-  const repurchases = 1 + Math.floor((cumulativeTotal - 50_000) / 100_000);
+  if (cumulativeTotal < 60_000) return 0;
+  // 1st repurchase at ₹60K, then every ₹60K → floor((cumulative - 60000) / 60000) + 1
+  const repurchases = 1 + Math.floor((cumulativeTotal - 60_000) / 60_000);
   return repurchases * 50;
 }
 
@@ -387,11 +387,11 @@ export async function evaluateAndUpdateHoldStatus(
 
   // Record threshold crossing timestamps (cumulative)
   const now = new Date();
-  if (prevCumulativeTotal < 50_000 && newCumulativeTotal >= 50_000 && !tracker.crossed_1lakh_at) {
-    tracker.crossed_1lakh_at = now; // first threshold (₹50K cumulative)
+  if (prevCumulativeTotal < 60_000 && newCumulativeTotal >= 60_000 && !tracker.crossed_1lakh_at) {
+    tracker.crossed_1lakh_at = now; // first threshold (₹60K cumulative)
   }
-  if (prevCumulativeTotal < 150_000 && newCumulativeTotal >= 150_000 && !tracker.crossed_3lakh_at) {
-    tracker.crossed_3lakh_at = now; // ₹1.5L cumulative
+  if (prevCumulativeTotal < 120_000 && newCumulativeTotal >= 120_000 && !tracker.crossed_3lakh_at) {
+    tracker.crossed_3lakh_at = now; // 2nd threshold (₹1.2L cumulative)
   }
 
   await tracker.save();

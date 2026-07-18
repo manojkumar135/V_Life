@@ -70,6 +70,7 @@ const OrderSchema = new mongoose.Schema(
     advance_deducted: { type: Number, default: 0 }, // amount deducted from advance
     advance_used: { type: Boolean, default: false },
     is_first_order: { type: Boolean, default: false },
+    is_upgrade_order: { type: Boolean, default: false },
     reward_used: { type: Number, default: 0 },
     reward_remaining: { type: Number, default: 0 },
     payable_amount: { type: Number, },
@@ -85,7 +86,7 @@ const OrderSchema = new mongoose.Schema(
     created_by: { type: String },
     last_modified_by: { type: String },
     last_modified_at: { type: Date },
-    order_status: { type: String, default: "pending" }, // pending, paid, shipped, delivered, canceled
+    order_status: { type: String, default: "pending" },
     bonus_checked: { type: Boolean, default: false },
     direct_bonus_checked: { type: Boolean, default: false },
     matching_bonus_checked: { type: Boolean, default: false },

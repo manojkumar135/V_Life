@@ -274,50 +274,50 @@ export default function OrderFormCartSection({
     setActiveTab("customer");
   };
 
-useEffect(() => {
-  let cancelled = false; // 👈 add this
+  useEffect(() => {
+    let cancelled = false;
 
-  const fetchAddress = async () => {
-    try {
-      const res = await axios.post("/api/address-operations", {
-        user_id: user_id,
-      });
+    const fetchAddress = async () => {
+      try {
+        const res = await axios.post("/api/address-operations", {
+          user_id: user_id,
+        });
 
-      if (cancelled) return; // 👈 add this — ignore stale responses
+        if (cancelled) return;
 
-      if (res.data.success) {
-        setAddress(res.data.address);
+        if (res.data.success) {
+          setAddress(res.data.address);
 
-        if (!isOtherOrder) {
-          const d = res.data.details;
-          if (d) {
-            setFormData((prev: any) => ({
-              ...prev,
-              door_no: prev.door_no || d.door_no,
-              landmark: prev.landmark || d.landmark,
-              city: prev.city || d.city,
-              state: prev.state || d.state,
-              country: prev.country || d.country,
-              pincode: prev.pincode || d.pincode,
-            }));
+          if (!isOtherOrder) {
+            const d = res.data.details;
+            if (d) {
+              setFormData((prev: any) => ({
+                ...prev,
+                door_no: prev.door_no || d.door_no,
+                landmark: prev.landmark || d.landmark,
+                city: prev.city || d.city,
+                state: prev.state || d.state,
+                country: prev.country || d.country,
+                pincode: prev.pincode || d.pincode,
+              }));
+            }
           }
+        } else {
+          setAddress("No address available");
         }
-      } else {
-        setAddress("No address available");
+      } catch (err) {
+        if (!cancelled) setAddress("Error fetching address");
       }
-    } catch (err) {
-      if (!cancelled) setAddress("Error fetching address");
+    };
+
+    if (user_id) {
+      fetchAddress();
     }
-  };
 
-  if (user_id) {
-    fetchAddress();
-  }
-
-  return () => {
-    cancelled = true; // 👈 add this — runs when isOtherOrder (or deps) change
-  };
-}, [user_id, cart, isOtherOrder]);
+    return () => {
+      cancelled = true; 
+    };
+  }, [user_id, cart, isOtherOrder]);
 
   const handlePlaceOrder = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -798,10 +798,8 @@ useEffect(() => {
                     )}
 
                     {/* Subtotal + Reward section only if reward exists */}
-                    {((!isOtherOrder && rewardPoints > 0)
-                    //  || fortnightPoints + dailyPoints > 0
-                    ) 
-                      && (
+                    {!isOtherOrder && rewardPoints > 0 && (
+                      //  || fortnightPoints + dailyPoints > 0
                       <>
                         {/* Subtotal */}
                         <div className="flex justify-between items-center text-sm text-gray-700 font-medium">

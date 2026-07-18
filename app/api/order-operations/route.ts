@@ -27,6 +27,8 @@ import {
 
 import { processPvOrder } from "@/services/processPvOrder";
 import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
+import { getPV } from "@/services/getPV"; 
+
 
 // ----------------- Types -----------------
 interface OrderItem {
@@ -136,6 +138,7 @@ export async function POST(request: Request) {
     /* ---------------- NORMALIZE OPTIONAL FIELDS ---------------- */
     const rewardUsed = Number(body.reward_used ?? 0);
     const rewardRemaining = Number(body.reward_remaining ?? 0);
+    const requestedUpgradeOrder = Boolean(body.is_upgrade_order);
 
     /* ============================================================
        🔑 IDENTIFY BENEFICIARY & PLACED BY (CRITICAL FIX)
@@ -165,6 +168,15 @@ export async function POST(request: Request) {
     // ✅ FINAL isFirstOrder logic
     const isFirstOrder =
       beneficiary.user_status !== "active" && !hasCompletedOrder;
+
+     const beneficiaryStarPV = requestedUpgradeOrder
+      ? await getPV(beneficiary.user_id)
+      : 0;
+
+    const isUpgradeOrder =
+      requestedUpgradeOrder &&
+      beneficiary.user_id === placedBy.user_id &&
+      beneficiaryStarPV === 50;
 
     const adminActivated =
       beneficiary.status_notes?.toLowerCase().includes("admin") ?? false;
@@ -211,6 +223,7 @@ export async function POST(request: Request) {
       order_id,
       user_id: beneficiary.user_id,
       is_first_order: isFirstOrder,
+      is_upgrade_order: isUpgradeOrder,
       amount,
     });
 
@@ -253,6 +266,7 @@ export async function POST(request: Request) {
       first_payment: isFirstOrder,
       advance: advanceUsed,
       advance_amount: advanceDeducted,
+      is_upgrade_order: isUpgradeOrder,
       details:
         beneficiary.user_id === placedBy.user_id
           ? "Order Payment"

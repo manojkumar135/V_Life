@@ -112,8 +112,8 @@ const ObligationCard = ({
 
   const thresholdLabel =
     index === 0
-      ? "₹50,000 cumulative"
-      : `₹${(50 + index * 100).toLocaleString("en-IN")}K cumulative`;
+      ? "₹60,000 cumulative"
+      : `₹${(60 + index * 60).toLocaleString("en-IN")}K cumulative`;
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">

@@ -62,6 +62,8 @@ export interface UserType {
   fortnightReward?: number;
   cashbackReward?: number;
   rewardPoints?: number;
+  pv?: number;
+  bv?: number;
   referBy?: string;
   infinity?: string;
   gst?: string;
@@ -122,7 +124,8 @@ const defaultUser: UserType = {
   fortnightReward: 0,
   cashbackReward: 0,
   rewardPoints: 0,
-
+  pv: 0,
+  bv:0,
   address: "",
   pincode: "",
   aadhar: "",

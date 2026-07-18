@@ -314,7 +314,7 @@ export default function OrdersPage() {
     console.log("Order clicked:", row);
   };
 
-  const handleAddOrder = async () => {
+ const handleAddOrder = async () => {
     if (!user?.user_id) {
       router.push("/orders/addorder");
       return;
@@ -325,6 +325,17 @@ export default function OrdersPage() {
 
       if (advanceRes.hasAdvance && !advanceRes.advanceUsed) {
         router.push("/orders/order-mode");
+        return;
+      }
+
+      // ✅ Upgrade check — self order only, exactly 50 PV
+      const pvRes = await axios.get("/api/user-pv", {
+        params: { user_id: user.user_id },
+      });
+
+      console.log("PV check response:", pvRes.data);
+      if (pvRes.data.success && pvRes.data.pv === 50) {
+        router.push("/orders/order-mode?choice=upgrade");
         return;
       }
 
