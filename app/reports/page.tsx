@@ -13,7 +13,6 @@ import { FaClipboardList } from "react-icons/fa";
 import { FaCrown } from "react-icons/fa";
 import { FaCoins } from "react-icons/fa";
 
-
 const Page = () => {
   const router = useRouter();
   const { user } = useVLife();
@@ -49,23 +48,31 @@ const Page = () => {
             <span className="mt-2 text-lg font-semibold">Fortnight Report</span>
           </div>
 
-          {/* Cashback Report */}
-          <div
-            onClick={() => router.push("/reports/cashback")}
-            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
-          >
-            <RiMoneyRupeeCircleLine size={32} />
-            <span className="mt-2 text-lg font-semibold">Redeem Report</span>
-          </div>
+          {user?.role !== "user" && (
+            <>
+              {/* Cashback Report */}
+              <div
+                onClick={() => router.push("/reports/cashback")}
+                className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              >
+                <RiMoneyRupeeCircleLine size={32} />
+                <span className="mt-2 text-lg font-semibold">
+                  Redeem Report
+                </span>
+              </div>
 
-          {/* Reward Report */}
-          <div
-            onClick={() => router.push("/reports/reward")}
-            className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
-          >
-            <LuTicketsPlane size={32} />
-            <span className="mt-2 text-lg font-semibold">Reward Report</span>
-          </div>
+              {/* Reward Report */}
+              <div
+                onClick={() => router.push("/reports/reward")}
+                className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              >
+                <LuTicketsPlane size={32} />
+                <span className="mt-2 text-lg font-semibold">
+                  Reward Report
+                </span>
+              </div>
+            </>
+          )}
 
           {/* Royal Club */}
           <div
@@ -93,18 +100,14 @@ const Page = () => {
                 className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
               >
                 <FaClipboardList size={32} />
-                <span className="mt-2 text-lg font-semibold">
-                  PV Tracker
-                </span>
+                <span className="mt-2 text-lg font-semibold">PV Tracker</span>
               </div>
-               <div
+              <div
                 onClick={() => router.push("/payrelease")}
                 className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
               >
-                <FaCoins  size={32} />
-                <span className="mt-2 text-lg font-semibold">
-                  Pay Release
-                </span>
+                <FaCoins size={32} />
+                <span className="mt-2 text-lg font-semibold">Pay Release</span>
               </div>
             </>
           )}
