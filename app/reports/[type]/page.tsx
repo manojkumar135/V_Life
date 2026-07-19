@@ -32,6 +32,31 @@ const fmt = (v: number) =>
   new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2 }).format(v ?? 0);
 
 /* ─────────────────────────────────────────────────────────────────────
+   Helper: derive a friendly source label.
+   For pair_star_reward rows, pull the star name out of remarks
+   e.g. "Pair Star Withdraw — BRONZE STAR (6 pairs)" → "Bronze Star Reward"
+───────────────────────────────────────────────────────────────────── */
+function getSourceLabel(row: any): string {
+  const rawSource = (row.source || row.module || "").toLowerCase();
+  const remarks: string = row.remarks || "";
+
+  if (rawSource === "pair_star_reward" && remarks) {
+    // Extract text between "—" (or "-") and "("
+    const match = remarks.match(/[—-]\s*([^(]+)\(/);
+    if (match && match[1]) {
+      const starName = match[1]
+        .trim()
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      return `${starName} Reward`;
+    }
+  }
+
+  // Fallback: default prettified source/module
+  return (row.source || row.module || "—").replace(/_/g, " ");
+}
+
+/* ─────────────────────────────────────────────────────────────────────
    Summary cards
 ───────────────────────────────────────────────────────────────────── */
 function SummaryCards({
@@ -313,16 +338,16 @@ export default function ReportTypePage() {
           </span>
         ),
     },
-    {
-      field: "source",
-      headerName: "Source / Module",
-      flex: 1.2,
-      renderCell: (p: any) => (
-        <span className="capitalize">
-          {(p.row.source || p.row.module || "—").replace(/_/g, " ")}
-        </span>
-      ),
-    },
+   {
+  field: "source",
+  headerName: "Source / Module",
+  flex: 1.2,
+  renderCell: (p: any) => (
+    <span className="capitalize">
+      {getSourceLabel(p.row)}
+    </span>
+  ),
+},
     { field: "reference_id", headerName: "Reference ID", flex: 1.2 },
     {
       field: "points",

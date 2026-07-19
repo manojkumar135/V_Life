@@ -173,6 +173,33 @@ export default function TransactionHistory() {
     return `${hour.toString().padStart(2, "0")}:${minute} ${ampm}`;
   };
 
+  /* ─────────────────────────────────────────────────────────────────────
+   Helper: derive a friendly "Detail" label.
+   Converts "Pair Star Reward — BRONZE STAR (6 pairs)" → "Bronze Star Reward"
+   Leaves all other detail strings untouched (after trimming "from X").
+───────────────────────────────────────────────────────────────────── */
+function getDetailLabel(rawDetail: string): string {
+  const cleaned = String(rawDetail ?? "")
+    .replace(/\s+from\s+\S+$/i, "")
+    .trim();
+
+  if (/pair star reward/i.test(cleaned)) {
+    // Extract text between "—" (or "-") and "("
+    const match = cleaned.match(/[—-]\s*([^(]+)\(/);
+    if (match && match[1]) {
+      const starName = match[1]
+        .trim()
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      return `${starName} Reward`;
+    }
+    // Fallback if no dash/parenthesis found but still a pair star reward
+    return "Pair Star Reward";
+  }
+
+  return cleaned;
+}
+
   // ✅ Columns setup
   const columns: GridColDef[] = [
     { field: "transaction_id", headerName: "Transaction ID", flex: 1 },
@@ -205,9 +232,7 @@ export default function TransactionHistory() {
   headerName: "Detail",
   flex: 1.3,
   renderCell: (params: GridRenderCellParams<any, string>) => {
-    const detail = String(params.value ?? "");
-    const cleaned = detail.replace(/\s+from\s+\S+$/i, "").trim();
-    return <span>{cleaned}</span>;
+    return <span>{getDetailLabel(params.value ?? "")}</span>;
   },
 },
     { field: "from", headerName: "From", flex: 0.8 },

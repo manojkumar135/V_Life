@@ -1,6 +1,5 @@
 "use client";
 
-
 //reports/[type]/[user_id]/page.tsx
 import React, { useCallback, useEffect, useState } from "react";
 import Layout from "@/layout/Layout";
@@ -22,8 +21,8 @@ import { handleDownload } from "@/utils/handleDownload";
    Direction filter options  (labels match DB values: "in" / "out")
 ───────────────────────────────────────────────────────────────────── */
 const DIRECTION_OPTIONS = [
-  { label: "All", value: ""    },
-  { label: "In",  value: "in"  },
+  { label: "All", value: "" },
+  { label: "In", value: "in" },
   { label: "Out", value: "out" },
 ];
 
@@ -34,42 +33,91 @@ const fmt = (v: number) =>
   new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2 }).format(v ?? 0);
 
 /* ─────────────────────────────────────────────────────────────────────
+   Helper: derive a friendly source label.
+   For pair_star_reward rows, pull the star name out of remarks
+   e.g. "Pair Star Withdraw — BRONZE STAR (6 pairs)" → "Bronze Star Reward"
+───────────────────────────────────────────────────────────────────── */
+function getSourceLabel(row: any): string {
+  const rawSource = (row.source || row.module || "").toLowerCase();
+  const remarks: string = row.remarks || "";
+
+  if (rawSource === "pair_star_reward" && remarks) {
+    // Extract text between "—" (or "-") and "("
+    const match = remarks.match(/[—-]\s*([^(]+)\(/);
+    if (match && match[1]) {
+      const starName = match[1]
+        .trim()
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      return `${starName} Reward`;
+    }
+  }
+
+  // Fallback: default prettified source/module
+  return (row.source || row.module || "—").replace(/_/g, " ");
+}
+
+/* ─────────────────────────────────────────────────────────────────────
    Summary cards
 ───────────────────────────────────────────────────────────────────── */
 function SummaryCards({
-  earned, used, balance, loading,
+  earned,
+  used,
+  balance,
+  loading,
 }: {
-  earned: number; used: number; balance: number; loading: boolean;
+  earned: number;
+  used: number;
+  balance: number;
+  loading: boolean;
 }) {
   const cards = [
     {
-      label: "Total Earned",    value: fmt(earned),
-      icon: <TrendingUp  size={22} />,
-      bg: "bg-green-50", border: "border-green-200", text: "text-green-700", iconBg: "bg-green-100",
+      label: "Total Earned",
+      value: fmt(earned),
+      icon: <TrendingUp size={22} />,
+      bg: "bg-green-50",
+      border: "border-green-200",
+      text: "text-green-700",
+      iconBg: "bg-green-100",
     },
     {
-      label: "Total Used",      value: fmt(used),
+      label: "Total Used",
+      value: fmt(used),
       icon: <TrendingDown size={22} />,
-      bg: "bg-red-50",   border: "border-red-200",   text: "text-red-600",   iconBg: "bg-red-100",
+      bg: "bg-red-50",
+      border: "border-red-200",
+      text: "text-red-600",
+      iconBg: "bg-red-100",
     },
     {
-      label: "Current Balance", value: fmt(balance),
-      icon: <Wallet      size={22} />,
-      bg: "bg-blue-50",  border: "border-blue-200",  text: "text-blue-700",  iconBg: "bg-blue-100",
+      label: "Current Balance",
+      value: fmt(balance),
+      icon: <Wallet size={22} />,
+      bg: "bg-blue-50",
+      border: "border-blue-200",
+      text: "text-blue-700",
+      iconBg: "bg-blue-100",
     },
   ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
       {cards.map((c) => (
-        <div key={c.label} className={`${c.bg} ${c.border} border rounded-xl p-4 flex items-center gap-4`}>
-          <div className={`${c.iconBg} ${c.text} rounded-full p-2.5`}>{c.icon}</div>
+        <div
+          key={c.label}
+          className={`${c.bg} ${c.border} border rounded-xl p-4 flex items-center gap-4`}
+        >
+          <div className={`${c.iconBg} ${c.text} rounded-full p-2.5`}>
+            {c.icon}
+          </div>
           <div>
             <p className="text-xs text-gray-500 font-medium">{c.label}</p>
-            {loading
-              ? <div className="h-6 w-28 bg-gray-200 animate-pulse rounded mt-1" />
-              : <p className={`text-xl font-bold ${c.text}`}>₹ {c.value}</p>
-            }
+            {loading ? (
+              <div className="h-6 w-28 bg-gray-200 animate-pulse rounded mt-1" />
+            ) : (
+              <p className={`text-xl font-bold ${c.text}`}>₹ {c.value}</p>
+            )}
           </div>
         </div>
       ))}
@@ -84,21 +132,21 @@ export default function AdminUserRewardDetailPage() {
   const router = useRouter();
   const params = useParams();
 
-  const type    = (params?.type    as string) || "daily";
+  const type = (params?.type as string) || "daily";
   const user_id = (params?.user_id as string) || "";
 
   const { query, setQuery, debouncedQuery } = useSearch();
 
   /* ── State ──────────────────────────────────────────────────────── */
-  const [rows,         setRows]         = useState<any[]>([]);
-  const [totalItems,   setTotalItems]   = useState(0);
-  const [loading,      setLoading]      = useState(false);
-  const [summary,      setSummary]      = useState({ earned: 0, used: 0, balance: 0 });
-  const [direction,    setDirection]    = useState("");
-  const [dateFilter,   setDateFilter]   = useState<any>(null);
-  const [showModal,    setShowModal]    = useState(false);
+  const [rows, setRows] = useState<any[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [summary, setSummary] = useState({ earned: 0, used: 0, balance: 0 });
+  const [direction, setDirection] = useState("");
+  const [dateFilter, setDateFilter] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
-  const [downloading,  setDownloading]  = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   /* ── Download selected rows as xlsx ────────────────────────────── */
   const handleDownloadClick = () => {
@@ -107,48 +155,62 @@ export default function AdminUserRewardDetailPage() {
       fileName: `${type}-${user_id}-report`,
       format: "xlsx",
       excludeHeaders: ["_id", "__v"],
-      onStart:  () => setDownloading(true),
+      onStart: () => setDownloading(true),
       onFinish: () => setDownloading(false),
     });
   };
 
   /* ── Pagination ─────────────────────────────────────────────────── */
   const handlePageChange = useCallback(() => {}, []);
-  const { currentPage, totalPages, nextPage, prevPage, startItem, endItem, goToPage } =
-    usePagination({ totalItems, itemsPerPage: 12, onPageChange: handlePageChange });
+  const {
+    currentPage,
+    totalPages,
+    nextPage,
+    prevPage,
+    startItem,
+    endItem,
+    goToPage,
+  } = usePagination({
+    totalItems,
+    itemsPerPage: 12,
+    onPageChange: handlePageChange,
+  });
 
   /* ── Fetch history for this user ────────────────────────────────── */
-  const fetchHistory = useCallback(async (search: string) => {
-    try {
-      setLoading(true);
+  const fetchHistory = useCallback(
+    async (search: string) => {
+      try {
+        setLoading(true);
 
-      const reqParams: any = {
-        type,
-        user_id,
-        direction,
-        search,
-      };
+        const reqParams: any = {
+          type,
+          user_id,
+          direction,
+          search,
+        };
 
-      // Date filter — single date
-      if (dateFilter?.type === "on") {
-        reqParams.date = dateFilter.date;
+        // Date filter — single date
+        if (dateFilter?.type === "on") {
+          reqParams.date = dateFilter.date;
+        }
+        // Date filter — range
+        if (dateFilter?.type === "range") {
+          reqParams.from = dateFilter.from;
+          reqParams.to = dateFilter.to;
+        }
+
+        const { data } = await axios.get("/api/scores", { params: reqParams });
+        setSummary(data.summary ?? { earned: 0, used: 0, balance: 0 });
+        setRows(data.history ?? []);
+        setTotalItems(data.total ?? 0);
+      } catch {
+        ShowToast.error("Failed to load history");
+      } finally {
+        setLoading(false);
       }
-      // Date filter — range
-      if (dateFilter?.type === "range") {
-        reqParams.from = dateFilter.from;
-        reqParams.to   = dateFilter.to;
-      }
-
-      const { data } = await axios.get("/api/scores", { params: reqParams });
-      setSummary(data.summary  ?? { earned: 0, used: 0, balance: 0 });
-      setRows(data.history     ?? []);
-      setTotalItems(data.total ?? 0);
-    } catch {
-      ShowToast.error("Failed to load history");
-    } finally {
-      setLoading(false);
-    }
-  }, [type, user_id, direction, dateFilter]);
+    },
+    [type, user_id, direction, dateFilter],
+  );
 
   /* ── Trigger fetch on search / filter change ────────────────────── */
   useEffect(() => {
@@ -160,7 +222,9 @@ export default function AdminUserRewardDetailPage() {
   /* ── Columns ────────────────────────────────────────────────────── */
   const columns = [
     {
-      field: "direction", headerName: "Type", flex: 0.6,
+      field: "direction",
+      headerName: "Type",
+      flex: 0.6,
       renderCell: (p: any) =>
         p.value === "in" ? (
           <span className="flex items-center gap-1.5 text-green-600 font-semibold">
@@ -173,31 +237,41 @@ export default function AdminUserRewardDetailPage() {
         ),
     },
     {
-      field: "source", headerName: "Source / Module", flex: 1.2,
+      field: "source",
+      headerName: "Source / Module",
+      flex: 1.2,
       renderCell: (p: any) => (
-        <span className="capitalize">
-          {(p.row.source || p.row.module || "—").replace(/_/g, " ")}
-        </span>
+        <span className="capitalize">{getSourceLabel(p.row)}</span>
       ),
     },
     { field: "reference_id", headerName: "Reference ID", flex: 1.2 },
     {
-      field: "points", headerName: "Points (₹)", flex: 0.9,
-      align: "right" as const, headerAlign: "right" as const,
+      field: "points",
+      headerName: "Points (₹)",
+      flex: 0.9,
+      align: "right" as const,
+      headerAlign: "right" as const,
       renderCell: (p: any) => (
-        <span className={`pr-2 ${p.row.direction === "in" ? "text-green-600 font-bold" : "text-red-500 font-bold"}`}>
+        <span
+          className={`pr-2 ${p.row.direction === "in" ? "text-green-600 font-bold" : "text-red-500 font-bold"}`}
+        >
           {p.row.direction === "in" ? "" : ""}₹ {fmt(p.value)}
         </span>
       ),
     },
     {
-      field: "balance_after", headerName: "Balance After", flex: 1,
-      align: "right" as const, headerAlign: "right" as const,
+      field: "balance_after",
+      headerName: "Balance After",
+      flex: 1,
+      align: "right" as const,
+      headerAlign: "right" as const,
       renderCell: (p: any) =>
         p.value != null ? <span className="pr-2">₹ {fmt(p.value)}</span> : "—",
     },
     {
-      field: "remarks", headerName: "Remarks", flex: 1.5,
+      field: "remarks",
+      headerName: "Remarks",
+      flex: 1.5,
       renderCell: (p: any) => (
         <span className="text-gray-500 text-xs truncate" title={p.value}>
           {p.value || "—"}
@@ -205,7 +279,9 @@ export default function AdminUserRewardDetailPage() {
       ),
     },
     {
-      field: "created_at", headerName: "Date & Time", flex: 1.3,
+      field: "created_at",
+      headerName: "Date & Time",
+      flex: 1.3,
       renderCell: (p: any) =>
         p.value ? new Date(p.value).toLocaleString("en-IN") : "—",
     },
@@ -217,7 +293,6 @@ export default function AdminUserRewardDetailPage() {
   return (
     <Layout>
       <div className="max-md:px-4 p-4 w-full max-w-[99%] mx-auto -mt-5">
-
         {/* Loading overlay */}
         {(loading || downloading) && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -275,7 +350,9 @@ export default function AdminUserRewardDetailPage() {
                 onClick={() => setDateFilter(null)}
                 className="ml-1 text-yellow-700 hover:text-red-600 font-bold"
                 title="Clear date filter"
-              >✕</button>
+              >
+                ✕
+              </button>
             </span>
           )}
         </div>
@@ -284,8 +361,8 @@ export default function AdminUserRewardDetailPage() {
         <Table
           columns={columns}
           rows={rows.slice((currentPage - 1) * 12, currentPage * 12)}
-  rowIdField="reference_id"
-            pageSize={12}
+          rowIdField="reference_id"
+          pageSize={12}
           checkboxSelection
           setSelectedRows={setSelectedRows}
         />
@@ -306,7 +383,10 @@ export default function AdminUserRewardDetailPage() {
         <DateFilterModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
-          onSubmit={(filter) => { setDateFilter(filter); setShowModal(false); }}
+          onSubmit={(filter) => {
+            setDateFilter(filter);
+            setShowModal(false);
+          }}
         />
       </div>
     </Layout>

@@ -28,7 +28,7 @@ import {
   FaPercent,
   FaTrophy,
 } from "react-icons/fa";
-
+import { SlBadge } from "react-icons/sl";
 import { MdOutlineCheckCircle } from "react-icons/md";
 import { RiMoneyRupeeCircleLine } from "react-icons/ri";
 import { MdOutlineAttachMoney } from "react-icons/md";
@@ -92,6 +92,30 @@ const PAIR_STAR_TO_BADGE: Record<string, string> = {
   "CROWN AMBASSADOR": "crownambassador",
   "MAVERICK AMBASSADOR": "maverickambassador",
 };
+
+// ── Badge key → Display name mapping ────────────────────────────────────────
+const BADGE_DISPLAY_NAMES: Record<string, string> = {
+  star: "Star",
+  bronze: "Bronze",
+  silver: "Silver",
+  gold: "Gold",
+  platinum: "Platinum",
+  ruby: "Ruby",
+  pearl: "Pearl",
+  saphire: "Saphire",
+  emerald: "Emerald",
+  diamond: "Diamond",
+  bluediamond: "Blue Diamond",
+  blackdiamond: "Black Diamond",
+  crowndiamond: "Crown Diamond",
+  ambassador: "Ambassador",
+  crownambassador: "Crown Ambassador",
+  maverickambassador: "Maverick Ambassador",
+};
+
+function getBadgeDisplayName(badgeKey: string): string {
+  return BADGE_DISPLAY_NAMES[badgeKey] || "-";
+}
 
 function resolveBadge(user: any): string {
   const status = (user?.user_status || user?.status || "").toLowerCase();
@@ -482,13 +506,13 @@ const DashboardPage: React.FC = () => {
 
             {/* ── Maverick Cycle + MNF — mobile only ── */}
             <div className="md:hidden grid grid-cols-2 gap-3">
-              <DashBox
+              {/* <DashBox
                 icon={<BsFillPeopleFill />}
                 title={`MAVERICK WINNERS CYCLE (${cycles?.matches?.toString() || "0"})`}
                 value={`${cycles?.remainingDays?.toString() || "0"} days left`}
                 index={2}
                 onClick={() => router.push("/wallet/rewards?tab=matching")}
-              />
+              /> */}
               {/* <DashBox
                 icon={<FaGift />}
                 title="MAVERICK NEXUS"
@@ -503,6 +527,13 @@ const DashboardPage: React.FC = () => {
                 index={1}
                 onClick={() => router.push("/pair-rankings")}
               /> */}
+              <DashBox
+                icon={<SlBadge />}
+                title="Live Rank"
+                value={getBadgeDisplayName(badgeKey)}
+                index={1}
+                onClick={() => router.push("/pair-rankings")}
+              />
               <DashBox
                 icon={<FaRupeeSign />}
                 title="Current Payout"
@@ -612,7 +643,7 @@ const DashboardPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4">
-                <div className="hidden md:block">
+                {/* <div className="hidden md:block">
                   <DashBox
                     icon={<BsFillPeopleFill />}
                     title={`MAVERICK CYCLE (${cycles?.matches?.toString() || "0"})`}
@@ -620,12 +651,21 @@ const DashboardPage: React.FC = () => {
                     index={2}
                     onClick={() => router.push("/wallet/rewards?tab=matching")}
                   />
+                </div> */}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<SlBadge />}
+                    title="Live Rank"
+                    value={getBadgeDisplayName(badgeKey)}
+                    index={1}
+                    onClick={() => router.push("/pair-rankings")}
+                  />
                 </div>
 
                 <div className="hidden md:block">
                   <DashBox
                     icon={<FaRupeeSign />}
-                    title="Total Payout"
+                    title="Total Earnings"
                     value={`₹ ${summary?.totalPayout?.toFixed(2) || "0.00"}`}
                     index={0}
                   />
@@ -695,28 +735,36 @@ const DashboardPage: React.FC = () => {
                     index={3}
                   />
                 </div> */}
-
-                <DashBox
-                    icon={<FaTrophy />}
-                    title="Ranks & rewards"
-                    value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
+                <div className="hidden md:block">
+                  <DashBox
+                    icon={<FaRupeeSign />}
+                    title="Current Payout"
+                    value={`₹ ${summary?.pendingPayout?.toFixed(2) || "0.00"}`}
                     index={3}
                   />
+                </div>
+
+                <DashBox
+                  icon={<FaTrophy />}
+                  title="Ranks & rewards"
+                  value={`₹ ${summary?.pairRewardTotal?.toFixed(2) || "0.00"}`}
+                  index={3}
+                />
 
                 <DashBox
                   icon={<FaGift />}
                   title="MAVERICK NEXUS"
                   value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
                   index={1}
-                  onClick={() => router.push("/wallet/rewards?tab=score")}
+                  // onClick={() => router.push("/wallet/rewards?tab=score")}
                 />
 
-                <DashBox
+                {/* <DashBox
                   icon={<MdOutlineCheckCircle />}
                   title="Redeem Points"
                   value={`${summary?.cashbackPoints?.toFixed(2) || "0.00"}`}
                   index={3}
-                />
+                /> */}
 
                 <DashBox
                   icon={<FaPercent />}
