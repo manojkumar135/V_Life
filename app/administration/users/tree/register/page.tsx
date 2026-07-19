@@ -49,6 +49,8 @@ function RegisterContent() {
 
   const [panVerified, setPanVerified] = useState(false);
   const [panChecking, setPanChecking] = useState(false);
+  const [panFormatValid, setPanFormatValid] = useState(false);
+  const [panError, setPanError] = useState(""); // ✅ NEW — race-free PAN error message
 
   const [referralName, setReferralName] = useState<string | null>(null);
   const [referralChecking, setReferralChecking] = useState(false);
@@ -645,49 +647,61 @@ function RegisterContent() {
 
                       formik.setFieldValue("pan", value);
                       setPanVerified(false);
+                      setPanFormatValid(false);
                       formik.setFieldValue("pancheck", false);
 
-                      // 👉 1️⃣ If typing and < 10 chars → NO ERROR, NO CHECK
+                      // 👉 0️⃣ Empty → required
+                      if (value.length === 0) {
+                        setPanError("* PAN is required");
+                        return;
+                      }
+
+                      // 👉 1️⃣ Typing and < 10 chars → NO ERROR YET
                       if (value.length < 10) {
-                        formik.setFieldError("pan", "");
+                        setPanError("");
                         return;
                       }
 
-                      // 👉 2️⃣ If > 10 chars → show error
+                      // 👉 2️⃣ > 10 chars (shouldn't normally happen due to maxLength)
                       if (value.length > 10) {
-                        formik.setFieldError(
-                          "pan",
-                          "PAN must be exactly 10 characters",
-                        );
+                        setPanError("* PAN must be exactly 10 characters");
                         return;
                       }
 
-                      // 👉 3️⃣ If length === 10 but wrong format → show error
+                      // 👉 3️⃣ length === 10 but wrong format
                       if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value)) {
-                        formik.setFieldError(
-                          "pan",
-                          "Invalid PAN format (ABCDE1234F)",
-                        );
+                        setPanError("* Invalid PAN format (ABCDE1234F)");
                         return;
                       }
 
                       // 👉 4️⃣ Valid format → clear error & check duplicate
-                      formik.setFieldError("pan", "");
+                      setPanError("");
 
                       const exists = await checkPanDuplicate(value);
                       if (exists) {
-                        formik.setFieldError("pan", "PAN already exists");
+                        setPanError("* PAN already exists");
                         return;
+                      }
+
+                      setPanFormatValid(true);
+                    }}
+                  onBlur={(e) => {
+                      formik.handleBlur(e);
+                      const val = formik.values.pan;
+                      if (!val) {
+                        setPanError("* PAN is required");
+                      } else if (val.length < 10) {
+                        setPanError("* PAN must be exactly 10 characters");
+                      } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(val)) {
+                        setPanError("* Invalid PAN format (ABCDE1234F)");
                       }
                     }}
                     className="w-full pl-10 pr-20 py-1 rounded-md border border-gray-400"
                   />
 
-                  {formik.values.pan.length === 10 &&
-                    /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(formik.values.pan) &&
+                  {panFormatValid &&
                     !panChecking &&
-                    !panVerified &&
-                    !formik.errors.pan && (
+                    !panVerified && (
                       <button
                         type="button"
                         onClick={verifyPan}
@@ -713,13 +727,16 @@ function RegisterContent() {
                   )}
                 </div>
 
-                {/* PAN Error */}
+              {/* PAN Error */}
                 <span className="text-red-500 text-xs mt-1 block">
-                  {formik.errors.pan ||
-                    (formik.touched.pan || formik.values.pan
-                      ? formik.errors.pancheck
-                      : "") ||
-                    "\u00A0"}
+                  {panError
+                    ? panError
+                    : formik.touched.pan && formik.errors.pan
+                      ? formik.errors.pan
+                      : (formik.touched.pan || formik.values.pan) &&
+                          formik.errors.pancheck
+                        ? `${formik.errors.pancheck}`
+                        : "\u00A0"}
                 </span>
               </div>
 
