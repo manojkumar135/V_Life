@@ -153,7 +153,7 @@ export default function ActivationForm() {
                   required
                   value={values.user_id}
                   onChange={async (e) => {
-                    const value = e.target.value;
+                    const value = e.target.value.toUpperCase();
                     setFieldValue("user_id", value);
 
                     if (value.length === 10) {
@@ -186,7 +186,8 @@ export default function ActivationForm() {
                     className="px-6 py-2 bg-orange-500 disabled:opacity-50"
                     onClick={() => handleOrderRedirect(50, values.user_id)}
                   >
-                    Retail Pack
+                    {/* Retail Pack */}
+                    50 Pack Activation
                   </SubmitButton>
 
                   <SubmitButton
@@ -195,7 +196,8 @@ export default function ActivationForm() {
                     className="px-6 py-2 bg-green-600 disabled:opacity-50"
                     onClick={() => handleOrderRedirect(100, values.user_id)}
                   >
-                    Activation Pack
+                    {/* Activation Pack */}
+                    100 Pack Activation
                   </SubmitButton>
                 </div>
               </Form>

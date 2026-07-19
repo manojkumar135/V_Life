@@ -751,13 +751,20 @@ const DashboardPage: React.FC = () => {
                   index={3}
                 />
 
-                <DashBox
+                 <DashBox
+                    icon={<BsFillPeopleFill />}
+                    title={`MAVERICK CYCLE (${cycles?.matches?.toString() || "0"})`}
+                    value={`${cycles?.remainingDays?.toString() || "0"} days left`}
+                    index={2}
+                  />
+
+                {/* <DashBox
                   icon={<FaGift />}
                   title="MAVERICK NEXUS"
                   value={`₹ ${summary?.rewardValue?.toFixed(2) || "0.00"}`}
                   index={1}
                   // onClick={() => router.push("/wallet/rewards?tab=score")}
-                />
+                /> */}
 
                 {/* <DashBox
                   icon={<MdOutlineCheckCircle />}

@@ -120,7 +120,8 @@ the amount will be adjusted in your first order.`;
                   className="flex-1 cursor-pointer bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
                   text-white font-semibold py-3 rounded-lg"
                 >
-                  Retail Pack
+                  {/* Retail Pack */}
+                  50 Pack Activation
                 </button>
 
                 <button
@@ -129,7 +130,17 @@ the amount will be adjusted in your first order.`;
                   text-white font-semibold py-3 rounded-lg"
                 >
                   {/* Order 100 PV */}
-                  Activation Pack
+                  {/* Activation Pack */}
+                  100 Pack Activation
+                </button>
+                <button
+                  // onClick={() => handleOrder(100)}
+                  className="flex-1 cursor-pointer bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4]
+                  text-white font-semibold py-3 rounded-lg"
+                >
+                  {/* Order 100 PV */}
+                  {/* Activation Pack */}
+                  Retail Pack
                 </button>
               </>
             ) : (
@@ -153,13 +164,13 @@ the amount will be adjusted in your first order.`;
               </>
             )}
 
-            <button
+            {/* <button
               onClick={onCancel}
               className="flex-1 cursor-pointer bg-gray-200 hover:bg-gray-300
               text-gray-700 font-medium py-3 rounded-lg"
             >
               Cancel
-            </button>
+            </button> */}
           </div>
         </div>
       </div>
@@ -174,45 +185,44 @@ the amount will be adjusted in your first order.`;
             contact: user?.contact,
           }}
           onSuccess={async (res) => {
-  try {
-    setLoading(true);
+            try {
+              setLoading(true);
 
-    await axios.post("/api/history-operations", {
-      transaction_id: res.razorpay_payment_id,
-      wallet_id: user?.wallet_id || "",
-      user_id: user?.user_id,
-      user_name: user?.user_name,
-      rank: user?.rank,
+              await axios.post("/api/history-operations", {
+                transaction_id: res.razorpay_payment_id,
+                wallet_id: user?.wallet_id || "",
+                user_id: user?.user_id,
+                user_name: user?.user_name,
+                rank: user?.rank,
 
-      account_holder_name: user?.user_name,
-      bank_name: "Razorpay",
-      account_number: "N/A",
-      ifsc_code: "N/A",
+                account_holder_name: user?.user_name,
+                bank_name: "Razorpay",
+                account_number: "N/A",
+                ifsc_code: "N/A",
 
-      date: formatDate(new Date()),
-      time: new Date().toLocaleTimeString(),
-      available_balance: 0,
-      amount: ADVANCE_AMOUNT,
-      advance: true,
-      source: "advance",
-      transaction_type: "Debit",
-      details: "Advance Payment for Account Activation",
-      status: "Completed",
+                date: formatDate(new Date()),
+                time: new Date().toLocaleTimeString(),
+                available_balance: 0,
+                amount: ADVANCE_AMOUNT,
+                advance: true,
+                source: "advance",
+                transaction_type: "Debit",
+                details: "Advance Payment for Account Activation",
+                status: "Completed",
 
-      created_by: user?.user_id,
-    });
+                created_by: user?.user_id,
+              });
 
-    ShowToast.success("Advance payment successful!");
-    router.push("/orders");
-  } catch (error) {
-    console.error("History save error:", error);
-    ShowToast.error("Payment successful, but failed to save history");
-  } finally {
-    setLoading(false);
-    setShowPayment(false);
-  }
-}}
-
+              ShowToast.success("Advance payment successful!");
+              router.push("/orders");
+            } catch (error) {
+              console.error("History save error:", error);
+              ShowToast.error("Payment successful, but failed to save history");
+            } finally {
+              setLoading(false);
+              setShowPayment(false);
+            }
+          }}
           onClose={() => setShowPayment(false)}
         />
       )}

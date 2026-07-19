@@ -36,9 +36,14 @@ export default function LoginPage() {
     onSubmit: async (values) => {
       setLoading(true);
       try {
+        const payload = {
+          ...values,
+          loginId: values.loginId.trim().toUpperCase(),
+        };
+
         const res = await axios.post(
           "/api/login-operations/signIn-operations",
-          values,
+          payload,
         );
 
         if (res.data.success) {
@@ -101,7 +106,6 @@ export default function LoginPage() {
 
       {/* ── Outer wrapper ── */}
       <div className="flex h-screen w-full overflow-hidden bg-linear-to-l from-[#0C3978] via-[#106187] to-[#16B8E4]">
-
         {/* ─── Left Panel: hidden on mobile AND tablet, visible only on xl+ ─── */}
         <div
           className="hidden xl:flex w-1/2 shrink-0"
@@ -242,7 +246,12 @@ export default function LoginPage() {
                       name="loginId"
                       placeholder="User ID / Contact"
                       value={formik.values.loginId}
-                      onChange={formik.handleChange}
+                      onChange={(e) =>
+                        formik.setFieldValue(
+                          "loginId",
+                          e.target.value.toUpperCase(),
+                        )
+                      }
                       onBlur={formik.handleBlur}
                       className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
                     />
