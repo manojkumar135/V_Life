@@ -25,18 +25,18 @@ export default function ProfileSection() {
   const { user } = useVLife();
   const [loading, setLoading] = useState(false);
 
-  const [otpPopup, setOtpPopup] = useState(false);
-  const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
-  const inputRefs = useRef<HTMLInputElement[]>([]);
-  const [timer, setTimer] = useState(0);
+  // const [otpPopup, setOtpPopup] = useState(false);
+  // const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
+  // const inputRefs = useRef<HTMLInputElement[]>([]);
+  // const [timer, setTimer] = useState(0);
 
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
   const isAdmin = user?.role === "admin";
 
-  const maskEmail = (email: string) => {
-    const [name, domain] = email.split("@");
-    return `${name.slice(0, 3)}***@${domain}`;
-  };
+  // const maskEmail = (email: string) => {
+  //   const [name, domain] = email.split("@");
+  //   return `${name.slice(0, 3)}***@${domain}`;
+  // };
 
   const initialValues = {
     fullName: user.user_name || "",
@@ -117,12 +117,12 @@ export default function ProfileSection() {
       }
     } finally {
       setLoading(false);
-      setOtpPopup(false);
-      setOtp(new Array(6).fill(""));
+      // setOtpPopup(false);
+      // setOtp(new Array(6).fill(""));
     }
   };
 
-  const handleSaveClick = () => {
+const handleSaveClick = () => {
     const values = formik.values;
     const original = originalRef.current;
 
@@ -131,68 +131,62 @@ export default function ProfileSection() {
       return;
     }
 
-    if (isAdmin) {
-      updateProfile(values);
-      return;
-    }
-
-    setOtpPopup(true);
-    sendOtp();
+    updateProfile(values);
   };
 
-  const sendOtp = async () => {
-    try {
-      setLoading(true);
-      await axios.post("/api/sendOTP", { email: user.mail });
-      ShowToast.success("OTP Sent");
-      setOtp(new Array(6).fill(""));
-      startTimer();
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const sendOtp = async () => {
+  //   try {
+  //     setLoading(true);
+  //     await axios.post("/api/sendOTP", { email: user.mail });
+  //     ShowToast.success("OTP Sent");
+  //     setOtp(new Array(6).fill(""));
+  //     startTimer();
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  const startTimer = () => {
-    setTimer(120);
-    const i = setInterval(() => {
-      setTimer((s) => {
-        if (s <= 1) {
-          clearInterval(i);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-  };
+  // const startTimer = () => {
+  //   setTimer(120);
+  //   const i = setInterval(() => {
+  //     setTimer((s) => {
+  //       if (s <= 1) {
+  //         clearInterval(i);
+  //         return 0;
+  //       }
+  //       return s - 1;
+  //     });
+  //   }, 1000);
+  // };
 
-  const verifyOtp = async () => {
-    if (otp.join("").length !== 6) return;
+  // const verifyOtp = async () => {
+  //   if (otp.join("").length !== 6) return;
 
-    try {
-      setLoading(true);
+  //   try {
+  //     setLoading(true);
 
-      const res = await axios.post("/api/verifyOTP", {
-        email: user.mail,
-        otp: otp.join(""),
-      });
+  //     const res = await axios.post("/api/verifyOTP", {
+  //       email: user.mail,
+  //       otp: otp.join(""),
+  //     });
 
-      if (!res.data.success) {
-        ShowToast.error("Invalid OTP");
-        return;
-      }
+  //     if (!res.data.success) {
+  //       ShowToast.error("Invalid OTP");
+  //       return;
+  //     }
 
-      // ✅ OTP verified successfully
-      ShowToast.success("OTP Verified");
+  //     // ✅ OTP verified successfully
+  //     ShowToast.success("OTP Verified");
 
-      // ⏳ keep loader for 2 seconds
-      setTimeout(() => {
-        updateProfile(formik.values);
-      }, 2000);
-    } catch {
-      ShowToast.error("OTP verification failed");
-      setLoading(false);
-    }
-  };
+  //     // ⏳ keep loader for 2 seconds
+  //     setTimeout(() => {
+  //       updateProfile(formik.values);
+  //     }, 2000);
+  //   } catch {
+  //     ShowToast.error("OTP verification failed");
+  //     setLoading(false);
+  //   }
+  // };
 
   useEffect(() => {
     if (!/^\d{6}$/.test(formik.values.pincode)) {
@@ -390,7 +384,7 @@ export default function ProfileSection() {
       </form>
 
       {/* OTP UI */}
-      {otpPopup && (
+      {/* {otpPopup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="relative bg-white p-7 rounded-xl w-[380px] shadow-xl text-center space-y-4">
             <h2 className="text-xl font-bold">Verify OTP</h2>
@@ -400,7 +394,6 @@ export default function ProfileSection() {
               <span className="font-semibold">{maskEmail(user.mail)}</span>
             </p>
 
-            {/* OTP Boxes */}
             <div className="flex justify-center gap-2">
               {otp.map((d, i) => (
                 <input
@@ -419,13 +412,11 @@ export default function ProfileSection() {
                     copy[i] = e.target.value;
                     setOtp(copy);
 
-                    // Auto focus next
                     if (e.target.value && i < otp.length - 1) {
                       inputRefs.current[i + 1]?.focus();
                     }
                   }}
                   onKeyDown={(e) => {
-                    // Move backward on backspace
                     if (e.key === "Backspace" && !otp[i] && i > 0) {
                       inputRefs.current[i - 1]?.focus();
                     }
@@ -442,7 +433,6 @@ export default function ProfileSection() {
               Verify OTP
             </SubmitButton>
 
-            {/* Timer */}
             <p className="text-sm text-gray-600">
               {timer > 0 ? (
                 <>Resend OTP in {formatTime(timer)}</>
@@ -457,7 +447,6 @@ export default function ProfileSection() {
               )}
             </p>
 
-            {/* Close X */}
             <button
               onClick={() => {
                 setOtpPopup(false);
@@ -470,7 +459,7 @@ export default function ProfileSection() {
             </button>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

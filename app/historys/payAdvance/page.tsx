@@ -121,7 +121,7 @@ the amount will be adjusted in your first order.`;
                   text-white font-semibold py-3 rounded-lg"
                 >
                   {/* Retail Pack */}
-                  50 Pack Activation
+                  50 PV
                 </button>
 
                 <button
@@ -131,7 +131,7 @@ the amount will be adjusted in your first order.`;
                 >
                   {/* Order 100 PV */}
                   {/* Activation Pack */}
-                  100 Pack Activation
+                  100 PV
                 </button>
                 <button
                   // onClick={() => handleOrder(100)}

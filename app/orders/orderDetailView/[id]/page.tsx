@@ -97,6 +97,7 @@ interface OrderData {
   landmark?: string;
   description?: string;
   orderStatus?: string;
+  isUpgradeOrder?: boolean;
   cart: CartItem[];
   totalAmount: number;
   subtotal: number;
@@ -324,6 +325,7 @@ export default function OrderDetailView() {
             landmark: raw.landmark,
             description: raw.description,
             orderStatus: raw.order_status,
+            isUpgradeOrder: Boolean(raw.is_upgrade_order),
             cart: raw.items.map((item: any) => ({
               id: item.product_id,
               name: item.name,
@@ -627,29 +629,52 @@ export default function OrderDetailView() {
 
           <div className="flex flex-col xl:flex-row max-lg:items-start items-center max-lg:justify-start justify-between gap-4 w-full">
             {/* order meta */}
-            <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5">
-              <span className="text-sm font-medium text-gray-600">
-                Order ID:{" "}
-                <span className="text-black font-semibold">
-                  {order.orderId}
-                </span>
-              </span>
-              <span className="text-sm font-medium text-gray-600">
-                Payment Date:{" "}
-                <span className="text-black font-semibold">
-                  {order.paymentDate}
-                </span>
-              </span>
-              <span className="text-sm font-medium text-gray-600">
-                Payment ID:{" "}
-                <span className="text-black font-semibold">
-                  {order.paymentId}
-                </span>
-              </span>
-              <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                Status: <StatusBadge status={order.orderStatus} />
-              </span>
-            </div>
+           <div className="flex flex-col lg:flex-row lg:flex-wrap lg:items-center xl:justify-between xl:w-[75%] gap-3 lg:gap-6 ml-0 max-lg:ml-5">
+  <span className="text-sm font-medium text-gray-600">
+    Order ID:{" "}
+    <span className="text-black font-semibold">
+      {order.orderId}
+    </span>
+  </span>
+
+  <span className="text-sm font-medium text-gray-600">
+    Payment Date:{" "}
+    <span className="text-black font-semibold">
+      {order.paymentDate}
+    </span>
+  </span>
+
+  <span className="text-sm font-medium text-gray-600">
+    Payment ID:{" "}
+    <span className="text-black font-semibold">
+      {order.paymentId}
+    </span>
+  </span>
+
+  {/* NEW */}
+  {/* {order.isUpgradeOrder && (
+    <span className="text-sm font-medium text-purple-700">
+      Order Type:{" "}
+      <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+        Upgrade Order
+      </span>
+    </span>
+  )} */}
+
+  <div className="flex items-center gap-2 flex-wrap">
+  <span className="text-sm font-medium text-gray-600">
+    Status:
+  </span>
+
+  <StatusBadge status={order.orderStatus} />
+
+  {order.isUpgradeOrder && (
+    <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+      Upgrade
+    </span>
+  )}
+</div>
+</div>
 
             {/* action buttons — admin only SR buttons, everyone sees Order Details */}
             <div className="flex flex-col items-end gap-1 max-lg:w-full">
@@ -935,9 +960,15 @@ export default function OrderDetailView() {
                   <KVRow label="Order Status">
                     <StatusBadge status={order.orderStatus} />
                   </KVRow>
+                  {order.isUpgradeOrder && (
+                    <KVRow label="Order Type">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">
+                        Upgrade Order (50 → 100 PV)
+                      </span>
+                    </KVRow>
+                  )}
                 </div>
 
-                {/* ── Tracking for normal user (read-only) ── */}
                 {/* ── Tracking for normal user (read-only) ── */}
                 {user.role !== "admin" && (
                   <div className="mt-4 pt-3 border-t border-gray-200">

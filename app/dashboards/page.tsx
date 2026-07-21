@@ -611,10 +611,26 @@ const DashboardPage: React.FC = () => {
 
               <InfoCard title="KYC Status">
                 <div className="text-sm space-y-1">
-                  <StatusItem label="PAN" value={user?.pan} />
-                  <StatusItem label="Bank" value={user?.wallet_id} />
-                  <StatusItem label="ID Proof" value={user?.aadhar} />
-                  <StatusItem label="Address" value={user?.pincode} />
+                  <StatusItem
+                    label="PAN"
+                    value={user?.pan}
+                    onClick={() => router.push("/wallet/wallets")}
+                  />
+                  <StatusItem
+                    label="Bank"
+                    value={user?.wallet_id}
+                    onClick={() => router.push("/wallet/wallets")}
+                  />
+                  <StatusItem
+                    label="ID Proof"
+                    value={user?.aadhar}
+                    onClick={() => router.push("/wallet/wallets")}
+                  />
+                  <StatusItem
+                    label="Address"
+                    value={user?.pincode}
+                    onClick={() => router.push("/settings")}
+                  />
                 </div>
               </InfoCard>
 
@@ -807,10 +823,23 @@ const InfoCard = ({
   </div>
 );
 
-const StatusItem = ({ label, value }: { label: string; value?: string }) => {
+const StatusItem = ({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value?: string;
+  onClick?: () => void;
+}) => {
   const hasValue = Boolean(value);
   return (
-    <div className="flex justify-between border-b border-gray-100 pb-1">
+    <div
+      onClick={onClick}
+      className={`flex justify-between border-b border-gray-100 pb-1 ${
+        onClick ? "cursor-pointer hover:text-blue-700" : ""
+      }`}
+    >
       <span>{label}</span>
       {hasValue ? (
         <span className="text-green-500 font-semibold">

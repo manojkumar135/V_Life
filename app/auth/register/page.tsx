@@ -825,11 +825,11 @@ function RegisterContent() {
             </div>
 
             {/* PAN Note */}
-            <p className="text-[0.75rem] text-red-600 -mt-2 mb-4">
+            {/* <p className="text-[0.75rem] text-red-600 -mt-2 mb-4">
               <strong className="text-gray-600">Note:</strong> If PAN is
               verified, TDS will be <strong>2%</strong>. If not verified, TDS
               will be <strong>20%</strong>.
-            </p>
+            </p> */}
 
             {/* Terms */}
             <div className="flex items-center space-x-2 ">

@@ -187,7 +187,7 @@ export default function ActivationForm() {
                     onClick={() => handleOrderRedirect(50, values.user_id)}
                   >
                     {/* Retail Pack */}
-                    50 Pack Activation
+                    50 PV
                   </SubmitButton>
 
                   <SubmitButton
@@ -197,7 +197,7 @@ export default function ActivationForm() {
                     onClick={() => handleOrderRedirect(100, values.user_id)}
                   >
                     {/* Activation Pack */}
-                    100 Pack Activation
+                    100 PV
                   </SubmitButton>
                 </div>
               </Form>
