@@ -13,9 +13,11 @@ import {
 import { addRewardScore } from "@/services/updateRewardScore";
 import { Score } from "@/models/score";
 import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
-
+import { getISTDateTime } from "@/utils/server/getISTDateTime";
 
 export async function PUT(req) {
+  const { formattedTime } = getISTDateTime();
+
   try {
     await connectDB();
 
@@ -69,6 +71,7 @@ export async function PUT(req) {
         user_status: newStatus,
         status_notes: notes,
         activated_date: formattedDate,
+        activated_time: formattedTime,
         last_modified_at: new Date(),
       }
     );
@@ -80,6 +83,8 @@ export async function PUT(req) {
         status: newStatus,
         status_notes: notes,
         activated_date: formattedDate,
+        activated_time: formattedTime,
+
         last_modified_at: new Date(),
       }
     );
@@ -91,6 +96,8 @@ export async function PUT(req) {
         status: newStatus,
         status_notes: notes,
         activated_date: formattedDate,
+        activated_time: formattedTime,
+
         updatedAt: new Date(),
       }
     );

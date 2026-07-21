@@ -136,6 +136,7 @@ const UserSchema = new mongoose.Schema(
     rank: { type: String, required: true, default: "none" },
     club: { type: String, default: "none" },
     activated_date: { type: String },
+    activated_time: { type: String },
 
     pair_star: { type: String },
     pairs: { type: Number, default: 0 },

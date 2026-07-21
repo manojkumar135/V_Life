@@ -5,16 +5,19 @@ import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { Wallet } from "@/models/wallet";
 import { Alert } from "@/models/alert";
+import { getISTDateTime } from "@/utils/server/getISTDateTime";
 
 export async function activateUser(user: any) {
+   const { formattedDate, formattedTime } = getISTDateTime();
   const date = new Date();
-  const formattedDate = date.toLocaleDateString("en-GB").split("/").join("-");
+  // const formattedDate = date.toLocaleDateString("en-GB").split("/").join("-");
 
   const updateData = {
     user_status: "active",
     status: "active",
     status_notes: "Activated automatically after first order",
     activated_date: formattedDate,
+    activated_time: formattedTime, 
     last_modified_at: new Date(),
   };
 

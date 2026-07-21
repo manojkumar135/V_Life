@@ -16,6 +16,8 @@ import { getTotalPayout } from "@/services/totalpayout";
 import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
 import { updateClub } from "@/services/clubrank";
 // import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
+import { getISTDateTime } from "@/utils/server/getISTDateTime";
+
 
 import {
   updateInfinityTeam,
@@ -309,6 +311,8 @@ export async function POST(request) {
         );
       }
 
+      const {  formattedTime: activatedTime } = getISTDateTime();
+
       const activatedDate = `${String(date.getDate()).padStart(2, "0")}-${String(
         date.getMonth() + 1
       ).padStart(2, "0")}-${date.getFullYear()}`;
@@ -335,6 +339,7 @@ export async function POST(request) {
           status: "active",
           status_notes: "Activated automatically after advance payment",
           activated_date: activatedDate,
+          activated_time: activatedTime,
           last_modified_at: new Date(),
         };
 
