@@ -42,7 +42,7 @@ export const getPV = async (userId: string): Promise<number> => {
 
   if (isAdminActivated && user?.user_status === "active") {
     // Virtual 50 PV baseline + any real order PV (e.g. the upgrade order)
-    return 50 + orderPV;
+    return 100 + orderPV;
   }
 
   return orderPV;

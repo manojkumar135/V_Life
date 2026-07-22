@@ -57,28 +57,44 @@ export async function GET(request: Request) {
     const user_id = searchParams.get("user_id");
 
     if (!user_id) {
-      return NextResponse.json({
-        success: false,
-        message: "Missing user_id",
-      });
+      return NextResponse.json({ success: false, message: "Missing user_id" });
     }
 
     const { start, end } = getCurrentWindow();
 
-    /* ---------------- HISTORIES IN WINDOW ---------------- */
-    const historiesInWindow = await History.find({
-      // first_payment: true,
-      ischecked: false,
-      transaction_type:"Debit",
-      created_at: { $gte: start, $lte: end },
-      is_upgrade_order: { $ne: true },
-      // $or: [
-      //   { first_order: true }, // normal order
-      //   { advance: true },     // advance activation
-      // ],
-    }).lean();
+    // 🆕 activation cutoff for this user, if activated today
+    const rootUser = await User.findOne({ user_id })
+      .select("activated_date activated_time")
+      .lean();
 
-    // console.log(historiesInWindow)
+    function formatDate(date: Date): string {
+      const dd = String(date.getDate()).padStart(2, "0");
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const yyyy = date.getFullYear();
+      return `${dd}-${mm}-${yyyy}`;
+    }
+
+    const todayIST = formatDate(
+      new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }))
+    );
+
+    let activationCutoff: Date | null = null;
+    if ((rootUser as any)?.activated_date === todayIST && (rootUser as any)?.activated_time) {
+      activationCutoff = istStringsToUTCDate(
+        (rootUser as any).activated_date,
+        (rootUser as any).activated_time
+      );
+    }
+
+    const historiesInWindow = await History.find({
+      ischecked: false,
+      transaction_type: "Debit",
+      created_at: {
+        $gte: activationCutoff && activationCutoff > start ? activationCutoff : start, // 🆕
+        $lte: end,
+      },
+      is_upgrade_order: { $ne: true },
+    }).lean();
 
     if (!historiesInWindow.length) {
       return NextResponse.json({
@@ -97,12 +113,11 @@ export async function GET(request: Request) {
     const leftTeamIds = getTeamUserIdsFromMap(allNodesMap, user_id, "left");
     const rightTeamIds = getTeamUserIdsFromMap(allNodesMap, user_id, "right");
 
-    /* ---------------- ORDER PV LOOKUP (ONLY FOR ORDERS) ---------------- */
+    /* ---------------- ORDER PV LOOKUP ---------------- */
     const orderIds = historiesInWindow
-      .filter(h => !h.advance && h.order_id)
-      .map(h => h.order_id);
+      .filter((h) => !h.advance && h.order_id)
+      .map((h) => h.order_id);
 
-      // console.log(orderIds,"historiesInWindow")
     const orders = orderIds.length
       ? await Order.find(
           { order_id: { $in: orderIds } },
@@ -111,7 +126,7 @@ export async function GET(request: Request) {
       : [];
 
     const orderPvMap = new Map(
-      orders.map(o => [o.order_id, Number(o.order_pv || 0)])
+      orders.map((o) => [o.order_id, Number(o.order_pv || 0)])
     );
 
     /* ---------------- PV CALCULATION ---------------- */
@@ -120,9 +135,7 @@ export async function GET(request: Request) {
 
     for (const h of historiesInWindow) {
       let pv = 0;
-
       if (h.advance) {
-        // 🔥 FIXED ADVANCE PV
         pv = 100;
       } else if (h.order_id) {
         pv = orderPvMap.get(h.order_id) || 0;
@@ -135,7 +148,6 @@ export async function GET(request: Request) {
       }
     }
 
-    /* ---------------- RESPONSE ---------------- */
     return NextResponse.json({
       success: true,
       message: "Team slot data fetched successfully",
@@ -145,7 +157,6 @@ export async function GET(request: Request) {
       timeRemaining: getTimeRemaining(end),
       window: { start, end },
     });
-
   } catch (error) {
     console.error("Error in /team-slot:", error);
     return NextResponse.json({
