@@ -23,7 +23,7 @@ function getTimeRemaining(end: Date): string {
 function getTeamUserIdsFromMap(
   allNodesMap: Map<string, any>,
   rootUserId: string,
-  side: "left" | "right"
+  side: "left" | "right",
 ): string[] {
   const result: string[] = [];
   const queue: string[] = [];
@@ -75,14 +75,19 @@ export async function GET(request: Request) {
     }
 
     const todayIST = formatDate(
-      new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }))
+      new Date(
+        new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }),
+      ),
     );
 
     let activationCutoff: Date | null = null;
-    if ((rootUser as any)?.activated_date === todayIST && (rootUser as any)?.activated_time) {
+    if (
+      (rootUser as any)?.activated_date === todayIST &&
+      (rootUser as any)?.activated_time
+    ) {
       activationCutoff = istStringsToUTCDate(
         (rootUser as any).activated_date,
-        (rootUser as any).activated_time
+        (rootUser as any).activated_time,
       );
     }
 
@@ -90,7 +95,10 @@ export async function GET(request: Request) {
       ischecked: false,
       transaction_type: "Debit",
       created_at: {
-        $gte: activationCutoff && activationCutoff > start ? activationCutoff : start, // 🆕
+        $gte:
+          activationCutoff && activationCutoff > start
+            ? activationCutoff
+            : start, // 🆕
         $lte: end,
       },
       is_upgrade_order: { $ne: true },
@@ -121,19 +129,37 @@ export async function GET(request: Request) {
     const orders = orderIds.length
       ? await Order.find(
           { order_id: { $in: orderIds } },
-          { order_id: 1, order_pv: 1 }
+          { order_id: 1, order_pv: 1 },
         ).lean()
       : [];
 
     const orderPvMap = new Map(
-      orders.map((o) => [o.order_id, Number(o.order_pv || 0)])
+      orders.map((o) => [o.order_id, Number(o.order_pv || 0)]),
     );
+
+    const teamUsers = await User.find(
+      { user_id: { $in: [...leftTeamIds, ...rightTeamIds] } },
+      { user_id: 1, user_status: 1, activated_date: 1, activated_time: 1 }, // ✅ correct field
+    ).lean();
+
+    const activeMap = new Map(teamUsers.map((u: any) => [u.user_id, u]));
 
     /* ---------------- PV CALCULATION ---------------- */
     let leftPV = 0;
     let rightPV = 0;
 
     for (const h of historiesInWindow) {
+      // 🆕 skip inactive users entirely — no PV counted
+      const userDoc = activeMap.get(h.user_id);
+      if (userDoc?.user_status !== "active") continue;
+      if (userDoc.activated_date === todayIST && userDoc.activated_time) {
+        const cutoff = istStringsToUTCDate(
+          userDoc.activated_date,
+          userDoc.activated_time,
+        );
+        if (cutoff && new Date(h.created_at) < cutoff) continue; // 🆕 guard against null
+      }
+
       let pv = 0;
       if (h.advance) {
         pv = 100;
@@ -165,4 +191,3 @@ export async function GET(request: Request) {
     });
   }
 }
-

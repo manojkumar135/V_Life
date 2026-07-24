@@ -15,6 +15,7 @@ import {
 import { updateClub } from "@/services/clubrank";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { determineHoldReasons } from "@/services/payoutHoldService";
+import { istStringsToUTCDate } from "@/utils/server/getISTDateTime";
 
 function formatDate(date: Date): string {
   const dd = String(date.getDate()).padStart(2, "0");
@@ -325,6 +326,15 @@ export async function getUserTeamsAndHistories() {
   );
 
   const treeNodes = (await TreeNode.find({}).lean()) as any[];
+  // 🆕 fetch activation info for all users once
+const allUsers = (await User.find({})
+  .select("user_id activated_date activated_time")
+  .lean()) as any[];
+const userActivationMap = new Map(allUsers.map((u: any) => [u.user_id, u]));
+
+const todayIST = formatDate(
+  new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })),
+);
   const allNodesMap = new Map<string, any>(
     treeNodes.map((n: any) => [n.user_id, n]),
   );
@@ -353,12 +363,21 @@ export async function getUserTeamsAndHistories() {
       "right",
     );
 
-    const leftHistories = historiesInWindow.filter((h) =>
+    let leftHistories = historiesInWindow.filter((h) =>
       leftTeamIds.includes(h.user_id),
     );
-    const rightHistories = historiesInWindow.filter((h) =>
+    let rightHistories = historiesInWindow.filter((h) =>
       rightTeamIds.includes(h.user_id),
     );
+
+const rootUserInfo = userActivationMap.get(node.user_id);
+if (rootUserInfo?.activated_date === todayIST && rootUserInfo?.activated_time) {
+  const cutoff = istStringsToUTCDate(rootUserInfo.activated_date, rootUserInfo.activated_time);
+  if (cutoff) {
+    leftHistories = leftHistories.filter((h) => new Date(h.created_at) >= cutoff);
+    rightHistories = rightHistories.filter((h) => new Date(h.created_at) >= cutoff);
+  }
+}
 
     result.push({
       user_id: node.user_id,

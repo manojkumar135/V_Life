@@ -17,6 +17,7 @@ import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
 import { updateClub } from "@/services/clubrank";
 // import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
 import { getISTDateTime } from "@/utils/server/getISTDateTime";
+import { round2 } from "@/utils/server/money";
 
 
 import {
@@ -278,6 +279,13 @@ export async function POST(request) {
     const date = new Date();
 
     // ------------------------------------
+    // Round amount to 2 decimals
+    // ------------------------------------
+    if (body.amount !== undefined) {
+      body.amount = round2(body.amount);
+    }
+
+    // ------------------------------------
     // Ledger defaults (UNCHANGED)
     // ------------------------------------
     body.ischecked = false;
@@ -311,7 +319,7 @@ export async function POST(request) {
         );
       }
 
-      const {  formattedTime: activatedTime } = getISTDateTime();
+      const { formattedTime: activatedTime } = getISTDateTime();
 
       const activatedDate = `${String(date.getDate()).padStart(2, "0")}-${String(
         date.getMonth() + 1

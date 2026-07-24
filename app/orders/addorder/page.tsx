@@ -499,10 +499,8 @@ export default function AddOrderPage() {
                 : isOtherOrder
                   ? (orderContext?.pv ?? 100)
                   : orderContext?.pv != null
-                    ? orderContext.pv 
-                    : isFirstOrder && user?.status === "inactive"
-                      ? 100
-                      : null,
+                   ? orderContext.pv 
+        : null,
             is_first_order: isFirstOrder,
             is_advance_paid: isAdvancePaidUser,
             is_use_advance: isUseAdvanceFlow,

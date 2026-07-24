@@ -20,6 +20,7 @@ import { updateClub } from "@/services/clubrank";
 import { determineHoldReasons } from "@/services/payoutHoldService";
 
 import { releaseReferralBonus } from "./referralBonus";
+import { istStringsToUTCDate } from "@/utils/server/getISTDateTime";
 
 /* ------------------------------------------------------------------ */
 /* 🔹 Helper - format date                                             */
@@ -186,6 +187,20 @@ async function processAdvanceReferral(): Promise<number> {
         continue;
       }
 
+      const sponsorUser = (await User.findOne({ user_id: sponsorId })
+  .select("activated_date activated_time")
+  .lean()) as any;
+const todayIST = formatDate(
+  new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })),
+);
+if (sponsorUser?.activated_date === todayIST && sponsorUser?.activated_time) {
+  const cutoff = istStringsToUTCDate(sponsorUser.activated_date, sponsorUser.activated_time);
+  if (cutoff && new Date(advance.created_at) < cutoff) {
+    await History.updateOne({ transaction_id: advance.transaction_id }, { $set: { isReferralChecked: true } });
+    continue;
+  }
+}
+
       // ✅ Use robust check before releasing
       const alreadyPaid = await isReferralAlreadyPaid(advance.transaction_id);
       if (alreadyPaid) {
@@ -261,6 +276,21 @@ export async function runDirectSalesBonus(): Promise<{
           );
           continue;
         }
+
+        const referUser = (await User.findOne({ user_id: referBy })
+  .select("activated_date activated_time")
+  .lean()) as any;
+const todayIST = formatDate(
+  new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })),
+);
+if (referUser?.activated_date === todayIST && referUser?.activated_time) {
+  const cutoff = istStringsToUTCDate(referUser.activated_date, referUser.activated_time);
+  const orderTime = orderToUTCDate(order);
+  if (cutoff && orderTime < cutoff) {
+    await Order.updateOne({ order_id: order.order_id }, { $set: { direct_bonus_checked: true } });
+    continue;
+  }
+}
 
         /* ---------------------------------------------------------- */
         /* 🔹 CASE 1: FIRST ORDER → REFERRAL BONUS                    */

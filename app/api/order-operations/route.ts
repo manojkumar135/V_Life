@@ -15,6 +15,7 @@ import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { activateUser } from "@/services/userActivation";
 import { getTotalPayout } from "@/services/totalpayout";
 import { updateClub } from "@/services/clubrank";
+import { round2 } from "@/utils/server/money";
 // import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
 
 // import { srCreateOrder, buildSRPayload } from "@/lib/shiprocket";
@@ -27,8 +28,7 @@ import {
 
 import { processPvOrder } from "@/services/processPvOrder";
 import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
-import { getPV } from "@/services/getPV"; 
-
+import { getPV } from "@/services/getPV";
 
 // ----------------- Types -----------------
 interface OrderItem {
@@ -133,8 +133,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     const advanceUsed = Boolean(body.advance_used);
-    const advanceDeducted = Number(body.advance_deducted || 0);
-
+    const advanceDeducted = round2(Number(body.advance_deducted || 0));
     /* ---------------- NORMALIZE OPTIONAL FIELDS ---------------- */
     const rewardUsed = Number(body.reward_used ?? 0);
     const rewardRemaining = Number(body.reward_remaining ?? 0);
@@ -169,7 +168,7 @@ export async function POST(request: Request) {
     const isFirstOrder =
       beneficiary.user_status !== "active" && !hasCompletedOrder;
 
-     const beneficiaryStarPV = requestedUpgradeOrder
+    const beneficiaryStarPV = requestedUpgradeOrder
       ? await getPV(beneficiary.user_id)
       : 0;
 
@@ -198,26 +197,36 @@ export async function POST(request: Request) {
     const order_id = await generateUniqueCustomId("OR", Order, 8, 8);
 
     /* ---------------- CALCULATE AMOUNT ---------------- */
-    const amount =
+    const amount = round2(
       body.amount ??
-      body.items.reduce(
-        (sum: number, item: any) =>
-          sum + (item.dealer_price || item.unit_price) * item.quantity,
-        0,
-      );
-
-    /* ---------------- CALCULATE BV / PV ---------------- */
-    const totalBV = body.items.reduce(
-      (sum: number, item: any) => sum + (item.bv || 0) * item.quantity,
-      0,
+        body.items.reduce(
+          (sum: number, item: any) =>
+            sum + (item.dealer_price || item.unit_price) * item.quantity,
+          0,
+        ),
     );
 
-    const totalPV = body.items.reduce(
-      (sum: number, item: any) => sum + (item.pv || 0) * item.quantity,
-      0,
+    /* ---------------- CALCULATE BV / PV ---------------- */
+    const totalBV = round2(
+      body.items.reduce(
+        (sum: number, item: any) => sum + (item.bv || 0) * item.quantity,
+        0,
+      ),
+    );
+
+    const totalPV = round2(
+      body.items.reduce(
+        (sum: number, item: any) => sum + (item.pv || 0) * item.quantity,
+        0,
+      ),
     );
 
     /* ---------------- 1️⃣ CREATE ORDER ---------------- */
+    const final_amount = round2(body.final_amount ?? amount);
+    const payable_amount = round2(body.payable_amount ?? final_amount);
+    const total_amount = round2(body.total_amount ?? final_amount);
+    const total_gst = round2(body.total_gst ?? 0);
+
     const newOrder = await Order.create({
       ...body,
       order_id,
@@ -225,6 +234,11 @@ export async function POST(request: Request) {
       is_first_order: isFirstOrder,
       is_upgrade_order: isUpgradeOrder,
       amount,
+      final_amount,
+      payable_amount,
+      total_amount,
+      total_gst,
+      advance_deducted: advanceDeducted,
     });
 
     /* ---------------- 2️⃣ CREATE HISTORY (PLACED BY) ---------------- */
@@ -255,9 +269,9 @@ export async function POST(request: Request) {
       transaction_type: "Debit",
       status: "Completed",
 
-      amount: body.payable_amount,
-      payable_amount: body.payable_amount,
-      base_amount: body.amount,
+     amount: payable_amount,
+      payable_amount: payable_amount,
+      base_amount: amount,
 
       reward_used: rewardUsed,
       reward_remaining: rewardRemaining,
