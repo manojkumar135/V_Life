@@ -52,6 +52,8 @@ function RegisterContent() {
 
   const [panVerified, setPanVerified] = useState(false);
   const [panChecking, setPanChecking] = useState(false);
+  const [panFormatValid, setPanFormatValid] = useState(false); // ✅ NEW
+  const [panError, setPanError] = useState(""); // ✅ NEW — race-free PAN error message
   const [showPassword, setShowPassword] = useState(false);
 
   const [isReferByPreset, setIsReferByPreset] = useState(false);
@@ -67,6 +69,13 @@ function RegisterContent() {
 
   const router = useRouter();
   const params = useSearchParams();
+
+  const today = new Date();
+  const maxDob = new Date(
+    today.getFullYear() - 17,
+    today.getMonth(),
+    today.getDate(),
+  );
 
   const formik = useFormik({
     initialValues: {
@@ -99,7 +108,7 @@ function RegisterContent() {
         .max(new Date(), "* Date of Birth cannot be in the future")
         .test("age", "* You must be at least 18 years old", function (value) {
           if (!value) return false;
-          const today = new Date();
+
           const birthDate = new Date(value);
           let age = today.getFullYear() - birthDate.getFullYear();
           const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -109,19 +118,26 @@ function RegisterContent() {
             (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
           );
         }),
-      referBy: Yup.string().required("* Referral ID is required"),
+      referBy: Yup.string()
+        .trim()
+        .required("* Referral ID is required")
+        .matches(
+          /^\S{10}$/,
+          "* Referral ID must be exactly 10 characters, no spaces",
+        ),
       team: Yup.string().required("* Team is required"),
       gender: Yup.string().required("* Gender is required"),
       pan: Yup.string()
         .trim()
-        .max(10, "* PAN must be exactly 10 characters")
-        .test("valid-pan", "* Invalid PAN format (ABCDE1234F)", (value) => {
-          if (!value) return true; // optional
-          if (value.length < 10) return true; // do NOT validate
-          return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value);
-        })
-        .nullable()
-        .notRequired(),
+        .required("* PAN is required")
+        .length(10, "* PAN must be exactly 10 characters")
+        .matches(
+          /^[A-Z]{5}[0-9]{4}[A-Z]$/,
+          "* Invalid PAN format (ABCDE1234F)",
+        ),
+      pancheck: Yup.boolean()
+        .oneOf([true], "* PAN must be verified")
+        .required("* PAN must be verified"),
       password: Yup.string()
         .required("* Password is required")
         .min(6, "* Password must be at least 6 characters"),
@@ -159,7 +175,9 @@ function RegisterContent() {
     }
     try {
       setReferralChecking(true);
-      const res = await axios.get(`/api/users-operations?user_id=${id}`);
+      const res = await axios.get(
+        `/api/users-operations?user_id=${id.toUpperCase()}`,
+      );
       if (res.data.success && res.data.data?.user_name) {
         setReferralName(res.data.data.user_name);
       } else {
@@ -201,7 +219,7 @@ function RegisterContent() {
         const data = JSON.parse(decrypted);
 
         if (data.referBy) {
-          formik.setFieldValue("referBy", data.referBy);
+          formik.setFieldValue("referBy", data.referBy.toUpperCase());
           referPreset = true;
         }
         if (data.position) {
@@ -214,7 +232,7 @@ function RegisterContent() {
     }
 
     if (referBy) {
-      formik.setFieldValue("referBy", referBy);
+      formik.setFieldValue("referBy", referBy.toUpperCase());
       referPreset = true;
     }
     if (position) {
@@ -288,7 +306,7 @@ function RegisterContent() {
   const handleNavigateToLogin = () => router.push("/auth/login");
 
   return (
-<div className="flex flex-row max-md:flex-col h-screen overflow-hidden max-sm:overflow-y-visible bg-[#106187]/85">
+    <div className="flex flex-row max-md:flex-col h-screen overflow-hidden max-sm:overflow-y-visible bg-[#106187]/85">
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <Loader />
@@ -364,7 +382,7 @@ function RegisterContent() {
                     onBlur={() => formik.setFieldTouched("dob", true)}
                     dateFormat="dd-MM-yyyy"
                     placeholderText="Date of Birth"
-                    maxDate={new Date()}
+                    maxDate={maxDob}
                     showYearDropdown
                     showMonthDropdown
                     scrollableYearDropdown
@@ -403,7 +421,7 @@ function RegisterContent() {
                       prevMonthButtonDisabled,
                       nextMonthButtonDisabled,
                     }) => {
-                      const currentYear = new Date().getFullYear();
+                      const currentYear = maxDob.getFullYear();
                       const years = Array.from(
                         { length: 101 },
                         (_, i) => currentYear - i,
@@ -588,9 +606,15 @@ function RegisterContent() {
                   <input
                     type="text"
                     name="referBy"
+                    maxLength={10}
                     placeholder="Referral ID"
-                    value={formik.values.referBy}
-                    onChange={formik.handleChange}
+                    value={formik.values.referBy.toUpperCase()}
+                    onChange={(e) => {
+                      const value = e.target.value
+                        .toUpperCase()
+                        .replace(/\s/g, "");
+                      formik.setFieldValue("referBy", value);
+                    }}
                     onBlur={formik.handleBlur}
                     readOnly={isReferByPreset}
                     className={`w-full pl-10 pr-4 py-1 rounded-md border border-gray-400 focus:ring-2 focus:ring-gray-200 ${
@@ -685,68 +709,79 @@ function RegisterContent() {
                     type="text"
                     name="pan"
                     maxLength={10}
-                    placeholder="PAN Number (Optional)"
+                    placeholder="PAN Number"
                     value={formik.values.pan.toUpperCase() || ""}
                     onChange={async (e) => {
                       const value = e.target.value.toUpperCase();
 
                       formik.setFieldValue("pan", value);
                       setPanVerified(false);
+                      setPanFormatValid(false);
+                      formik.setFieldValue("pancheck", false);
 
-                      // 👉 1️⃣ If typing and < 10 chars → NO ERROR, NO CHECK
+                      // 👉 0️⃣ Empty → required
+                      if (value.length === 0) {
+                        setPanError("* PAN is required");
+                        return;
+                      }
+
+                      // 👉 1️⃣ Typing and < 10 chars → NO ERROR YET
                       if (value.length < 10) {
-                        formik.setFieldError("pan", "");
+                        setPanError("");
                         return;
                       }
 
-                      // 👉 2️⃣ If > 10 chars → show error
+                      // 👉 2️⃣ > 10 chars (shouldn't normally happen due to maxLength)
                       if (value.length > 10) {
-                        formik.setFieldError(
-                          "pan",
-                          "PAN must be exactly 10 characters",
-                        );
+                        setPanError("* PAN must be exactly 10 characters");
                         return;
                       }
 
-                      // 👉 3️⃣ If length === 10 but wrong format → show error
+                      // 👉 3️⃣ length === 10 but wrong format
                       if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value)) {
-                        formik.setFieldError(
-                          "pan",
-                          "Invalid PAN format (ABCDE1234F)",
-                        );
+                        setPanError("* Invalid PAN format (ABCDE1234F)");
                         return;
                       }
 
                       // 👉 4️⃣ Valid format → clear error & check duplicate
-                      formik.setFieldError("pan", "");
+                      setPanError("");
 
                       const exists = await checkPanDuplicate(value);
                       if (exists) {
-                        formik.setFieldError("pan", "PAN already exists");
+                        setPanError("* PAN already exists");
                         return;
+                      }
+
+                      setPanFormatValid(true);
+                    }}
+                    onBlur={(e) => {
+                      formik.handleBlur(e);
+                      const val = formik.values.pan;
+                      if (!val) {
+                        setPanError("* PAN is required");
+                      } else if (val.length < 10) {
+                        setPanError("* PAN must be exactly 10 characters");
+                      } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(val)) {
+                        setPanError("* Invalid PAN format (ABCDE1234F)");
                       }
                     }}
                     className="w-full pl-10 pr-20 py-1 rounded-md border border-gray-400"
                   />
 
-                  {formik.values.pan.length === 10 &&
-                    /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(formik.values.pan) &&
-                    !panChecking &&
-                    !panVerified &&
-                    !formik.errors.pan && (
-                      <button
-                        type="button"
-                        onClick={verifyPan}
-                        className="
+                  {panFormatValid && !panChecking && !panVerified && (
+                    <button
+                      type="button"
+                      onClick={verifyPan}
+                      className="
             absolute right-1 top-1
             bg-[#106187] text-white 
             px-3 rounded 
             h-[26px] flex items-center text-sm cursor-pointer
           "
-                      >
-                        Verify
-                      </button>
-                    )}
+                    >
+                      Verify
+                    </button>
+                  )}
 
                   {panChecking && (
                     <span className="absolute right-3 top-[10px] text-[10px] text-gray-500">
@@ -761,7 +796,14 @@ function RegisterContent() {
 
                 {/* PAN Error */}
                 <span className="text-red-500 text-xs mt-1 block">
-                  {formik.errors.pan || "\u00A0"}
+                  {panError
+                    ? panError
+                    : formik.touched.pan && formik.errors.pan
+                      ? formik.errors.pan
+                      : (formik.touched.pan || formik.values.pan) &&
+                          formik.errors.pancheck
+                        ? ` ${formik.errors.pancheck}`
+                        : "\u00A0"}
                 </span>
               </div>
 
@@ -795,11 +837,11 @@ function RegisterContent() {
             </div>
 
             {/* PAN Note */}
-            <p className="text-[0.75rem] text-red-600 -mt-2 mb-4">
+            {/* <p className="text-[0.75rem] text-red-600 -mt-2 mb-4">
               <strong className="text-gray-600">Note:</strong> If PAN is
               verified, TDS will be <strong>2%</strong>. If not verified, TDS
               will be <strong>20%</strong>.
-            </p>
+            </p> */}
 
             {/* Terms */}
             <div className="flex items-center space-x-2 ">
@@ -857,15 +899,17 @@ function RegisterContent() {
                 loading ||
                 !formik.isValid ||
                 !formik.dirty ||
-                !formik.values.terms
+                !formik.values.terms ||
+                !formik.values.pancheck
               }
               className={`w-full py-1 mt-1 font-semibold rounded-md text-[1.2rem] ${
                 loading ||
                 !formik.isValid ||
                 !formik.dirty ||
-                !formik.values.terms
+                !formik.values.terms ||
+                !formik.values.pancheck
                   ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
+                  : "bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
               }`}
             >
               Register
