@@ -318,7 +318,7 @@ function RegisterContent() {
               {/* DOB */}
               <div>
                 <div className="relative" inputMode="none">
-                  <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none z-100" />
+                  <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none" />
                   <DatePicker
                     selected={
                       formik.values.dob ? new Date(formik.values.dob) : null
