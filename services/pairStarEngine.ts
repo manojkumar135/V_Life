@@ -35,6 +35,14 @@
  *  - Tier names are fixed from constants/pairStar.ts — admin cannot change names.
  *  - Falls back to constants if DB not yet seeded.
  *  - Cached for 60 seconds to avoid repeated DB calls.
+ *
+ * Activation-cutoff rule:
+ *  - A team member only counts toward an ancestor's left/right active count if
+ *    their own activation timestamp is AFTER the later of:
+ *      (a) the global Pair Star start_date (admin-configured, applies to everyone), and
+ *      (b) the ancestor's own activation timestamp (a user can't earn pairs from
+ *          team activity that happened before they themselves were active).
+ *  - See laterDate() in utils/server/getISTDateTime for how these two are combined.
  */
 
 import { User } from "@/models/user";
@@ -57,6 +65,7 @@ import {
   istStringsToUTCDate,
   laterDate,
 } from "@/utils/server/getISTDateTime";
+
 // Re-export constants so existing imports from this file still work
 export { PAIR_STAR_TIERS, PAIR_STAR_TIER_NAMES } from "@/constant/pairStar";
 export type { PairStarTierName } from "@/constant/pairStar";
@@ -68,7 +77,6 @@ export type { PairStarTierName } from "@/constant/pairStar";
 async function countActiveInSubtree(
   user_id: string,
   nodeMap: Map<string, any>,
-  // globalStartDate: Date | null,
   effectiveStartDate: Date | null,
 ): Promise<{ leftCount: number; rightCount: number }> {
   const root = nodeMap.get(user_id);
@@ -105,10 +113,10 @@ async function countActiveInSubtree(
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
       ? User.find(activeQuery(leftIds), {
-  user_id: 1,
-  activated_date: 1,
-  activated_time: 1,
-}).lean()
+          user_id: 1,
+          activated_date: 1,
+          activated_time: 1,
+        }).lean()
       : [],
     rightIds.length
       ? User.find(activeQuery(rightIds), {
@@ -120,23 +128,21 @@ async function countActiveInSubtree(
   ]);
 
   const filterByDate = (users: any[]): number => {
-  // if (!globalStartDate) return users.length;
-  if (!effectiveStartDate) return users.length;
+    if (!effectiveStartDate) return users.length;
 
-  return users.filter((user: any) => {
-    if (!user.activated_date || !user.activated_time) {
-      return false;
-    }
+    return users.filter((user: any) => {
+      if (!user.activated_date || !user.activated_time) {
+        return false;
+      }
 
-    const activationDate = istStringsToUTCDate(
-      user.activated_date,
-      user.activated_time,
-    );
+      const activationDate = istStringsToUTCDate(
+        user.activated_date,
+        user.activated_time,
+      );
 
-    // return !!activationDate && activationDate >= globalStartDate;
-    return !!activationDate && activationDate >= effectiveStartDate;
-  }).length;
-};
+      return !!activationDate && activationDate >= effectiveStartDate;
+    }).length;
+  };
 
   return {
     leftCount: filterByDate(leftUsers as any[]),
@@ -277,6 +283,8 @@ export async function propagatePairStarOnActivation(
         user_name: 1,
         contact: 1,
         mail: 1,
+        activated_date: 1,
+        activated_time: 1,
         left_active_count: 1,
         right_active_count: 1,
         pair_star: 1,
@@ -330,6 +338,8 @@ async function checkAndUpgradePairStar(
     right_active_count: number;
     pair_star?: string;
     pairs: number;
+    activated_date?: string;
+    activated_time?: string;
     pair_star_released_tiers?: Array<{
       tier_name: string;
       reward: string;
@@ -349,10 +359,23 @@ async function checkAndUpgradePairStar(
   istNow: Date,
 ): Promise<void> {
   // ── Accurate counts from tree traversal — same logic as API ──────────────
+  // Effective cutoff = later of (global Pair Star start date) and (this
+  // ancestor's own activation timestamp) — a user cannot earn pairs from
+  // team activity that predates their own activation.
+  const ancestorActivationCutoff = istStringsToUTCDate(
+    ancestor.activated_date,
+    ancestor.activated_time,
+  );
+
+  const effectiveStartDate = laterDate(
+    globalStartDate,
+    ancestorActivationCutoff,
+  );
+
   const { leftCount, rightCount } = await countActiveInSubtree(
     ancestor.user_id,
     nodeMap,
-    globalStartDate,
+    effectiveStartDate,
   );
   const currentPairs = Math.min(leftCount, rightCount);
 

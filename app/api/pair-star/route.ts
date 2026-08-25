@@ -13,7 +13,10 @@ import TreeNode from "@/models/tree";
 import { getDirectPV } from "@/services/directPV";
 import { loadTierConfig, loadGlobalConfig } from "@/services/pairStarConfig";
 import jwt from "jsonwebtoken";
-import { istStringsToUTCDate } from "@/utils/server/getISTDateTime";
+import {
+  istStringsToUTCDate,
+  laterDate,
+} from "@/utils/server/getISTDateTime";
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
 // Decode accessToken from cookie and return { user_id, role }
@@ -43,10 +46,10 @@ function parseDDMMYYYY(str: string): Date | null {
   return new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
 }
 
-// Count active users in left/right subtree filtered by a start date
+// Count active users in left/right subtree filtered by an effective start date
 async function countActiveFromDate(
   user_id: string,
-  startDate: Date | null,
+  effectiveStartDate: Date | null,
 ): Promise<{ leftCount: number; rightCount: number }> {
   const allNodes = (await TreeNode.find(
     {},
@@ -89,36 +92,36 @@ async function countActiveFromDate(
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
       ? User.find(activeQuery(leftIds), {
-  user_id: 1,
-  activated_date: 1,
-  activated_time: 1,
-}).lean()
+          user_id: 1,
+          activated_date: 1,
+          activated_time: 1,
+        }).lean()
       : [],
     rightIds.length
       ? User.find(activeQuery(rightIds), {
-  user_id: 1,
-  activated_date: 1,
-  activated_time: 1,
-}).lean()
+          user_id: 1,
+          activated_date: 1,
+          activated_time: 1,
+        }).lean()
       : [],
   ]);
 
- const filterByDate = (users: any[]): number => {
-  if (!startDate) return users.length;
+  const filterByDate = (users: any[]): number => {
+    if (!effectiveStartDate) return users.length;
 
-  return users.filter((user: any) => {
-    if (!user.activated_date || !user.activated_time) {
-      return false;
-    }
+    return users.filter((user: any) => {
+      if (!user.activated_date || !user.activated_time) {
+        return false;
+      }
 
-    const activationDate = istStringsToUTCDate(
-      user.activated_date,
-      user.activated_time,
-    );
+      const activationDate = istStringsToUTCDate(
+        user.activated_date,
+        user.activated_time,
+      );
 
-    return !!activationDate && activationDate >= startDate;
-  }).length;
-};
+      return !!activationDate && activationDate >= effectiveStartDate;
+    }).length;
+  };
 
   return {
     leftCount: filterByDate(leftUsers as any[]),
@@ -135,7 +138,7 @@ async function buildUserProgress(user_id: string) {
 
   const user = (await User.findOne({ user_id })
     .select(
-      "user_id user_name pairs pair_star left_active_count right_active_count activated_date pair_star_released_tiers",
+      "user_id user_name pairs pair_star left_active_count right_active_count activated_date activated_time pair_star_released_tiers",
     )
     .lean()) as any;
 
@@ -146,17 +149,24 @@ async function buildUserProgress(user_id: string) {
     ? parseDDMMYYYY(globalConfig.start_date)
     : null;
 
+  // Effective cutoff = later of (global Pair Star start date) and (this
+  // user's own activation timestamp) — a user cannot earn pairs from team
+  // activity that predates their own activation.
+  const userActivationCutoff = istStringsToUTCDate(
+    user.activated_date,
+    user.activated_time,
+  );
+  const effectiveStartDate = laterDate(
+    globalStartDate,
+    userActivationCutoff,
+  );
+
   let leftCount: number;
   let rightCount: number;
 
-  if (globalStartDate) {
-    const counted = await countActiveFromDate(user_id, globalStartDate);
-    leftCount = counted.leftCount;
-    rightCount = counted.rightCount;
-  } else {
-    leftCount = user.left_active_count ?? 0;
-    rightCount = user.right_active_count ?? 0;
-  }
+  const counted = await countActiveFromDate(user_id, effectiveStartDate);
+  leftCount = counted.leftCount;
+  rightCount = counted.rightCount;
 
   const currentPairs = Math.min(leftCount, rightCount);
   const releasedTiers: Array<{
