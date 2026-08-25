@@ -53,7 +53,10 @@ import { Wallet } from "@/models/wallet";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { History } from "@/models/history";
-
+import {
+  istStringsToUTCDate,
+  laterDate,
+} from "@/utils/server/getISTDateTime";
 // Re-export constants so existing imports from this file still work
 export { PAIR_STAR_TIERS, PAIR_STAR_TIER_NAMES } from "@/constant/pairStar";
 export type { PairStarTierName } from "@/constant/pairStar";
@@ -65,7 +68,8 @@ export type { PairStarTierName } from "@/constant/pairStar";
 async function countActiveInSubtree(
   user_id: string,
   nodeMap: Map<string, any>,
-  globalStartDate: Date | null,
+  // globalStartDate: Date | null,
+  effectiveStartDate: Date | null,
 ): Promise<{ leftCount: number; rightCount: number }> {
   const root = nodeMap.get(user_id);
   if (!root) return { leftCount: 0, rightCount: 0 };
@@ -101,28 +105,38 @@ async function countActiveInSubtree(
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
       ? User.find(activeQuery(leftIds), {
-          user_id: 1,
-          activated_date: 1,
-        }).lean()
+  user_id: 1,
+  activated_date: 1,
+  activated_time: 1,
+}).lean()
       : [],
     rightIds.length
       ? User.find(activeQuery(rightIds), {
           user_id: 1,
           activated_date: 1,
+          activated_time: 1,
         }).lean()
       : [],
   ]);
 
   const filterByDate = (users: any[]): number => {
-    if (!globalStartDate) return users.length;
-    return users.filter((u: any) => {
-      if (!u.activated_date) return false;
-      const parts = u.activated_date.split("-");
-      if (parts.length !== 3) return false;
-      const d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T00:00:00.000Z`);
-      return d >= globalStartDate;
-    }).length;
-  };
+  // if (!globalStartDate) return users.length;
+  if (!effectiveStartDate) return users.length;
+
+  return users.filter((user: any) => {
+    if (!user.activated_date || !user.activated_time) {
+      return false;
+    }
+
+    const activationDate = istStringsToUTCDate(
+      user.activated_date,
+      user.activated_time,
+    );
+
+    // return !!activationDate && activationDate >= globalStartDate;
+    return !!activationDate && activationDate >= effectiveStartDate;
+  }).length;
+};
 
   return {
     leftCount: filterByDate(leftUsers as any[]),

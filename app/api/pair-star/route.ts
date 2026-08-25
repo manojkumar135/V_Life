@@ -13,7 +13,7 @@ import TreeNode from "@/models/tree";
 import { getDirectPV } from "@/services/directPV";
 import { loadTierConfig, loadGlobalConfig } from "@/services/pairStarConfig";
 import jwt from "jsonwebtoken";
-
+import { istStringsToUTCDate } from "@/utils/server/getISTDateTime";
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
 // Decode accessToken from cookie and return { user_id, role }
@@ -89,25 +89,36 @@ async function countActiveFromDate(
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
       ? User.find(activeQuery(leftIds), {
-          user_id: 1,
-          activated_date: 1,
-        }).lean()
+  user_id: 1,
+  activated_date: 1,
+  activated_time: 1,
+}).lean()
       : [],
     rightIds.length
       ? User.find(activeQuery(rightIds), {
-          user_id: 1,
-          activated_date: 1,
-        }).lean()
+  user_id: 1,
+  activated_date: 1,
+  activated_time: 1,
+}).lean()
       : [],
   ]);
 
-  const filterByDate = (users: any[]): number => {
-    if (!startDate) return users.length;
-    return users.filter((u: any) => {
-      const d = parseDDMMYYYY(u.activated_date ?? "");
-      return d !== null && d >= startDate;
-    }).length;
-  };
+ const filterByDate = (users: any[]): number => {
+  if (!startDate) return users.length;
+
+  return users.filter((user: any) => {
+    if (!user.activated_date || !user.activated_time) {
+      return false;
+    }
+
+    const activationDate = istStringsToUTCDate(
+      user.activated_date,
+      user.activated_time,
+    );
+
+    return !!activationDate && activationDate >= startDate;
+  }).length;
+};
 
   return {
     leftCount: filterByDate(leftUsers as any[]),

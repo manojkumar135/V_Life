@@ -44,3 +44,10 @@ export function istStringsToUTCDate(dateStr, timeStr) {
   const istMillis = Date.UTC(year, month - 1, day, hh, mm, 0);
   return new Date(istMillis - 5.5 * 60 * 60 * 1000);
 }
+
+export function laterDate(firstDate, secondDate) {
+  if (!firstDate) return secondDate;
+  if (!secondDate) return firstDate;
+
+  return firstDate > secondDate ? firstDate : secondDate;
+}
