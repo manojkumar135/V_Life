@@ -110,7 +110,7 @@ export default function WelcomeLetter() {
             {/* Letter Content */}
             <div className="text-gray-900 leading-relaxed space-y-4 max-md:text-[12px] text-[14px]  px-5 max-md:px-1">
               <p className="font-bold">
-                To,<br />
+                From,<br />
                 Maverick Signature Network PVT Ltd<br />
                 ANDHRA PRADESH
               </p>

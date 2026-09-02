@@ -116,7 +116,7 @@ export default function WelcomePDF({ data }) {
                     <Text style={styles.title}>WELCOME TO MAVERICK</Text>
 
                     <Text style={[styles.paragraph, styles.bold]}>
-                        To,{"\n"}
+                        From,{"\n"}
                         Maverick Signature Network PVT Ltd{"\n"}
                         ANDHRA PRADESH
                     </Text>

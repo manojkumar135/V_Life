@@ -21,6 +21,8 @@ import InviteForm from "@/components/invite";
 import ProfileSection from "@/components/profile";
 import OfficeDetails from "@/components/office";
 import NewsPop from "@/components/NewsPop";
+import Cropper from "react-easy-crop";
+import type { Area } from "react-easy-crop";
 
 // Validation Schema
 const profileSchema = Yup.object().shape({
@@ -70,8 +72,14 @@ const Page = () => {
   const [postOfficeData, setPostOfficeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const { user } = useVLife();
-  // console.log(user, "from profile page");
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [rawImage, setRawImage] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
+  const { user, setUser } = useVLife();
+    // console.log(user, "from profile page");
 
   // Formik initialization
   const formik = useFormik<FormValues>({
@@ -112,7 +120,7 @@ const Page = () => {
       } catch (error: any) {
         console.error("Error updating profile:", error);
         ShowToast.error(
-          error.response?.data?.message || "Failed to update profile"
+          error.response?.data?.message || "Failed to update profile",
         );
       } finally {
         setLoading(false);
@@ -121,7 +129,8 @@ const Page = () => {
   });
 
   // Unified File Upload Handler
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Step 1: file selected -> open crop modal (no upload yet)
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -130,11 +139,81 @@ const Page = () => {
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImage(reader.result as string);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCropModalOpen(true);
+    };
+    reader.readAsDataURL(file);
+
+    // reset input so selecting the same file again still fires onChange
+    e.target.value = "";
+  };
+
+  const onCropComplete = (
+    _croppedArea: Area,
+    croppedAreaPixelsResult: Area,
+  ) => {
+    setCroppedAreaPixels(croppedAreaPixelsResult);
+  };
+
+  // Step 2: user confirms crop -> produce a Blob, then upload it
+  const getCroppedBlob = (
+    imageSrc: string,
+    cropPixels: Area,
+  ): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const image = new window.Image();
+      image.crossOrigin = "anonymous";
+      image.src = imageSrc;
+      image.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = cropPixels.width;
+        canvas.height = cropPixels.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
+
+        ctx.drawImage(
+          image,
+          cropPixels.x,
+          cropPixels.y,
+          cropPixels.width,
+          cropPixels.height,
+          0,
+          0,
+          cropPixels.width,
+          cropPixels.height,
+        );
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error("Cropping failed"));
+          },
+          "image/jpeg",
+          0.9,
+        );
+      };
+      image.onerror = reject;
+    });
+  };
+
+  const handleCropConfirm = async () => {
+    if (!rawImage || !croppedAreaPixels) return;
+
     try {
       setLoading(true);
+      setCropModalOpen(false);
+
+      const croppedBlob = await getCroppedBlob(rawImage, croppedAreaPixels);
+      const croppedFile = new File([croppedBlob], "profile.jpg", {
+        type: "image/jpeg",
+      });
 
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", croppedFile);
 
       const res = await axios.post("/api/getFileUrl", formData);
 
@@ -142,11 +221,12 @@ const Page = () => {
         const imageUrl = res.data.fileUrl;
         formik.setFieldValue("profile", imageUrl);
 
-        // ✅ Trigger the PATCH API call to update user profile with the new image
         await axios.patch("/api/users-operations", {
           user_id: user.user_id,
           profile: imageUrl,
         });
+
+        setUser({ profile: imageUrl });
 
         ShowToast.success("Profile image uploaded successfully!");
       } else {
@@ -157,6 +237,7 @@ const Page = () => {
       ShowToast.error(err.response?.data?.message || "Failed to upload file");
     } finally {
       setLoading(false);
+      setRawImage(null);
     }
   };
 
@@ -169,7 +250,7 @@ const Page = () => {
         setLoading(true);
         try {
           const res = await axios.get(
-            `/api/location-by-pincode?pincode=${pincode}`
+            `/api/location-by-pincode?pincode=${pincode}`,
           );
           if (res.data.success) {
             const { city, state, country, postOffices } = res.data.data;
@@ -286,9 +367,56 @@ const Page = () => {
             ref={fileInputRef}
             className="hidden"
             accept="image/*"
-            onChange={handleFileUpload}
+            onChange={handleFileSelect}
           />
+          {/* Crop Modal */}
+          {cropModalOpen && rawImage && (
+            <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center">
+              <div className="bg-white rounded-xl p-4 w-[90vw] max-w-md">
+                <div className="relative w-full h-72 bg-gray-100 rounded-lg overflow-hidden">
+                  <Cropper
+                    image={rawImage}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={1}
+                    cropShape="round"
+                    showGrid={false}
+                    onCropChange={setCrop}
+                    onZoomChange={setZoom}
+                    onCropComplete={onCropComplete}
+                  />
+                </div>
 
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="w-full mt-4"
+                />
+
+                <div className="flex justify-end gap-3 mt-4">
+                  <button
+                    className="px-4 py-2 rounded-md bg-gray-200 text-gray-700"
+                    onClick={() => {
+                      setCropModalOpen(false);
+                      setRawImage(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded-md bg-black text-white"
+                    onClick={handleCropConfirm}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="mb-8">
             <ProfileSection />
           </div>
@@ -306,7 +434,7 @@ const Page = () => {
               "Welcome Letter",
               "Change Password",
               "Invite",
-              "Support"
+              "Support",
             );
 
             return sections.map((section) => (

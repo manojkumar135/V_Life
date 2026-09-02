@@ -18,8 +18,8 @@ import { FaIdCard } from "react-icons/fa";
 import { FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+// import DatePicker from "react-datepicker";
+// import "react-datepicker/dist/react-datepicker.css";
 
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
@@ -56,6 +56,9 @@ function RegisterContent() {
   const [panError, setPanError] = useState(""); // ✅ NEW — race-free PAN error message
   const [showPassword, setShowPassword] = useState(false);
 
+    const [dobDigits, setDobDigits] = useState(""); // raw digits only, up to 8: DDMMYYYY
+  const [dobError, setDobError] = useState("");
+
   const [isReferByPreset, setIsReferByPreset] = useState(false);
   const [isTeamPreset, setIsTeamPreset] = useState(false);
 
@@ -76,6 +79,111 @@ function RegisterContent() {
     today.getMonth(),
     today.getDate(),
   );
+
+  // Builds the always-10-char mask string, e.g. "11/MM/YYYY" or "11/02/YYYY"
+  const maskDob = (digits: string) => {
+    const day = digits.slice(0, 2).padEnd(2, "D");
+    const month = digits.slice(2, 4).padEnd(2, "M");
+    const year = digits.slice(4, 8).padEnd(4, "Y");
+    return `${day}/${month}/${year}`;
+  };
+
+  const validateDobDigits = (digits: string) => {
+    if (digits.length < 8) {
+      formik.setFieldValue("dob", "");
+      setDobError("");
+      return;
+    }
+
+    const day = digits.slice(0, 2);
+    const month = digits.slice(2, 4);
+    const year = digits.slice(4, 8);
+    const parsed = parseDob(`${day}/${month}/${year}`);
+
+    if (!parsed) {
+      formik.setFieldValue("dob", "");
+      setDobError("* Invalid date");
+      return;
+    }
+    if (parsed > new Date()) {
+      formik.setFieldValue("dob", "");
+      setDobError("* Date of Birth cannot be in the future");
+      return;
+    }
+    if (calculateAge(parsed) < 18) {
+      formik.setFieldValue("dob", "");
+      setDobError("* You must be at least 18 years old");
+      return;
+    }
+
+    setDobError("");
+    const iso = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+    formik.setFieldValue("dob", iso);
+  };
+
+  const handleDobKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow tab/shift for accessibility; block everything else from default insertion
+    if (e.key === "Tab") return;
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      setDobDigits((prev) => {
+        const next = prev.slice(0, -1);
+        validateDobDigits(next);
+        return next;
+      });
+      return;
+    }
+
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      setDobDigits((prev) => {
+        if (prev.length >= 8) return prev;
+        const next = prev + e.key;
+        validateDobDigits(next);
+        return next;
+      });
+      return;
+    }
+
+    // block letters, symbols, paste-triggering keys, etc.
+    e.preventDefault();
+  };
+
+  const handleDobBlur = () => {
+    formik.setFieldTouched("dob", true);
+    if (dobDigits.length > 0 && dobDigits.length < 8) {
+      setDobError("* Enter a complete date (DD/MM/YYYY)");
+    }
+  };
+
+  const parseDob = (formatted: string): Date | null => {
+    const match = formatted.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return null;
+
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    const date = new Date(year, month - 1, day);
+
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      return null;
+    }
+    return date;
+  };
+
+  const calculateAge = (birthDate: Date): number => {
+    const now = new Date();
+    let age = now.getFullYear() - birthDate.getFullYear();
+    const monthDiff = now.getMonth() - birthDate.getMonth();
+    const dayDiff = now.getDate() - birthDate.getDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age--;
+    return age;
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -360,149 +468,53 @@ function RegisterContent() {
                 </span>
               </div>
 
-              {/* DOB */}
+                          {/* DOB */}
               <div>
-                <div className="relative" inputMode="none">
-                  <IoCalendarOutline className="absolute left-3 top-2.5 text-gray-500 pointer-events-none" />
-                  <DatePicker
-                    selected={
-                      formik.values.dob ? new Date(formik.values.dob) : null
-                    }
-                    onChange={(date: Date | null) => {
-                      if (!date) return formik.setFieldValue("dob", "");
+                <div className="relative">
+                  <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none z-10" />
 
-                      const localDate = new Date(
-                        date.getTime() - date.getTimezoneOffset() * 60000,
-                      )
-                        .toISOString()
-                        .split("T")[0];
+                  {/* Overlay: styled display, sits behind the real input */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 pl-10 pr-4 py-1 flex items-center font-mono text-base pointer-events-none whitespace-pre"
+                  >
+                    {maskDob(dobDigits)
+                      .split("")
+                      .map((ch, i) => (
+                        <span
+                          key={i}
+                          className={
+                            /[DMY]/.test(ch) ? "text-gray-400" : "text-black"
+                          }
+                        >
+                          {ch}
+                        </span>
+                      ))}
+                  </div>
 
-                      formik.setFieldValue("dob", localDate);
-                    }}
-                    onBlur={() => formik.setFieldTouched("dob", true)}
-                    dateFormat="dd-MM-yyyy"
-                    placeholderText="Date of Birth"
-                    maxDate={maxDob}
-                    showYearDropdown
-                    showMonthDropdown
-                    scrollableYearDropdown
-                    yearDropdownItemNumber={100}
-                    popperPlacement="bottom"
-                    popperProps={{
-                      strategy: "fixed",
-                    }}
-                    popperClassName="z-[999] xl:w-[350px]"
-                    onKeyDown={(e) => e.preventDefault()}
-                    shouldCloseOnSelect
-                    calendarClassName="custom-datepicker-calendar"
-                    customInput={
-                      <input
-                        readOnly
-                        inputMode="none"
-                        onFocus={(e) => e.target.blur()}
-                        className={`w-full pl-10 pr-4 py-1 rounded-md border ${
-                          formik.touched.dob && formik.errors.dob
-                            ? "border-red-500"
-                            : "border-gray-400"
-                        } focus:ring-2 focus:ring-gray-200`}
-                      />
-                    }
-                    className={`w-full pl-10 pr-4 py-1 rounded-md border ${
-                      formik.touched.dob && formik.errors.dob
+                  {/* Real input: transparent text, visible caret, handles all input */}
+                  <input
+                    type="text"
+                    name="dob"
+                    inputMode="numeric"
+                    value={maskDob(dobDigits)}
+                    onKeyDown={handleDobKeyDown}
+                    onChange={() => {}}
+                    onPaste={(e) => e.preventDefault()}
+                    onBlur={handleDobBlur}
+                    className={`relative w-full pl-10 pr-4 py-1 rounded-md border font-mono text-base text-transparent caret-black bg-transparent ${
+                      dobError || (formik.touched.dob && formik.errors.dob)
                         ? "border-red-500"
                         : "border-gray-400"
                     } focus:ring-2 focus:ring-gray-200`}
-                    renderCustomHeader={({
-                      date,
-                      changeYear,
-                      changeMonth,
-                      decreaseMonth,
-                      increaseMonth,
-                      prevMonthButtonDisabled,
-                      nextMonthButtonDisabled,
-                    }) => {
-                      const currentYear = maxDob.getFullYear();
-                      const years = Array.from(
-                        { length: 101 },
-                        (_, i) => currentYear - i,
-                      );
-                      const months = [
-                        "January",
-                        "February",
-                        "March",
-                        "April",
-                        "May",
-                        "June",
-                        "July",
-                        "August",
-                        "September",
-                        "October",
-                        "November",
-                        "December",
-                      ];
-
-                      return (
-                        <div className="flex items-center justify-between w-full px-2 py-1">
-                          <button
-                            type="button"
-                            onClick={decreaseMonth}
-                            disabled={prevMonthButtonDisabled}
-                            className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
-                          >
-                            ‹
-                          </button>
-
-                          <div className="flex items-center gap-2">
-                            {/* Month - plain select, no keyboard */}
-                            <select
-                              value={date.getMonth()}
-                              onChange={(e) =>
-                                changeMonth(Number(e.target.value))
-                              }
-                              onFocus={(e) => e.target.blur()} // ← prevents keyboard
-                              className="border border-gray-300 rounded px-1 py-1 text-sm bg-white cursor-pointer"
-                            >
-                              {months.map((month, idx) => (
-                                <option key={month} value={idx}>
-                                  {month}
-                                </option>
-                              ))}
-                            </select>
-
-                            {/* Year - plain select, no keyboard */}
-                            <select
-                              value={date.getFullYear()}
-                              onChange={(e) =>
-                                changeYear(Number(e.target.value))
-                              }
-                              onFocus={(e) => e.target.blur()} // ← prevents keyboard
-                              className="border border-gray-300 rounded px-1 py-1 text-sm bg-white cursor-pointer"
-                            >
-                              {years.map((year) => (
-                                <option key={year} value={year}>
-                                  {year}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={increaseMonth}
-                            disabled={nextMonthButtonDisabled}
-                            className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
-                          >
-                            ›
-                          </button>
-                        </div>
-                      );
-                    }}
                   />
                 </div>
                 <span className="text-red-500 text-xs mt-1 block">
-                  {formik.touched.dob && formik.errors.dob
-                    ? formik.errors.dob
-                    : "\u00A0"}
+                  {dobError
+                    ? dobError
+                    : formik.touched.dob && formik.errors.dob
+                      ? formik.errors.dob
+                      : "\u00A0"}
                 </span>
               </div>
 

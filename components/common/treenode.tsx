@@ -590,10 +590,10 @@ const BinaryTreeNode: React.FC<Props> = ({
                 <span>{node.infinityRight ?? 0}</span>
               </div>
             )}
-            <div className="flex">
+            {/* <div className="flex">
               <strong className="w-27">Total Infinify BV:</strong>
               <span>{(node.totalLeftBV ?? 0) + (node.totalRightBV ?? 0)}</span>
-            </div>
+            </div> */}
             {user?.role === "admin" && (
               <>
                 <div className="flex">
@@ -614,11 +614,11 @@ const BinaryTreeNode: React.FC<Props> = ({
             )}
 
             <div className="flex">
-              <strong className="w-20">Left PV:</strong>
+              <strong className="w-20">Live Left PV:</strong>
               <span>{pvLoading ? "..." : (currentPV?.leftPV ?? 0)}</span>
             </div>
             <div className="flex">
-              <strong className="w-20">Right PV:</strong>
+              <strong className="w-20">Live Right PV:</strong>
               <span>{pvLoading ? "..." : (currentPV?.rightPV ?? 0)}</span>
             </div>
           </div>

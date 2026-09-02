@@ -51,6 +51,14 @@ async function countActiveFromDate(
   user_id: string,
   effectiveStartDate: Date | null,
 ): Promise<{ leftCount: number; rightCount: number }> {
+   // Team activations count only after the parent user is activated.
+   const owner = (await User.findOne({ user_id })
+    .select("user_status")
+    .lean()) as { user_status?: string } | null;
+
+  if (owner?.user_status?.toLowerCase() !== "active") {
+    return { leftCount: 0, rightCount: 0 };
+  }
   const allNodes = (await TreeNode.find(
     {},
     { user_id: 1, parent: 1, left: 1, right: 1 },
@@ -80,14 +88,9 @@ async function countActiveFromDate(
   const rightIds = subtreeIds(root.right);
 
   const activeQuery = (ids: string[]) => ({
-    user_id: { $in: ids },
-    user_status: "active",
-    $or: [
-      { status_notes: { $exists: false } },
-      { status_notes: null },
-      { status_notes: { $not: /admin/i } },
-    ],
-  });
+  user_id: { $in: ids },
+  user_status: "active",
+});
 
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
@@ -106,22 +109,25 @@ async function countActiveFromDate(
       : [],
   ]);
 
-  const filterByDate = (users: any[]): number => {
-    if (!effectiveStartDate) return users.length;
+ const filterByDate = (users: any[]): number => {
+  return users.filter((user: any) => {
+    // Active users without date/time are counted.
+    if (!user.activated_date || !user.activated_time) {
+      return true;
+    }
 
-    return users.filter((user: any) => {
-      if (!user.activated_date || !user.activated_time) {
-        return false;
-      }
+    if (!effectiveStartDate) {
+      return true;
+    }
 
-      const activationDate = istStringsToUTCDate(
-        user.activated_date,
-        user.activated_time,
-      );
+    const activationDate = istStringsToUTCDate(
+      user.activated_date,
+      user.activated_time,
+    );
 
-      return !!activationDate && activationDate >= effectiveStartDate;
-    }).length;
-  };
+    return !!activationDate && activationDate >= effectiveStartDate;
+  }).length;
+};
 
   return {
     leftCount: filterByDate(leftUsers as any[]),

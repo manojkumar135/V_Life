@@ -79,6 +79,15 @@ async function countActiveInSubtree(
   nodeMap: Map<string, any>,
   effectiveStartDate: Date | null,
 ): Promise<{ leftCount: number; rightCount: number }> {
+  
+ const owner = (await User.findOne({ user_id })
+    .select("user_status")
+    .lean()) as { user_status?: string } | null;
+
+  if (owner?.user_status?.toLowerCase() !== "active") {
+    return { leftCount: 0, rightCount: 0 };
+  }
+
   const root = nodeMap.get(user_id);
   if (!root) return { leftCount: 0, rightCount: 0 };
 
@@ -100,15 +109,10 @@ async function countActiveInSubtree(
   const rightIds = subtreeIds(root.right);
 
   // Exclude admin-activated users — they have "admin" in status_notes
-  const activeQuery = (ids: string[]) => ({
-    user_id: { $in: ids },
-    user_status: "active",
-    $or: [
-      { status_notes: { $exists: false } },
-      { status_notes: null },
-      { status_notes: { $not: /admin/i } },
-    ],
-  });
+ const activeQuery = (ids: string[]) => ({
+  user_id: { $in: ids },
+  user_status: "active",
+});
 
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
@@ -128,21 +132,24 @@ async function countActiveInSubtree(
   ]);
 
   const filterByDate = (users: any[]): number => {
-    if (!effectiveStartDate) return users.length;
+  return users.filter((user: any) => {
+    // Active users without date/time are counted.
+    if (!user.activated_date || !user.activated_time) {
+      return true;
+    }
 
-    return users.filter((user: any) => {
-      if (!user.activated_date || !user.activated_time) {
-        return false;
-      }
+    if (!effectiveStartDate) {
+      return true;
+    }
 
-      const activationDate = istStringsToUTCDate(
-        user.activated_date,
-        user.activated_time,
-      );
+    const activationDate = istStringsToUTCDate(
+      user.activated_date,
+      user.activated_time,
+    );
 
-      return !!activationDate && activationDate >= effectiveStartDate;
-    }).length;
-  };
+    return !!activationDate && activationDate >= effectiveStartDate;
+  }).length;
+};
 
   return {
     leftCount: filterByDate(leftUsers as any[]),
@@ -245,11 +252,25 @@ export async function propagatePairStarOnActivation(
 
     if (ancestors.length === 0) return;
 
+const activeAncestors = await User.find(
+  {
+    user_id: { $in: ancestors.map((ancestor) => ancestor.user_id) },
+    user_status: "active",
+  },
+  { user_id: 1 },
+).lean();
+
+const activeAncestorIds = new Set(
+  activeAncestors.map((ancestor: any) => ancestor.user_id),
+);
+
     // ── 3. Bulk $inc left_active_count / right_active_count on User + TreeNode
     const userBulkOps: any[] = [];
     const treeBulkOps: any[] = [];
 
     for (const { user_id, side } of ancestors) {
+        if (!activeAncestorIds.has(user_id)) continue;
+
       const incField =
         side === "left" ? "left_active_count" : "right_active_count";
 
@@ -268,10 +289,14 @@ export async function propagatePairStarOnActivation(
       });
     }
 
-    await Promise.all([
-      User.bulkWrite(userBulkOps, { ordered: false }),
-      TreeNode.bulkWrite(treeBulkOps, { ordered: false }),
-    ]);
+   await Promise.all([
+  userBulkOps.length
+    ? User.bulkWrite(userBulkOps, { ordered: false })
+    : Promise.resolve(),
+  treeBulkOps.length
+    ? TreeNode.bulkWrite(treeBulkOps, { ordered: false })
+    : Promise.resolve(),
+]);
 
     // ── 4. Re-read updated counts + pair_star_released_tiers for each ancestor
     const ancestorIds = ancestors.map((a) => a.user_id);
