@@ -156,13 +156,22 @@ async function countActiveInSubtree(
     rightCount: filterByDate(rightUsers as any[]),
   };
 }
-
+function normalizeTierName(name?: string | null): string {
+  return String(name || "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
 function tierIndexByName(
   name: string | undefined | null,
   tiers: TierConfig[],
 ): number {
-  if (!name) return -1;
-  return tiers.findIndex((t) => t.tier_name === name);
+  const normalizedName = normalizeTierName(name);
+
+  return tiers.findIndex(
+    (tier) => normalizeTierName(tier.tier_name) === normalizedName,
+  );
 }
 
 function computeHighestTier(
@@ -493,8 +502,9 @@ async function checkAndUpgradePairStar(
 
     // ── GUARD: check if this specific tier is already released ───────────
     const alreadyReleased = releasedTiers.some(
-      (r: any) => r.tier_name === tier.tier_name,
-    );
+  (r: any) =>
+    normalizeTierName(r.tier_name) === normalizeTierName(tier.tier_name),
+);
     if (alreadyReleased) {
       console.log(
         `[PairStar] ${ancestor.user_id} — ${tier.tier_name} already released, skipping`,

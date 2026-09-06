@@ -25,6 +25,7 @@ import { Wallet } from "@/models/wallet";
 import { Score } from "@/models/score";
 import { Withdraw } from "@/models/withdraw";
 import { PayoutBatch } from "@/models/batch";
+import { User } from "@/models/user";
 
 const DAILY_NAMES = [
   "Matching Bonus",
@@ -490,6 +491,7 @@ export async function POST(_request: Request) {
     const dailyPayoutOps: any[] = [];
     const weeklyPayoutOps: any[] = [];
     const withdrawDocs: any[] = [];
+    const pairStarUserOps: any[] = [];
     let totalPayoutCount = 0;
     let grandTotal = 0;
 
@@ -623,6 +625,24 @@ export async function POST(_request: Request) {
             },
           };
 
+          if (rec.payout_name === "Pair Star Reward") {
+            pairStarUserOps.push({
+              updateOne: {
+                filter: {
+                  user_id: rec.user_id,
+                  "pair_star_released_tiers.payout_id": rec.payout_id,
+                },
+                update: {
+                  $set: {
+                    "pair_star_released_tiers.$.payout_status": "Paid",
+                    "pair_star_released_tiers.$.transaction_id":
+                      rec.transaction_id || rec.payout_id,
+                  },
+                },
+              },
+            });
+          }
+
           if (rec._source === "daily") dailyPayoutOps.push(payoutOp);
           else weeklyPayoutOps.push(payoutOp);
 
@@ -687,6 +707,9 @@ export async function POST(_request: Request) {
         : Promise.resolve(),
       weeklyPayoutOps.length > 0
         ? WeeklyPayout.bulkWrite(weeklyPayoutOps)
+        : Promise.resolve(),
+      pairStarUserOps.length > 0
+        ? User.bulkWrite(pairStarUserOps, { ordered: false })
         : Promise.resolve(),
       withdrawDocs.length > 0
         ? Withdraw.bulkWrite(

@@ -110,14 +110,28 @@ export async function PUT(req: Request) {
         );
       }
 
-      const { pairs, direct_pv, reward } = update;
-      const setFields: any = {
+const { pairs, direct_pv, reward, reward_amount } = update;      const setFields: any = {
         updated_by: auth.decoded._id,
         updated_at: new Date(),
       };
       if (pairs !== undefined)     setFields.pairs     = Number(pairs);
       if (direct_pv !== undefined) setFields.direct_pv = Number(direct_pv);
       if (reward !== undefined)    setFields.reward    = reward;
+      if (reward_amount !== undefined) {
+  const numericRewardAmount = Number(reward_amount);
+
+  if (!Number.isFinite(numericRewardAmount) || numericRewardAmount <= 0) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "reward_amount must be greater than zero",
+      },
+      { status: 400 },
+    );
+  }
+
+  setFields.reward_amount = numericRewardAmount;
+}
 
       await PairStarConfig.findOneAndUpdate(
         { tier_name },

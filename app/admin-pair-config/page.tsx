@@ -23,6 +23,7 @@ interface TierConfig {
   pairs: number;
   direct_pv: number;
   reward: string;
+  reward_amount: number;
   updated_by: string | null;
   updated_at: string | null;
 }
@@ -199,6 +200,7 @@ export default function AdminPairConfigPage() {
         pairs: Number(row.pairs),
         direct_pv: Number(row.direct_pv),
         reward: row.reward,
+        reward_amount: Number(row.reward_amount),
       });
       if (res.data.success) {
         ShowToast.success(`${tier_name} updated.`);

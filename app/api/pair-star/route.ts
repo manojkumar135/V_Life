@@ -200,8 +200,12 @@ async function buildUserProgress(user_id: string) {
 
     // Normalize underscore → space for matching e.g. "BRONZE_STAR" → "BRONZE STAR"
     const releaseRecord = releasedTiers.find(
-      (r) => r.tier_name.replace(/_/g, " ") === tier.tier_name,
-    );
+(r) =>
+  String(r.tier_name || "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase() === tier.tier_name.toUpperCase()    );
     const reward_released = !!releaseRecord;
 
     // payout_status "Paid" means payment received → show received date

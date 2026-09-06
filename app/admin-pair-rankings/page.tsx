@@ -56,26 +56,32 @@ function badgeClass(tier: string) {
 function PayoutCell({ releasedTiers }: { releasedTiers: AdminUser["released_tiers"] }) {
   if (!releasedTiers?.length) return <span className="text-gray-400">—</span>;
   const withPayout = releasedTiers.filter((r) => r.payout_id);
+
   if (!withPayout.length) return <span className="text-gray-400">—</span>;
   return (
     <div className="flex flex-col gap-1">
-      {withPayout.map((r) => (
-        <a
-          key={r.payout_id}
-          href={`/wallet/payout/detailview/${r.payout_id}`}
-          className="text-blue-600 hover:text-blue-800 hover:underline font-mono text-[11px]"
+     {withPayout.map((r) => {
+  const payoutStatus = r.payout_status?.toLowerCase();
+
+  return (
+    <a key={r.payout_id} href={`/wallet/payout/detailview/${r.payout_id}`}>
+      {r.payout_id}
+      {r.payout_status && (
+        <span
+          className={`ml-1 text-[10px] font-semibold ${
+            payoutStatus === "paid" || payoutStatus === "completed"
+              ? "text-green-600"
+              : payoutStatus === "pending"
+                ? "text-yellow-600"
+                : "text-gray-400"
+          }`}
         >
-          {r.payout_id}
-          {r.payout_status && (
-            <span className={`ml-1 text-[10px] font-semibold ${
-              r.payout_status === "Completed" ? "text-green-600" :
-              r.payout_status === "Pending" ? "text-yellow-600" : "text-gray-400"
-            }`}>
-              ({r.payout_status})
-            </span>
-          )}
-        </a>
-      ))}
+          ({r.payout_status})
+        </span>
+      )}
+    </a>
+  );
+})}
     </div>
   );
 }
@@ -188,7 +194,7 @@ export default function AdminPairRankingsPage() {
 
         {/* ── Summary tiles — top tiers ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-5">
-          {PAIR_STAR_TIERS.slice(0, 5).map((t) => (
+          {PAIR_STAR_TIERS.map((t) => (
             <button
               key={t.name}
               onClick={() => setTierFilter(tierFilter === t.name ? "" : t.name)}

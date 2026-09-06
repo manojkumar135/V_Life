@@ -35,13 +35,17 @@ export async function loadTierConfig(): Promise<TierConfig[]> {
 
   const config: TierConfig[] = PAIR_STAR_TIERS.map((t) => {
     const db = dbMap.get(t.name);
-    return {
-      tier_name: t.name,
-      pairs: db?.pairs ?? t.pairs,
-      direct_pv: db?.direct_pv ?? t.directPV,
-      reward: db?.reward ?? t.reward,
-      reward_amount: db?.reward_amount ?? t.rewardAmount,
-    };
+    const dbRewardAmount = Number(db?.reward_amount);
+
+   return {
+  tier_name: t.name,
+  pairs: db?.pairs ?? t.pairs,
+  direct_pv: db?.direct_pv ?? t.directPV,
+  reward: db?.reward ?? t.reward,
+  reward_amount:
+    dbRewardAmount > 0 ? dbRewardAmount : t.rewardAmount,
+};
+
   });
 
   cachedTiers = config;
