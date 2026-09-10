@@ -62,12 +62,12 @@ export const getDirectPV = async (userId: string) => {
     }
   }
 
-  console.log(
-    leftDirectPV,
-    rightDirectPV,
-    leftDirectPV + rightDirectPV,
-    "directPv",
-  );
+  // console.log(
+  //   leftDirectPV,
+  //   rightDirectPV,
+  //   leftDirectPV + rightDirectPV,
+  //   "directPv",
+  // );
 
   return {
     leftDirectPV,

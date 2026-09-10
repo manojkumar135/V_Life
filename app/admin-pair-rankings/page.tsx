@@ -21,6 +21,8 @@ interface AdminUser {
   pair_star: string;
   left_active_count: number;
   right_active_count: number;
+  left_active: number;
+right_active: number;
   activated_date: string;
   released_tiers: Array<{
     tier_name: string;
@@ -53,36 +55,24 @@ function badgeClass(tier: string) {
   return TIER_BADGE_COLORS[tier] ?? "bg-gray-100 text-gray-700 border-gray-200";
 }
 
-function PayoutCell({ releasedTiers }: { releasedTiers: AdminUser["released_tiers"] }) {
+function PayoutCell({
+  releasedTiers,
+  onView,
+}: {
+  releasedTiers: AdminUser["released_tiers"];
+  onView: () => void;
+}) {
   if (!releasedTiers?.length) return <span className="text-gray-400">—</span>;
   const withPayout = releasedTiers.filter((r) => r.payout_id);
 
   if (!withPayout.length) return <span className="text-gray-400">—</span>;
   return (
-    <div className="flex flex-col gap-1">
-     {withPayout.map((r) => {
-  const payoutStatus = r.payout_status?.toLowerCase();
-
-  return (
-    <a key={r.payout_id} href={`/wallet/payout/detailview/${r.payout_id}`}>
-      {r.payout_id}
-      {r.payout_status && (
-        <span
-          className={`ml-1 text-[10px] font-semibold ${
-            payoutStatus === "paid" || payoutStatus === "completed"
-              ? "text-green-600"
-              : payoutStatus === "pending"
-                ? "text-yellow-600"
-                : "text-gray-400"
-          }`}
-        >
-          ({r.payout_status})
-        </span>
-      )}
-    </a>
-  );
-})}
-    </div>
+    <button
+      onClick={onView}
+      className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+    >
+      View ({withPayout.length})
+    </button>
   );
 }
 
@@ -93,6 +83,7 @@ export default function AdminPairRankingsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("");
+    const [payoutModalUser, setPayoutModalUser] = useState<AdminUser | null>(null);
 
   const { user } = useVLife();
 
@@ -293,16 +284,19 @@ export default function AdminPairRankingsPage() {
                       {u.pairs.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-green-700 font-medium">
-                      {u.left_active_count.toLocaleString()}
+                      {u.left_active.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-orange-600 font-medium">
-                      {u.right_active_count.toLocaleString()}
+                      {u.right_active.toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 max-w-40">
                       {u.reward}
                     </td>
                     <td className="px-4 py-3">
-                      <PayoutCell releasedTiers={u.released_tiers} />
+                      <PayoutCell
+                        releasedTiers={u.released_tiers}
+                        onView={() => setPayoutModalUser(u)}
+                      />
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {u.activated_date ?? "—"}
@@ -342,11 +336,11 @@ export default function AdminPairRankingsPage() {
                   </div>
                   <div className="bg-green-50 rounded-lg py-1.5">
                     <p className="text-[10px] text-gray-500">Left</p>
-                    <p className="font-bold text-green-700 text-sm">{u.left_active_count.toLocaleString()}</p>
+                    <p className="font-bold text-green-700 text-sm">{u.left_active.toLocaleString()}</p>
                   </div>
                   <div className="bg-orange-50 rounded-lg py-1.5">
                     <p className="text-[10px] text-gray-500">Right</p>
-                    <p className="font-bold text-orange-600 text-sm">{u.right_active_count.toLocaleString()}</p>
+                    <p className="font-bold text-orange-600 text-sm">{u.right_active.toLocaleString()}</p>
                   </div>
                 </div>
 
@@ -354,9 +348,12 @@ export default function AdminPairRankingsPage() {
                   <p className="text-xs text-gray-600">
                     <span className="text-gray-400">Reward:</span> {u.reward}
                   </p>
-                  <div className="text-xs text-gray-500">
+                 <div className="text-xs text-gray-500">
                     <span className="text-gray-400">Payout: </span>
-                    <PayoutCell releasedTiers={u.released_tiers} />
+                    <PayoutCell
+                      releasedTiers={u.released_tiers}
+                      onView={() => setPayoutModalUser(u)}
+                    />
                   </div>
                   <p className="text-xs text-gray-500">
                     <span className="text-gray-400">Activated: </span>
@@ -368,11 +365,69 @@ export default function AdminPairRankingsPage() {
           )}
         </div>
 
-        {/* ── Footer count ── */}
+               {/* ── Footer count ── */}
         {filtered.length > 0 && (
           <p className="text-xs text-gray-400 text-center pt-4 pb-6">
             Showing {filtered.length} of {data.length} achievers
           </p>
+        )}
+
+        {/* ── Payout details modal ── */}
+        {payoutModalUser && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setPayoutModalUser(null)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div>
+                  <p className="font-bold text-gray-900">{payoutModalUser.user_name}</p>
+                  <p className="text-xs text-gray-400">{payoutModalUser.user_id}</p>
+                </div>
+                <button
+                  onClick={() => setPayoutModalUser(null)}
+                  className="text-gray-400 hover:text-gray-700 text-xl leading-none cursor-pointer"
+                >
+                  &times;
+                </button>
+              </div>
+              <div className="overflow-y-auto px-5 py-4 space-y-2">
+                {payoutModalUser.released_tiers
+                  .filter((r) => r.payout_id)
+                  .map((r) => {
+                    const payoutStatus = r.payout_status?.toLowerCase();
+                    return (
+                      <a
+                        key={r.payout_id}
+                        href={`/wallet/payout/detailview/${r.payout_id}`}
+                        className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{r.payout_id}</p>
+                          <p className="text-[11px] text-gray-400">{r.tier_name}</p>
+                        </div>
+                        {r.payout_status && (
+                          <span
+                            className={`text-[11px] font-semibold ${
+                              payoutStatus === "paid" || payoutStatus === "completed"
+                                ? "text-green-600"
+                                : payoutStatus === "pending"
+                                  ? "text-yellow-600"
+                                  : "text-gray-400"
+                            }`}
+                          >
+                            {r.payout_status}
+                          </span>
+                        )}
+                      </a>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </Layout>

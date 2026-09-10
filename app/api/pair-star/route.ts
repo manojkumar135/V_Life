@@ -8,15 +8,13 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
+import { DailyPayout } from "@/models/payout";
 import { Login } from "@/models/login";
 import TreeNode from "@/models/tree";
 import { getDirectPV } from "@/services/directPV";
 import { loadTierConfig, loadGlobalConfig } from "@/services/pairStarConfig";
 import jwt from "jsonwebtoken";
-import {
-  istStringsToUTCDate,
-  laterDate,
-} from "@/utils/server/getISTDateTime";
+import { istStringsToUTCDate, laterDate } from "@/utils/server/getISTDateTime";
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
 // Decode accessToken from cookie and return { user_id, role }
@@ -47,18 +45,108 @@ function parseDDMMYYYY(str: string): Date | null {
 }
 
 // Count active users in left/right subtree filtered by an effective start date
-async function countActiveFromDate(
+// async function countActiveFromDate(
+//   user_id: string,
+//   effectiveStartDate: Date | null,
+// ): Promise<{ leftCount: number; rightCount: number }> {
+//    // Team activations count only after the parent user is activated.
+//    const owner = (await User.findOne({ user_id })
+//     .select("user_status")
+//     .lean()) as { user_status?: string } | null;
+
+//   if (owner?.user_status?.toLowerCase() !== "active") {
+//     return { leftCount: 0, rightCount: 0 };
+//   }
+//   const allNodes = (await TreeNode.find(
+//     {},
+//     { user_id: 1, parent: 1, left: 1, right: 1 },
+//   ).lean()) as any;
+
+//   const nodeMap = new Map<string, any>();
+//   for (const n of allNodes) nodeMap.set(n.user_id, n);
+
+//   const root = nodeMap.get(user_id);
+//   if (!root) return { leftCount: 0, rightCount: 0 };
+
+//   function subtreeIds(startId: string | null | undefined): string[] {
+//     if (!startId) return [];
+//     const ids: string[] = [];
+//     const queue = [startId];
+//     while (queue.length) {
+//       const cur = queue.shift()!;
+//       ids.push(cur);
+//       const node = nodeMap.get(cur);
+//       if (node?.left) queue.push(node.left);
+//       if (node?.right) queue.push(node.right);
+//     }
+//     return ids;
+//   }
+
+//   const leftIds = subtreeIds(root.left);
+//   const rightIds = subtreeIds(root.right);
+
+//   const activeQuery = (ids: string[]) => ({
+//   user_id: { $in: ids },
+//   user_status: "active",
+// });
+
+//   const [leftUsers, rightUsers] = await Promise.all([
+//     leftIds.length
+//       ? User.find(activeQuery(leftIds), {
+//           user_id: 1,
+//           activated_date: 1,
+//           activated_time: 1,
+//         }).lean()
+//       : [],
+//     rightIds.length
+//       ? User.find(activeQuery(rightIds), {
+//           user_id: 1,
+//           activated_date: 1,
+//           activated_time: 1,
+//         }).lean()
+//       : [],
+//   ]);
+
+//  const filterByDate = (users: any[]): number => {
+//   return users.filter((user: any) => {
+//     // Active users without date/time are counted.
+//     if (!user.activated_date || !user.activated_time) {
+//       return true;
+//     }
+
+//     if (!effectiveStartDate) {
+//       return true;
+//     }
+
+//     const activationDate = istStringsToUTCDate(
+//       user.activated_date,
+//       user.activated_time,
+//     );
+
+//     return !!activationDate && activationDate >= effectiveStartDate;
+//   }).length;
+// };
+
+//   return {
+//     leftCount: filterByDate(leftUsers as any[]),
+//     rightCount: filterByDate(rightUsers as any[]),
+//   };
+// }
+
+// Count active team PV in left/right subtree filtered by an effective start date.
+// Pair count is based on the PV total: floor(min(leftPV, rightPV) / 100).
+async function countPVFromDate(
   user_id: string,
   effectiveStartDate: Date | null,
-): Promise<{ leftCount: number; rightCount: number }> {
-   // Team activations count only after the parent user is activated.
-   const owner = (await User.findOne({ user_id })
+): Promise<{ leftPV: number; rightPV: number }> {
+  const owner = (await User.findOne({ user_id })
     .select("user_status")
     .lean()) as { user_status?: string } | null;
 
   if (owner?.user_status?.toLowerCase() !== "active") {
-    return { leftCount: 0, rightCount: 0 };
+    return { leftPV: 0, rightPV: 0 };
   }
+
   const allNodes = (await TreeNode.find(
     {},
     { user_id: 1, parent: 1, left: 1, right: 1 },
@@ -68,7 +156,7 @@ async function countActiveFromDate(
   for (const n of allNodes) nodeMap.set(n.user_id, n);
 
   const root = nodeMap.get(user_id);
-  if (!root) return { leftCount: 0, rightCount: 0 };
+  if (!root) return { leftPV: 0, rightPV: 0 };
 
   function subtreeIds(startId: string | null | undefined): string[] {
     if (!startId) return [];
@@ -88,9 +176,9 @@ async function countActiveFromDate(
   const rightIds = subtreeIds(root.right);
 
   const activeQuery = (ids: string[]) => ({
-  user_id: { $in: ids },
-  user_status: "active",
-});
+    user_id: { $in: ids },
+    user_status: "active",
+  });
 
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
@@ -98,6 +186,7 @@ async function countActiveFromDate(
           user_id: 1,
           activated_date: 1,
           activated_time: 1,
+          self_pv: 1,
         }).lean()
       : [],
     rightIds.length
@@ -105,34 +194,68 @@ async function countActiveFromDate(
           user_id: 1,
           activated_date: 1,
           activated_time: 1,
+          self_pv: 1,
         }).lean()
       : [],
   ]);
 
- const filterByDate = (users: any[]): number => {
-  return users.filter((user: any) => {
-    // Active users without date/time are counted.
-    if (!user.activated_date || !user.activated_time) {
-      return true;
-    }
+  const sumEligiblePV = (users: any[]): number =>
+    users
+      .filter((user: any) => {
+        if (!user.activated_date || !user.activated_time) return true;
+        if (!effectiveStartDate) return true;
 
-    if (!effectiveStartDate) {
-      return true;
-    }
+        const activationDate = istStringsToUTCDate(
+          user.activated_date,
+          user.activated_time,
+        );
 
-    const activationDate = istStringsToUTCDate(
-      user.activated_date,
-      user.activated_time,
-    );
-
-    return !!activationDate && activationDate >= effectiveStartDate;
-  }).length;
-};
+        return !!activationDate && activationDate >= effectiveStartDate;
+      })
+      .reduce((total, user) => total + Number(user.self_pv || 0), 0);
 
   return {
-    leftCount: filterByDate(leftUsers as any[]),
-    rightCount: filterByDate(rightUsers as any[]),
+    leftPV: sumEligiblePV(leftUsers as any[]),
+    rightPV: sumEligiblePV(rightUsers as any[]),
   };
+}
+
+async function applyDailyPayoutStatuses(releasedTiers: any[]): Promise<any[]> {
+  const payoutIds: string[] = releasedTiers
+    .map((tier) => tier.payout_id)
+    .filter((payoutId): payoutId is string => Boolean(payoutId));
+
+  if (!payoutIds.length) return releasedTiers;
+
+  const payouts = (await DailyPayout.find(
+    { payout_id: { $in: payoutIds } },
+    { payout_id: 1, status: 1, transaction_id: 1 },
+  ).lean()) as unknown as Array<{
+    payout_id: string;
+    status?: string;
+    transaction_id?: string;
+  }>;
+  const payoutMap = new Map(
+    payouts.map((payout) => [
+      payout.payout_id,
+      {
+        status: payout.status,
+        transaction_id: payout.transaction_id,
+      },
+    ]),
+  );
+
+  return releasedTiers.map((tier) => {
+    const payout = tier.payout_id ? payoutMap.get(tier.payout_id) : undefined;
+
+    if (!payout) return tier;
+
+    return {
+      ...tier,
+      payout_status: payout.status ?? tier.payout_status,
+      transaction_id: payout.transaction_id ?? tier.transaction_id,
+    };
+  });
 }
 
 // Build full tier progress for a single user — used for both user page and admin user search
@@ -162,27 +285,19 @@ async function buildUserProgress(user_id: string) {
     user.activated_date,
     user.activated_time,
   );
-  const effectiveStartDate = laterDate(
-    globalStartDate,
-    userActivationCutoff,
+  const effectiveStartDate = laterDate(globalStartDate, userActivationCutoff);
+
+  let leftPV: number;
+  let rightPV: number;
+
+  const counted = await countPVFromDate(user_id, effectiveStartDate);
+  leftPV = counted.leftPV;
+  rightPV = counted.rightPV;
+
+  const currentPairs = Math.floor(Math.min(leftPV, rightPV) / 100);
+  const releasedTiers = await applyDailyPayoutStatuses(
+    user.pair_star_released_tiers ?? [],
   );
-
-  let leftCount: number;
-  let rightCount: number;
-
-  const counted = await countActiveFromDate(user_id, effectiveStartDate);
-  leftCount = counted.leftCount;
-  rightCount = counted.rightCount;
-
-  const currentPairs = Math.min(leftCount, rightCount);
-  const releasedTiers: Array<{
-    tier_name: string;
-    reward: string;
-    pairs: number;
-    released_at: string;
-    payout_status: string;
-    transaction_id: string | null;
-  }> = user.pair_star_released_tiers ?? [];
 
   let leftDirectPV = 0;
   let rightDirectPV = 0;
@@ -200,17 +315,19 @@ async function buildUserProgress(user_id: string) {
 
     // Normalize underscore → space for matching e.g. "BRONZE_STAR" → "BRONZE STAR"
     const releaseRecord = releasedTiers.find(
-(r) =>
-  String(r.tier_name || "")
-    .replace(/_/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toUpperCase() === tier.tier_name.toUpperCase()    );
+      (r) =>
+        String(r.tier_name || "")
+          .replace(/_/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toUpperCase() === tier.tier_name.toUpperCase(),
+    );
     const reward_released = !!releaseRecord;
 
     // payout_status "Paid" means payment received → show received date
-    const isPaid = releaseRecord?.payout_status === "Paid";
-
+    const isPaid = ["paid", "completed"].includes(
+      String(releaseRecord?.payout_status ?? "").toLowerCase(),
+    );
     return {
       name: tier.tier_name,
       required_pairs: tier.pairs,
@@ -224,8 +341,8 @@ async function buildUserProgress(user_id: string) {
         Math.round((currentPairs / tier.pairs) * 100),
       ),
 
-      left_active: leftCount,
-      right_active: rightCount,
+      left_active: Math.floor(leftPV / 100),
+      right_active: Math.floor(rightPV / 100),
       left_direct_pv: leftDirectPV,
       right_direct_pv: rightDirectPV,
       left_pv_balance: Math.max(0, tier.direct_pv - leftDirectPV),
@@ -257,8 +374,8 @@ async function buildUserProgress(user_id: string) {
     user_name: user.user_name,
     current_pairs: currentPairs,
     current_pair_star: user.pair_star ?? null,
-    left_active: leftCount,
-    right_active: rightCount,
+    left_active: Math.floor(leftPV / 100),
+    right_active: Math.floor(rightPV / 100),
     left_direct_pv: leftDirectPV,
     right_direct_pv: rightDirectPV,
     start_date: globalConfig.start_date ?? null, // global — same for all users
@@ -317,23 +434,32 @@ export async function GET(req: Request) {
         .sort({ pairs: -1 })
         .lean();
 
-      const data = (users as any[]).map((u) => {
-        const tierInfo = tierConfig.find((t) => t.tier_name === u.pair_star);
-        const releasedTiers = u.pair_star_released_tiers ?? [];
-        return {
-          user_id: u.user_id,
-          user_name: u.user_name,
-          contact: u.contact,
-          pairs: u.pairs ?? 0,
-          pair_star: u.pair_star,
-          left_active_count: u.left_active_count ?? 0,
-          right_active_count: u.right_active_count ?? 0,
-          activated_date: u.activated_date,
-          reward: tierInfo?.reward ?? "",
-          required_pairs: tierInfo?.pairs ?? 0,
-          released_tiers: releasedTiers,
-        };
-      });
+      const data = (
+        await Promise.all(
+          (users as any[]).map(async (u) => {
+            const progress = await buildUserProgress(u.user_id);
+            const tierInfo = tierConfig.find(
+              (t) => t.tier_name === u.pair_star,
+            );
+
+            return {
+              user_id: u.user_id,
+              user_name: u.user_name,
+              contact: u.contact,
+              pairs: progress?.current_pairs ?? 0,
+              pair_star: u.pair_star,
+              left_active: progress?.left_active ?? 0,
+              right_active: progress?.right_active ?? 0,
+              activated_date: u.activated_date,
+              reward: tierInfo?.reward ?? "",
+              required_pairs: tierInfo?.pairs ?? 0,
+              released_tiers: await applyDailyPayoutStatuses(
+                u.pair_star_released_tiers ?? [],
+              ),
+            };
+          }),
+        )
+      ).filter(Boolean);
 
       return NextResponse.json({ success: true, data });
     }

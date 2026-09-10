@@ -12,6 +12,8 @@ import { GiDoubled } from "react-icons/gi";
 import { FaClipboardList } from "react-icons/fa";
 import { FaCrown } from "react-icons/fa";
 import { FaCoins } from "react-icons/fa";
+import { MdBalance } from "react-icons/md";
+
 
 const Page = () => {
   const router = useRouter();
@@ -108,6 +110,13 @@ const Page = () => {
               >
                 <FaCoins size={32} />
                 <span className="mt-2 text-lg font-semibold">Pay Release</span>
+              </div>
+               <div
+                onClick={() => router.push("/admin-pair-pv")}
+                className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
+              >
+                <MdBalance size={32} />
+                <span className="mt-2 text-lg font-semibold">Pair stars</span>
               </div>
             </>
           )}

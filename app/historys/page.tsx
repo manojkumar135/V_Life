@@ -183,7 +183,7 @@ function getDetailLabel(rawDetail: string): string {
     .replace(/\s+from\s+\S+$/i, "")
     .trim();
 
-  if (/pair star reward/i.test(cleaned)) {
+   if (/pair star reward/i.test(cleaned)) {
     // Extract text between "—" (or "-") and "("
     const match = cleaned.match(/[—-]\s*([^(]+)\(/);
     if (match && match[1]) {
@@ -191,12 +191,32 @@ function getDetailLabel(rawDetail: string): string {
         .trim()
         .toLowerCase()
         .replace(/\b\w/g, (c) => c.toUpperCase());
+
       return `${starName} Reward`;
     }
+
     // Fallback if no dash/parenthesis found but still a pair star reward
     return "Pair Star Reward";
   }
 
+  // ✅ Short labels for bonus types
+  if (/^infinity matching bonus$/i.test(cleaned)) {
+    return "IMB";
+  }
+
+  if (/^infinity sales bonus$/i.test(cleaned)) {
+    return "ISB";
+  }
+
+  if (/^direct sales bonus$/i.test(cleaned)) {
+    return "DSB";
+  }
+
+  if (/^daily matching bonus$/i.test(cleaned)) {
+    return "MB";
+  }
+
+  // ✅ Keep all other existing details unchanged
   return cleaned;
 }
 

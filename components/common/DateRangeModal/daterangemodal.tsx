@@ -11,18 +11,24 @@ interface DateFilterModalProps {
     date?: string;
     from?: string;
     to?: string;
+    count?: number;
   }) => void;
+  showCountFilter?: boolean; // opt-in — only pages that need it pass this
+  countLabel?: string; // optional custom label, defaults to "Min Count"
 }
 
 const DateFilterModal: React.FC<DateFilterModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  showCountFilter = false,
+  countLabel = "Min Count",
 }) => {
   const [filterType, setFilterType] = useState<"all" | "on" | "range">("all");
   const [date, setDate] = useState<Date | null>(null);
   const [from, setFrom] = useState<Date | null>(null);
   const [to, setTo] = useState<Date | null>(null);
+  const [count, setCount] = useState<string>("");
 
   if (!isOpen) return null;
 
@@ -37,15 +43,27 @@ const DateFilterModal: React.FC<DateFilterModalProps> = ({
     return `${year}-${month}-${day}`;
   };
 
-  const handleSubmit = () => {
+    const handleSubmit = () => {
+    const countValue =
+      showCountFilter && count.trim() !== "" ? Number(count) : undefined;
+
     if (filterType === "all") {
-      onSubmit({ type: "all" });
+      onSubmit({ type: "all", ...(countValue !== undefined && { count: countValue }) });
     } else if (filterType === "on") {
       if (!date) return alert("Please select a date");
-      onSubmit({ type: "on", date: formatDate(date) });
+      onSubmit({
+        type: "on",
+        date: formatDate(date),
+        ...(countValue !== undefined && { count: countValue }),
+      });
     } else {
       if (!from || !to) return alert("Please select both From and To dates");
-      onSubmit({ type: "range", from: formatDate(from), to: formatDate(to) });
+      onSubmit({
+        type: "range",
+        from: formatDate(from),
+        to: formatDate(to),
+        ...(countValue !== undefined && { count: countValue }),
+      });
     }
     onClose();
   };
@@ -127,7 +145,22 @@ const DateFilterModal: React.FC<DateFilterModalProps> = ({
                 onFocus={() => setFilterType("range")}
               />
             </div>
-          </div>
+                  </div>
+
+          {/* Count filter — only rendered when the parent page opts in */}
+          {showCountFilter && (
+            <div className="flex items-center gap-2">
+              <label className="whitespace-nowrap">{countLabel}</label>
+              <input
+                type="number"
+                min={0}
+                value={count}
+                onChange={(e) => setCount(e.target.value)}
+                placeholder="e.g. 10"
+                className="border rounded px-2 py-1 text-black w-[100px]"
+              />
+            </div>
+          )}
         </div>
 
         {/* Actions */}

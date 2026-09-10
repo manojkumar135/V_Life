@@ -74,13 +74,97 @@ export type { PairStarTierName } from "@/constant/pairStar";
 // Count active users in left/right subtree using already-loaded nodeMap
 // This is the same logic as countActiveFromDate in the API — ensures consistency
 // ─────────────────────────────────────────────────────────────────────────────
-async function countActiveInSubtree(
+async function countPVInSubtree(
+  user_id: string,
+  nodeMap: Map<string, any>,
+  effectiveStartDate: Date | null,
+): Promise<{ leftPV: number; rightPV: number }> {
+  const owner = (await User.findOne({ user_id })
+    .select("user_status")
+    .lean()) as { user_status?: string } | null;
+
+  if (owner?.user_status?.toLowerCase() !== "active") {
+    return { leftPV: 0, rightPV: 0 };
+  }
+
+  const root = nodeMap.get(user_id);
+  if (!root) return { leftPV: 0, rightPV: 0 };
+
+  const subtreeIds = (startId: string | null | undefined): string[] => {
+    if (!startId) return [];
+
+    const ids: string[] = [];
+    const queue = [startId];
+
+    while (queue.length) {
+      const cur = queue.shift()!;
+      ids.push(cur);
+
+      const node = nodeMap.get(cur);
+      if (node?.left) queue.push(node.left);
+      if (node?.right) queue.push(node.right);
+    }
+
+    return ids;
+  };
+
+  const leftIds = subtreeIds(root.left);
+  const rightIds = subtreeIds(root.right);
+
+  const activeQuery = (ids: string[]) => ({
+    user_id: { $in: ids },
+    user_status: "active",
+  });
+
+  const [leftUsers, rightUsers] = await Promise.all([
+    leftIds.length
+      ? User.find(activeQuery(leftIds), {
+          user_id: 1,
+          activated_date: 1,
+          activated_time: 1,
+          self_pv: 1,
+        }).lean()
+      : [],
+    rightIds.length
+      ? User.find(activeQuery(rightIds), {
+          user_id: 1,
+          activated_date: 1,
+          activated_time: 1,
+          self_pv: 1,
+        }).lean()
+      : [],
+  ]);
+
+  const sumEligiblePV = (users: any[]): number =>
+    users
+      .filter((user: any) => {
+        if (!user.activated_date || !user.activated_time) return true;
+        if (!effectiveStartDate) return true;
+
+        const activationDate = istStringsToUTCDate(
+          user.activated_date,
+          user.activated_time,
+        );
+
+        return !!activationDate && activationDate >= effectiveStartDate;
+      })
+      .reduce(
+        (total, user) => total + Number(user.self_pv || 0),
+        0,
+      );
+
+  return {
+    leftPV: sumEligiblePV(leftUsers),
+    rightPV: sumEligiblePV(rightUsers),
+  };
+}
+
+async function countActiveUsersInSubtree(
   user_id: string,
   nodeMap: Map<string, any>,
   effectiveStartDate: Date | null,
 ): Promise<{ leftCount: number; rightCount: number }> {
-  
- const owner = (await User.findOne({ user_id })
+  const owner = (await User.findOne({ user_id })
     .select("user_status")
     .lean()) as { user_status?: string } | null;
 
@@ -91,69 +175,63 @@ async function countActiveInSubtree(
   const root = nodeMap.get(user_id);
   if (!root) return { leftCount: 0, rightCount: 0 };
 
-  function subtreeIds(startId: string | null | undefined): string[] {
+  const subtreeIds = (startId: string | null | undefined): string[] => {
     if (!startId) return [];
+
     const ids: string[] = [];
     const queue = [startId];
+
     while (queue.length) {
       const cur = queue.shift()!;
       ids.push(cur);
+
       const node = nodeMap.get(cur);
       if (node?.left) queue.push(node.left);
       if (node?.right) queue.push(node.right);
     }
+
     return ids;
-  }
+  };
 
   const leftIds = subtreeIds(root.left);
   const rightIds = subtreeIds(root.right);
 
-  // Exclude admin-activated users — they have "admin" in status_notes
- const activeQuery = (ids: string[]) => ({
-  user_id: { $in: ids },
-  user_status: "active",
-});
+  const activeQuery = (ids: string[]) => ({
+    user_id: { $in: ids },
+    user_status: "active",
+  });
 
   const [leftUsers, rightUsers] = await Promise.all([
     leftIds.length
       ? User.find(activeQuery(leftIds), {
-          user_id: 1,
           activated_date: 1,
           activated_time: 1,
         }).lean()
       : [],
     rightIds.length
       ? User.find(activeQuery(rightIds), {
-          user_id: 1,
           activated_date: 1,
           activated_time: 1,
         }).lean()
       : [],
   ]);
 
-  const filterByDate = (users: any[]): number => {
-  return users.filter((user: any) => {
-    // Active users without date/time are counted.
-    if (!user.activated_date || !user.activated_time) {
-      return true;
-    }
+  const countEligibleUsers = (users: any[]): number =>
+    users.filter((user: any) => {
+      if (!user.activated_date || !user.activated_time) return true;
+      if (!effectiveStartDate) return true;
 
-    if (!effectiveStartDate) {
-      return true;
-    }
+      const activationDate = istStringsToUTCDate(
+        user.activated_date,
+        user.activated_time,
+      );
 
-    const activationDate = istStringsToUTCDate(
-      user.activated_date,
-      user.activated_time,
-    );
-
-    return !!activationDate && activationDate >= effectiveStartDate;
-  }).length;
-};
+      return !!activationDate && activationDate >= effectiveStartDate;
+    }).length;
 
   return {
-    leftCount: filterByDate(leftUsers as any[]),
-    rightCount: filterByDate(rightUsers as any[]),
+    leftCount: countEligibleUsers(leftUsers),
+    rightCount: countEligibleUsers(rightUsers),
   };
 }
 function normalizeTierName(name?: string | null): string {
@@ -406,14 +484,14 @@ async function checkAndUpgradePairStar(
     ancestorActivationCutoff,
   );
 
-  const { leftCount, rightCount } = await countActiveInSubtree(
-    ancestor.user_id,
-    nodeMap,
-    effectiveStartDate,
-  );
-  const currentPairs = Math.min(leftCount, rightCount);
+   const [{ leftPV, rightPV }, { leftCount, rightCount }] = await Promise.all([
+    countPVInSubtree(ancestor.user_id, nodeMap, effectiveStartDate),
+    countActiveUsersInSubtree(ancestor.user_id, nodeMap, effectiveStartDate),
+  ]);
 
-  // Sync stored counters if they differ from actual counts
+  const currentPairs = Math.floor(Math.min(leftPV, rightPV) / 100);
+
+  // keep pair count based on PV and update side counters separately
   if (
     currentPairs !== (ancestor.pairs ?? 0) ||
     leftCount !== (ancestor.left_active_count ?? 0) ||
@@ -442,7 +520,6 @@ async function checkAndUpgradePairStar(
       ),
     ]);
   }
-
   // Not reached first tier yet — nothing to do
   if (currentPairs < tierConfig[0].pairs) return;
 
@@ -590,8 +667,8 @@ async function checkAndUpgradePairStar(
       // }
 
       if (wallet && isPanVerified) {
-        withdrawAmount = Number((totalAmount * 0.88).toFixed(2));
-        tdsAmount = Number((totalAmount * 0.02).toFixed(2));
+        withdrawAmount = Number((totalAmount * 0.8).toFixed(2));
+        tdsAmount = Number((totalAmount * 0.1).toFixed(2));
         adminCharge = Number((totalAmount * 0.1).toFixed(2));
       } else {
         withdrawAmount = Number((totalAmount * 0.7).toFixed(2));

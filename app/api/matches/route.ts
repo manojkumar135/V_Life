@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/user";
 import { get60DayStats } from "@/services/cycles";
+import { DailyPayout } from "@/models/payout";
 
 export async function GET(req: Request) {
   try {
@@ -21,7 +22,6 @@ export async function GET(req: Request) {
       user_status: { $regex: /^active$/i },
     };
 
-
     // Search across user fields
     if (search) {
       userQuery.$or = [
@@ -32,15 +32,53 @@ export async function GET(req: Request) {
     }
 
     // Date filter on activated_date
-    if (date) {
-      userQuery.activated_date = date; // stored as "DD-MM-YYYY"
-    } else if (from && to) {
-      // Convert range to match stored format if needed — filter post-fetch
-    }
+    // if (date) {
+    //   userQuery.activated_date = date;
+    // } else if (from && to) {
+    // }
 
     const users = await User.find(userQuery)
       .select("user_id user_name contact activation_date created_at")
       .lean();
+
+    const hasDateFilter = Boolean(date || (from && to));
+    const matchCounts = new Map<
+      string,
+      { matches: number; matchingBonus: number }
+    >();
+
+    if (hasDateFilter) {
+      const start = new Date(`${date || from}T00:00:00.000Z`);
+      const end = new Date(`${date || to}T00:00:00.000Z`);
+      end.setUTCDate(end.getUTCDate() + 1);
+
+      const payouts = await DailyPayout.aggregate([
+        {
+          $match: {
+            user_id: { $in: users.map((user: any) => user.user_id) },
+            name: "Matching Bonus",
+            created_at: {
+              $gte: start,
+              $lt: end,
+            },
+          },
+        },
+        {
+          $group: {
+            _id: "$user_id",
+            matches: { $sum: 1 },
+            matchingBonus: { $sum: "$amount" },
+          },
+        },
+      ]);
+
+      payouts.forEach((payout) => {
+        matchCounts.set(payout._id, {
+          matches: payout.matches,
+          matchingBonus: payout.matchingBonus,
+        });
+      });
+    }
 
     // ── Build per-user cycle stats ────────────────────────────────
     const results = await Promise.all(
@@ -59,6 +97,7 @@ export async function GET(req: Request) {
             ).padStart(2, "0")}-${d.getFullYear()}`;
           }
 
+          const rangeStats = matchCounts.get(u.user_id);
           //   console.log(u)
           return {
             user_id: u.user_id,
@@ -70,8 +109,10 @@ export async function GET(req: Request) {
             cycleEnd: stats.cycleEnd,
             daysPassed: stats.daysPassed,
             remainingDays: stats.remainingDays,
-            matches: stats.matches,
-            matchingBonus: stats.matchingBonus,
+            matches: hasDateFilter ? (rangeStats?.matches ?? 0) : stats.matches,
+            matchingBonus: hasDateFilter
+              ? (rangeStats?.matchingBonus ?? 0)
+              : stats.matchingBonus,
           };
         } catch {
           return null;
@@ -79,17 +120,19 @@ export async function GET(req: Request) {
       }),
     );
 
-    // Filter nulls + optional date-range post-filter on cycleStart
-    let data = results.filter(Boolean) as any[];
+    // Filter nulls + sort by matches in descending order
+    let data = (results.filter(Boolean) as any[]).sort(
+      (a, b) => (b.matches ?? 0) - (a.matches ?? 0),
+    );
 
-    if (from && to) {
-      const fromDate = new Date(from);
-      const toDate = new Date(to);
-      data = data.filter((r) => {
-        const cs = new Date(r.cycleStart);
-        return cs >= fromDate && cs <= toDate;
-      });
-    }
+    // if (from && to) {
+    //   const fromDate = new Date(from);
+    //   const toDate = new Date(to);
+    //   data = data.filter((r) => {
+    //     const cs = new Date(r.cycleStart);
+    //     return cs >= fromDate && cs <= toDate;
+    //   });
+    // }
 
     return NextResponse.json({ success: true, data });
   } catch (err: any) {
