@@ -61,10 +61,7 @@ import { Wallet } from "@/models/wallet";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { History } from "@/models/history";
-import {
-  istStringsToUTCDate,
-  laterDate,
-} from "@/utils/server/getISTDateTime";
+import { istStringsToUTCDate, laterDate } from "@/utils/server/getISTDateTime";
 
 // Re-export constants so existing imports from this file still work
 export { PAIR_STAR_TIERS, PAIR_STAR_TIER_NAMES } from "@/constant/pairStar";
@@ -148,10 +145,7 @@ async function countPVInSubtree(
 
         return !!activationDate && activationDate >= effectiveStartDate;
       })
-      .reduce(
-        (total, user) => total + Number(user.self_pv || 0),
-        0,
-      );
+      .reduce((total, user) => total + Number(user.self_pv || 0), 0);
 
   return {
     leftPV: sumEligiblePV(leftUsers),
@@ -273,8 +267,8 @@ function computeHighestTier(
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN EXPORT: called fire-and-forget after every user activation
 // ─────────────────────────────────────────────────────────────────────────────
-export async function propagatePairStarOnActivation(
-  activatedUserId: string,
+export async function propagatePairStarOnPvChange(
+  userId: string,
 ): Promise<void> {
   try {
     await connectDB();
@@ -310,10 +304,10 @@ export async function propagatePairStarOnActivation(
     // ── 2. Walk UP the tree collecting ancestors + which side the new user is on
     const ancestors: Array<{ user_id: string; side: "left" | "right" }> = [];
 
-    const startNode = nodeMap.get(activatedUserId);
+    const startNode = nodeMap.get(userId);
     if (!startNode) {
       console.warn(
-        `[PairStar] TreeNode not found for activated user ${activatedUserId}`,
+        `[PairStar] TreeNode not found for activated user ${userId}`,
       );
       return;
     }
@@ -339,51 +333,51 @@ export async function propagatePairStarOnActivation(
 
     if (ancestors.length === 0) return;
 
-const activeAncestors = await User.find(
-  {
-    user_id: { $in: ancestors.map((ancestor) => ancestor.user_id) },
-    user_status: "active",
-  },
-  { user_id: 1 },
-).lean();
+    // const activeAncestors = await User.find(
+    //   {
+    //     user_id: { $in: ancestors.map((ancestor) => ancestor.user_id) },
+    //     user_status: "active",
+    //   },
+    //   { user_id: 1 },
+    // ).lean();
 
-const activeAncestorIds = new Set(
-  activeAncestors.map((ancestor: any) => ancestor.user_id),
-);
+    // const activeAncestorIds = new Set(
+    //   activeAncestors.map((ancestor: any) => ancestor.user_id),
+    // );
 
-    // ── 3. Bulk $inc left_active_count / right_active_count on User + TreeNode
-    const userBulkOps: any[] = [];
-    const treeBulkOps: any[] = [];
+    // // ── 3. Bulk $inc left_active_count / right_active_count on User + TreeNode
+    // const userBulkOps: any[] = [];
+    // const treeBulkOps: any[] = [];
 
-    for (const { user_id, side } of ancestors) {
-        if (!activeAncestorIds.has(user_id)) continue;
+    // for (const { user_id, side } of ancestors) {
+    //   if (!activeAncestorIds.has(user_id)) continue;
 
-      const incField =
-        side === "left" ? "left_active_count" : "right_active_count";
+    //   const incField =
+    //     side === "left" ? "left_active_count" : "right_active_count";
 
-      userBulkOps.push({
-        updateOne: {
-          filter: { user_id },
-          update: { $inc: { [incField]: 1 } },
-        },
-      });
+    //   userBulkOps.push({
+    //     updateOne: {
+    //       filter: { user_id },
+    //       update: { $inc: { [incField]: 1 } },
+    //     },
+    //   });
 
-      treeBulkOps.push({
-        updateOne: {
-          filter: { user_id },
-          update: { $inc: { [incField]: 1 } },
-        },
-      });
-    }
+    //   treeBulkOps.push({
+    //     updateOne: {
+    //       filter: { user_id },
+    //       update: { $inc: { [incField]: 1 } },
+    //     },
+    //   });
+    // }
 
-   await Promise.all([
-  userBulkOps.length
-    ? User.bulkWrite(userBulkOps, { ordered: false })
-    : Promise.resolve(),
-  treeBulkOps.length
-    ? TreeNode.bulkWrite(treeBulkOps, { ordered: false })
-    : Promise.resolve(),
-]);
+    // await Promise.all([
+    //   userBulkOps.length
+    //     ? User.bulkWrite(userBulkOps, { ordered: false })
+    //     : Promise.resolve(),
+    //   treeBulkOps.length
+    //     ? TreeNode.bulkWrite(treeBulkOps, { ordered: false })
+    //     : Promise.resolve(),
+    // ]);
 
     // ── 4. Re-read updated counts + pair_star_released_tiers for each ancestor
     const ancestorIds = ancestors.map((a) => a.user_id);
@@ -397,6 +391,8 @@ const activeAncestorIds = new Set(
         mail: 1,
         activated_date: 1,
         activated_time: 1,
+        left_active: 1,
+        right_active: 1,
         left_active_count: 1,
         right_active_count: 1,
         pair_star: 1,
@@ -433,8 +429,7 @@ const activeAncestorIds = new Set(
       ),
     );
   } catch (err) {
-    console.error("[PairStar] propagatePairStarOnActivation error:", err);
-  }
+console.error("[PairStar] propagatePairStarOnPvChange error:", err);  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -446,6 +441,8 @@ async function checkAndUpgradePairStar(
     user_name: string;
     contact?: string;
     mail?: string;
+    left_active?: number;
+    right_active?: number;
     left_active_count: number;
     right_active_count: number;
     pair_star?: string;
@@ -484,16 +481,20 @@ async function checkAndUpgradePairStar(
     ancestorActivationCutoff,
   );
 
-   const [{ leftPV, rightPV }, { leftCount, rightCount }] = await Promise.all([
+  const [{ leftPV, rightPV }, { leftCount, rightCount }] = await Promise.all([
     countPVInSubtree(ancestor.user_id, nodeMap, effectiveStartDate),
     countActiveUsersInSubtree(ancestor.user_id, nodeMap, effectiveStartDate),
   ]);
 
-  const currentPairs = Math.floor(Math.min(leftPV, rightPV) / 100);
+  const leftActive = Math.floor(leftPV / 100);
+  const rightActive = Math.floor(rightPV / 100);
 
+  const currentPairs = Math.min(leftActive, rightActive);
   // keep pair count based on PV and update side counters separately
   if (
     currentPairs !== (ancestor.pairs ?? 0) ||
+    leftActive !== (ancestor.left_active ?? 0) ||
+    rightActive !== (ancestor.right_active ?? 0) ||
     leftCount !== (ancestor.left_active_count ?? 0) ||
     rightCount !== (ancestor.right_active_count ?? 0)
   ) {
@@ -503,6 +504,12 @@ async function checkAndUpgradePairStar(
         {
           $set: {
             pairs: currentPairs,
+
+            // PV points
+            left_active: leftActive,
+            right_active: rightActive,
+
+            // Number of active users
             left_active_count: leftCount,
             right_active_count: rightCount,
           },
@@ -513,6 +520,12 @@ async function checkAndUpgradePairStar(
         {
           $set: {
             pairs: currentPairs,
+
+            // PV points
+            left_active: leftActive,
+            right_active: rightActive,
+
+            // Number of active users
             left_active_count: leftCount,
             right_active_count: rightCount,
           },
@@ -579,9 +592,9 @@ async function checkAndUpgradePairStar(
 
     // ── GUARD: check if this specific tier is already released ───────────
     const alreadyReleased = releasedTiers.some(
-  (r: any) =>
-    normalizeTierName(r.tier_name) === normalizeTierName(tier.tier_name),
-);
+      (r: any) =>
+        normalizeTierName(r.tier_name) === normalizeTierName(tier.tier_name),
+    );
     if (alreadyReleased) {
       console.log(
         `[PairStar] ${ancestor.user_id} — ${tier.tier_name} already released, skipping`,

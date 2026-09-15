@@ -27,7 +27,7 @@ import {
 } from "@/services/infinity";
 
 import { processPvOrder } from "@/services/processPvOrder";
-import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
+import { propagatePairStarOnPvChange } from "@/services/pairStarEngine";
 import { getPV } from "@/services/getPV";
 
 // ----------------- Types -----------------
@@ -367,14 +367,15 @@ export async function POST(request: Request) {
       await activateUser(beneficiary); // does NOT save
       await beneficiary.save();
       justActivated = true;
-
-      // 🔥 Fire-and-forget: propagate pair star counts up the tree
-      propagatePairStarOnActivation(beneficiary.user_id).catch((err) =>
-        console.error("[PairStar] propagation error (order):", err),
-      );
     } else {
       await beneficiary.save();
     }
+
+    if (totalPV > 0) {
+  propagatePairStarOnPvChange(beneficiary.user_id).catch((err) =>
+    console.error("[PairStar] PV propagation error (order):", err),
+  );
+}
 
     /* ---------------- RELOAD BENEFICIARY ---------------- */
     const freshUser = await User.findOne({

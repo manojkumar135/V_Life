@@ -84,7 +84,7 @@ export default function MatchesPage() {
       ? [
           { field: "user_id", headerName: "User ID", flex: 0.8 },
           { field: "user_name", headerName: "Name", flex: 1 },
-          { field: "contact", headerName: "Contact", flex: 1 },
+          { field: "contact", headerName: "Contact", flex: 0.7 },
         ]
       : []),
 

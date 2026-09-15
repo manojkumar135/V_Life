@@ -712,7 +712,7 @@ export default function OrderDetailView() {
               <div className="hidden lg:grid grid-cols-12 font-semibold text-gray-700 text-sm border-b pb-2 mb-2 xl:px-15">
                 <div className="col-span-4">Product</div>
                 <div className="col-span-1 text-center">Quantity</div>
-                <div className="col-span-1 text-right">BV</div>
+                <div className="col-span-1 text-right">DSB</div>
                 <div className="col-span-1 text-right">PV</div>
                 <div className="col-span-2 text-center">Unit Price(₹)</div>
                 <div className="col-span-1 text-right">GST(₹)</div>

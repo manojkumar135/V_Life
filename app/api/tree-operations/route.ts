@@ -156,7 +156,12 @@ function buildTree(
 
     rank: user?.rank || "none",
     club: user?.club || "none",
-    pair_star: user?.pair_star || null,
+       pair_star: user?.pair_star || null,
+    pair_star_released: user?.pair_star_released_tiers?.length
+      ? user.pair_star_released_tiers[user.pair_star_released_tiers.length - 1]
+      : (user?.pair_star
+          ? { tier_name: user.pair_star }
+          : (user?.club ? { tier_name: user.club } : { tier_name: null })),
 
     bv: user?.bv || 0,
     pv: user?.pv || 0,

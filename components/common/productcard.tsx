@@ -112,7 +112,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           <div className="flex flex-col px-2">
             {!hideBV && (
               <p className="text-xs mt-2 ">
-                BV (<span className="font-semibold">{bv}</span>)
+                DSB (<span className="font-semibold">{bv}</span>)
               </p>
             )}
 

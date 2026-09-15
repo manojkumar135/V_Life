@@ -15,6 +15,17 @@ export interface TreeNode {
   status_notes?: string;
   pair_star?: string;
 
+    pair_star_released?: {
+    tier_name: string | null;
+    reward?: string;
+    pairs?: number;
+    released_at?: string;
+    payout_id?: string;
+    payout_status?: string;
+    transaction_id?: string | null;
+    _id?: string;
+  } | null;
+
   rank?: string;
   club?: string;
   contact?: string;
@@ -458,9 +469,16 @@ const BinaryTreeNode: React.FC<Props> = ({
               </span>
             </div>
 
+            {node.pair_star_released?.tier_name && (
+              <div className="flex">
+                <strong className="w-20">Pair Star:</strong>
+                <span>{node.pair_star_released.tier_name}</span>
+              </div>
+            )}
+
             {user?.role === "admin" && (
               <>
-                {node.rank && (
+                {/* {node.rank && (
                   <div className="flex">
                     <strong className="w-20">Rank:</strong>
                     <span className="truncate font-semibold capitalize">
@@ -475,7 +493,7 @@ const BinaryTreeNode: React.FC<Props> = ({
                       {node.club}
                     </span>
                   </div>
-                )}
+                )} */}
                 {node.contact && (
                   <div className="flex">
                     <strong className="w-20">Contact:</strong>

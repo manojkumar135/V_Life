@@ -40,6 +40,8 @@ const TreeNodeSchema = new Schema(
 
     pair_star: { type: String },
     pairs: { type: Number, default: 0 },
+    left_active: { type: Number, default: 0 },
+right_active: { type: Number, default: 0 },
     left_active_count: { type: Number, default: 0 },
     right_active_count: { type: Number, default: 0 },
 

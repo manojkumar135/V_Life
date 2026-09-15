@@ -22,7 +22,7 @@ interface AdminUser {
   left_active_count: number;
   right_active_count: number;
   left_active: number;
-right_active: number;
+  right_active: number;
   activated_date: string;
   released_tiers: Array<{
     tier_name: string;
@@ -55,6 +55,14 @@ function badgeClass(tier: string) {
   return TIER_BADGE_COLORS[tier] ?? "bg-gray-100 text-gray-700 border-gray-200";
 }
 
+function normTier(s: string) {
+  return String(s || "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toUpperCase();
+}
+
 function PayoutCell({
   releasedTiers,
   onView,
@@ -83,7 +91,9 @@ export default function AdminPairRankingsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("");
-    const [payoutModalUser, setPayoutModalUser] = useState<AdminUser | null>(null);
+  const [payoutModalUser, setPayoutModalUser] = useState<AdminUser | null>(
+    null,
+  );
 
   const { user } = useVLife();
 
@@ -98,9 +108,9 @@ export default function AdminPairRankingsPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { admin: "true" };
-      if (tierFilter) params.pair_star = tierFilter;
-      const res = await axios.get("/api/pair-star", { params });
+      const res = await axios.get("/api/pair-star", {
+        params: { admin: "true" },
+      });
       if (res.data.success) {
         setData(res.data.data);
       } else {
@@ -111,34 +121,45 @@ export default function AdminPairRankingsPage() {
     } finally {
       setLoading(false);
     }
-  }, [tierFilter]);
-
+  }, []);
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Client-side search filter
+  // Client-side tier + search filter
   useEffect(() => {
-    if (!search.trim()) {
-      setFiltered(data);
-      return;
+    let result = data;
+
+    if (tierFilter) {
+      result = result.filter((u) =>
+        u.released_tiers?.some(
+          (r) => normTier(r.tier_name) === normTier(tierFilter),
+        ),
+      );
     }
-    const q = search.toLowerCase();
-    setFiltered(
-      data.filter(
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
         (u) =>
           u.user_id.toLowerCase().includes(q) ||
           u.user_name.toLowerCase().includes(q) ||
           (u.contact || "").toLowerCase().includes(q) ||
           (u.pair_star || "").toLowerCase().includes(q),
-      ),
-    );
-  }, [search, data]);
+      );
+    }
 
-  // Summary counts per tier
+    setFiltered(result);
+  }, [search, tierFilter, data]);
+
+   // Summary counts per tier — based on achievement history (released_tiers),
+  // not just the user's current pair_star, and always from the full `data`
+  // so selecting a tile never zeroes out the other tiles.
   const tierCounts = PAIR_STAR_TIERS.reduce(
     (acc, t) => {
-      acc[t.name] = data.filter((u) => u.pair_star === t.name).length;
+      acc[t.name] = data.filter((u) =>
+        u.released_tiers?.some((r) => normTier(r.tier_name) === normTier(t.name)),
+      ).length;
       return acc;
     },
     {} as Record<string, number>,
@@ -198,13 +219,19 @@ export default function AdminPairRankingsPage() {
                 }
               `}
             >
-              <p className={`text-xs font-semibold truncate ${tierFilter === t.name ? "" : "text-gray-600"}`}>
+              <p
+                className={`text-xs font-semibold truncate ${tierFilter === t.name ? "" : "text-gray-600"}`}
+              >
                 {t.name}
               </p>
-              <p className={`text-xl font-bold mt-0.5 ${tierFilter === t.name ? "" : "text-gray-900"}`}>
+              <p
+                className={`text-xl font-bold mt-0.5 ${tierFilter === t.name ? "" : "text-gray-900"}`}
+              >
                 {tierCounts[t.name] ?? 0}
               </p>
-              <p className={`text-[10px] mt-0.5 ${tierFilter === t.name ? "opacity-80" : "text-gray-400"}`}>
+              <p
+                className={`text-[10px] mt-0.5 ${tierFilter === t.name ? "opacity-80" : "text-gray-400"}`}
+              >
                 {t.reward}
               </p>
             </button>
@@ -214,7 +241,10 @@ export default function AdminPairRankingsPage() {
         {/* ── Filters ── */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
-            <FaSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <FaSearch
+              size={13}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
             <input
               type="text"
               placeholder="Search by name, ID, contact..."
@@ -224,7 +254,10 @@ export default function AdminPairRankingsPage() {
             />
           </div>
           <div className="relative">
-            <FaFilter size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <FaFilter
+              size={12}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
             <select
               value={tierFilter}
               onChange={(e) => setTierFilter(e.target.value)}
@@ -246,9 +279,15 @@ export default function AdminPairRankingsPage() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {[
-                  "User", "Contact", "Star", "Points",
-                  "Left Active", "Right Active", "Reward",
-                  "Payout ID", "Activated Date",
+                  "User",
+                  "Contact",
+                  "Star",
+                  "Points",
+                  "Left Active",
+                  "Right Active",
+                  "Reward",
+                  "Payout ID",
+                  "Activated Date",
                 ].map((h) => (
                   <th
                     key={h}
@@ -268,14 +307,23 @@ export default function AdminPairRankingsPage() {
                 </tr>
               ) : (
                 filtered.map((u) => (
-                  <tr key={u.user_id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={u.user_id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-900">{u.user_name}</p>
+                      <p className="font-semibold text-gray-900">
+                        {u.user_name}
+                      </p>
                       <p className="text-xs text-gray-400">{u.user_id}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{u.contact || "—"}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {u.contact || "—"}
+                    </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border ${badgeClass(u.pair_star)}`}>
+                      <span
+                        className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border ${badgeClass(u.pair_star)}`}
+                      >
                         <FaMedal size={10} />
                         {u.pair_star}
                       </span>
@@ -314,16 +362,23 @@ export default function AdminPairRankingsPage() {
             <p className="text-center text-gray-400 py-10">No users found.</p>
           ) : (
             filtered.map((u) => (
-              <div key={u.user_id} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <div
+                key={u.user_id}
+                className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+              >
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <div>
                     <p className="font-bold text-gray-900">{u.user_name}</p>
                     <p className="text-xs text-gray-400">{u.user_id}</p>
                     {u.contact && (
-                      <p className="text-xs text-gray-500 mt-0.5">{u.contact}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {u.contact}
+                      </p>
                     )}
                   </div>
-                  <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border flex-shrink-0 ${badgeClass(u.pair_star)}`}>
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full border flex-shrink-0 ${badgeClass(u.pair_star)}`}
+                  >
                     <FaMedal size={9} />
                     {u.pair_star}
                   </span>
@@ -332,15 +387,21 @@ export default function AdminPairRankingsPage() {
                 <div className="grid grid-cols-3 gap-2 text-center mb-3">
                   <div className="bg-blue-50 rounded-lg py-1.5">
                     <p className="text-[10px] text-gray-500">Points</p>
-                    <p className="font-bold text-blue-700 text-sm">{u.pairs.toLocaleString()}</p>
+                    <p className="font-bold text-blue-700 text-sm">
+                      {u.pairs.toLocaleString()}
+                    </p>
                   </div>
                   <div className="bg-green-50 rounded-lg py-1.5">
                     <p className="text-[10px] text-gray-500">Left</p>
-                    <p className="font-bold text-green-700 text-sm">{u.left_active.toLocaleString()}</p>
+                    <p className="font-bold text-green-700 text-sm">
+                      {u.left_active.toLocaleString()}
+                    </p>
                   </div>
                   <div className="bg-orange-50 rounded-lg py-1.5">
                     <p className="text-[10px] text-gray-500">Right</p>
-                    <p className="font-bold text-orange-600 text-sm">{u.right_active.toLocaleString()}</p>
+                    <p className="font-bold text-orange-600 text-sm">
+                      {u.right_active.toLocaleString()}
+                    </p>
                   </div>
                 </div>
 
@@ -348,7 +409,7 @@ export default function AdminPairRankingsPage() {
                   <p className="text-xs text-gray-600">
                     <span className="text-gray-400">Reward:</span> {u.reward}
                   </p>
-                 <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500">
                     <span className="text-gray-400">Payout: </span>
                     <PayoutCell
                       releasedTiers={u.released_tiers}
@@ -357,7 +418,9 @@ export default function AdminPairRankingsPage() {
                   </div>
                   <p className="text-xs text-gray-500">
                     <span className="text-gray-400">Activated: </span>
-                    <span className="font-medium">{u.activated_date ?? "—"}</span>
+                    <span className="font-medium">
+                      {u.activated_date ?? "—"}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -365,7 +428,7 @@ export default function AdminPairRankingsPage() {
           )}
         </div>
 
-               {/* ── Footer count ── */}
+        {/* ── Footer count ── */}
         {filtered.length > 0 && (
           <p className="text-xs text-gray-400 text-center pt-4 pb-6">
             Showing {filtered.length} of {data.length} achievers
@@ -384,8 +447,12 @@ export default function AdminPairRankingsPage() {
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div>
-                  <p className="font-bold text-gray-900">{payoutModalUser.user_name}</p>
-                  <p className="text-xs text-gray-400">{payoutModalUser.user_id}</p>
+                  <p className="font-bold text-gray-900">
+                    {payoutModalUser.user_name}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {payoutModalUser.user_id}
+                  </p>
                 </div>
                 <button
                   onClick={() => setPayoutModalUser(null)}
@@ -406,13 +473,18 @@ export default function AdminPairRankingsPage() {
                         className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
                       >
                         <div>
-                          <p className="text-sm font-semibold text-gray-800">{r.payout_id}</p>
-                          <p className="text-[11px] text-gray-400">{r.tier_name}</p>
+                          <p className="text-sm font-semibold text-gray-800">
+                            {r.payout_id}
+                          </p>
+                          <p className="text-[11px] text-gray-400">
+                            {r.tier_name}
+                          </p>
                         </div>
                         {r.payout_status && (
                           <span
                             className={`text-[11px] font-semibold ${
-                              payoutStatus === "paid" || payoutStatus === "completed"
+                              payoutStatus === "paid" ||
+                              payoutStatus === "completed"
                                 ? "text-green-600"
                                 : payoutStatus === "pending"
                                   ? "text-yellow-600"

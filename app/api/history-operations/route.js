@@ -13,7 +13,7 @@ import mongoose from "mongoose";
 import { Alert } from "@/models/alert";
 
 import { getTotalPayout } from "@/services/totalpayout";
-import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
+import { propagatePairStarOnPvChange } from "@/services/pairStarEngine";
 import { updateClub } from "@/services/clubrank";
 // import { checkAndReleasePromotionalBonus } from "@/services/promotionalBonus";
 import { getISTDateTime } from "@/utils/server/getISTDateTime";
@@ -373,6 +373,11 @@ export async function POST(request) {
           }
         );
       }
+      if (earnedPV > 0) {
+  propagatePairStarOnPvChange(body.user_id).catch((err) =>
+    console.error("[PairStar] PV propagation error (advance):", err)
+  );
+}
 
       // ------------------------------------
       // FAST RESPONSE (UNCHANGED)
@@ -398,10 +403,6 @@ export async function POST(request) {
             // This ensures odd/even infinity assignment is always correct
             await addToPaidDirectsOrdered(referrerId, freshUser.user_id);
 
-            // 🔥 Fire-and-forget: propagate pair star counts up the tree
-            propagatePairStarOnActivation(body.user_id).catch((err) =>
-              console.error("[PairStar] propagation error (history/advance):", err)
-            );
 
             if (earnedPV > 0) {
               await User.updateOne(

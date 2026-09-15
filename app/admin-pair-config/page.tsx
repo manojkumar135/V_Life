@@ -757,7 +757,7 @@ export default function AdminPairConfigPage() {
                             <span className="text-gray-500">
                               {Math.min(tier.left_active, tier.required_pairs)}/
                               {tier.required_pairs} · PV {tier.left_direct_pv}/
-                              {tier.required_direct_pv}
+                              {tier.required_direct_pv}   {"  "}
                               {tier.left_pv_balance > 0
                                 ? ` (${tier.left_pv_balance} pending)`
                                 : " ✓"}

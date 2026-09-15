@@ -38,7 +38,7 @@ const Page = () => {
             className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <BsCalendarDay size={32} />
-            <span className="mt-2 text-lg font-semibold">Daily Report</span>
+            <span className="mt-2 text-lg font-semibold">DSB & MB Report</span>
           </div>
 
           {/* Fortnight Report */}
@@ -47,7 +47,7 @@ const Page = () => {
             className="bg-linear-to-br from-[#106187] via-[#106187]  to-[#339AB5] text-white rounded-md p-6 flex flex-col items-center justify-center hover:shadow-md transition cursor-pointer"
           >
             <BsCalendarRange size={32} />
-            <span className="mt-2 text-lg font-semibold">Fortnight Report</span>
+            <span className="mt-2 text-lg font-semibold">ISB & IMB Report</span>
           </div>
 
           {user?.role !== "user" && (

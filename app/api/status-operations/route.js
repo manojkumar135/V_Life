@@ -12,7 +12,7 @@ import {
 } from "@/services/infinity";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { Score } from "@/models/score";
-import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
+// import { propagatePairStarOnActivation } from "@/services/pairStarEngine";
 import { getISTDateTime } from "@/utils/server/getISTDateTime";
 
 export async function PUT(req) {
@@ -148,9 +148,9 @@ export async function PUT(req) {
         await addActivatedUserToInfinity(userIdToUpdate);
 
         // 🔥 Fire-and-forget: propagate pair star counts up the tree
-        propagatePairStarOnActivation(userIdToUpdate).catch((err) =>
-          console.error("[PairStar] propagation error (admin):", err)
-        );
+        // propagatePairStarOnActivation(userIdToUpdate).catch((err) =>
+        //   console.error("[PairStar] propagation error (admin):", err)
+        // );
       } catch (err) {
         console.error("Error adding activated user to infinity:", err);
       }
