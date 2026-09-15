@@ -47,7 +47,7 @@ export default function MatchesPage() {
     try {
       setLoading(true);
 
-      const params: any = {
+          const params: any = {
         search: search || "",
         role: user?.role,
         ...(user?.user_id && { user_id: user.user_id }),
@@ -55,6 +55,9 @@ export default function MatchesPage() {
         ...(dateFilter?.type === "range" && {
           from: dateFilter.from,
           to: dateFilter.to,
+        }),
+        ...(dateFilter?.count !== undefined && {
+          min_matches: dateFilter.count,
         }),
       };
 
@@ -211,7 +214,6 @@ export default function MatchesPage() {
           checkboxSelection
           setSelectedRows={setSelectedRows}
         />
-
         <DateFilterModal
           isOpen={showModal}
           onClose={() => setShowModal(false)}
@@ -219,6 +221,8 @@ export default function MatchesPage() {
             setDateFilter(filter);
             setShowModal(false);
           }}
+          showCountFilter
+          countLabel="Min Matches"
         />
       </div>
     </Layout>

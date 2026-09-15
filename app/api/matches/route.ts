@@ -12,9 +12,14 @@ export async function GET(req: Request) {
     const role = searchParams.get("role");
     const user_id = searchParams.get("user_id");
     const search = searchParams.get("search") || "";
-    const from = searchParams.get("from");
+        const from = searchParams.get("from");
     const to = searchParams.get("to");
     const date = searchParams.get("date");
+    const minMatchesParam = searchParams.get("min_matches");
+    const minMatches =
+      minMatchesParam !== null && minMatchesParam !== ""
+        ? Number(minMatchesParam)
+        : null;
 
     // ── Build user query ──────────────────────────────────────────
     // const userQuery: any = {};
@@ -120,10 +125,14 @@ export async function GET(req: Request) {
       }),
     );
 
-    // Filter nulls + sort by matches in descending order
+        // Filter nulls + sort by matches in descending order
     let data = (results.filter(Boolean) as any[]).sort(
       (a, b) => (b.matches ?? 0) - (a.matches ?? 0),
     );
+
+    if (minMatches !== null) {
+      data = data.filter((r) => (r.matches ?? 0) >= minMatches);
+    }
 
     // if (from && to) {
     //   const fromDate = new Date(from);
