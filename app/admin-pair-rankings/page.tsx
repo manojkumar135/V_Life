@@ -207,18 +207,21 @@ export default function AdminPairRankingsPage() {
         {/* ── Summary tiles — top tiers ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-5">
           {PAIR_STAR_TIERS.map((t) => (
-            <button
-              key={t.name}
-              onClick={() => setTierFilter(tierFilter === t.name ? "" : t.name)}
-              className={`
-                rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer
-                ${
-                  tierFilter === t.name
-                    ? `${badgeClass(t.name)} shadow-md ring-2 ring-offset-1 ring-current`
-                    : "bg-white border-gray-200 hover:border-gray-300 shadow-sm"
-                }
-              `}
-            >
+          <button
+  key={t.name}
+  onClick={() =>
+    setTierFilter(tierFilter === t.name ? "" : t.name)
+  }
+  className={`
+    rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer
+    ${badgeClass(t.name)}
+    ${
+      tierFilter === t.name
+        ? "shadow-md ring-2 ring-offset-1 ring-current"
+        : "shadow-sm hover:shadow-md"
+    }
+  `}
+>
               <p
                 className={`text-xs font-semibold truncate ${tierFilter === t.name ? "" : "text-gray-600"}`}
               >

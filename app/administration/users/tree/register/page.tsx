@@ -19,8 +19,8 @@ import { FaIdCard } from "react-icons/fa";
 import { FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 
 // import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+// import DatePicker from "react-datepicker";
+// import "react-datepicker/dist/react-datepicker.css";
 
 import ShowToast from "@/components/common/Toast/toast";
 import Loader from "@/components/common/loader";
@@ -49,6 +49,11 @@ function RegisterContent() {
 
   const [panVerified, setPanVerified] = useState(false);
   const [panChecking, setPanChecking] = useState(false);
+  const [panFormatValid, setPanFormatValid] = useState(false);
+  const [panError, setPanError] = useState(""); // ✅ NEW — race-free PAN error message
+
+  const [dobDigits, setDobDigits] = useState(""); // raw digits only, up to 8: DDMMYYYY
+  const [dobError, setDobError] = useState("");
 
   const [referralName, setReferralName] = useState<string | null>(null);
   const [referralChecking, setReferralChecking] = useState(false);
@@ -63,6 +68,116 @@ function RegisterContent() {
 
   const router = useRouter();
   const params = useSearchParams();
+
+  const today = new Date();
+  const maxDob = new Date(
+    today.getFullYear() - 17,
+    today.getMonth(),
+    today.getDate(),
+  );
+
+  // Builds the always-10-char mask string, e.g. "11/MM/YYYY" or "11/02/YYYY"
+  const maskDob = (digits: string) => {
+    const day = digits.slice(0, 2).padEnd(2, "D");
+    const month = digits.slice(2, 4).padEnd(2, "M");
+    const year = digits.slice(4, 8).padEnd(4, "Y");
+    return `${day}/${month}/${year}`;
+  };
+
+  const parseDob = (formatted: string): Date | null => {
+    const match = formatted.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return null;
+
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const year = parseInt(match[3], 10);
+    const date = new Date(year, month - 1, day);
+
+    if (
+      date.getFullYear() !== year ||
+      date.getMonth() !== month - 1 ||
+      date.getDate() !== day
+    ) {
+      return null;
+    }
+    return date;
+  };
+
+  const calculateAge = (birthDate: Date): number => {
+    const now = new Date();
+    let age = now.getFullYear() - birthDate.getFullYear();
+    const monthDiff = now.getMonth() - birthDate.getMonth();
+    const dayDiff = now.getDate() - birthDate.getDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) age--;
+    return age;
+  };
+
+  const validateDobDigits = (digits: string) => {
+    if (digits.length < 8) {
+      formik.setFieldValue("dob", "");
+      setDobError("");
+      return;
+    }
+
+    const day = digits.slice(0, 2);
+    const month = digits.slice(2, 4);
+    const year = digits.slice(4, 8);
+    const parsed = parseDob(`${day}/${month}/${year}`);
+
+    if (!parsed) {
+      formik.setFieldValue("dob", "");
+      setDobError("* Invalid date");
+      return;
+    }
+    if (parsed > new Date()) {
+      formik.setFieldValue("dob", "");
+      setDobError("* Date of Birth cannot be in the future");
+      return;
+    }
+    if (calculateAge(parsed) < 18) {
+      formik.setFieldValue("dob", "");
+      setDobError("* You must be at least 18 years old");
+      return;
+    }
+
+    setDobError("");
+    const iso = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}`;
+    formik.setFieldValue("dob", iso);
+  };
+
+  const handleDobKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Tab") return;
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      setDobDigits((prev) => {
+        const next = prev.slice(0, -1);
+        validateDobDigits(next);
+        return next;
+      });
+      return;
+    }
+
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault();
+      setDobDigits((prev) => {
+        if (prev.length >= 8) return prev;
+        const next = prev + e.key;
+        validateDobDigits(next);
+        return next;
+      });
+      return;
+    }
+
+    e.preventDefault();
+  };
+
+  const handleDobBlur = () => {
+    formik.setFieldTouched("dob", true);
+    if (dobDigits.length > 0 && dobDigits.length < 8) {
+      setDobError("* Enter a complete date (DD/MM/YYYY)");
+    }
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -91,6 +206,7 @@ function RegisterContent() {
         .required("* Contact is required")
         .matches(/^[0-9]{10}$/, "* Contact must be a 10-digit number"),
       dob: Yup.date()
+        .typeError("* Date of Birth is required")
         .required("* Date of Birth is required")
         .max(new Date(), "* Date of Birth cannot be in the future")
         .test("age", "* You must be at least 18 years old", function (value) {
@@ -105,19 +221,26 @@ function RegisterContent() {
             (age === 18 && (monthDiff > 0 || (monthDiff === 0 && dayDiff >= 0)))
           );
         }),
-      referBy: Yup.string().required("* Referral ID is required"),
+      referBy: Yup.string()
+        .trim()
+        .required("* Referral ID is required")
+        .matches(
+          /^\S{10}$/,
+          "* Referral ID must be exactly 10 characters, no spaces",
+        ),
       team: Yup.string().required("* Team is required"),
       gender: Yup.string().required("* Gender is required"),
       pan: Yup.string()
         .trim()
-        .max(10, "* PAN must be exactly 10 characters")
-        .test("valid-pan", "* Invalid PAN format (ABCDE1234F)", (value) => {
-          if (!value) return true; // optional
-          if (value.length < 10) return true; // do NOT validate
-          return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value); // only validate when length = 10
-        })
-        .nullable()
-        .notRequired(),
+        .required("* PAN is required")
+        .length(10, "* PAN must be exactly 10 characters")
+        .matches(
+          /^[A-Z]{5}[0-9]{4}[A-Z]$/,
+          "* Invalid PAN format (ABCDE1234F)",
+        ),
+      pancheck: Yup.boolean()
+        .oneOf([true], "* PAN must be verified")
+        .required("* PAN must be verified"),
       password: Yup.string()
         .required("* Password is required")
         .min(6, "* Password must be at least 6 characters"),
@@ -209,7 +332,9 @@ function RegisterContent() {
     }
     try {
       setReferralChecking(true);
-      const res = await axios.get(`/api/users-operations?user_id=${id}`);
+      const res = await axios.get(
+        `/api/users-operations?user_id=${id.toUpperCase()}`,
+      );
       if (res.data.success && res.data.data?.user_name) {
         setReferralName(res.data.data.user_name);
       } else {
@@ -230,7 +355,7 @@ function RegisterContent() {
 
   useEffect(() => {
     if (formik.values.referBy?.length === 10) {
-      checkReferralId(formik.values.referBy);
+      checkReferralId(formik.values.referBy.toUpperCase());
     }
   }, [formik.values.referBy]);
 
@@ -299,145 +424,51 @@ function RegisterContent() {
 
               {/* DOB */}
               <div>
-                <div className="relative" inputMode="none">
-                  <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none" />
-                  <DatePicker
-                    selected={
-                      formik.values.dob ? new Date(formik.values.dob) : null
-                    }
-                    onChange={(date: Date | null) => {
-                      if (!date) return formik.setFieldValue("dob", "");
+                <div className="relative">
+                  <IoCalendarOutline className="absolute left-3 top-2 text-gray-500 pointer-events-none z-10" />
 
-                      const localDate = new Date(
-                        date.getTime() - date.getTimezoneOffset() * 60000,
-                      )
-                        .toISOString()
-                        .split("T")[0];
+                  {/* Overlay: styled display, sits behind the real input */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 pl-10 pr-4 py-1 flex items-center font-mono text-base pointer-events-none whitespace-pre"
+                  >
+                    {maskDob(dobDigits)
+                      .split("")
+                      .map((ch, i) => (
+                        <span
+                          key={i}
+                          className={
+                            /[DMY]/.test(ch) ? "text-gray-400" : "text-black"
+                          }
+                        >
+                          {ch}
+                        </span>
+                      ))}
+                  </div>
 
-                      formik.setFieldValue("dob", localDate);
-                    }}
-                    onBlur={() => formik.setFieldTouched("dob", true)}
-                    dateFormat="dd-MM-yyyy"
-                    placeholderText="Date of Birth"
-                    maxDate={new Date()}
-                    showYearDropdown
-                    showMonthDropdown
-                    scrollableYearDropdown
-                    yearDropdownItemNumber={100}
-                    popperPlacement="bottom"
-                    popperProps={{ strategy: "fixed" }}
-                    popperClassName="z-[999] xl:w-[350px]"
-                    onKeyDown={(e) => e.preventDefault()}
-                    shouldCloseOnSelect
-                    calendarClassName="custom-datepicker-calendar"
-                    className={`w-full pl-10 pr-4 py-1 rounded-md border ${
-                      formik.touched.dob && formik.errors.dob
+                  {/* Real input: transparent text, visible caret, handles all input */}
+                  <input
+                    type="text"
+                    name="dob"
+                    inputMode="numeric"
+                    value={maskDob(dobDigits)}
+                    onKeyDown={handleDobKeyDown}
+                    onChange={() => {}}
+                    onPaste={(e) => e.preventDefault()}
+                    onBlur={handleDobBlur}
+                    className={`relative w-full pl-10 pr-4 py-1 rounded-md border font-mono text-base text-transparent caret-black bg-transparent ${
+                      dobError || (formik.touched.dob && formik.errors.dob)
                         ? "border-red-500"
                         : "border-gray-400"
                     } focus:ring-2 focus:ring-gray-200`}
-                    customInput={
-                      <input
-                        readOnly
-                        inputMode="none"
-                        onFocus={(e) => e.target.blur()}
-                        className={`w-full pl-10 pr-4 py-1 rounded-md border ${
-                          formik.touched.dob && formik.errors.dob
-                            ? "border-red-500"
-                            : "border-gray-400"
-                        } focus:ring-2 focus:ring-gray-200`}
-                      />
-                    }
-                    renderCustomHeader={({
-                      date,
-                      changeYear,
-                      changeMonth,
-                      decreaseMonth,
-                      increaseMonth,
-                      prevMonthButtonDisabled,
-                      nextMonthButtonDisabled,
-                    }) => {
-                      const currentYear = new Date().getFullYear();
-                      const years = Array.from(
-                        { length: 101 },
-                        (_, i) => currentYear - i,
-                      );
-                      const months = [
-                        "January",
-                        "February",
-                        "March",
-                        "April",
-                        "May",
-                        "June",
-                        "July",
-                        "August",
-                        "September",
-                        "October",
-                        "November",
-                        "December",
-                      ];
-
-                      return (
-                        <div className="flex items-center justify-between w-full px-2 py-1">
-                          <button
-                            type="button"
-                            onClick={decreaseMonth}
-                            disabled={prevMonthButtonDisabled}
-                            className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
-                          >
-                            ‹
-                          </button>
-
-                          <div className="flex items-center gap-2">
-                            {/* Month Dropdown - native select, no keyboard */}
-                            <select
-                              value={date.getMonth()}
-                              onChange={(e) =>
-                                changeMonth(Number(e.target.value))
-                              }
-                              onFocus={(e) => e.target.blur()}
-                              className="border border-gray-300 rounded px-1 py-1 text-sm bg-white cursor-pointer focus:outline-none"
-                            >
-                              {months.map((month, idx) => (
-                                <option key={month} value={idx}>
-                                  {month}
-                                </option>
-                              ))}
-                            </select>
-
-                            {/* Year Dropdown - native select, no keyboard */}
-                            <select
-                              value={date.getFullYear()}
-                              onChange={(e) =>
-                                changeYear(Number(e.target.value))
-                              }
-                              onFocus={(e) => e.target.blur()}
-                              className="border border-gray-300 rounded px-1 py-1 text-sm bg-white cursor-pointer focus:outline-none"
-                            >
-                              {years.map((year) => (
-                                <option key={year} value={year}>
-                                  {year}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={increaseMonth}
-                            disabled={nextMonthButtonDisabled}
-                            className="px-2 rounded hover:bg-gray-100 disabled:opacity-40 text-lg font-semibold"
-                          >
-                            ›
-                          </button>
-                        </div>
-                      );
-                    }}
                   />
                 </div>
                 <span className="text-red-500 text-xs mt-1 block">
-                  {formik.touched.dob && formik.errors.dob
-                    ? formik.errors.dob
-                    : "\u00A0"}
+                  {dobError
+                    ? dobError
+                    : formik.touched.dob && formik.errors.dob
+                      ? formik.errors.dob
+                      : "\u00A0"}
                 </span>
               </div>
 
@@ -541,13 +572,19 @@ function RegisterContent() {
                   <input
                     type="text"
                     name="referBy"
+                    maxLength={10}
                     placeholder="Referral ID"
-                    value={formik.values.referBy}
+                    value={formik.values.referBy.toUpperCase()}
                     onChange={(e) => {
-                      formik.handleChange(e);
+                      const value = e.target.value
+                        .toUpperCase()
+                        .replace(/\s/g, "");
+
+                      formik.setFieldValue("referBy", value);
                       setReferralName(null);
-                      if (e.target.value.length === 10) {
-                        checkReferralId(e.target.value);
+
+                      if (value.length === 10) {
+                        checkReferralId(value);
                       }
                     }}
                     onBlur={formik.handleBlur}
@@ -632,68 +669,79 @@ function RegisterContent() {
                     type="text"
                     name="pan"
                     maxLength={10}
-                    placeholder="PAN Number (Optional)"
+                    placeholder="PAN Number"
                     value={formik.values.pan.toUpperCase() || ""}
                     onChange={async (e) => {
                       const value = e.target.value.toUpperCase();
 
                       formik.setFieldValue("pan", value);
                       setPanVerified(false);
+                      setPanFormatValid(false);
+                      formik.setFieldValue("pancheck", false);
 
-                      // 👉 1️⃣ If typing and < 10 chars → NO ERROR, NO CHECK
+                      // 👉 0️⃣ Empty → required
+                      if (value.length === 0) {
+                        setPanError("* PAN is required");
+                        return;
+                      }
+
+                      // 👉 1️⃣ Typing and < 10 chars → NO ERROR YET
                       if (value.length < 10) {
-                        formik.setFieldError("pan", "");
+                        setPanError("");
                         return;
                       }
 
-                      // 👉 2️⃣ If > 10 chars → show error
+                      // 👉 2️⃣ > 10 chars (shouldn't normally happen due to maxLength)
                       if (value.length > 10) {
-                        formik.setFieldError(
-                          "pan",
-                          "PAN must be exactly 10 characters",
-                        );
+                        setPanError("* PAN must be exactly 10 characters");
                         return;
                       }
 
-                      // 👉 3️⃣ If length === 10 but wrong format → show error
+                      // 👉 3️⃣ length === 10 but wrong format
                       if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value)) {
-                        formik.setFieldError(
-                          "pan",
-                          "Invalid PAN format (ABCDE1234F)",
-                        );
+                        setPanError("* Invalid PAN format (ABCDE1234F)");
                         return;
                       }
 
                       // 👉 4️⃣ Valid format → clear error & check duplicate
-                      formik.setFieldError("pan", "");
+                      setPanError("");
 
                       const exists = await checkPanDuplicate(value);
                       if (exists) {
-                        formik.setFieldError("pan", "PAN already exists");
+                        setPanError("* PAN already exists");
                         return;
+                      }
+
+                      setPanFormatValid(true);
+                    }}
+                    onBlur={(e) => {
+                      formik.handleBlur(e);
+                      const val = formik.values.pan;
+                      if (!val) {
+                        setPanError("* PAN is required");
+                      } else if (val.length < 10) {
+                        setPanError("* PAN must be exactly 10 characters");
+                      } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(val)) {
+                        setPanError("* Invalid PAN format (ABCDE1234F)");
                       }
                     }}
                     className="w-full pl-10 pr-20 py-1 rounded-md border border-gray-400"
                   />
 
-                  {formik.values.pan.length === 10 &&
-                    /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(formik.values.pan) &&
-                    !panChecking &&
-                    !panVerified &&
-                    !formik.errors.pan && (
-                      <button
-                        type="button"
-                        onClick={verifyPan}
-                        className="
+                  {panFormatValid && !panChecking && !panVerified && (
+                    <button
+                      type="button"
+                      onClick={verifyPan}
+                      className="
             absolute right-1 top-1
             bg-[#106187] text-white 
             px-3 rounded 
             h-[26px] flex items-center text-sm cursor-pointer
           "
-                      >
-                        Verify
-                      </button>
-                    )}
+                    >
+                      Verify
+                    </button>
+                  )}
 
                   {panChecking && (
                     <span className="absolute right-3 top-[10px] text-[10px] text-gray-500">
@@ -708,7 +756,14 @@ function RegisterContent() {
 
                 {/* PAN Error */}
                 <span className="text-red-500 text-xs mt-1 block">
-                  {formik.errors.pan || "\u00A0"}
+                  {panError
+                    ? panError
+                    : formik.touched.pan && formik.errors.pan
+                      ? formik.errors.pan
+                      : (formik.touched.pan || formik.values.pan) &&
+                          formik.errors.pancheck
+                        ? `${formik.errors.pancheck}`
+                        : "\u00A0"}
                 </span>
               </div>
 
@@ -742,11 +797,11 @@ function RegisterContent() {
             </div>
 
             {/* PAN Note */}
-            <p className="text-[0.75rem] text-red-600 -mt-2 mb-4">
+            {/* <p className="text-[0.75rem] text-red-600 -mt-2 mb-4">
               <strong className="text-gray-600">Note:</strong> If PAN is
               verified, TDS will be <strong>2%</strong>. If not verified, TDS
               will be <strong>20%</strong>.
-            </p>
+            </p> */}
 
             {/* Terms */}
             <div className="flex items-center space-x-2">
@@ -792,15 +847,17 @@ function RegisterContent() {
                 loading ||
                 !formik.isValid ||
                 !formik.dirty ||
-                !formik.values.terms
+                !formik.values.terms ||
+                !formik.values.pancheck
               }
               className={`w-full py-1 mt-1 font-semibold rounded-md text-[1.2rem] ${
                 loading ||
                 !formik.isValid ||
                 !formik.dirty ||
-                !formik.values.terms
+                !formik.values.terms ||
+                !formik.values.pancheck
                   ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-gradient-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
+                  : "bg-linear-to-r from-[#0C3978] via-[#106187] to-[#16B8E4] text-white cursor-pointer"
               }`}
             >
               Register
