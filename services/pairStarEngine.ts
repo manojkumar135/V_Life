@@ -61,8 +61,7 @@ import { Wallet } from "@/models/wallet";
 import { addRewardScore } from "@/services/updateRewardScore";
 import { generateUniqueCustomId } from "@/utils/server/customIdGenerator";
 import { History } from "@/models/history";
-import { istStringsToUTCDate, laterDate } from "@/utils/server/getISTDateTime";
-
+import { activationDateToUTC, laterDate } from "@/utils/server/getISTDateTime";
 // Re-export constants so existing imports from this file still work
 export { PAIR_STAR_TIERS, PAIR_STAR_TIER_NAMES } from "@/constant/pairStar";
 export type { PairStarTierName } from "@/constant/pairStar";
@@ -135,15 +134,14 @@ async function countPVInSubtree(
   const sumEligiblePV = (users: any[]): number =>
     users
       .filter((user: any) => {
-        if (!user.activated_date || !user.activated_time) return true;
         if (!effectiveStartDate) return true;
 
-        const activationDate = istStringsToUTCDate(
+        const activationDate = activationDateToUTC(
           user.activated_date,
           user.activated_time,
         );
 
-        return !!activationDate && activationDate >= effectiveStartDate;
+        return Boolean(activationDate && activationDate >= effectiveStartDate);
       })
       .reduce((total, user) => total + Number(user.self_pv || 0), 0);
 
@@ -212,15 +210,14 @@ async function countActiveUsersInSubtree(
 
   const countEligibleUsers = (users: any[]): number =>
     users.filter((user: any) => {
-      if (!user.activated_date || !user.activated_time) return true;
       if (!effectiveStartDate) return true;
 
-      const activationDate = istStringsToUTCDate(
+      const activationDate = activationDateToUTC(
         user.activated_date,
         user.activated_time,
       );
 
-      return !!activationDate && activationDate >= effectiveStartDate;
+      return Boolean(activationDate && activationDate >= effectiveStartDate);
     }).length;
 
   return {
@@ -429,7 +426,8 @@ export async function propagatePairStarOnPvChange(
       ),
     );
   } catch (err) {
-console.error("[PairStar] propagatePairStarOnPvChange error:", err);  }
+    console.error("[PairStar] propagatePairStarOnPvChange error:", err);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -471,7 +469,7 @@ async function checkAndUpgradePairStar(
   // Effective cutoff = later of (global Pair Star start date) and (this
   // ancestor's own activation timestamp) — a user cannot earn pairs from
   // team activity that predates their own activation.
-  const ancestorActivationCutoff = istStringsToUTCDate(
+  const ancestorActivationCutoff = activationDateToUTC(
     ancestor.activated_date,
     ancestor.activated_time,
   );

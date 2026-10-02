@@ -14,7 +14,7 @@ import TreeNode from "@/models/tree";
 import { getDirectPV } from "@/services/directPV";
 import { loadTierConfig, loadGlobalConfig } from "@/services/pairStarConfig";
 import jwt from "jsonwebtoken";
-import { istStringsToUTCDate, laterDate } from "@/utils/server/getISTDateTime";
+import { activationDateToUTC, laterDate } from "@/utils/server/getISTDateTime";
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
 // Decode accessToken from cookie and return { user_id, role }
@@ -202,15 +202,14 @@ async function countPVFromDate(
   const sumEligiblePV = (users: any[]): number =>
     users
       .filter((user: any) => {
-        if (!user.activated_date || !user.activated_time) return true;
         if (!effectiveStartDate) return true;
 
-        const activationDate = istStringsToUTCDate(
+        const activationDate = activationDateToUTC(
           user.activated_date,
           user.activated_time,
         );
 
-        return !!activationDate && activationDate >= effectiveStartDate;
+        return Boolean(activationDate && activationDate >= effectiveStartDate);
       })
       .reduce((total, user) => total + Number(user.self_pv || 0), 0);
 
@@ -281,10 +280,10 @@ async function buildUserProgress(user_id: string) {
   // Effective cutoff = later of (global Pair Star start date) and (this
   // user's own activation timestamp) — a user cannot earn pairs from team
   // activity that predates their own activation.
-  const userActivationCutoff = istStringsToUTCDate(
-    user.activated_date,
-    user.activated_time,
-  );
+  const userActivationCutoff = activationDateToUTC(
+  user.activated_date,
+  user.activated_time,
+);
   const effectiveStartDate = laterDate(globalStartDate, userActivationCutoff);
 
   let leftPV: number;

@@ -45,6 +45,22 @@ export function istStringsToUTCDate(dateStr, timeStr) {
   return new Date(istMillis - 5.5 * 60 * 60 * 1000);
 }
 
+export function activationDateToUTC(dateStr, timeStr) {
+  if (!dateStr) return null;
+
+  if (timeStr) {
+    return istStringsToUTCDate(dateStr, timeStr);
+  }
+
+  const parts = String(dateStr).split("-").map(Number);
+  if (parts.length !== 3) return null;
+
+  const [day, month, year] = parts;
+  if (!day || !month || !year) return null;
+
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
 export function laterDate(firstDate, secondDate) {
   if (!firstDate) return secondDate;
   if (!secondDate) return firstDate;
