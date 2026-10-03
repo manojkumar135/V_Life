@@ -100,7 +100,9 @@ export async function GET(request: Request) {
           const regex = new RegExp("^" + term, "i");
           const conds: any[] = [
             { transaction_id: regex },
+            { payout_id: regex },
             { user_id: regex },
+            { wallet_id: regex }, 
             { user_name: regex },
             { status: regex },
             { details: regex }

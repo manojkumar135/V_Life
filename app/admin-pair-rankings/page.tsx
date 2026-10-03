@@ -152,13 +152,15 @@ export default function AdminPairRankingsPage() {
     setFiltered(result);
   }, [search, tierFilter, data]);
 
-   // Summary counts per tier — based on achievement history (released_tiers),
+  // Summary counts per tier — based on achievement history (released_tiers),
   // not just the user's current pair_star, and always from the full `data`
   // so selecting a tile never zeroes out the other tiles.
   const tierCounts = PAIR_STAR_TIERS.reduce(
     (acc, t) => {
       acc[t.name] = data.filter((u) =>
-        u.released_tiers?.some((r) => normTier(r.tier_name) === normTier(t.name)),
+        u.released_tiers?.some(
+          (r) => normTier(r.tier_name) === normTier(t.name),
+        ),
       ).length;
       return acc;
     },
@@ -189,15 +191,17 @@ export default function AdminPairRankingsPage() {
               Pair Star — Admin View
             </h1>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <FaUsers size={16} />
-            <span>
-              <strong className="text-gray-900">{totalAchievers}</strong>{" "}
-              achievers
-            </span>
+          <div className="flex items-center justify-between sm:justify-start gap-2 text-sm text-gray-500 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <FaUsers size={16} />
+              <span>
+                <strong className="text-gray-900">{totalAchievers}</strong>{" "}
+                achievers
+              </span>
+            </div>
             <button
               onClick={() => router.push("/admin-pair-config")}
-              className="ml-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg cursor-pointer"
+              className="sm:ml-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg cursor-pointer"
             >
               Edit Config
             </button>
@@ -207,12 +211,10 @@ export default function AdminPairRankingsPage() {
         {/* ── Summary tiles — top tiers ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-5">
           {PAIR_STAR_TIERS.map((t) => (
-          <button
-  key={t.name}
-  onClick={() =>
-    setTierFilter(tierFilter === t.name ? "" : t.name)
-  }
-  className={`
+            <button
+              key={t.name}
+              onClick={() => setTierFilter(tierFilter === t.name ? "" : t.name)}
+              className={`
     rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer
     ${badgeClass(t.name)}
     ${
@@ -221,7 +223,7 @@ export default function AdminPairRankingsPage() {
         : "shadow-sm hover:shadow-md"
     }
   `}
->
+            >
               <p
                 className={`text-xs font-semibold truncate ${tierFilter === t.name ? "" : "text-gray-600"}`}
               >

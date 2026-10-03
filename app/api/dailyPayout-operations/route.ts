@@ -97,7 +97,9 @@ export async function GET(request: Request) {
         const searchConditions = searchTerms.flatMap(term => {
           const regex = new RegExp("^" + term, "i");
           const conds: any[] = [
+            { payout_id: regex },
             { transaction_id: regex },
+            { wallet_id: regex }, 
             { user_id: regex },
             { user_name: regex },
             { status: regex },
