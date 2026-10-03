@@ -18,9 +18,9 @@ const API_URL = "/api/withdraw";
 
 const BONUS_TYPE_OPTIONS = [
   { label: "All Types", value: "" },
-  { label: "Daily",     value: "daily" },
+  { label: "Daily", value: "daily" },
   { label: "Fortnight", value: "fortnight" },
-  { label: "Referral",  value: "referral" },
+  { label: "Referral", value: "referral" },
   { label: "Pair Star", value: "pairstar" },
 ];
 
@@ -31,19 +31,19 @@ export default function WithdrawPage() {
   const { query, setQuery, debouncedQuery } = useSearch();
   const [reportData, setReportData] = useState<any[]>([]);
   const [totalItems, setTotalItems] = useState(0);
-  const [loading, setLoading]       = useState(false);
+  const [loading, setLoading] = useState(false);
   const [dateFilter, setDateFilter] = useState<any>(null);
-  const [showModal, setShowModal]   = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
-  const [bonusType, setBonusType]   = useState("");
+  const [bonusType, setBonusType] = useState("");
 
   const [summary, setSummary] = useState({
-    total_records:  0,
-    unique_users:   0,
+    total_records: 0,
+    unique_users: 0,
     unique_batches: 0,
     total_original: 0,
     total_deducted: 0,
-    grand_release:  0,
+    grand_release: 0,
   });
 
   const isAdmin = user?.role === "admin";
@@ -66,16 +66,17 @@ export default function WithdrawPage() {
       try {
         setLoading(true);
         const params: any = {
-          role:    user.role,
+          role: user.role,
           user_id: user.user_id,
-          search:  search || "",
-          limit:   1000,
-          ...(bonusType && bonusType !== "pairstar" && { bonus_type: bonusType }),
+          search: search || "",
+          limit: 1000,
+          ...(bonusType &&
+            bonusType !== "pairstar" && { bonus_type: bonusType }),
           ...(bonusType === "pairstar" && { payout_name: "Pair Star Reward" }),
-          ...(dateFilter?.type === "on"    && { date: dateFilter.date }),
+          ...(dateFilter?.type === "on" && { date: dateFilter.date }),
           ...(dateFilter?.type === "range" && {
             from: dateFilter.from,
-            to:   dateFilter.to,
+            to: dateFilter.to,
           }),
         };
         const { data } = await axios.get(API_URL, { params });
@@ -84,12 +85,12 @@ export default function WithdrawPage() {
         setTotalItems(rows.length);
         setSummary(
           data.summary || {
-            total_records:  0,
-            unique_users:   0,
+            total_records: 0,
+            unique_users: 0,
             unique_batches: 0,
             total_original: 0,
             total_deducted: 0,
-            grand_release:  0,
+            grand_release: 0,
           },
         );
       } catch (error) {
@@ -117,7 +118,7 @@ export default function WithdrawPage() {
     {
       field: "batch_id",
       headerName: "Batch ID",
-      flex: 1.5,
+      flex: 1.2,
       renderCell: (p: any) =>
         isAdmin ? (
           <span
@@ -143,18 +144,20 @@ export default function WithdrawPage() {
 
     // ── Admin only: Users count per batch ──
     ...(isAdmin
-      ? [{
-          field: "user_count",
-          headerName: "Users",
-          flex: 0.6,
-          align: "center" as const,
-          headerAlign: "center" as const,
-          renderCell: (p: any) => (
-            <span className="text-xs font-semibold text-[#0C3978]">
-              {p.value ?? "—"}
-            </span>
-          ),
-        } as GridColDef]
+      ? [
+          {
+            field: "user_count",
+            headerName: "Users",
+            flex: 0.6,
+            align: "center" as const,
+            headerAlign: "center" as const,
+            renderCell: (p: any) => (
+              <span className="text-xs font-semibold text-[#0C3978]">
+                {p.value ?? "—"}
+              </span>
+            ),
+          } as GridColDef,
+        ]
       : []),
 
     // ── User only: Bank ──
@@ -163,14 +166,14 @@ export default function WithdrawPage() {
       : []),
 
     // ── Types ──
-    {
-      field: "bonus_types",
-      headerName: "Types",
-      flex: 1,
-      renderCell: (p: any) => (
-        <span className="text-gray-600 text-xs">{p.value || "—"}</span>
-      ),
-    },
+    // {
+    //   field: "bonus_types",
+    //   headerName: "Types",
+    //   flex: 1,
+    //   renderCell: (p: any) => (
+    //     <span className="text-gray-600 text-xs">{p.value || "—"}</span>
+    //   ),
+    // },
 
     // ── Payouts count ──
     {
@@ -206,7 +209,9 @@ export default function WithdrawPage() {
       align: "right" as const,
       headerAlign: "right" as const,
       renderCell: (p: GridRenderCellParams<any, number>) => (
-        <span className={`text-xs font-medium truncate ${(p.value ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}>
+        <span
+          className={`text-xs font-medium truncate ${(p.value ?? 0) > 0 ? "text-orange-600" : "text-gray-400"}`}
+        >
           {(p.value ?? 0) > 0 ? `₹ ${Number(p.value).toFixed(2)}` : "—"}
         </span>
       ),
@@ -230,7 +235,7 @@ export default function WithdrawPage() {
     {
       field: "neft_utr",
       headerName: "NEFT UTR",
-      flex: 1,
+      flex: 1.4,
       renderCell: (p: any) =>
         p.value ? (
           <span className="font-mono text-xs text-[#0C3978]">{p.value}</span>
@@ -245,7 +250,7 @@ export default function WithdrawPage() {
     {
       label: "Total Records",
       value: summary.total_records.toString(),
-      sub:   isAdmin
+      sub: isAdmin
         ? `${summary.unique_users} users · ${summary.unique_batches} batches`
         : `${summary.unique_batches} batches`,
       color: "from-[#0C3978] to-[#106187]",
@@ -253,25 +258,26 @@ export default function WithdrawPage() {
     {
       label: "Total Original Amount",
       value: `₹ ${Number(summary.total_original).toFixed(2)}`,
-      sub:   "Net after TDS/admin",
+      sub: "Net after TDS/admin",
       color: "from-[#106187] to-[#16B8E4]",
     },
     {
       label: "Total Deducted (Orders)",
       value: `₹ ${Number(summary.total_deducted).toFixed(2)}`,
-      sub:   "Points used on orders",
+      sub: "Points used on orders",
       color: "from-orange-500 to-orange-400",
     },
     {
       label: "Grand Release Amount",
       value: `₹ ${Number(summary.grand_release).toFixed(2)}`,
-      sub:   "Actual amount paid out",
+      sub: "Actual amount paid out",
       color: "from-green-600 to-green-500",
     },
   ];
 
-  const onBack     = () => router.push("/wallet/payout");
-  const handleEdit = (_id: string, row: any) => router.push(`/batches/${row.batch_id}`);
+  const onBack = () => router.push("/wallet/payout");
+  const handleEdit = (_id: string, row: any) =>
+    router.push(`/batches/${row.batch_id}`);
 
   return (
     <Layout>
@@ -320,9 +326,10 @@ export default function WithdrawPage() {
               key={opt.value}
               onClick={() => setBonusType(opt.value)}
               className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer
-                ${bonusType === opt.value
-                  ? "bg-[#0C3978] text-white border-[#0C3978]"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978]"
+                ${
+                  bonusType === opt.value
+                    ? "bg-[#0C3978] text-white border-[#0C3978]"
+                    : "bg-white text-gray-600 border-gray-300 hover:border-[#0C3978]"
                 }`}
             >
               {opt.label}

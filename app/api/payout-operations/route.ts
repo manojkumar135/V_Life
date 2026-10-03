@@ -19,10 +19,10 @@ export async function GET(request: Request) {
     if (id || payout_id) {
       const query: any = {};
       if (id) {
-        if (mongoose.Types.ObjectId.isValid(id)) {
+        if (/^[a-f\d]{24}$/i.test(id)) {
           query._id = id;
         } else {
-          query.transaction_id = id;
+          query.$or = [{ payout_id: id }, { transaction_id: id }];
         }
       }
       if (payout_id) query.payout_id = payout_id;
@@ -36,10 +36,13 @@ export async function GET(request: Request) {
       if (!payout) {
         return NextResponse.json(
           { success: false, message: "Payout not found", data: null },
-          { status: 404 }
+          { status: 404 },
         );
       }
-      return NextResponse.json({ success: true, data: payout }, { status: 200 });
+      return NextResponse.json(
+        { success: true, data: payout },
+        { status: 200 },
+      );
     }
 
     // ✅ If fetching all by user
@@ -49,18 +52,20 @@ export async function GET(request: Request) {
     const dailyRecords = await DailyPayout.find(query);
     const weeklyRecords = await WeeklyPayout.find(query);
 
-    const payouts = [...dailyRecords, ...weeklyRecords].sort((a: any, b: any) => {
-      const dateA = new Date(a.created_at || a.date || 0).getTime();
-      const dateB = new Date(b.created_at || b.date || 0).getTime();
-      return dateB - dateA; // latest first
-    });
+    const payouts = [...dailyRecords, ...weeklyRecords].sort(
+      (a: any, b: any) => {
+        const dateA = new Date(a.created_at || a.date || 0).getTime();
+        const dateB = new Date(b.created_at || b.date || 0).getTime();
+        return dateB - dateA; // latest first
+      },
+    );
 
     return NextResponse.json({ success: true, data: payouts }, { status: 200 });
   } catch (error: any) {
     console.error("GET payout error:", error);
     return NextResponse.json(
       { success: false, message: error.message || "Server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -74,40 +79,58 @@ export async function PATCH(request: Request) {
 
     if (!id && !payout_id) {
       return NextResponse.json(
-        { success: false, message: "Missing identifier (id, payout_id, or transaction_id)" },
-        { status: 400 }
+        {
+          success: false,
+          message: "Missing identifier (id, payout_id, or transaction_id)",
+        },
+        { status: 400 },
       );
     }
 
     const query: any = {};
-    if (id && mongoose.Types.ObjectId.isValid(id)) query._id = id;
+    if (id && /^[a-f\d]{24}$/i.test(id)) query._id = id;
     if (payout_id) query.payout_id = payout_id;
+    else if (id && !query._id) query.payout_id = id;
+
+    if (Object.keys(query).length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Invalid identifier" },
+        { status: 400 },
+      );
+    }
 
     // ✅ Try updating in Daily first
-    let updated = await DailyPayout.findOneAndUpdate(query, { $set: updates }, { new: true });
+    let updated = await DailyPayout.findOneAndUpdate(
+      query,
+      { $set: updates },
+      { new: true },
+    );
 
     // ✅ If not found, try Weekly
     if (!updated) {
-      updated = await WeeklyPayout.findOneAndUpdate(query, { $set: updates }, { new: true });
+      updated = await WeeklyPayout.findOneAndUpdate(
+        query,
+        { $set: updates },
+        { new: true },
+      );
     }
 
     if (!updated) {
       return NextResponse.json(
         { success: false, message: "Payout not found for update" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return NextResponse.json(
       { success: true, message: "Payout updated successfully", data: updated },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error: any) {
     console.error("PATCH payout error:", error);
     return NextResponse.json(
       { success: false, message: error.message || "Server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-
